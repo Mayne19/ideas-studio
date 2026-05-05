@@ -1,0 +1,42 @@
+from datetime import timedelta
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app.core.config import settings
+from app.core.security import create_access_token
+from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse
+from app.schemas.user import UserPublic
+from app.services.auth_service import create_user, authenticate_user, get_user_by_email
+from app.dependencies.auth import get_current_user
+from app.models.user import User
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.post("/register", response_model=UserPublic, status_code=201)
+def register(data: RegisterRequest, db: Session = Depends(get_db)):
+    if get_user_by_email(db, data.email):
+        raise HTTPException(status_code=400, detail="Email already registered")
+    return create_user(db, data)
+
+
+@router.post("/login", response_model=TokenResponse)
+def login(data: LoginRequest, db: Session = Depends(get_db)):
+    user = authenticate_user(db, data.email, data.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    token = create_access_token(
+        {"sub": user.id},
+        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+    )
+    return TokenResponse(access_token=token)
+
+
+@router.get("/me", response_model=UserPublic)
+def me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.post("/logout")
+def logout():
+    return {"message": "Logged out. Discard your token client-side."}
