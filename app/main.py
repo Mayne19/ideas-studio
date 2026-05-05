@@ -1,13 +1,32 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.routers import auth, projects, health
+from app.routers import auth, projects, health, categories, articles, public_api, tracking, ideas, seo, performance, recommendations, notifications, members
 
 app = FastAPI(
     title=settings.APP_NAME,
     description="Headless AI-assisted SEO CMS for coded blogs.",
-    version="0.1.0",
+    version="0.2.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(projects.router)
+app.include_router(categories.router)
+app.include_router(articles.router)
+app.include_router(public_api.router)
+app.include_router(tracking.router)
+app.include_router(ideas.router)
+app.include_router(seo.router)
+app.include_router(performance.router)
+app.include_router(recommendations.router)
+app.include_router(notifications.router)
+app.include_router(members.router)

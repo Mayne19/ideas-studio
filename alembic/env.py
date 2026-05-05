@@ -11,6 +11,10 @@ from app.core.database import Base
 
 # Import models so their tables are registered in Base.metadata
 from app.models import user, project, project_member  # noqa: F401
+from app.models import category, article, traffic_event  # noqa: F401
+from app.models import article_log  # noqa: F401
+from app.models import seo_analysis  # noqa: F401
+from app.models import optimization_recommendation, notification  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)

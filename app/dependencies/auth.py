@@ -69,6 +69,18 @@ def require_project_member(project_id: str, db: Session = Depends(get_db), curre
     return get_project_member(project_id, current_user, db)
 
 
+def get_member_for_project(db: Session, user_id: str, project_id: str) -> ProjectMember | None:
+    return (
+        db.query(ProjectMember)
+        .filter(
+            ProjectMember.user_id == user_id,
+            ProjectMember.project_id == project_id,
+            ProjectMember.status == "active",
+        )
+        .first()
+    )
+
+
 def require_project_role(*allowed_roles: str):
     def dependency(member: ProjectMember = Depends(get_project_member)) -> ProjectMember:
         if member.role not in allowed_roles:

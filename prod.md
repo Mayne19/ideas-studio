@@ -1057,25 +1057,79 @@ Règles :
 - ajout roadmap backend 5 jours ;
 - renommage du projet : Automat SaaS → Ideas Studio.
 
+## Règle actuelle avec `prod.md` et `label.md`
+
+À partir de maintenant, le projet utilise deux documents :
+
+```txt
+prod.md  = source de vérité principale pour la V1 à coder maintenant
+label.md = annexe stratégique IA/SEO long terme
+```
+
+Règles :
+
+1. `prod.md` reste prioritaire pour le développement backend V1.
+2. `label.md` doit être lu pour comprendre la direction stratégique future.
+3. `label.md` ne doit jamais élargir automatiquement le scope du jour en cours.
+4. Les modules avancés de `label.md` ne doivent pas être codés tant qu’ils ne sont pas explicitement demandés.
+5. Chaque jour de roadmap doit rester limité à son objectif.
+6. Les choix techniques doivent rester extensibles pour ne pas bloquer les futurs modules IA/SEO.
+7. Ne pas transformer la V1 en système trop complexe avant d’avoir fini le backend stable.
+
+Modules avancés de `label.md` à NE PAS coder automatiquement dans les jours 1 à 5 :
+
+```txt
+Source Ledger
+Source Verification Engine
+Claim-to-Source Mapping
+Deep Rewrite Engine complet
+Natural Writing Engine complet
+Google Fit Score
+Originality Engine complet
+Safe Publish Gate
+ContentBrief complet
+Model Router avancé
+Model Performance Registry
+Prompt Versioning complet
+AI Jobs avancés
+Article Versioning
+Audit Trail avancé
+Webhooks avancés
+Billing
+Quotas IA
+Google Update Watcher
+Topical Authority Engine avancé
+Competitive Comparison View
+```
+
+Ces éléments servent pour la roadmap future : V1 renforcée, V1.5, V2.
+
+---
+
 ## PROMPTS BACKEND
 
-### Prompt Backend Day 1
+---
+
+# Prompt Backend Day 1 — ARCHIVÉ / DÉJÀ FAIT
 
 ```txt
 Tu travailles sur un nouveau projet nommé Ideas Studio.
 
-Avant de coder, lis entièrement le fichier :
+Avant de coder, lis entièrement :
 
 prod.md
 
-Ce fichier est la source de vérité du projet.
+Ce fichier est la source de vérité principale du projet.
+
+Si label.md existe déjà, lis-le uniquement comme annexe stratégique long terme.
+Ne code aucun module avancé de label.md pendant le Jour 1.
 
 Règles :
-- ne résume pas `prod.md`
+- ne résume pas prod.md
 - ne l’ignore pas
 - ne pars pas dans une autre architecture
 - ne fais pas autre chose que ce qui est demandé ici
-- si une consigne de ce prompt contredit `prod.md`, demande confirmation avant d’agir
+- si une consigne de ce prompt contredit prod.md, demande confirmation avant d’agir
 - travaille uniquement sur le JOUR 1 de la roadmap backend
 
 OBJECTIF JOUR 1
@@ -1108,6 +1162,7 @@ Ne code pas encore :
 - workers
 - idées
 - articles avancés
+- modules avancés de label.md
 
 STACK DEMANDÉE
 
@@ -1368,10 +1423,13 @@ RAPPORT FINAL
 6. ce qui reste pour Jour 2
 ```
 
-### Rapport Day 1
+---
+
+# Rapport Day 1
 
 ```txt
 Rapport final — Jour 1
+
 1. Fichiers créés
 
 app/main.py
@@ -1385,12 +1443,21 @@ alembic.ini, alembic/env.py, alembic/script.py.mako
 alembic/versions/001_initial.py
 tests/conftest.py, test_auth.py, test_projects.py
 .env.example, requirements.txt, README.md
+
 2. Modèles créés
-Modèle	Champs clés
-users	id, name, email (unique), password_hash, is_active, is_platform_admin, created_at, updated_at
-projects	id, owner_id (FK), name, domain, language, country_target, audience, tone, status, public_tracking_key, secret_api_key, connected_at, last_seen_at, created_at, updated_at
-project_members	id, project_id (FK), user_id (FK), role, status, created_at — UniqueConstraint (project_id, user_id)
-Rôles projet disponibles : owner, admin, editor, writer, viewer
+
+users :
+id, name, email unique, password_hash, is_active, is_platform_admin, created_at, updated_at
+
+projects :
+id, owner_id, name, domain, language, country_target, audience, tone, status, public_tracking_key, secret_api_key, connected_at, last_seen_at, created_at, updated_at
+
+project_members :
+id, project_id, user_id, role, status, created_at
+UniqueConstraint(project_id, user_id)
+
+Rôles projet disponibles :
+owner, admin, editor, writer, viewer
 
 3. Routes créées
 
@@ -1404,6 +1471,7 @@ POST /projects
 GET  /projects/{project_id}
 PATCH /projects/{project_id}
 GET  /projects/{project_id}/connect
+
 4. Commandes pour lancer
 
 python3 -m venv venv
@@ -1412,35 +1480,43 @@ pip install -r requirements.txt
 cp .env.example .env
 alembic upgrade head
 uvicorn app.main:app --reload
-5. Tests effectués — 14/14 passent
-Test	Résultat
-register user	✅
-duplicate email rejeté	✅
-login user	✅
-login mauvais password	✅
-GET /auth/me	✅
-GET /auth/me sans token	✅
-create project	✅
-list projects	✅
-list ne retourne que ses projets	✅
-access own project OK	✅
-access other user project → 403	✅
-project member créé comme owner	✅
-patch project as owner	✅
-connect info (snippet + clé masquée)	✅
-Note technique : bcrypt doit rester < 4.0.0 — passlib 1.7.4 est incompatible avec bcrypt 4+/5+. Déjà pris en compte dans requirements.txt.
 
-6. Ce qui reste pour Jour 2 (CMS Core)
-Modèle articles (statuts complets : idea_proposed → published)
+5. Tests effectués — 14/14 passent
+
+register user
+duplicate email rejeté
+login user
+login mauvais password
+GET /auth/me
+GET /auth/me sans token
+create project
+list projects
+list ne retourne que ses projets
+access own project OK
+access other user project → 403
+project member créé comme owner
+patch project as owner
+connect info snippet + clé masquée
+
+Note technique :
+bcrypt doit rester < 4.0.0.
+passlib 1.7.4 est incompatible avec bcrypt 4+/5+.
+Déjà pris en compte dans requirements.txt.
+
+6. Ce qui reste pour Jour 2
+
+Modèle articles
 Modèle categories
 Routes CRUD articles liées à project_id
-Public API : GET /api/public/projects/{id}/articles et /{slug}
-Route POST /api/traffic/collect (collecte basique)
+Public API articles published
+Route POST /api/traffic/collect
 Servir GET /traffic.js
-Migration Alembic pour articles et categories
+Migration Alembic pour articles/categories/traffic_events
 ```
 
-### Prompt Backend Day 2
+---
+
+# Prompt Backend Day 2 — ARCHIVÉ / DÉJÀ FAIT
 
 ```txt
 Tu travailles sur le projet Ideas Studio.
@@ -1448,8 +1524,40 @@ Tu travailles sur le projet Ideas Studio.
 Avant de coder, lis entièrement :
 
 prod.md
+label.md
 
-Ce fichier est la source de vérité du projet.
+RÈGLE DE PRIORITÉ ENTRE LES DOCUMENTS
+
+prod.md est la source de vérité principale pour ce qui doit être codé maintenant en V1.
+
+label.md est une annexe stratégique IA/SEO long terme.
+Il sert à comprendre la direction future du produit, mais il ne doit pas élargir le scope du jour en cours.
+
+Si label.md propose un module avancé qui n’est pas explicitement demandé dans le Jour 2, ne l’implémente pas maintenant.
+
+Utilise label.md seulement pour :
+- garder une architecture extensible ;
+- éviter des choix qui bloqueraient les futurs modules IA/SEO ;
+- préparer proprement les futurs modules sans les coder aujourd’hui.
+
+Ne crée pas aujourd’hui les modules avancés de label.md :
+- Source Ledger
+- Source Verification Engine
+- Claim-to-Source Mapping
+- Deep Rewrite Engine
+- Natural Writing Engine
+- Google Fit Score
+- Originality Engine
+- Safe Publish Gate
+- ContentBrief
+- Model Router
+- Prompt Versioning
+- AI Jobs avancés
+- Article Versioning
+- Audit Trail avancé
+- Webhooks
+- Billing
+- Quotas IA
 
 AVANT DE MODIFIER
 
@@ -1470,7 +1578,8 @@ Avant de commencer le Jour 2, vérifie que les tests Jour 1 passent encore.
 
 Règles :
 - ne résume pas prod.md
-- ne l’ignore pas
+- ne résume pas label.md
+- ne les ignore pas
 - ne pars pas dans une autre architecture
 - ne fais pas autre chose que ce qui est demandé ici
 - travaille uniquement sur le JOUR 2 de la roadmap backend
@@ -1514,6 +1623,7 @@ Ne code pas encore :
 - performance avancée
 - recommandations post-publication
 - billing
+- modules avancés de label.md
 
 MODÈLES À CRÉER
 
@@ -1812,12 +1922,20 @@ RAPPORT FINAL
 
 Important :
 Ne commence pas le Jour 3.
+Ne code pas les modules avancés de label.md.
 ```
 
-### Rapport Day 2
+---
 
+# Rapport Day 2
 
-### Prompt Backend Day 3
+```txt
+À coller ici après réception du rapport final de Claude pour le Jour 2.
+```
+
+---
+
+# Prompt Backend Day 3
 
 ```txt
 Tu travailles sur le projet Ideas Studio.
@@ -1825,18 +1943,73 @@ Tu travailles sur le projet Ideas Studio.
 Avant de coder, lis entièrement :
 
 prod.md
+label.md
 
-Ce fichier est la source de vérité du projet.
+RÈGLE DE PRIORITÉ ENTRE LES DOCUMENTS
 
-Règles :
+prod.md est la source de vérité principale pour ce qui doit être codé maintenant en V1.
+
+label.md est une annexe stratégique IA/SEO long terme.
+Il sert à comprendre la direction future du produit, mais il ne doit pas élargir le scope du jour en cours.
+
+Si label.md propose un module avancé qui n’est pas explicitement demandé dans le Jour 3, ne l’implémente pas maintenant.
+
+Utilise label.md seulement pour :
+- garder une architecture extensible ;
+- éviter des choix qui bloqueraient les futurs modules IA/SEO ;
+- nommer proprement les dossiers/services si cela aide ;
+- préparer des abstractions simples, sans coder les modules avancés.
+
+Ne crée pas aujourd’hui les modules avancés de label.md :
+- Source Ledger
+- Source Verification Engine
+- Claim-to-Source Mapping
+- Deep Rewrite Engine complet
+- Natural Writing Engine complet
+- Google Fit Score
+- Originality Engine
+- Safe Publish Gate
+- ContentBrief complet
+- Model Router avancé
+- Prompt Versioning
+- AI Jobs avancés
+- Article Versioning
+- Audit Trail avancé
+- Webhooks
+- Billing
+- Quotas IA
+
+AVANT DE MODIFIER
+
+Commence par inspecter rapidement l’état actuel du projet :
+- structure app/
+- modèles existants
+- routers existants
+- services existants
+- providers existants s’il y en a
+- dependencies auth/permissions existantes
+- migrations Alembic existantes
+- tests existants
+
+Ne réécris pas les Jours 1 et 2.
+Ne casse pas les routes déjà fonctionnelles.
+Réutilise les helpers/services existants quand ils existent.
+Si une fonction existe déjà, améliore-la au lieu de créer un doublon.
+
+Avant de commencer le Jour 3, vérifie que les tests Jour 1 et Jour 2 passent encore.
+
+RÈGLES GÉNÉRALES
+
 - ne résume pas prod.md
-- ne l’ignore pas
+- ne résume pas label.md
 - ne pars pas dans une autre architecture
+- ne fais pas autre chose que ce qui est demandé ici
 - travaille uniquement sur le JOUR 3 de la roadmap backend
 - ne touche pas au frontend sauf minimum API nécessaire
 - ne code pas le SEO Analyzer complet aujourd’hui
 - ne code pas la performance post-publication aujourd’hui
 - ne code pas le billing
+- ne code pas les modules avancés de label.md aujourd’hui
 
 CONTEXTE
 
@@ -1846,30 +2019,38 @@ Jour 1 doit avoir créé :
 - projects
 - project_members
 - permissions
+- routes de base
+- migrations initiales
+- tests auth/projects
 
 Jour 2 doit avoir créé :
 - categories
 - articles
+- statuts articles
 - API publique articles
 - tracking de base
 - traffic_events
+- traffic.js
+- routes CMS
+- tests CMS/public API/tracking
 
 OBJECTIF JOUR 3
 
 Créer :
 - Idea Engine
 - séparation idea_only / full_article
-- LLMProvider abstraction
-- SearchProvider abstraction
+- LLMProvider abstraction simple
+- SearchProvider abstraction simple
 - création de cartes idées
 - lancement rédaction depuis une idée
 - rejet / priorité / brouillon manuel
 - routes API correspondantes
-- jobs background simples si possible
+- scheduler simple pour generate_daily_ideas
+- logs simples du pipeline si raisonnable
 
 PRINCIPE PRODUIT
 
-Ideas Studio ne doit pas rédiger automatiquement tous les jours.
+Ideas Studio ne doit pas rédiger automatiquement tous les jours sans validation.
 
 Le système doit d’abord proposer une idée :
 
@@ -1907,7 +2088,7 @@ Vérifie que articles contient déjà :
 - seo_score
 - quality_score
 
-Si certains champs manquent, ajoute migration backward-compatible.
+Si certains champs manquent, ajoute une migration backward-compatible.
 
 AJOUTER SI NÉCESSAIRE
 
@@ -1923,7 +2104,11 @@ Champs :
 - created_at
 
 But :
-suivre les étapes du pipeline.
+suivre les étapes simples du pipeline Jour 3.
+
+Important :
+article_logs doit rester simple.
+Ne crée pas encore le système complet ai_jobs décrit dans label.md.
 
 PROVIDERS À CRÉER
 
@@ -1938,8 +2123,8 @@ Interface :
 
 Créer implémentation simple :
 - MockLLMProvider pour tests/dev
-- OllamaLLMProvider si simple
-- prévoir Claude/OpenAI plus tard sans l’implémenter si hors scope
+- OllamaLLMProvider seulement si simple et non bloquant
+- prévoir Claude/OpenAI plus tard sans les implémenter aujourd’hui
 
 Créer abstraction :
 
@@ -1951,10 +2136,17 @@ Interface :
 
 Créer implémentation simple :
 - MockSearchProvider
-- SearXNGSearchProvider si simple/configuré
+- SearXNGSearchProvider seulement si simple/configuré
 
 Important :
 Le système doit fonctionner en mode dev même sans vraie IA grâce aux providers mock.
+
+Ne crée pas aujourd’hui :
+- LiteLLM complet
+- Model Router avancé
+- Model Performance Registry
+- Cost Tracker avancé
+- Prompt Versioning complet
 
 IDEA ENGINE
 
@@ -1968,7 +2160,7 @@ generate_idea(project_id, category_id=None)
 
 Elle doit :
 1. charger project
-2. charger stratégie projet si disponible
+2. charger catégorie si category_id fourni
 3. choisir catégorie prioritaire si category_id absent
 4. générer ou trouver un keyword principal
 5. trouver keywords secondaires
@@ -1998,23 +2190,34 @@ Fonction :
 start_writing_from_idea(article_id)
 
 Elle doit :
-1. vérifier que l’article appartient au projet
-2. vérifier status compatible :
+1. vérifier que l’article existe
+2. vérifier que l’article appartient bien à un projet
+3. vérifier status compatible :
    - idea_proposed
    - idea_priority
    - outline_ready
    - failed
-3. passer status=writing_in_progress
-4. utiliser keyword / angle / outline_json
-5. générer contenu complet
-6. créer meta_title/meta_description si absent
-7. générer excerpt
-8. calculer word_count
-9. status=draft_ready ou review_needed
-10. logguer les étapes
+4. passer status=writing_in_progress
+5. utiliser keyword / angle / outline_json
+6. générer contenu complet
+7. créer meta_title/meta_description si absent
+8. générer excerpt
+9. calculer word_count
+10. status=draft_ready ou review_needed
+11. logguer les étapes si article_logs existe
 
 Pour dev sans IA :
 - générer un contenu mock structuré avec H2/H3 depuis outline_json
+
+Important :
+Le Writing Engine Jour 3 reste simple.
+
+Ne code pas encore :
+- Deep Rewrite Engine complet
+- Natural Writing Engine complet
+- Originality Engine
+- Source Verification Engine
+- Safe Publish Gate
 
 ROUTES IDÉES
 
@@ -2044,7 +2247,7 @@ Action :
 - lance rédaction depuis une idée
 - si worker disponible, lancer en background
 - sinon exécuter sync en dev
-- retourne article mis à jour ou job_id
+- retourne article mis à jour ou job_id simple
 
 Créer :
 
@@ -2093,7 +2296,7 @@ POST /articles/{article_id}/rerun
 Action :
 - si idée → relancer génération plan ou rédaction
 - si failed → relancer depuis étape possible
-- v1 simple : relancer start_writing_from_idea
+- V1 simple : relancer start_writing_from_idea
 
 LAUNCH MODE
 
@@ -2116,7 +2319,7 @@ Si mode=idea_only :
 Si mode=full_article :
 - créer idée puis lancer writing_engine
 
-SCHEDULER
+SCHEDULER SIMPLE
 
 Créer fonction :
 
@@ -2128,8 +2331,9 @@ Elle doit :
 - éviter doublons
 - logguer résultat
 
-Ne branche pas encore forcément cron complet si trop long.
-Mais la fonction doit exister et être testable.
+Ne branche pas encore cron complet.
+Ne crée pas encore ai_jobs complet.
+La fonction doit seulement exister et être testable.
 
 SETTINGS
 
@@ -2140,7 +2344,7 @@ Ajouter dans config :
 - OLLAMA_URL
 - SEARXNG_URL
 
-SECURITÉ
+SÉCURITÉ
 
 Toutes les routes doivent vérifier :
 - user connecté
@@ -2153,38 +2357,283 @@ Permissions minimales :
 - owner/admin/editor peuvent rejeter/prioriser
 - viewer lecture seule
 
+Règle critique :
+Un utilisateur ne doit jamais accéder, modifier, générer ou rédiger pour un projet dont il n’est pas membre.
+
 TESTS MINIMUM
 
 Ajouter tests :
-1. generate idea crée un article status idea_proposed
-2. generate idea avec même keyword évite doublon
-3. reject idea met status idea_rejected
-4. priority met idea_priority
-5. manual draft met draft_ready
-6. start-writing génère content mock et status draft_ready
-7. user non membre ne peut pas générer idée
-8. viewer ne peut pas modifier
-9. generate_daily_ideas respecte IDEAS_PER_DAY
+1. les tests Jour 1 passent encore
+2. les tests Jour 2 passent encore
+3. generate idea crée un article status idea_proposed
+4. generate idea avec même keyword évite doublon
+5. reject idea met status idea_rejected
+6. priority met idea_priority
+7. manual draft met draft_ready
+8. start-writing génère content mock et status draft_ready
+9. user non membre ne peut pas générer idée
+10. viewer ne peut pas générer/modifier
+11. generate_daily_ideas respecte IDEAS_PER_DAY
+12. launch mode idea_only fonctionne
+13. launch mode full_article crée idée puis draft
+
+README
+
+Mettre à jour README avec :
+- endpoints Idea Engine
+- endpoints Writing Engine
+- mode mock IA
+- variables .env ajoutées
+- commandes tests
+
+COMMANDES ATTENDUES
+
+Le projet doit toujours démarrer avec :
+
+uvicorn app.main:app --reload
+
+Et tests avec :
+
+pytest
+
+Vérifie aussi :
+
+alembic upgrade head
 
 RAPPORT FINAL
 
 À la fin, donne :
 1. fichiers créés/modifiés
-2. providers ajoutés
-3. routes ajoutées
-4. fonctionnement idea_only
-5. fonctionnement full_article depuis idée
-6. fonctionnement mock IA
-7. tests effectués
-8. ce qui reste pour Jour 4
+2. modèles/tables ajoutés ou modifiés
+3. migrations ajoutées
+4. providers ajoutés
+5. routes ajoutées
+6. fonctionnement idea_only
+7. fonctionnement full_article depuis idée
+8. fonctionnement mock IA
+9. tests effectués
+10. confirmation que les tests Jour 1 passent encore
+11. confirmation que les tests Jour 2 passent encore
+12. bugs connus
+13. ce qui reste pour Jour 4
+14. commande exacte utilisée pour lancer les tests
 
 Important :
 Ne commence pas Jour 4.
+Ne code pas les modules avancés de label.md.
+Ne transforme pas Ideas Studio en usine nucléaire avant d’avoir fini la V1.
 ```
-### Rapport Day 3
+#### Support Day 3
+```txt
+Tu viens de terminer le Jour 3 du backend Ideas Studio.
 
+Avant de passer au Jour 4, fais une vérification ciblée du Jour 3.
 
-### Prompt Backend Day 4
+Lis d’abord :
+
+prod.md
+label.md
+
+Puis inspecte le code actuel.
+
+Objectif :
+vérifier que toutes les abstractions demandées au Jour 3 ont bien été créées et intégrées correctement.
+
+À vérifier précisément :
+
+1. LLMProvider
+
+Confirme si ces éléments existent :
+- app/services/providers/llm_provider.py
+- une interface ou classe de base LLMProvider
+- MockLLMProvider
+- get_llm_provider() ou équivalent
+- méthodes prévues :
+  - generate_text()
+  - generate_json()
+  - is_available()
+
+Vérifie aussi si writing_engine utilise bien cette abstraction ou une abstraction équivalente.
+
+Si ce n’est pas fait :
+- ajoute uniquement l’abstraction minimale LLMProvider
+- ajoute MockLLMProvider
+- connecte writing_engine au provider si nécessaire
+- ne crée pas Claude/OpenAI/Gemini aujourd’hui
+- ne demande aucune clé API
+- ne commence pas le Jour 4
+
+2. SearchProvider
+
+Confirme si ces éléments existent :
+- app/services/providers/search_provider.py
+- SearchProvider ou interface équivalente
+- MockSearchProvider
+- SearXNGSearchProvider si prévu
+- get_search_provider() ou équivalent
+- méthodes prévues :
+  - search()
+  - is_available()
+
+Vérifie aussi si idea_engine utilise bien cette abstraction.
+
+3. Idea Engine
+
+Vérifie :
+- generate_idea()
+- création article status=idea_proposed
+- déduplication par keyword actif dans le même projet
+- outline_json
+- serp_summary_json
+- opportunity_score
+- category_id optionnel
+- count max raisonnable dans la route generate
+
+4. Writing Engine
+
+Vérifie :
+- start_writing_from_idea()
+- statuts compatibles :
+  - idea_proposed
+  - idea_priority
+  - outline_ready
+  - failed
+- passage temporaire en writing_in_progress
+- génération de content mock
+- meta_title/meta_description si absents
+- excerpt
+- word_count
+- status final draft_ready ou review_needed
+- logs si article_logs existe
+
+5. Routes Jour 3
+
+Vérifie que les routes existent et fonctionnent :
+- POST /projects/{project_id}/ideas/generate
+- POST /articles/{article_id}/start-writing
+- POST /articles/{article_id}/reject
+- POST /articles/{article_id}/priority
+- POST /articles/{article_id}/manual-draft
+- POST /articles/{article_id}/rerun
+- POST /projects/{project_id}/launch
+
+6. Sécurité
+
+Vérifie :
+- user connecté obligatoire
+- accès projet obligatoire
+- user non membre bloqué
+- viewer ne peut pas générer/modifier
+- owner/admin/editor/writer autorisés selon les règles du Jour 3
+
+7. Tests
+
+Relance :
+
+pytest tests/ -v
+
+Vérifie que :
+- les tests Jour 1 passent encore
+- les tests Jour 2 passent encore
+- les tests Jour 3 passent encore
+
+RÈGLES IMPORTANTES
+
+- Ne commence pas le Jour 4.
+- Ne code pas le SEO Analyzer.
+- Ne code pas les modules avancés de label.md.
+- Ne fais pas de refonte générale.
+- Si quelque chose manque, corrige seulement ce qui manque pour compléter le Jour 3.
+- Si tout est déjà bon, ne modifie rien.
+
+Rapport attendu :
+
+1. LLMProvider : présent / manquant / corrigé
+2. SearchProvider : présent / manquant / corrigé
+3. Idea Engine : OK / problèmes trouvés
+4. Writing Engine : OK / problèmes trouvés
+5. Routes Jour 3 : OK / problèmes trouvés
+6. Sécurité : OK / problèmes trouvés
+7. Tests : résultat exact
+8. Fichiers modifiés si correction
+9. Verdict final :
+   - Jour 3 complet : oui/non
+   - Prêt pour Jour 4 : oui/non
+```
+
+---
+
+# Rapport Day 3
+
+```txt
+Jour 3 terminé — 53/53 tests passent.
+
+Fichiers créés :
+
+search_provider.py — SearchResult, MockSearchProvider, SearXNGSearchProvider, get_search_provider()
+log_service.py — log_step()
+idea_engine.py — generate_idea() avec déduplication par keyword actif
+writing_engine.py — start_writing_from_idea() avec outline + rédaction
+scheduler.py — generate_daily_ideas() pour tous les projets actifs
+schemas/ideas.py — tous les schémas Pydantic
+routers/ideas.py — 7 routes (generate, start-writing, reject, priority, manual-draft, rerun, launch)
+003_article_logs.py — migration article_logs
+
+Rapport d'audit Jour 3
+
+1. LLMProvider — présent, corrigé
+
+Interface, MockLLMProvider, OllamaLLMProvider, get_llm_provider(), generate_text(), generate_json(), is_available() : tous présents
+writing_engine utilise bien l'abstraction via llm.is_mock
+2. SearchProvider — présent, correct
+
+Interface, SearchResult, MockSearchProvider, SearXNGSearchProvider, get_search_provider(), search(), is_available() : tous présents
+idea_engine utilise bien l'abstraction
+3. Idea Engine — corrigé
+
+status="idea" (inexistant dans ARTICLE_STATUSES) → "idea_proposed" ✓
+Déduplication : ensemble des statuts actifs incomplet → corrigé (ajout idea_proposed, idea_priority, outline_ready, writing_requested) ✓
+4. Writing Engine — corrigé
+
+Statut intermédiaire writing_in_progress manquant → ajouté ✓
+meta_title / meta_description non générés si absents → ajoutés ✓
+excerpt non généré → ajouté ✓
+Statut final "draft" → "draft_ready" ✓
+5. Routes Jour 3 — corrigées
+
+generate : "writer" manquant dans les rôles → ajouté ✓
+start-writing : statuts vérifiés erronnés ("idea" au lieu de "idea_proposed"…) → corrigés ✓
+reject : statut et rôle corrigés ✓
+priority : PATCH → POST, status "idea_priority" maintenant effectivement appliqué ✓
+manual-draft : route déplacée vers /articles/{id}/manual-draft, transforme une idée existante, status="draft_ready" ✓
+rerun : statuts corrigés ✓
+launch : mode idea_only / full_article ajouté ✓
+6. Sécurité — corrigée
+
+get_member_for_project retournait None silencieusement → remplacé par _check_role() qui lève systématiquement 403 ✓
+Viewer bloqué sur toutes les routes de modification ✓
+Non-membre bloqué sur /articles/{id}/* ✓
+7. Tests — 61/61 passent
+
+Jour 1 (16) : ✓
+Jour 2 (20) : ✓
+Jour 3 (25) : ✓ (8 tests ajoutés : deduplication, viewer bloqué, non-membre bloqué, idea_priority, draft_ready, launch modes, scheduler)
+8. Fichiers modifiés
+
+idea_engine.py
+writing_engine.py
+routers/ideas.py
+schemas/ideas.py
+tests/test_ideas.py
+9. Verdict
+
+Jour 3 complet : oui
+Prêt pour Jour 4 : oui
+```
+
+---
+
+# Prompt Backend Day 4
 
 ```txt
 Tu travailles sur le projet Ideas Studio.
@@ -2192,12 +2641,63 @@ Tu travailles sur le projet Ideas Studio.
 Avant de coder, lis entièrement :
 
 prod.md
+label.md
 
-Ce fichier est la source de vérité du projet.
+RÈGLE DE PRIORITÉ ENTRE LES DOCUMENTS
 
-Règles :
+prod.md est la source de vérité principale pour ce qui doit être codé maintenant en V1.
+
+label.md est une annexe stratégique IA/SEO long terme.
+Il sert à comprendre la direction future du produit, mais il ne doit pas élargir le scope du jour en cours.
+
+Si label.md propose un module avancé qui n’est pas explicitement demandé dans le Jour 4, ne l’implémente pas maintenant.
+
+Utilise label.md seulement pour :
+- garder une architecture extensible ;
+- éviter des choix qui bloqueraient les futurs modules IA/SEO ;
+- préparer des scores ou champs futurs seulement si cela ne complique pas la V1.
+
+Ne crée pas aujourd’hui les modules avancés de label.md :
+- Source Ledger complet
+- Source Verification Engine complet
+- Claim-to-Source Mapping
+- Deep Rewrite Engine complet
+- Natural Writing Engine complet
+- Google Fit Score complet
+- Originality Engine complet
+- Safe Publish Gate complet
+- ContentBrief complet
+- Model Router avancé
+- Prompt Versioning
+- AI Jobs avancés
+- Article Versioning
+- Audit Trail avancé
+- Webhooks
+- Billing
+- Quotas IA
+
+AVANT DE MODIFIER
+
+Commence par inspecter rapidement l’état actuel du projet :
+- modèles articles/categories existants
+- routes articles existantes
+- routes ideas/writing existantes
+- services existants
+- migrations Alembic existantes
+- tests existants
+
+Ne réécris pas les Jours 1, 2 et 3.
+Ne casse pas les routes déjà fonctionnelles.
+Réutilise les helpers/services existants quand ils existent.
+Si une fonction existe déjà, améliore-la au lieu de créer un doublon.
+
+Avant de commencer le Jour 4, vérifie que les tests Jour 1, Jour 2 et Jour 3 passent encore.
+
+RÈGLES GÉNÉRALES
+
 - ne résume pas prod.md
-- ne l’ignore pas
+- ne résume pas label.md
+- ne pars pas dans une autre architecture
 - travaille uniquement sur le JOUR 4 de la roadmap backend
 - ne fais pas de frontend complet
 - ne code pas le design de l’éditeur
@@ -2218,14 +2718,15 @@ Jour 3 :
 - Writing Engine
 - cartes idées
 - start-writing depuis idée
+- providers mock simples
 
 OBJECTIF JOUR 4
 
 Créer :
 - SEO Analyzer backend
-- Readability Analyzer
-- Quality Analyzer
-- EEAT checks
+- Readability Analyzer simple
+- Quality Analyzer simple
+- EEAT checks simples
 - endpoint analyze article
 - sauvegarde article depuis éditeur
 - gestion meta/slug/cover/FAQ/callouts
@@ -2234,14 +2735,20 @@ Créer :
 
 PRINCIPE
 
-Le moteur d’analyse doit être détaillé en interne, mais simple à afficher.
+Le moteur d’analyse doit être détaillé en interne, mais simple dans l’affichage.
 
-Il vérifie beaucoup de critères, mais retourne des scores simples :
+Il vérifie plusieurs critères, mais retourne des scores simples :
 - SEO Score /100
 - Readability Score /100
 - Quality Score /100
 - EEAT Score /100
 - Publication Readiness
+
+Attention :
+label.md parle de Google Fit Score, Helpful Content Score, Trust Score, Safe Publish Gate, Source Verification, etc.
+Ces modules sont importants pour la suite, mais ne doivent pas être codés complètement aujourd’hui.
+
+Aujourd’hui, le Jour 4 doit rester sur le SEO Analyzer V1 prévu dans prod.md.
 
 MODÈLES À AJOUTER
 
@@ -2300,7 +2807,7 @@ Elle doit :
 14. analyser FAQ
 15. analyser lisibilité
 16. analyser qualité
-17. analyser EEAT
+17. analyser EEAT simple
 18. calculer scores
 19. sauvegarder seo_analyses
 20. mettre à jour scores sur articles
@@ -2335,7 +2842,6 @@ Vérifier :
 - phrases trop longues
 - paragraphes trop longs
 - répétitions
-- mots trop complexes si détectable
 - sections trop denses
 - manque de sous-titres
 - listes utiles
@@ -2355,16 +2861,20 @@ Vérifier :
 - valeur ajoutée faible
 - réponse à l’intention de recherche
 
-EEAT CHECKS
+EEAT CHECKS SIMPLES
 
 Vérifier :
-- présence sources/citations
+- présence sources/citations si possible
 - présence exemples concrets
 - présence conseils actionnables
-- absence d’affirmations non supportées
-- clarté de l’auteur ou du point de vue si disponible
+- absence d’affirmations trop vagues
 - contenu crédible
-- liens externes fiables si nécessaires
+- liens externes utiles si nécessaires
+
+Important :
+Ne crée pas encore Source Verification Engine complet.
+Ne crée pas encore Claim-to-Source Mapping.
+Ne bloque pas la publication avec Safe Publish Gate complet aujourd’hui.
 
 FORMAT ISSUE
 
@@ -2449,16 +2959,19 @@ Si meta_description trop courte :
 TESTS
 
 Ajouter tests :
-1. analyze article retourne scores
-2. article sans meta description crée warning
-3. article trop court pénalise quality
-4. article sans keyword dans title pénalise SEO
-5. article avec phrases longues pénalise readability
-6. critical bloque readiness
-7. editor patch sauvegarde content
-8. word_count recalculé
-9. viewer ne peut pas modifier
-10. user non membre ne peut pas analyser
+1. les tests Jour 1 passent encore
+2. les tests Jour 2 passent encore
+3. les tests Jour 3 passent encore
+4. analyze article retourne scores
+5. article sans meta description crée warning
+6. article trop court pénalise quality
+7. article sans keyword dans title pénalise SEO
+8. article avec phrases longues pénalise readability
+9. critical bloque readiness
+10. editor patch sauvegarde content
+11. word_count recalculé
+12. viewer ne peut pas modifier
+13. user non membre ne peut pas analyser
 
 README
 
@@ -2466,25 +2979,62 @@ Mettre à jour README :
 - endpoints analyse
 - exemple retour SEO
 - logique scores
+- limites de la V1
+- mention que les modules avancés de label.md arriveront plus tard
+
+COMMANDES ATTENDUES
+
+Le projet doit toujours démarrer avec :
+
+uvicorn app.main:app --reload
+
+Et tests avec :
+
+pytest
+
+Vérifie aussi :
+
+alembic upgrade head
 
 RAPPORT FINAL
 
 À la fin, donne :
 1. fichiers créés/modifiés
 2. tables/colonnes ajoutées
-3. checks SEO implémentés
-4. scores implémentés
-5. routes ajoutées
-6. tests effectués
-7. limitations connues
-8. ce qui reste pour Jour 5
+3. migrations ajoutées
+4. checks SEO implémentés
+5. scores implémentés
+6. routes ajoutées
+7. tests effectués
+8. confirmation que les tests Jour 1, 2 et 3 passent encore
+9. limitations connues
+10. ce qui reste pour Jour 5
+11. commande exacte utilisée pour lancer les tests
 
 Important :
 Ne commence pas Jour 5.
+Ne code pas les modules avancés de label.md.
 ```
-### Rapport Day 4
 
-### Prompt Backend Day 5
+---
+
+# Rapport Day 4
+
+```txt
+Jour 4 terminé — 77/77 tests passent. Voici ce qui a été livré :
+
+Fichiers créés :
+
+app/services/seo_analyzer.py — analyseur rule-based complet (SEO + Readability + Quality + EEAT), formule 100 - 20×critical - 10×warning - 3×info
+app/routers/seo.py — 5 routes : /analyze, /analysis/latest, /analyses, /editor (PATCH), /ready-check
+alembic/versions/004_seo_analyzer.py — migration table seo_analyses + 4 colonnes articles
+tests/test_seo.py — 16 tests
+Mise à jour : app/main.py et alembic/env.py pour inclure le nouveau routeur et le modèle.
+```
+
+---
+
+# Prompt Backend Day 5
 
 ```txt
 Tu travailles sur le projet Ideas Studio.
@@ -2492,12 +3042,66 @@ Tu travailles sur le projet Ideas Studio.
 Avant de coder, lis entièrement :
 
 prod.md
+label.md
 
-Ce fichier est la source de vérité du projet.
+RÈGLE DE PRIORITÉ ENTRE LES DOCUMENTS
 
-Règles :
+prod.md est la source de vérité principale pour ce qui doit être codé maintenant en V1.
+
+label.md est une annexe stratégique IA/SEO long terme.
+Il sert à comprendre la direction future du produit, mais il ne doit pas élargir le scope du jour en cours.
+
+Si label.md propose un module avancé qui n’est pas explicitement demandé dans le Jour 5, ne l’implémente pas maintenant.
+
+Utilise label.md seulement pour :
+- garder une architecture extensible ;
+- éviter des choix qui bloqueraient les futurs modules IA/SEO ;
+- préparer proprement la suite sans complexifier la V1.
+
+Ne crée pas aujourd’hui les modules avancés de label.md :
+- Source Ledger complet
+- Source Verification Engine complet
+- Claim-to-Source Mapping
+- Deep Rewrite Engine complet
+- Natural Writing Engine complet
+- Google Fit Score complet
+- Originality Engine complet
+- Safe Publish Gate complet
+- ContentBrief complet
+- Model Router avancé
+- Prompt Versioning
+- AI Jobs avancés
+- Article Versioning
+- Audit Trail avancé
+- Webhooks avancés
+- Billing
+- Quotas IA
+- Google Update Watcher
+- Topical Authority Engine avancé
+
+AVANT DE MODIFIER
+
+Commence par inspecter rapidement l’état actuel du projet :
+- modèles existants
+- routers existants
+- services existants
+- providers existants
+- migrations Alembic existantes
+- tests existants
+- README existant
+
+Ne réécris pas les Jours 1, 2, 3 et 4.
+Ne casse pas les routes déjà fonctionnelles.
+Réutilise les helpers/services existants quand ils existent.
+Si une fonction existe déjà, améliore-la au lieu de créer un doublon.
+
+Avant de commencer le Jour 5, vérifie que les tests Jour 1, Jour 2, Jour 3 et Jour 4 passent encore.
+
+RÈGLES GÉNÉRALES
+
 - ne résume pas prod.md
-- ne l’ignore pas
+- ne résume pas label.md
+- ne pars pas dans une autre architecture
 - travaille uniquement sur le JOUR 5 de la roadmap backend
 - ne fais pas de frontend complet
 - ne code pas billing
@@ -2512,7 +3116,7 @@ Jour 2 :
 - CMS/articles/categories/public API/tracking
 
 Jour 3 :
-- Idea Engine/Writing Engine
+- Idea Engine/Writing Engine/providers mock
 
 Jour 4 :
 - SEO Analyzer/Editor API
@@ -2651,6 +3255,10 @@ Si meta description faible :
 
 Ne pas créer doublon si recommandation pending existe déjà.
 
+Important :
+Ne pas créer aujourd’hui le système avancé complet décrit dans label.md.
+Le Jour 5 crée seulement une première version simple des recommandations.
+
 ROUTES PERFORMANCE
 
 Créer :
@@ -2698,7 +3306,7 @@ Créer helper :
 
 create_notification(project_id, title, message, level="info", type="system")
 
-SCHEDULER
+SCHEDULER SIMPLE
 
 Créer :
 
@@ -2743,9 +3351,9 @@ Vérifier :
 - API publique articles published seulement
 - articles scheduled non visibles avant date si logique implémentée
 - drafts non visibles
-- no secret leaked
+- aucune clé secrète exposée
 
-SECURITÉ
+SÉCURITÉ
 
 Toutes les routes privées :
 - user connecté
@@ -2755,16 +3363,20 @@ Toutes les routes privées :
 TESTS
 
 Ajouter tests :
-1. performance summary retourne data même vide
-2. article performance retourne data
-3. review_published_articles crée recommendation
-4. pas de doublon recommendation
-5. accept recommendation
-6. reject recommendation
-7. notifications list
-8. mark notification read
-9. daily task appelle generate_daily_ideas et review
-10. API publique ne leak pas draft/scheduled non publié
+1. les tests Jour 1 passent encore
+2. les tests Jour 2 passent encore
+3. les tests Jour 3 passent encore
+4. les tests Jour 4 passent encore
+5. performance summary retourne data même vide
+6. article performance retourne data
+7. review_published_articles crée recommendation
+8. pas de doublon recommendation
+9. accept recommendation
+10. reject recommendation
+11. notifications list
+12. mark notification read
+13. daily task appelle generate_daily_ideas et review
+14. API publique ne leak pas draft/scheduled non publié
 
 DOCUMENTATION
 
@@ -2774,8 +3386,10 @@ Mettre à jour README :
 - scheduler
 - daily tasks
 - workflow complet backend V1
+- limites V1
+- modules label.md prévus pour plus tard
 
-AUDIT FINAL BACKEND
+AUDIT FINAL BACKEND RAPIDE
 
 Faire un audit rapide :
 - routes principales
@@ -2785,27 +3399,108 @@ Faire un audit rapide :
 - absence de secrets frontend
 - tests OK
 
+COMMANDES ATTENDUES
+
+Le projet doit toujours démarrer avec :
+
+uvicorn app.main:app --reload
+
+Et tests avec :
+
+pytest
+
+Vérifie aussi :
+
+alembic upgrade head
+
 RAPPORT FINAL
 
 À la fin, donne :
 1. fichiers créés/modifiés
 2. modèles ajoutés
-3. routes ajoutées
-4. performance summary fonctionnement
-5. optimization engine fonctionnement
-6. scheduler fonctionnement
-7. notifications fonctionnement
-8. tests effectués
-9. points faibles restants
-10. backend V1 prêt ou non pour frontend
+3. migrations ajoutées
+4. routes ajoutées
+5. performance summary fonctionnement
+6. optimization engine fonctionnement
+7. scheduler fonctionnement
+8. notifications fonctionnement
+9. tests effectués
+10. confirmation que les tests Jour 1, 2, 3 et 4 passent encore
+11. points faibles restants
+12. backend V1 prêt ou non pour frontend
+13. commande exacte utilisée pour lancer les tests
 
 Important :
 Ne code pas le frontend.
 Ne commence pas billing.
+Ne code pas les modules avancés de label.md.
 ```
-### Rapport Day 5
 
-## PROMPT AUDIT FINAL BACKEND
+---
+
+# Rapport Day 5
+
+```txt
+Rapport final — Jour 5
+1. Fichiers créés/modifiés
+Créés :
+
+app/models/optimization_recommendation.py
+app/models/notification.py
+app/services/notification_service.py
+app/services/performance_service.py
+app/services/optimization_engine.py
+app/services/scheduler_service.py
+app/schemas/performance.py, recommendation.py, notification.py
+app/routers/performance.py, recommendations.py, notifications.py
+alembic/versions/005_performance_optimization.py
+app/cli.py
+tests/test_day5.py
+Modifiés : app/main.py, alembic/env.py, app/models/article.py (+ search_console_metrics_json), README.md
+
+2. Modèles ajoutés
+optimization_recommendations, notifications
+
+3. Migrations ajoutées
+005_performance_optimization.py — 2 tables + 1 colonne placeholder
+
+4. Routes ajoutées (11)
+Performance (3) · Recommendations (5) · Notifications (3)
+
+5. Performance summary
+Agrège les traffic_events par période configurable (30d, 7d, 90d). Retourne total_views, unique_pages, top_pages, referrers, countries, devices, trend_by_day. Résultat vide si aucun trafic — jamais d'erreur.
+
+6. Optimization Engine
+review_published_articles(project_id) parcourt les articles published avec published_at ≥ J+7, classe en J+7/J+30/J+90, crée des OptimizationRecommendation selon 5 règles V1. Anti-doublon : une recommandation pending du même type bloque la création. Crée une Notification par article avec nouvelles recommandations.
+
+7. Scheduler
+run_daily_project_tasks(project_id) enchaîne generate_daily_ideas + review_published_articles + notification de synthèse. run_all_projects_daily_tasks() boucle sur tous les projets actifs.
+
+8. Notifications
+Helper create_notification() utilisable depuis n'importe quel service. Routes : liste, mark-read, read-all. Non exposées sans auth.
+
+9. Tests effectués
+pytest tests/ -v — 97/97 passent
+
+10. Confirmation tests Jours 1–4
+Tous passent : Jour 1 (16), Jour 2 (20), Jour 3 (25), Jour 4 (16), Jour 5 (20) = 97 total
+
+11. Points faibles restants
+Pas de workers Redis/RQ — le scheduler doit être appelé via CLI ou cron externe
+Performance basée sur les traffic_events locaux seulement (pas Search Console)
+search_console_metrics_json préparé en DB mais non rempli (placeholder V2)
+SQLite en dev : datetimes naive — corrigé via _as_utc() helper
+12. Backend V1 prêt pour frontend ?
+Oui. Toutes les APIs décrites dans prod.md sont opérationnelles. Architecture extensible pour les modules de label.md (LLM Gateway, Source Verification, Google Fit Score, etc.) sans refonte nécessaire.
+
+13. Commande exacte des tests
+
+source venv/bin/activate && python -m pytest tests/ -v
+```
+
+---
+
+# PROMPT AUDIT FINAL BACKEND
 
 ```txt
 Tu travailles sur le projet Ideas Studio.
@@ -2813,6 +3508,18 @@ Tu travailles sur le projet Ideas Studio.
 Avant de répondre, lis entièrement :
 
 prod.md
+label.md
+
+RÈGLE DE PRIORITÉ ENTRE LES DOCUMENTS
+
+prod.md est la source de vérité principale pour vérifier la V1 backend.
+
+label.md est une annexe stratégique IA/SEO long terme.
+Il sert à vérifier que l’architecture ne bloque pas les évolutions futures, mais il ne doit pas être utilisé pour déclarer la V1 incomplète simplement parce que les modules avancés ne sont pas encore codés.
+
+Important :
+Ne critique pas l’absence des modules avancés de label.md comme un bug bloquant de la V1.
+Tu peux les lister comme améliorations futures, dette stratégique ou roadmap V1.5/V2.
 
 Tu dois faire un audit complet du backend V1 après les jours 1 à 5.
 
@@ -2831,6 +3538,7 @@ Vérifier si le backend V1 est réellement prêt pour que le front-end soit dév
 - pas de logique énorme dans les routers
 - config propre
 - migrations présentes
+- architecture suffisamment extensible pour les futurs modules de label.md
 
 2. Auth
 - register
@@ -2918,22 +3626,422 @@ Vérifier si le backend V1 est réellement prêt pour que le front-end soit dév
 - commandes migration
 - commandes tests
 
+13. Compatibilité future avec label.md
+Vérifie seulement si l’architecture permet plus tard :
+- LLMProvider plus avancé
+- Source Verification Engine
+- ContentBrief
+- Google Fit Score
+- Safe Publish Gate
+- Model Router
+- Prompt Versioning
+- Article Versioning
+- Webhooks
+
+Mais ne demande pas de les coder maintenant.
+
 SORTIE ATTENDUE
 
 Donne un rapport structuré :
 
 1. Ce qui est prêt
 2. Ce qui est partiellement prêt
-3. Ce qui manque
+3. Ce qui manque réellement pour la V1
 4. Bugs ou risques
 5. Dette technique
 6. Recommandations avant frontend
 7. Liste des endpoints disponibles
 8. Liste des modèles/tables
-9. Verdict final :
+9. Compatibilité future avec label.md
+10. Améliorations futures issues de label.md, non bloquantes pour la V1
+11. Verdict final :
    - Backend V1 prêt pour frontend : oui/non
    - Si non, liste exacte des corrections bloquantes
 
 Ne corrige rien sans que je te le demande.
+Ne transforme pas les modules avancés de label.md en exigences bloquantes pour la V1.
 ```
 
+### Rapport Audit Final Backend
+
+```txt
+Audit Backend V1 — Ideas Studio (Jours 1-5)
+Généré le 2026-05-05 — 97/97 tests passent
+
+1. Ce qui est prêt
+Module	Statut	Détail
+Auth JWT	✅ Prêt	Register, login, logout (token blacklist), GET /auth/me, bcrypt + python-jose, middleware token blacklist en mémoire
+Projects	✅ Prêt	CRUD complet, public_tracking_key auto-généré, GET /connect avec masquage de la clé secrète, ProjectMember role-based
+Categories	✅ Prêt	CRUD complet, rattaché à un projet, protection par membership
+Articles (CMS)	✅ Prêt	CRUD + filtres (status, category, search, published_only, pagination), PATCH /editor, publish/unpublish/schedule, statuses complets
+Tracking	✅ Prêt	traffic.js servi dynamiquement, POST /api/traffic/collect sans auth, collecte path/url/referrer/user_agent
+Idea Engine	✅ Prêt	generate + launch (idea_only / full_article / dry_run), reject/priority/rerun, abstraction LLM/Search provider
+Writing Engine	✅ Prêt	start-writing, manual-draft, pipeline outline→draft via LLM provider
+SEO Analyzer	✅ Prêt	4 familles de règles (SEO / Readability / Quality / EEAT), formule scoring documentée, ready-check, SeoAnalysis historisé
+Performance	✅ Prêt	Summary + articles list + article detail, filtre period=Nd, agrégation sur traffic_events
+Recommendations	✅ Prêt	5 règles V1 (low_traffic, faq, meta_desc, seo_score, internal_links), anti-doublon pending, accept/reject/apply
+Notifications	✅ Prêt	Création automatique via optimization engine, list, mark-read, read-all
+Public API	✅ Prêt	Filtre strict status="published", aucun champ sensible exposé
+CLI	✅ Prêt	daily, generate-ideas --project-id, review --project-id
+Migrations	✅ Prêt	Chaîne 001→002→003→004→005 cohérente
+2. Ce qui est partiellement prêt
+Gestion des membres du projet
+
+ProjectMember existe en base, le modèle/service est fonctionnel, le role-check est utilisé partout.
+POST /projects/{id}/members est référencé dans le README mais n'existe pas en tant que route HTTP. Les tests qui en ont besoin contournent via insertion directe en DB (TestingSessionLocal).
+Impact : bloquant pour le frontend — impossible d'inviter un collaborateur sans accès direct à la base.
+Provider configuration
+
+L'abstraction LLMProvider / SearchProvider est propre et fonctionne en mock.
+Ollama est branché mais non testé de bout en bout (pas de test d'intégration avec un vrai serveur Ollama).
+.env.example ne documente pas les variables ajoutées aux Jours 3-5 (IDEAS_PER_DAY, DEFAULT_LLM_PROVIDER, DEFAULT_SEARCH_PROVIDER, OLLAMA_URL, OLLAMA_MODEL, SEARXNG_URL). Le README les documente correctement — mais .env.example est la référence pour un nouveau développeur.
+Token blacklist
+
+Implémenté en mémoire (set()). Fonctionnel en dev/test, mais non persistant — redémarrer le serveur invalide tous les tokens blacklistés. Acceptable V1, problème V2+ prod.
+3. Ce qui manque réellement pour la V1
+Manque	Priorité	Impact
+POST /projects/{id}/members	Critique	Le frontend ne peut pas gérer les équipes
+.env.example incomplet	Élevée	Onboarding cassé pour un nouveau dev
+DELETE /projects/{id}	Moyenne	Impossible de supprimer un projet via API
+DELETE /projects/{id}/members/{user_id}	Moyenne	Impossible de retirer un membre
+Pagination sur /notifications et /recommendations	Basse	OK pour V1, nécessaire dès >50 entrées
+4. Bugs et risques
+Bug 1 — POST /projects/{id}/members absent (critique)
+Le README documente cette route, elle est attendue par le frontend, mais aucune route n'existe dans app/routers/projects.py. Les tests qui l'appellent ne vérifient pas le status code (ex. test_seo.py ligne ~160), ce qui masque le 404.
+
+Bug 2 — Token blacklist non persistante
+BLACKLISTED_TOKENS: set[str] dans app/core/security.py est une variable globale. En multi-worker (uvicorn --workers 4), chaque processus a sa propre copie — un token blacklisté sur le worker 1 reste valide sur le worker 2.
+
+Risque 1 — CORS wildcard
+allow_origins=["*"] dans main.py est correct en dev mais ne doit pas aller en production sans restriction.
+
+Risque 2 — allow_credentials=True avec allow_origins=["*"]
+La combinaison allow_credentials=True + allow_origins=["*"] viole la spec CORS (les navigateurs la rejettent). FastAPI/starlette lève une exception au démarrage si cette combinaison est détectée — vérifier que allow_credentials n'est pas activé simultanément.
+
+Risque 3 — SQLite en production
+DATABASE_URL defaulte à SQLite. Acceptable en dev, problème de concurrence en production (writes sérialisés, verrous). Documenter explicitement que PostgreSQL est requis pour la prod.
+
+Risque 4 — Naive datetime SQLite
+Le bug a été corrigé via _as_utc() dans optimization_engine.py, mais d'autres comparaisons de dates dans le projet (ex. tracking_service.py, performance_service.py) pourraient subir le même problème si elles comparent des datetimes issus de SQLite avec datetime.now(timezone.utc). À surveiller lors du passage PostgreSQL.
+
+5. Dette technique
+Item	Sévérité	Détail
+Token blacklist en mémoire	Moyenne	Doit migrer vers Redis pour la prod multi-worker
+_get_article_view_count charge tous les events en mémoire	Moyenne	db.query(...).all() puis filtre Python — OK avec <10k events, lent ensuite
+Pas d'index sur traffic_events.path	Basse	Requêtes performance lentes à large volume
+ideas.py router : _run_ideas dupliqué dans scheduler_service.py	Basse	La logique de génération d'idées est répliquée
+Aucune limite sur content article	Basse	Un article très long peut saturer le LLM
+SeoAnalysis non purgé	Basse	Accumulation infinie d'analyses — prévoir TTL ou limite max
+6. Recommandations avant de démarrer le frontend
+Bloquant (à faire avant J1 frontend) :
+
+Implémenter POST /projects/{id}/members — sans ça, la gestion d'équipe est impossible via l'interface. Corps attendu : {"user_id": "...", "role": "editor|admin|viewer"}. Prévoir aussi DELETE /projects/{id}/members/{user_id} et GET /projects/{id}/members.
+
+Compléter .env.example avec toutes les variables requises (copier depuis README).
+
+Fortement conseillé :
+
+Documenter la combinaison CORS — choisir entre allow_origins=["*"] (sans credentials) ou allow_origins=["http://localhost:3000"] (avec credentials si cookies JWT).
+
+Ajouter GET /projects/{id}/members — le frontend en aura besoin pour afficher l'équipe.
+
+Ajouter DELETE /projects/{id} — nécessaire pour les settings du projet.
+
+Non bloquant mais utile :
+
+Migrer vers PostgreSQL dès le premier test de charge.
+Ajouter un index sur traffic_events(project_id, created_at) — les queries performance en bénéficieront immédiatement.
+7. Liste des endpoints disponibles (37 routes)
+
+Auth
+  POST /auth/register
+  POST /auth/login
+  GET  /auth/me
+  POST /auth/logout
+
+Projects
+  GET  /projects
+  POST /projects
+  GET  /projects/{id}
+  PATCH /projects/{id}
+  GET  /projects/{id}/connect
+  POST /projects/{id}/members          ← NON IMPLÉMENTÉ (404)
+
+Categories
+  GET  /projects/{id}/categories
+  POST /projects/{id}/categories
+  GET  /categories/{id}
+  PATCH /categories/{id}
+  DELETE /categories/{id}
+
+Articles
+  GET  /projects/{id}/articles
+  POST /projects/{id}/articles
+  GET  /articles/{id}
+  PATCH /articles/{id}
+  POST /articles/{id}/publish
+  POST /articles/{id}/schedule
+  POST /articles/{id}/unpublish
+
+Idea Engine
+  POST /projects/{id}/ideas/generate
+  POST /projects/{id}/launch
+  POST /articles/{id}/start-writing
+  POST /articles/{id}/reject
+  POST /articles/{id}/priority
+  POST /articles/{id}/manual-draft
+  POST /articles/{id}/rerun
+
+SEO Analyzer
+  POST /articles/{id}/analyze
+  GET  /articles/{id}/analysis/latest
+  GET  /articles/{id}/analyses
+  PATCH /articles/{id}/editor
+  POST /articles/{id}/ready-check
+
+Performance
+  GET  /projects/{id}/performance/summary
+  GET  /projects/{id}/performance/articles
+  GET  /articles/{id}/performance
+
+Recommendations
+  GET  /projects/{id}/recommendations
+  POST /projects/{id}/recommendations/review
+  POST /recommendations/{id}/accept
+  POST /recommendations/{id}/reject
+  POST /recommendations/{id}/apply
+
+Notifications
+  GET  /projects/{id}/notifications
+  POST /notifications/{id}/read
+  POST /projects/{id}/notifications/read-all
+
+Public API (sans auth)
+  GET  /api/public/projects/{id}/articles
+  GET  /api/public/projects/{id}/articles/{slug}
+
+Tracking
+  GET  /traffic.js
+  POST /api/traffic/collect
+
+Health
+  GET  /health
+8. Modèles / Tables
+Table	Champs clés
+users	id, email, hashed_password, name, role, created_at
+projects	id, owner_id, name, domain, language, public_tracking_key, secret_api_key, status, created_at
+project_members	id, project_id, user_id, role
+categories	id, project_id, name, slug, description
+articles	id, project_id, category_id, title, slug, content, status, keyword, seo_score, readability_score, quality_score, eeat_score, faq_json, internal_links_json, external_links_json, search_console_metrics_json, published_at, scheduled_at, …
+seo_analyses	id, article_id, seo_score, readability_score, quality_score, eeat_score, readiness_status, issues_json, suggestions_json, created_at
+traffic_events	id, project_id, url, path, referrer, user_agent, created_at
+optimization_recommendations	id, project_id, article_id, type, priority, reason, suggestion, status, created_at, updated_at
+notifications	id, project_id, user_id, type, title, message, level, read_at, created_at
+9. Compatibilité future avec label.md
+Le backend V1 est structuré de façon à absorber les modules label.md sans refactoring majeur :
+
+Module label.md	Compatibilité	Note
+LLM Gateway (LiteLLM)	✅ Directe	Remplace MockLLMProvider / OllamaProvider — l'interface LLMProvider est déjà abstraite
+Deep Rewrite Engine	✅ Directe	Nouveau service, nouveaux champs sur articles
+Source Ledger	✅ Directe	Nouvelle table sources, champ JSON sur articles
+SearXNG	✅ Déjà partiellement branché	SearchProvider existe, SearXNGProvider implémenté
+Originality Engine	✅ Directe	Nouveau service + nouveau score sur seo_analyses
+Anti-Cannibalization	✅ Directe	Query sur articles par keyword — pas de changement de modèle
+Internal Linking Engine	✅ Directe	Extension de optimization_engine.py
+Article Versioning	⚠️ Requiert migration	Nouvelle table article_versions — modèle actuel sans historique
+Search Console	⚠️ Requiert migration	search_console_metrics_json placeholder existe — à typer
+Webhooks	⚠️ Requiert worker	Necessaire un système de queue (Redis/RQ)
+Billing	❌ Hors scope V1	Architecture séparée requise
+Google Update Watcher	❌ Hors scope V1	Service externe à intégrer
+10. Améliorations futures (non bloquantes V1)
+Issues de label.md, à planifier post-frontend :
+
+Model Router : sélection automatique du LLM selon le contexte (idée vs rédaction vs SEO) — infrastructure déjà en place via LLMProvider
+Google Fit Score : score de pertinence par rapport aux SERPs — requiert Search Console ou SearXNG
+Safe Publish Gate : vérification automatique avant publication (min word count, min SEO score, meta présente) — peut s'appuyer sur ready-check existant
+ContentBrief : génération de brief structuré avant la rédaction — extension de outline_json
+Topical Authority Engine : analyse du cluster thématique du blog — requiert indexation complète des articles publiés
+Author Profiles : table authors + champ author_id sur articles
+11. Verdict final
+Le backend V1 est fonctionnel et couvrant pour le frontend, avec une réserve critique.
+
+✅ 97/97 tests passent. Toutes les routes prévues dans la roadmap Jours 1-5 sont implémentées, testées, et documentées. L'architecture est propre (SQLAlchemy 2.0, Pydantic v2, abstraction providers, role-based access control cohérent, Public API isolée).
+
+⚠️ Un point bloquant avant de démarrer le frontend : POST /projects/{id}/members n'existe pas. C'est la seule fonctionnalité documentée dans le README qui retourne un 404. À implémenter en moins d'une heure — c'est une route CRUD standard qui suit exactement le pattern des autres routes du projet.
+
+⚠️ Un point de fragilité opérationnel : .env.example est incomplet — un nouveau développeur ne peut pas configurer le projet correctement sans consulter le README en parallèle.
+
+Une fois POST /projects/{id}/members implémenté et .env.example complété, le backend est prêt pour le frontend.
+```
+
+### Revue Audit Final Backend
+
+```txt
+Tu travailles sur Ideas Studio.
+
+Avant de coder, lis :
+
+prod.md
+label.md
+
+Objectif :
+corriger uniquement les blocages identifiés dans l’audit final backend V1.
+
+Ne commence pas le frontend.
+Ne code pas de module avancé de label.md.
+Ne fais pas de refonte générale.
+Ne touche pas aux modules qui fonctionnent déjà sauf nécessité directe.
+
+BLOCAGE 1 — Routes project members manquantes
+
+L’audit a trouvé que ProjectMember existe déjà en base et que les permissions utilisent déjà les rôles, mais les routes HTTP de gestion d’équipe sont manquantes.
+
+À implémenter :
+
+GET /projects/{project_id}/members
+- retourne la liste des membres du projet
+- accessible seulement aux membres du projet
+- doit inclure au minimum :
+  - id
+  - user_id
+  - user name/email si relation disponible
+  - role
+  - status
+  - created_at
+
+POST /projects/{project_id}/members
+- ajoute un membre au projet
+- uniquement owner/admin
+- body attendu :
+  {
+    "user_id": "...",
+    "role": "admin|editor|writer|viewer"
+  }
+- interdit d’ajouter deux fois le même user au même projet
+- interdit d’ajouter un membre avec role owner via cette route
+- status par défaut = active
+- retourne le membre créé
+
+PATCH /projects/{project_id}/members/{user_id}
+- modifie le rôle d’un membre
+- uniquement owner/admin
+- interdit de modifier le owner principal si cela casse le projet
+- interdit de donner role owner via cette route
+- retourne le membre modifié
+
+DELETE /projects/{project_id}/members/{user_id}
+- retire un membre du projet
+- uniquement owner/admin
+- interdit de supprimer le owner principal du projet
+- retourne un message clair
+
+Règles sécurité :
+- user non membre du projet → 403
+- viewer/writer/editor ne peuvent pas gérer les membres
+- admin peut gérer les membres sauf owner principal
+- owner peut gérer les membres
+- ne jamais permettre à un projet de se retrouver sans owner
+
+BLOCAGE 2 — .env.example incomplet
+
+Complète .env.example avec toutes les variables utilisées par les jours 1 à 5.
+
+Doit contenir au minimum :
+
+APP_NAME=Ideas Studio
+APP_ENV=development
+APP_URL=http://localhost:8000
+DATABASE_URL=sqlite:///./ideas_studio.db
+SECRET_KEY=change-me
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+
+IDEAS_PER_DAY=1
+DEFAULT_LLM_PROVIDER=mock
+DEFAULT_SEARCH_PROVIDER=mock
+OLLAMA_URL=http://localhost:11434
+OLLAMA_MODEL=
+SEARXNG_URL=
+
+Ajoute aussi toute autre variable réellement utilisée dans app/core/config.py.
+
+TESTS À AJOUTER
+
+Ajoute des tests pour :
+
+1. GET /projects/{id}/members fonctionne pour owner
+2. POST /projects/{id}/members ajoute un membre
+3. POST empêche doublon project_id/user_id
+4. POST interdit role owner
+5. PATCH modifie le rôle d’un membre
+6. DELETE retire un membre
+7. DELETE interdit de retirer le owner principal
+8. viewer ne peut pas gérer les membres
+9. user non membre ne peut pas voir/gérer les membres
+10. tous les anciens tests passent encore
+
+DOCUMENTATION
+
+Mets à jour README si nécessaire :
+- routes members
+- exemple body POST/PATCH
+- permissions
+
+COMMANDES
+
+Relance :
+
+python -m pytest tests/ -v
+alembic upgrade head
+
+RAPPORT FINAL ATTENDU
+
+Donne :
+1. fichiers modifiés
+2. routes ajoutées
+3. règles de sécurité appliquées
+4. .env.example complété : oui/non
+5. tests ajoutés
+6. résultat exact des tests
+7. backend V1 prêt frontend : oui/non
+
+Important :
+Corrige uniquement ces blocages.
+Ne commence pas autre chose.
+```
+
+#### Rapport revue audit final 
+```txt
+Rapport final
+1. Fichiers modifiés / créés
+Fichier	Action
+app/schemas/member.py	Créé — MemberAdd, MemberPatch, MemberPublic
+app/routers/members.py	Créé — 4 routes members
+app/main.py	Modifié — import + include_router(members.router)
+.env.example	Modifié — toutes les variables ajoutées
+tests/test_members.py	Créé — 10 tests
+README.md	Modifié — section Members ajoutée
+2. Routes ajoutées
+
+GET    /projects/{id}/members
+POST   /projects/{id}/members
+PATCH  /projects/{id}/members/{user_id}
+DELETE /projects/{id}/members/{user_id}
+3. Règles de sécurité appliquées
+Non-membre → 403 sur toutes les routes members
+viewer/writer/editor → 403 sur POST/PATCH/DELETE
+Rôle owner non assignable via API → 422 (validation Pydantic)
+Doublon project_id/user_id → 409
+Owner principal (= project.owner_id) non modifiable et non supprimable → 403
+Admin peut gérer tous les membres sauf le owner principal
+4. .env.example complété : oui
+Toutes les variables de app/core/config.py sont présentes : APP_NAME, APP_ENV, APP_URL, DATABASE_URL, SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, IDEAS_PER_DAY, DEFAULT_LLM_PROVIDER, DEFAULT_SEARCH_PROVIDER, OLLAMA_URL, OLLAMA_MODEL, SEARXNG_URL.
+
+5. Tests ajoutés : 10/10
+list_members_owner · add_member_success · add_member_duplicate_blocked · add_member_role_owner_blocked · patch_member_role · delete_member_success · delete_owner_blocked · viewer_cannot_add_member · nonmember_cannot_list_members · nonmember_cannot_add_member
+
+6. Résultat des tests
+
+107 passed, 1 warning in 126.36s
+7. Backend V1 prêt frontend : oui
+Les deux blocages identifiés dans l'audit sont corrigés. Les 97 tests originaux passent toujours. 10 nouveaux tests couvrent entièrement la gestion d'équipe.
+```
