@@ -116,18 +116,28 @@ def editor_update(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    from datetime import datetime, timezone
+    from app.core.utils import calculate_word_count
+    from app.services.version_service import create_version, should_create_manual_version
+
     article = _get_article_or_404(db, article_id)
     _check_role(db, current_user.id, article.project_id, {"owner", "admin", "editor", "writer"})
 
     data = payload.model_dump(exclude_unset=True)
+
+    if should_create_manual_version(data):
+        create_version(db, article, "manual", current_user.id)
+
     for field, value in data.items():
         setattr(article, field, value)
 
-    from datetime import datetime, timezone
+    if "content" in data:
+        article.word_count = calculate_word_count(article.content)
+
     article.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(article)
-    return {"id": article.id, "updated": True}
+    return {"id": article.id, "updated": True, "word_count": article.word_count}
 
 
 @router.post("/articles/{article_id}/ready-check", response_model=ReadyCheckResponse)

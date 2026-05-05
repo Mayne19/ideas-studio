@@ -41,9 +41,13 @@ class ArticleEditorUpdate(BaseModel):
     title: str | None = None
     slug: str | None = None
     content: str | None = None
+    excerpt: str | None = None
     meta_title: str | None = None
     meta_description: str | None = None
     cover_image_url: str | None = None
     faq_json: str | None = None
     callouts_json: str | None = None
+    internal_links_json: str | None = None
+    external_links_json: str | None = None
+    content_blocks_json: str | None = None
     category_id: str | None = None

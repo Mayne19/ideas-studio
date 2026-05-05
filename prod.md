@@ -4045,3 +4045,689 @@ list_members_owner · add_member_success · add_member_duplicate_blocked · add_
 7. Backend V1 prêt frontend : oui
 Les deux blocages identifiés dans l'audit sont corrigés. Les 97 tests originaux passent toujours. 10 nouveaux tests couvrent entièrement la gestion d'équipe.
 ```
+
+## SUITE BACKEND
+## Stack et outils validés — règle générale
+
+Avant d’installer une librairie ou de choisir un outil, vérifier cette section.
+
+Les outils officiels de Ideas Studio V1 sont ceux listés ici.
+
+Ne pas choisir :
+- un autre éditeur WYSIWYG
+- une autre stack backend
+- un autre système de jobs
+- un autre outil SEO externe payant
+- un autre provider IA par défaut
+
+sans validation explicite.
+
+### Backend
+
+- Python
+- FastAPI
+- SQLAlchemy ou SQLModel
+- Alembic
+- PostgreSQL en production
+- SQLite seulement en développement local
+- Pydantic
+- python-dotenv
+- passlib/bcrypt
+- python-jose/JWT
+- Uvicorn
+
+### Jobs background
+
+Outil prévu :
+
+- Redis + RQ
+
+Important :
+Redis/RQ est prévu pour les jobs réels, mais ne doit pas être forcé dans les étapes où une version simple/synchrone suffit.
+
+Jobs prévus :
+- generate_idea
+- write_article
+- analyze_article
+- publish_article
+- review_performance
+- generate_recommendations
+
+### IA
+
+Ideas Studio ne crée pas son propre LLM.
+
+Le système utilise une abstraction :
+
+- LLMProvider
+
+Providers prévus :
+- MockLLMProvider pour tests/dev
+- OllamaLLMProvider pour local
+- ClaudeProvider optionnel premium
+- OpenAIProvider optionnel plus tard
+- GeminiProvider optionnel plus tard
+
+### Recherche web / SERP
+
+Le système utilise une abstraction :
+
+- SearchProvider
+
+Providers prévus :
+- MockSearchProvider pour tests/dev
+- SearXNGSearchProvider pour recherche locale
+- TavilySearchProvider optionnel plus tard
+
+Extraction :
+- trafilatura
+- BeautifulSoup4
+- lxml
+- readability-lxml si nécessaire
+- Playwright seulement si nécessaire
+
+### Correction grammaticale
+
+- LanguageTool local
+
+Important :
+LanguageTool sert à la correction grammaticale, orthographe, ponctuation et style léger.
+
+LanguageTool ne doit pas être utilisé comme moteur de reformulation profonde.
+
+### SEO Analyzer
+
+Le SEO Analyzer est codé dans Ideas Studio.
+
+Il ne doit pas dépendre d’un outil SEO payant externe.
+
+Il analyse :
+- keyword
+- title
+- H1/H2/H3
+- meta title
+- meta description
+- slug
+- densité
+- liens internes
+- liens externes
+- images/alt
+- lisibilité
+- EEAT
+- FAQ
+- structure
+- qualité
+- readiness publication
+
+### Tracking
+
+Tracking maison :
+
+- traffic.js
+- /api/traffic/collect
+- project_id
+- public_tracking_key
+
+Le script public ne doit jamais contenir secret_api_key.
+
+### Frontend
+
+Frontend recommandé :
+
+- React + Vite pour le dashboard SaaS
+- Next.js possible plus tard si besoin SSR/public blog
+
+### Éditeur WYSIWYG officiel
+
+Éditeur officiel :
+
+- TipTap
+
+TipTap sert uniquement côté frontend.
+
+Le backend doit seulement fournir :
+- Editor API
+- autosave
+- versions
+- preview
+- media manager
+- content blocks
+- SEO analysis endpoints
+- publishing workflow
+
+Ne pas utiliser :
+- éditeur maison
+- simple textarea comme éditeur final
+- Quill comme éditeur principal
+- awesome-wysiwyg-editors comme composant
+
+Quill peut être mentionné comme ancien prototype, mais Ideas Studio V2 utilise TipTap.
+
+### Graphiques frontend
+
+Outil recommandé :
+
+- Recharts
+
+Utilisation :
+- dashboard performance
+- traffic summary
+- articles performance
+- recommendations stats
+
+### Prompt Day 7 Backend
+```txt
+Tu travailles sur Ideas Studio.
+
+Avant de coder, lis entièrement :
+
+prod.md
+label.md
+
+Contexte :
+Le backend V1 Jours 1 à 5 est terminé.
+L’audit final a été corrigé.
+Les routes members ont été ajoutées.
+.env.example a été complété.
+107 tests passent.
+
+Objectif :
+faire uniquement un Backend Day 6 — Editor Backend Hardening.
+
+But :
+compléter le backend nécessaire au vrai éditeur d’articles frontend TipTap, avant de commencer le frontend.
+
+RÈGLE DE PRIORITÉ
+
+prod.md = source principale de la V1.
+label.md = annexe stratégique long terme.
+
+Utilise label.md seulement pour ne pas bloquer l’évolution future, mais n’implémente pas ses modules avancés aujourd’hui.
+
+Important :
+- Ne commence pas le frontend.
+- N’installe pas TipTap dans le backend.
+- TipTap sera installé côté frontend plus tard.
+- Ne refais pas les Jours 1 à 5.
+- Ne casse pas les routes existantes.
+- Ne code pas Redis/RQ complet aujourd’hui.
+- Ne code pas Google Fit Score complet.
+- Ne code pas Source Verification Engine.
+- Ne code pas Deep Rewrite Engine.
+- Ne code pas Originality Engine complet.
+- Ne code pas Safe Publish Gate complet.
+- Ne code pas billing.
+- Ne fais pas de refonte générale.
+
+TipTap est l’éditeur WYSIWYG officiel de Ideas Studio, mais il est frontend-only.
+Le backend Day 6 doit seulement préparer les routes, modèles et données nécessaires pour que TipTap puisse fonctionner plus tard côté frontend.
+
+AVANT DE MODIFIER
+
+Inspecte rapidement :
+- modèles articles existants
+- routes articles / seo existantes
+- routes publish/schedule/unpublish existantes
+- services existants
+- permissions existantes
+- migrations Alembic existantes
+- tests existants
+
+Avant de commencer les modifications, vérifie que les tests existants passent encore.
+
+À FAIRE
+
+1. Editor Backend API
+
+Ajouter :
+
+GET /articles/{article_id}/editor
+
+Cette route doit :
+- charger toutes les données nécessaires à l’éditeur
+- être protégée par auth
+- vérifier project membership
+- retourner au minimum :
+  - id
+  - project_id
+  - category_id
+  - title
+  - slug
+  - content
+  - excerpt
+  - status
+  - keyword
+  - meta_title
+  - meta_description
+  - cover_image_url
+  - faq_json
+  - callouts_json
+  - internal_links_json
+  - external_links_json
+  - content_blocks_json si présent
+  - word_count
+  - seo_score
+  - readability_score
+  - quality_score
+  - eeat_score
+  - readiness_status
+  - latest_analysis si simple à joindre
+  - created_at
+  - updated_at
+
+Vérifier et compléter :
+
+PATCH /articles/{article_id}/editor
+
+Cette route existe déjà, mais elle doit maintenant accepter et sauvegarder :
+- title
+- slug
+- content
+- excerpt
+- meta_title
+- meta_description
+- cover_image_url
+- faq_json
+- callouts_json
+- internal_links_json
+- external_links_json
+- content_blocks_json
+- category_id
+
+Elle doit :
+- recalculer word_count si content change
+- mettre updated_at
+- ne jamais publier automatiquement
+- créer une version si le contenu ou les champs éditoriaux importants changent
+
+Ajouter :
+
+POST /articles/{article_id}/autosave
+
+Cette route doit :
+- sauvegarder sans publier
+- accepter les mêmes champs principaux que PATCH /editor
+- recalculer word_count si content change
+- mettre updated_at
+- ne pas changer le status vers published
+- créer une version autosave si article_versions existe
+- éviter les doublons inutiles si le contenu est identique à la dernière version autosave
+
+Ajouter :
+
+GET /articles/{article_id}/preview
+
+Cette route doit :
+- retourner une preview privée de l’article, même si l’article n’est pas publié
+- nécessiter auth + project membership
+- ne pas exposer les brouillons via l’API publique
+- retourner au minimum :
+  - title
+  - slug
+  - content
+  - excerpt
+  - meta_title
+  - meta_description
+  - cover_image_url
+  - faq_json
+  - callouts_json
+  - internal_links_json
+  - external_links_json
+  - content_blocks_json
+  - status
+
+2. Version History
+
+Créer une table article_versions :
+
+Champs :
+- id
+- project_id
+- article_id
+- title
+- slug
+- content
+- excerpt
+- meta_title
+- meta_description
+- cover_image_url
+- faq_json
+- callouts_json
+- internal_links_json
+- external_links_json
+- content_blocks_json
+- version_number
+- version_type
+- created_by
+- created_at
+
+version_type possible :
+- manual
+- autosave
+- restore
+
+Créer routes :
+
+GET /articles/{article_id}/versions
+
+Cette route doit :
+- lister les versions d’un article
+- nécessiter auth
+- vérifier project membership
+- retourner les versions triées par version_number ou created_at DESC
+
+POST /articles/{article_id}/versions/{version_id}/restore
+
+Cette route doit :
+- restaurer une ancienne version
+- créer une nouvelle version de type restore ou sauvegarder l’état précédent avant restauration
+- recalculer word_count
+- mettre updated_at
+- être autorisée pour owner/admin/editor
+- être autorisée pour writer seulement si l’article n’est pas published
+- être interdite à viewer
+- être interdite au non-membre
+
+3. Media Manager simple
+
+Créer une table media_assets :
+
+Champs :
+- id
+- project_id
+- article_id nullable
+- url
+- filename
+- mime_type
+- size
+- alt_text
+- caption
+- source
+- created_at
+- updated_at
+
+Créer routes :
+
+GET /projects/{project_id}/media
+
+Cette route doit :
+- lister les médias du projet
+- nécessiter auth
+- vérifier project membership
+- accepter éventuellement un filtre article_id
+
+POST /projects/{project_id}/media/upload
+
+V1 simple :
+- ne pas intégrer S3
+- ne pas intégrer Cloudinary
+- ne pas forcer un vrai stockage fichier
+- stocker des médias URL-based
+
+Body attendu :
+- url
+- filename
+- mime_type
+- size
+- alt_text
+- caption
+- source
+- article_id nullable
+
+Règles :
+- owner/admin/editor/writer autorisés
+- viewer interdit
+- si article_id est fourni, vérifier que l’article appartient au même projet
+
+PATCH /media/{media_id}
+
+Permettre de modifier :
+- alt_text
+- caption
+- source
+- article_id
+
+Règles :
+- owner/admin/editor/writer autorisés
+- viewer interdit
+- si article_id est fourni, vérifier même projet
+
+DELETE /media/{media_id}
+
+Règles :
+- owner/admin/editor autorisés
+- writer autorisé seulement si média lié à un article non published qu’il peut modifier
+- viewer interdit
+- non-membre interdit
+
+4. Publishing Workflow complémentaire
+
+Ajouter les statuts si absents :
+
+- ready_to_publish
+- unpublished
+- archived
+
+Ajouter routes :
+
+POST /articles/{article_id}/mark-ready
+
+Cette route doit :
+- mettre status = ready_to_publish
+- être autorisée pour owner/admin/editor
+- être autorisée pour writer seulement si article non published
+- ne doit pas publier l’article
+
+POST /articles/{article_id}/archive
+
+Cette route doit :
+- mettre status = archived
+- être autorisée seulement pour owner/admin/editor
+- archived ne doit jamais être visible via l’API publique
+
+Vérifier :
+- status published visible dans Public API
+- scheduled non visible si pas encore publié
+- draft / review_needed / correction_needed / ready_to_publish / unpublished / archived non visibles publiquement
+
+5. Content Blocks
+
+Ajouter à articles si absent :
+
+- content_blocks_json
+
+Vérifier que ces champs sont supportés dans :
+- GET /editor
+- PATCH /editor
+- POST /autosave
+- GET /preview
+- article_versions
+- restore version
+
+Champs structurés :
+- faq_json
+- callouts_json
+- internal_links_json
+- external_links_json
+- content_blocks_json
+
+6. Sécurité
+
+Toutes les routes ajoutées doivent vérifier :
+- user connecté
+- membre du projet
+- rôle correct
+
+Règles :
+- viewer = lecture seule
+- writer peut modifier brouillons / draft_ready / review_needed / correction_needed / ready_to_publish
+- writer ne doit pas modifier un article published
+- owner/admin/editor peuvent gérer le workflow complet
+- non-membre = 403
+
+Ne jamais exposer :
+- secret_api_key
+- brouillons dans l’API publique
+- articles archived/unpublished dans l’API publique
+
+7. Migrations
+
+Créer une migration Alembic pour :
+- article_versions
+- media_assets
+- content_blocks_json si absent
+- nouveaux statuts si enum utilisé
+
+Si les statuts sont stockés en string, mettre simplement à jour la constante ARTICLE_STATUSES.
+
+8. Tests
+
+Ajouter des tests pour :
+
+Editor :
+1. GET /articles/{id}/editor retourne les données complètes
+2. PATCH /editor sauvegarde content_blocks_json
+3. PATCH /editor crée une version si contenu changé
+4. POST /autosave sauvegarde sans publier
+5. viewer ne peut pas autosave
+6. non-membre bloqué
+
+Versions :
+7. GET /versions liste les versions
+8. restore version restaure le contenu
+9. restore crée une version de type restore ou sauvegarde l’état précédent
+10. restore interdit à viewer
+11. restore interdit à non-membre
+
+Preview :
+12. GET /preview fonctionne pour brouillon avec auth
+13. preview brouillon non accessible sans auth
+14. preview brouillon non accessible à non-membre
+
+Media :
+15. créer media URL-based
+16. lister media du projet
+17. patch alt_text/caption
+18. delete media
+19. viewer ne peut pas créer media
+20. non-membre bloqué
+
+Publishing :
+21. mark-ready met status ready_to_publish
+22. archive met status archived
+23. archived non visible dans Public API
+24. unpublished non visible dans Public API
+
+Regression :
+25. tous les anciens tests passent encore
+
+9. Documentation
+
+Mettre à jour README avec :
+- Editor Backend API
+- Autosave
+- Version History
+- Preview
+- Media Manager URL-based
+- Publishing workflow
+- limites V1
+
+Mettre à jour .env.example seulement si une nouvelle variable est réellement ajoutée.
+
+COMMANDES À EXÉCUTER
+
+alembic upgrade head
+python -m pytest tests/ -v
+
+RAPPORT FINAL ATTENDU
+
+Donne :
+1. fichiers créés/modifiés
+2. modèles/tables ajoutés
+3. routes ajoutées
+4. migrations ajoutées
+5. fonctionnement Editor API
+6. fonctionnement Autosave
+7. fonctionnement Version History
+8. fonctionnement Preview
+9. fonctionnement Media Manager
+10. workflow publication complété
+11. tests ajoutés
+12. résultat exact des tests
+13. anciens tests toujours OK : oui/non
+14. backend prêt pour frontend : oui/non
+
+VERDICT ATTENDU
+
+À la fin, dis clairement :
+
+Backend V1 + Editor Backend prêt pour frontend : oui/non
+
+Important :
+Ne commence pas le frontend.
+Ne code pas les modules avancés de label.md.
+Ne transforme pas ce Day 6 en refonte générale.
+Corrige uniquement ce qui est nécessaire pour que le frontend éditeur puisse être construit proprement.
+```
+
+#### Rapport Day 6
+
+```txt
+Rapport final Day 6
+1. Fichiers créés / modifiés
+Fichier	Action
+app/models/article.py	Modifié — content_blocks_json, statuts ready_to_publish/unpublished/archived, WRITER_EDITABLE_STATUSES
+app/models/article_version.py	Créé
+app/models/media_asset.py	Créé
+app/schemas/seo.py	Modifié — ArticleEditorUpdate étendu
+app/schemas/editor.py	Créé
+app/schemas/media.py	Créé
+app/services/version_service.py	Créé
+app/routers/editor.py	Créé
+app/routers/versions.py	Créé
+app/routers/media.py	Créé
+app/routers/articles.py	Modifié — mark-ready, archive
+app/routers/seo.py	Modifié — PATCH /editor crée versions + word_count
+app/main.py	Modifié — 3 nouveaux routers
+alembic/versions/006_editor_hardening.py	Créé
+tests/test_day6.py	Créé — 24 tests
+README.md	Modifié
+2. Modèles / tables ajoutés
+Table	Champs clés
+article_versions	id, project_id, article_id, title, slug, content, excerpt, meta, cover, faq/callouts/links/blocks json, version_number, version_type (manual|autosave|restore), created_by, created_at
+media_assets	id, project_id, article_id (nullable), url, filename, mime_type, size, alt_text, caption, source, created_at, updated_at
+articles.content_blocks_json	Colonne Text nullable ajoutée
+3. Routes ajoutées (12 nouvelles)
+
+GET  /articles/{id}/editor
+POST /articles/{id}/autosave
+GET  /articles/{id}/preview
+GET  /articles/{id}/versions
+POST /articles/{id}/versions/{version_id}/restore
+POST /articles/{id}/mark-ready
+POST /articles/{id}/archive
+GET  /projects/{id}/media
+POST /projects/{id}/media/upload
+PATCH /media/{id}
+DELETE /media/{id}
+PATCH /articles/{id}/editor étendu (4 champs + word_count + version)
+4. Migration ajoutée
+006_editor_hardening.py → tables article_versions + media_assets + colonne content_blocks_json
+
+5–10. Fonctionnement
+Editor API : GET /editor retourne toutes les données + dernière analyse SEO comme latest_analysis
+Autosave : POST /autosave sauvegarde sans jamais changer status → published, déduplique si contenu identique au dernier autosave
+Version History : PATCH /editor et autosave créent des snapshots ; restore applique la version choisie après avoir sauvegardé l'état courant
+Preview : accès privé au contenu brouillon (auth + membre requis, API publique non affectée)
+Media Manager : URL-based (pas de stockage fichier), lié optionnellement à un article du même projet
+Publishing : mark-ready → ready_to_publish ; archive → archived (invisible API publique) ; les 3 nouveaux statuts valides dans ARTICLE_STATUSES
+11–13. Tests
+Tests ajoutés : 24 (test_day6.py)
+Résultat : 131/131 passed
+Anciens tests : 107/107 toujours OK ✓
+Verdict final
+Backend V1 + Editor Backend prêt pour frontend : OUI
+```
+
+
+

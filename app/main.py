@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.routers import auth, projects, health, categories, articles, public_api, tracking, ideas, seo, performance, recommendations, notifications, members
+from app.routers import auth, projects, health, categories, articles, public_api, tracking, ideas, seo, performance, recommendations, notifications, members, editor, versions, media
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -30,3 +30,6 @@ app.include_router(performance.router)
 app.include_router(recommendations.router)
 app.include_router(notifications.router)
 app.include_router(members.router)
+app.include_router(editor.router)
+app.include_router(versions.router)
+app.include_router(media.router)

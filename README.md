@@ -126,6 +126,24 @@ python -m app.cli review --project-id <project_id>
 - `POST /articles/{id}/publish`
 - `POST /articles/{id}/schedule`
 - `POST /articles/{id}/unpublish`
+- `POST /articles/{id}/mark-ready` — status → ready_to_publish (owner/admin/editor/writer)
+- `POST /articles/{id}/archive` — status → archived (owner/admin/editor)
+
+### Editor Backend (Day 6)
+- `GET /articles/{id}/editor` — données complètes pour l'éditeur (auth + membre)
+- `PATCH /articles/{id}/editor` — sauvegarde éditoriale + crée une version manual si contenu change
+- `POST /articles/{id}/autosave` — sauvegarde sans publier + version autosave si contenu différent
+- `GET /articles/{id}/preview` — preview privée (draft inclus, auth + membre)
+
+### Version History
+- `GET /articles/{id}/versions` — liste les versions (auth + membre)
+- `POST /articles/{id}/versions/{version_id}/restore` — restaure une version (owner/admin/editor/writer non-publié)
+
+### Media Manager (URL-based)
+- `GET /projects/{id}/media` — liste les médias (auth + membre) · filtre `?article_id=`
+- `POST /projects/{id}/media/upload` — enregistre un media URL (owner/admin/editor/writer)
+- `PATCH /media/{id}` — modifie alt_text/caption/source/article_id (non-viewer)
+- `DELETE /media/{id}` — supprime (owner/admin/editor · writer si article non published)
 
 ### Idea Engine
 - `POST /projects/{id}/ideas/generate`
@@ -136,11 +154,11 @@ python -m app.cli review --project-id <project_id>
 - `POST /articles/{id}/manual-draft`
 - `POST /articles/{id}/rerun`
 
-### SEO Analyzer / Éditeur
+### SEO Analyzer
 - `POST /articles/{id}/analyze`
 - `GET /articles/{id}/analysis/latest`
 - `GET /articles/{id}/analyses`
-- `PATCH /articles/{id}/editor`
+- `PATCH /articles/{id}/editor` _(voir Editor Backend)_
 - `POST /articles/{id}/ready-check`
 
 ### Performance

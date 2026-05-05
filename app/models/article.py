@@ -19,10 +19,15 @@ ARTICLE_STATUSES = frozenset({
     "published",
     "failed",
     "update_recommended",
+    "ready_to_publish",
+    "unpublished",
+    "archived",
 })
 
 # Statuses a writer role is allowed to edit
-WRITER_EDITABLE_STATUSES = frozenset({"draft", "draft_ready", "review_needed", "correction_needed"})
+WRITER_EDITABLE_STATUSES = frozenset({
+    "draft", "draft_ready", "review_needed", "correction_needed", "ready_to_publish"
+})
 
 
 class Article(Base):
@@ -59,6 +64,7 @@ class Article(Base):
     internal_links_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     external_links_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     search_console_metrics_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content_blocks_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     rejection_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
     rejection_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

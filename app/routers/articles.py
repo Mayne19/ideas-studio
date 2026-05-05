@@ -115,6 +115,50 @@ def schedule_article_route(
     return schedule_article(db, article, data.scheduled_at)
 
 
+@router.post("/articles/{article_id}/mark-ready", response_model=ArticlePublic)
+def mark_ready_route(
+    article_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    article = get_article_by_id(db, article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    member = get_member_for_project(db, current_user.id, article.project_id)
+    if not member:
+        raise HTTPException(status_code=403, detail="Access denied")
+    if member.role == "viewer":
+        raise HTTPException(status_code=403, detail="Viewers cannot change article status")
+    if member.role == "writer" and article.status == "published":
+        raise HTTPException(status_code=403, detail="Writers cannot change published articles")
+    article.status = "ready_to_publish"
+    from datetime import datetime, timezone
+    article.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(article)
+    return article
+
+
+@router.post("/articles/{article_id}/archive", response_model=ArticlePublic)
+def archive_article_route(
+    article_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    article = get_article_by_id(db, article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    member = get_member_for_project(db, current_user.id, article.project_id)
+    if not member or member.role not in _MANAGE_ROLES:
+        raise HTTPException(status_code=403, detail="Insufficient permissions to archive")
+    article.status = "archived"
+    from datetime import datetime, timezone
+    article.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(article)
+    return article
+
+
 @router.post("/articles/{article_id}/unpublish", response_model=ArticlePublic)
 def unpublish_article_route(
     article_id: str,
