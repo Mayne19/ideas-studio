@@ -1,0 +1,61 @@
+import { forwardRef } from 'react'
+import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { Loader2 } from 'lucide-react'
+import { cn } from '@/utils/cn'
+
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
+type ButtonSize = 'sm' | 'md' | 'lg'
+
+type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant
+  size?: ButtonSize
+  loading?: boolean
+  icon?: ReactNode
+}
+
+const variants: Record<ButtonVariant, string> = {
+  primary:
+    'bg-accent text-white hover:bg-accent-dark active:opacity-90 shadow-sm',
+  secondary:
+    'bg-[#f0f0f2] text-primary hover:bg-[#e5e5e7] active:bg-[#dcdce0]',
+  ghost:
+    'bg-transparent text-primary hover:bg-[#f0f0f2] active:bg-[#e5e5e7]',
+  danger:
+    'bg-danger text-white hover:opacity-90 active:opacity-80',
+}
+
+const sizes: Record<ButtonSize, string> = {
+  sm: 'h-8 px-3 text-[13px] gap-1.5 rounded-[8px]',
+  md: 'h-9 px-4 text-[14px] gap-2 rounded-[10px]',
+  lg: 'h-10 px-5 text-[15px] gap-2 rounded-[10px]',
+}
+
+const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { variant = 'primary', size = 'md', loading = false, icon, children, className, disabled, ...props },
+  ref,
+) {
+  return (
+    <button
+      ref={ref}
+      disabled={disabled || loading}
+      className={cn(
+        'inline-flex items-center justify-center font-medium transition-all duration-150',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40',
+        'disabled:opacity-50 disabled:cursor-not-allowed',
+        variants[variant],
+        sizes[size],
+        className,
+      )}
+      {...props}
+    >
+      {loading ? (
+        <Loader2 className="animate-spin" size={14} />
+      ) : icon ? (
+        <span className="shrink-0">{icon}</span>
+      ) : null}
+      {children}
+    </button>
+  )
+})
+
+export default Button

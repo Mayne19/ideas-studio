@@ -4,9 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node ./node_modules/vite/bin/vite.js dist",
-    "build": "node ./node_modules/vite/bin/vite.js build dist --outDir ../dist-build --emptyOutDir",
-    "preview": "node ./node_modules/vite/bin/vite.js preview --outDir dist-build"
+    "dev": "node ./node_modules/vite/bin/vite.js",
+    "build": "node ./node_modules/typescript/bin/tsc -b && node ./node_modules/vite/bin/vite.js build",
+    "lint": "node ./node_modules/eslint/bin/eslint.js .",
+    "preview": "node ./node_modules/vite/bin/vite.js preview"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -1,0 +1,32 @@
+import { api } from './client'
+import type { Category } from '@/types'
+
+export type CreateCategoryPayload = {
+  name: string
+  description?: string
+  priority?: number
+  target_frequency?: number | null
+}
+
+export type UpdateCategoryPayload = {
+  name?: string
+  description?: string | null
+  priority?: number
+  target_frequency?: number | null
+}
+
+export function listCategories(projectId: string): Promise<Category[]> {
+  return api.get<Category[]>(`/projects/${projectId}/categories`)
+}
+
+export function createCategory(projectId: string, payload: CreateCategoryPayload): Promise<Category> {
+  return api.post<Category>(`/projects/${projectId}/categories`, payload)
+}
+
+export function updateCategory(projectId: string, categoryId: string, payload: UpdateCategoryPayload): Promise<Category> {
+  return api.patch<Category>(`/projects/${projectId}/categories/${categoryId}`, payload)
+}
+
+export function deleteCategory(projectId: string, categoryId: string): Promise<void> {
+  return api.delete<void>(`/projects/${projectId}/categories/${categoryId}`)
+}

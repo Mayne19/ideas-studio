@@ -1,0 +1,444 @@
+import { useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  useDroppable,
+} from '@dnd-kit/core'
+import type { DragStartEvent, DragEndEvent, DragOverEvent } from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { ExternalLink, Loader2, RefreshCw } from 'lucide-react'
+import {
+  listArticles, publishArticle, unpublishArticle, markReadyArticle, archiveArticle,
+  scheduleArticle, patchArticle,
+} from '@/api/articles'
+import { listCategories } from '@/api/categories'
+import type { Article, ArticleStatus, Category } from '@/types'
+import { formatDate } from '@/utils/format'
+import LoadingState from '@/components/ui/LoadingState'
+import ErrorState from '@/components/ui/ErrorState'
+import Button from '@/components/ui/Button'
+import Modal from '@/components/ui/Modal'
+
+type ColumnDef = {
+  status: ArticleStatus
+  label: string
+  color: string
+}
+
+const COLUMNS: ColumnDef[] = [
+  { status: 'idea_proposed',       label: 'Idées',          color: '#8e8e93' },
+  { status: 'idea_priority',       label: 'Prioritaires',   color: '#ff9500' },
+  { status: 'writing_requested',   label: 'Rédaction dem.', color: '#007aff' },
+  { status: 'writing_in_progress', label: 'En rédaction',   color: '#007aff' },
+  { status: 'draft_ready',         label: 'Brouillons',     color: '#5856d6' },
+  { status: 'review_needed',       label: 'À relire',       color: '#ff9500' },
+  { status: 'correction_needed',   label: 'À corriger',     color: '#ff3b30' },
+  { status: 'ready_to_publish',    label: 'Prêts',          color: '#34c759' },
+  { status: 'scheduled',           label: 'Programmés',     color: '#5856d6' },
+  { status: 'published',           label: 'Publiés',        color: '#34c759' },
+  { status: 'failed',              label: 'Échecs',         color: '#ff3b30' },
+  { status: 'archived',            label: 'Archivés',       color: '#8e8e93' },
+]
+
+const QUICK_ACTIONS: Partial<Record<ArticleStatus, { key: string; label: string }[]>> = {
+  draft_ready:       [{ key: 'mark-ready', label: 'Marquer prêt' }],
+  review_needed:     [{ key: 'mark-ready', label: 'Marquer prêt' }],
+  correction_needed: [{ key: 'mark-ready', label: 'Marquer prêt' }],
+  ready_to_publish:  [{ key: 'publish',    label: 'Publier' }],
+  published:         [{ key: 'unpublish',  label: 'Dépublier' }],
+  scheduled:         [{ key: 'publish',    label: 'Publier' }],
+}
+
+function ScoreDot({ value }: { value: number }) {
+  const color = value >= 70 ? 'bg-success/10 text-[#1a7a3a]' : value >= 40 ? 'bg-warning/10 text-[#c07000]' : 'bg-danger/10 text-danger'
+  return (
+    <span className={`text-[9px] font-medium px-1 py-0.5 rounded-full ${color}`}>
+      {Math.round(value)}
+    </span>
+  )
+}
+
+function CardContent({
+  article,
+  categories,
+  onEdit,
+  onAction,
+  isDragging = false,
+}: {
+  article: Article
+  categories: Category[]
+  onEdit: () => void
+  onAction: (key: string, article: Article) => void
+  isDragging?: boolean
+}) {
+  const quickActions = QUICK_ACTIONS[article.status] ?? []
+  const category = categories.find((c) => c.id === article.category_id)
+
+  return (
+    <div className={`rounded-[12px] border border-border bg-surface p-3 shadow-card ${isDragging ? 'opacity-50' : 'hover:shadow-float'} transition-shadow`}>
+      <div className="flex items-start justify-between gap-2 mb-1.5">
+        <p
+          className="text-[12px] font-medium text-primary leading-snug cursor-pointer hover:text-accent transition-colors line-clamp-2 flex-1"
+          onClick={onEdit}
+        >
+          {article.title}
+        </p>
+        <button
+          onClick={onEdit}
+          className="shrink-0 flex h-5 w-5 items-center justify-center rounded-[6px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors mt-0.5"
+        >
+          <ExternalLink size={10} />
+        </button>
+      </div>
+
+      {(category || article.keyword) && (
+        <div className="flex items-center gap-1 mb-1.5 flex-wrap">
+          {category && (
+            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-accent/8 text-accent">
+              {category.name}
+            </span>
+          )}
+          {article.keyword && (
+            <p className="text-[10px] text-tertiary truncate">{article.keyword}</p>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-center gap-1 flex-wrap">
+        {article.seo_score !== null && <ScoreDot value={article.seo_score} />}
+        {article.readability_score !== null && <ScoreDot value={article.readability_score} />}
+        {article.quality_score !== null && <ScoreDot value={article.quality_score} />}
+        {article.eeat_score !== null && <ScoreDot value={article.eeat_score} />}
+        {article.word_count > 0 && (
+          <span className="text-[10px] text-tertiary">{article.word_count}m</span>
+        )}
+        <span className="text-[10px] text-tertiary ml-auto">{formatDate(article.updated_at)}</span>
+      </div>
+
+      {quickActions.length > 0 && (
+        <div className="flex gap-1 mt-2 pt-2 border-t border-border">
+          {quickActions.map((action) => (
+            <button
+              key={action.key}
+              onClick={(e) => { e.stopPropagation(); onAction(action.key, article) }}
+              className="flex-1 rounded-[8px] bg-[#f0f0f2] px-2 py-1 text-[10px] font-medium text-secondary hover:bg-accent hover:text-white transition-colors"
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SortableCard({
+  article,
+  categories,
+  onEdit,
+  onAction,
+}: {
+  article: Article
+  categories: Category[]
+  onEdit: () => void
+  onAction: (key: string, article: Article) => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: article.id,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    cursor: isDragging ? 'grabbing' : 'grab',
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+    >
+      <CardContent article={article} categories={categories} onEdit={onEdit} onAction={onAction} isDragging={isDragging} />
+    </div>
+  )
+}
+
+function KanbanColumn({
+  column,
+  articles,
+  categories,
+  onEdit,
+  onAction,
+}: {
+  column: ColumnDef
+  articles: Article[]
+  categories: Category[]
+  onEdit: (a: Article) => void
+  onAction: (key: string, a: Article) => void
+}) {
+  const articleIds = articles.map((a) => a.id)
+  const { setNodeRef, isOver } = useDroppable({ id: column.status })
+
+  return (
+    <div className="flex flex-col min-w-[220px] max-w-[220px] h-full">
+      <div className="flex items-center gap-2 mb-3 px-1">
+        <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: column.color }} />
+        <span className="text-[12px] font-semibold text-primary">{column.label}</span>
+        <span className="ml-auto text-[11px] text-tertiary bg-[#f0f0f2] rounded-full px-1.5 py-0.5">
+          {articles.length}
+        </span>
+      </div>
+      <SortableContext items={articleIds} strategy={verticalListSortingStrategy}>
+        <div
+          ref={setNodeRef}
+          className={`flex flex-col gap-2 overflow-y-auto flex-1 pb-2 min-h-[80px] rounded-[12px] transition-colors ${isOver ? 'bg-accent/5' : ''}`}
+        >
+          {articles.length === 0 ? (
+            <div className="flex items-center justify-center rounded-[12px] border border-dashed border-border h-20">
+              <p className="text-[11px] text-tertiary">Vide</p>
+            </div>
+          ) : (
+            articles.map((article) => (
+              <SortableCard
+                key={article.id}
+                article={article}
+                categories={categories}
+                onEdit={() => onEdit(article)}
+                onAction={onAction}
+              />
+            ))
+          )}
+        </div>
+      </SortableContext>
+    </div>
+  )
+}
+
+export default function KanbanPage() {
+  const { projectId } = useParams<{ projectId: string }>()
+  const navigate = useNavigate()
+
+  const [articles, setArticles] = useState<Article[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [loadStatus, setLoadStatus] = useState<'loading' | 'success' | 'error'>('loading')
+  const [actionError, setActionError] = useState('')
+  const [loadingAction, setLoadingAction] = useState(false)
+  const [tick, setTick] = useState(0)
+  const [activeId, setActiveId] = useState<string | null>(null)
+
+  // Schedule modal state
+  const [scheduleTarget, setScheduleTarget] = useState<Article | null>(null)
+  const [scheduleDate, setScheduleDate] = useState('')
+  const [scheduling, setScheduling] = useState(false)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  )
+
+  useEffect(() => {
+    if (!projectId) return
+    listCategories(projectId).then(setCategories).catch(() => {})
+  }, [projectId])
+
+  useEffect(() => {
+    if (!projectId) return
+    let cancelled = false
+    Promise.resolve().then(() => { if (!cancelled) setLoadStatus('loading') })
+    listArticles(projectId, { limit: 500 })
+      .then((data) => { if (!cancelled) { setArticles(data); setLoadStatus('success') } })
+      .catch(() => { if (!cancelled) setLoadStatus('error') })
+    return () => { cancelled = true }
+  }, [projectId, tick])
+
+  async function handleAction(key: string, article: Article) {
+    if (!projectId) return
+    if (key === 'schedule') {
+      setScheduleTarget(article)
+      setScheduleDate('')
+      return
+    }
+    setLoadingAction(true)
+    setActionError('')
+    try {
+      let updated: Article | undefined
+      if (key === 'publish') updated = await publishArticle(projectId, article.id)
+      else if (key === 'unpublish') updated = await unpublishArticle(projectId, article.id)
+      else if (key === 'mark-ready') updated = await markReadyArticle(projectId, article.id)
+      else if (key === 'archive') updated = await archiveArticle(projectId, article.id)
+      if (updated) {
+        setArticles((prev) => prev.map((a) => a.id === updated!.id ? updated! : a))
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Erreur lors de l'action.")
+    } finally {
+      setLoadingAction(false)
+    }
+  }
+
+  async function handleScheduleConfirm() {
+    if (!projectId || !scheduleTarget || !scheduleDate) return
+    setScheduling(true)
+    try {
+      const updated = await scheduleArticle(projectId, scheduleTarget.id, new Date(scheduleDate).toISOString())
+      setArticles((prev) => prev.map((a) => a.id === updated.id ? updated : a))
+      setScheduleTarget(null)
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Erreur lors de la programmation.')
+    } finally {
+      setScheduling(false)
+    }
+  }
+
+  const activeArticle = activeId ? articles.find((a) => a.id === activeId) : null
+
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(event.active.id as string)
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  function handleDragOver(_e: DragOverEvent) { /* handled by useDroppable */ }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    setActiveId(null)
+    if (!over || !projectId) return
+
+    const overId = String(over.id)
+    // over.id is either a column status (droppable) or an article id (sortable)
+    let newStatus: ArticleStatus | undefined
+    const matchedColumn = COLUMNS.find((c) => c.status === overId)
+    if (matchedColumn) {
+      newStatus = matchedColumn.status
+    } else {
+      const targetArticle = articles.find((a) => a.id === overId)
+      if (targetArticle) newStatus = targetArticle.status
+    }
+
+    if (!newStatus) return
+
+    const article = articles.find((a) => a.id === active.id)
+    if (!article || article.status === newStatus) return
+
+    // Optimistically update UI
+    const prevStatus = article.status
+    setArticles((prev) => prev.map((a) => a.id === article.id ? { ...a, status: newStatus! } : a))
+
+    // Persist to backend — revert on error
+    patchArticle(projectId, article.id, { status: newStatus }).catch(() => {
+      setArticles((prev) => prev.map((a) => a.id === article.id ? { ...a, status: prevStatus } : a))
+    })
+  }
+
+  const articlesByStatus = (status: ArticleStatus) =>
+    articles
+      .filter((a) => a.status === status)
+      .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+
+  if (loadStatus === 'loading') return <LoadingState />
+  if (loadStatus === 'error') return <ErrorState onRetry={() => setTick((t) => t + 1)} />
+
+  return (
+    <>
+      <div className="flex flex-col h-full min-h-0 p-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4 shrink-0">
+          <div>
+            <h1 className="text-[20px] font-semibold text-primary tracking-tight">Kanban éditorial</h1>
+            <p className="mt-0.5 text-[13px] text-secondary">
+              {articles.length} article{articles.length !== 1 ? 's' : ''} — glissez pour déplacer entre colonnes
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {loadingAction && <Loader2 size={14} className="animate-spin text-tertiary" />}
+            <Button size="sm" variant="secondary" icon={<RefreshCw size={13} />} onClick={() => setTick((t) => t + 1)}>
+              Rafraîchir
+            </Button>
+          </div>
+        </div>
+
+        {actionError && (
+          <div className="mb-3 shrink-0 rounded-[10px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[13px] text-danger flex items-center justify-between">
+            <span>{actionError}</span>
+            <button onClick={() => setActionError('')} className="ml-3 text-danger/60 hover:text-danger">✕</button>
+          </div>
+        )}
+
+        {/* Kanban board with DnD */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="flex gap-4 overflow-x-auto flex-1 min-h-0 pb-4">
+            {COLUMNS.map((col) => (
+              <KanbanColumn
+                key={col.status}
+                column={col}
+                articles={articlesByStatus(col.status)}
+                categories={categories}
+                onEdit={(a) => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
+                onAction={handleAction}
+              />
+            ))}
+          </div>
+
+          <DragOverlay>
+            {activeArticle && (
+              <div className="w-[220px] rotate-1 opacity-90">
+                <CardContent
+                  article={activeArticle}
+                  categories={categories}
+                  onEdit={() => {}}
+                  onAction={() => {}}
+                />
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
+      </div>
+
+      {/* Schedule modal */}
+      <Modal
+        open={!!scheduleTarget}
+        onClose={() => { setScheduleTarget(null); setScheduleDate('') }}
+        title="Programmer la publication"
+        size="sm"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-[13px] text-secondary truncate">{scheduleTarget?.title}</p>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[12px] font-medium text-secondary">Date et heure de publication</label>
+            <input
+              type="datetime-local"
+              value={scheduleDate}
+              onChange={(e) => setScheduleDate(e.target.value)}
+              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+            />
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button type="button" variant="secondary" size="sm" className="flex-1 justify-center" onClick={() => setScheduleTarget(null)}>
+              Annuler
+            </Button>
+            <Button size="sm" loading={scheduling} className="flex-1 justify-center" onClick={handleScheduleConfirm}>
+              Programmer
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </>
+  )
+}
