@@ -16,7 +16,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { ExternalLink, Loader2, RefreshCw } from 'lucide-react'
+import { CalendarClock, ExternalLink, FileText, Loader2, Plus, RefreshCw } from 'lucide-react'
 import {
   listArticles, publishArticle, unpublishArticle, markReadyArticle, archiveArticle,
   scheduleArticle, patchArticle,
@@ -28,11 +28,13 @@ import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
+import StatusBadge from '@/components/ui/StatusBadge'
 
 type ColumnDef = {
-  status: ArticleStatus
+  status: string
   label: string
   color: string
+  custom?: boolean
 }
 
 const COLUMNS: ColumnDef[] = [
@@ -59,13 +61,52 @@ const QUICK_ACTIONS: Partial<Record<ArticleStatus, { key: string; label: string 
   scheduled:         [{ key: 'publish',    label: 'Publier' }],
 }
 
-function ScoreDot({ value }: { value: number }) {
-  const color = value >= 70 ? 'bg-success/10 text-[#1a7a3a]' : value >= 40 ? 'bg-warning/10 text-[#c07000]' : 'bg-danger/10 text-danger'
+function scoreTone(value: number | null) {
+  if (value === null) return 'bg-[#f0f0f2] text-tertiary'
+  return value >= 70 ? 'bg-success/10 text-[#1a7a3a]' : value >= 40 ? 'bg-warning/10 text-[#c07000]' : 'bg-danger/10 text-danger'
+}
+
+function ScorePill({ label, value }: { label: string; value: number | null }) {
   return (
-    <span className={`text-[9px] font-medium px-1 py-0.5 rounded-full ${color}`}>
-      {Math.round(value)}
+    <span className={`inline-flex min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-full px-1 py-0.5 text-[8px] font-medium ${scoreTone(value)}`}>
+      {label} {value === null ? '—' : Math.round(value)}
     </span>
   )
+}
+
+function stripHtml(value: string): string {
+  return value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function getWordCount(article: Article): number | null {
+  if (article.word_count > 0) return article.word_count
+  if (article.content?.trim()) {
+    const words = stripHtml(article.content).split(/\s+/).filter(Boolean)
+    return words.length > 0 ? words.length : null
+  }
+  return null
+}
+
+function formatWordCount(value: number): string {
+  return `${value.toLocaleString('fr-FR')} mots`
+}
+
+function getUsefulDate(article: Article): { label: string; value: string } {
+  if (article.published_at) return { label: 'Publié', value: article.published_at }
+  if (article.scheduled_at) return { label: 'Planifié', value: article.scheduled_at }
+  if (article.updated_at) return { label: 'Maj', value: article.updated_at }
+  return { label: 'Créé', value: article.created_at }
+}
+
+function customColumnsStorageKey(projectId: string): string {
+  return `ideas-studio:kanban-custom-columns:${projectId}`
+}
+
+function fallbackColumnLabel(status: string): string {
+  return status
+    .replace(/^custom_/, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
 function CardContent({
@@ -83,9 +124,11 @@ function CardContent({
 }) {
   const quickActions = QUICK_ACTIONS[article.status] ?? []
   const category = categories.find((c) => c.id === article.category_id)
+  const wordCount = getWordCount(article)
+  const usefulDate = getUsefulDate(article)
 
   return (
-    <div className={`rounded-[12px] border border-border bg-surface p-3 shadow-card ${isDragging ? 'opacity-50' : 'hover:shadow-float'} transition-shadow`}>
+    <div className={`rounded-[16px] bg-surface p-3 ${isDragging ? 'opacity-50' : 'hover:bg-white'} transition-colors`}>
       <div className="flex items-start justify-between gap-2 mb-1.5">
         <p
           className="text-[12px] font-medium text-primary leading-snug cursor-pointer hover:text-accent transition-colors line-clamp-2 flex-1"
@@ -101,28 +144,38 @@ function CardContent({
         </button>
       </div>
 
-      {(category || article.keyword) && (
-        <div className="flex items-center gap-1 mb-1.5 flex-wrap">
-          {category && (
-            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-accent/8 text-accent">
-              {category.name}
-            </span>
-          )}
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-[10px] font-medium text-accent/80">
+            {category?.name ?? 'Sans catégorie'}
+          </p>
           {article.keyword && (
-            <p className="text-[10px] text-tertiary truncate">{article.keyword}</p>
+            <p className="mt-0.5 truncate text-[10px] text-tertiary">{article.keyword}</p>
           )}
         </div>
-      )}
+        <StatusBadge status={article.status} className="shrink-0" />
+      </div>
 
-      <div className="flex items-center gap-1 flex-wrap">
-        {article.seo_score !== null && <ScoreDot value={article.seo_score} />}
-        {article.readability_score !== null && <ScoreDot value={article.readability_score} />}
-        {article.quality_score !== null && <ScoreDot value={article.quality_score} />}
-        {article.eeat_score !== null && <ScoreDot value={article.eeat_score} />}
-        {article.word_count > 0 && (
-          <span className="text-[10px] text-tertiary">{article.word_count}m</span>
+      <div className="mb-2 flex items-center gap-1">
+        <ScorePill label="SEO" value={article.seo_score} />
+        <ScorePill label="Lis." value={article.readability_score} />
+        <ScorePill label="Qual." value={article.quality_score} />
+        <ScorePill label="EEAT" value={article.eeat_score} />
+      </div>
+
+      <div className="flex items-center justify-between gap-2 text-[10px] text-tertiary">
+        {wordCount !== null ? (
+          <span className="flex min-w-0 items-center gap-1">
+            <FileText size={10} />
+            {formatWordCount(wordCount)}
+          </span>
+        ) : (
+          <span />
         )}
-        <span className="text-[10px] text-tertiary ml-auto">{formatDate(article.updated_at)}</span>
+        <span className="flex shrink-0 items-center gap-1">
+          <CalendarClock size={10} />
+          {usefulDate.label} {formatDate(usefulDate.value)}
+        </span>
       </div>
 
       {quickActions.length > 0 && (
@@ -237,6 +290,9 @@ export default function KanbanPage() {
   const [loadingAction, setLoadingAction] = useState(false)
   const [tick, setTick] = useState(0)
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [customColumns, setCustomColumns] = useState<ColumnDef[]>([])
+  const [columnModalOpen, setColumnModalOpen] = useState(false)
+  const [newColumnName, setNewColumnName] = useState('')
 
   // Schedule modal state
   const [scheduleTarget, setScheduleTarget] = useState<Article | null>(null)
@@ -250,6 +306,29 @@ export default function KanbanPage() {
   useEffect(() => {
     if (!projectId) return
     listCategories(projectId).then(setCategories).catch(() => {})
+  }, [projectId])
+
+  useEffect(() => {
+    if (!projectId) return
+    let active = true
+    try {
+      const raw = window.localStorage.getItem(customColumnsStorageKey(projectId))
+      const parsed = raw ? JSON.parse(raw) : []
+      let nextColumns: ColumnDef[] = []
+      if (Array.isArray(parsed)) {
+        nextColumns = parsed.filter((column): column is ColumnDef =>
+          column &&
+          typeof column === 'object' &&
+          typeof column.status === 'string' &&
+          typeof column.label === 'string' &&
+          typeof column.color === 'string'
+        )
+      }
+      Promise.resolve().then(() => { if (active) setCustomColumns(nextColumns) })
+    } catch {
+      Promise.resolve().then(() => { if (active) setCustomColumns([]) })
+    }
+    return () => { active = false }
   }, [projectId])
 
   useEffect(() => {
@@ -301,6 +380,24 @@ export default function KanbanPage() {
     }
   }
 
+  function handleCreateColumn(event: React.FormEvent) {
+    event.preventDefault()
+    if (!projectId) return
+    const label = newColumnName.trim()
+    if (!label) return
+    const column: ColumnDef = {
+      status: `custom_${Date.now()}`,
+      label,
+      color: '#007aff',
+      custom: true,
+    }
+    const next = [...customColumns, column]
+    setCustomColumns(next)
+    window.localStorage.setItem(customColumnsStorageKey(projectId), JSON.stringify(next))
+    setNewColumnName('')
+    setColumnModalOpen(false)
+  }
+
   const activeArticle = activeId ? articles.find((a) => a.id === activeId) : null
 
   function handleDragStart(event: DragStartEvent) {
@@ -317,8 +414,8 @@ export default function KanbanPage() {
 
     const overId = String(over.id)
     // over.id is either a column status (droppable) or an article id (sortable)
-    let newStatus: ArticleStatus | undefined
-    const matchedColumn = COLUMNS.find((c) => c.status === overId)
+    let newStatus: string | undefined
+    const matchedColumn = allColumns.find((c) => c.status === overId)
     if (matchedColumn) {
       newStatus = matchedColumn.status
     } else {
@@ -333,7 +430,7 @@ export default function KanbanPage() {
 
     // Optimistically update UI
     const prevStatus = article.status
-    setArticles((prev) => prev.map((a) => a.id === article.id ? { ...a, status: newStatus! } : a))
+    setArticles((prev) => prev.map((a) => a.id === article.id ? { ...a, status: newStatus! as ArticleStatus } : a))
 
     // Persist to backend — revert on error
     patchArticle(projectId, article.id, { status: newStatus }).catch(() => {
@@ -341,7 +438,20 @@ export default function KanbanPage() {
     })
   }
 
-  const articlesByStatus = (status: ArticleStatus) =>
+  const knownStatuses = new Set([...COLUMNS, ...customColumns].map((column) => column.status))
+  const unknownColumns: ColumnDef[] = Array.from(new Set(
+    articles
+      .map((article) => article.status)
+      .filter((status) => !knownStatuses.has(status))
+  )).map((status) => ({
+    status,
+    label: fallbackColumnLabel(status),
+    color: '#8e8e93',
+    custom: true,
+  }))
+  const allColumns = [...COLUMNS, ...customColumns, ...unknownColumns]
+
+  const articlesByStatus = (status: string) =>
     articles
       .filter((a) => a.status === status)
       .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
@@ -362,6 +472,9 @@ export default function KanbanPage() {
           </div>
           <div className="flex items-center gap-2">
             {loadingAction && <Loader2 size={14} className="animate-spin text-tertiary" />}
+            <Button size="sm" variant="secondary" icon={<Plus size={13} />} onClick={() => setColumnModalOpen(true)}>
+              Ajouter colonne
+            </Button>
             <Button size="sm" variant="secondary" icon={<RefreshCw size={13} />} onClick={() => setTick((t) => t + 1)}>
               Rafraîchir
             </Button>
@@ -384,7 +497,7 @@ export default function KanbanPage() {
           onDragEnd={handleDragEnd}
         >
           <div className="flex gap-4 overflow-x-auto flex-1 min-h-0 pb-4">
-            {COLUMNS.map((col) => (
+            {allColumns.map((col) => (
               <KanbanColumn
                 key={col.status}
                 column={col}
@@ -410,6 +523,44 @@ export default function KanbanPage() {
           </DragOverlay>
         </DndContext>
       </div>
+
+      {/* Custom column modal */}
+      <Modal
+        open={columnModalOpen}
+        onClose={() => { setColumnModalOpen(false); setNewColumnName('') }}
+        title="Ajouter une colonne"
+        size="sm"
+      >
+        <form onSubmit={handleCreateColumn} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[12px] font-medium text-secondary">Nom de la colonne</label>
+            <input
+              value={newColumnName}
+              onChange={(event) => setNewColumnName(event.target.value)}
+              placeholder="Ex. À valider client"
+              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+              autoFocus
+            />
+            <p className="text-[11px] leading-snug text-tertiary">
+              La colonne est ajoutée au Kanban de ce projet sur ce navigateur. Les cartes déplacées dans cette colonne sont enregistrées avec ce statut.
+            </p>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="flex-1 justify-center"
+              onClick={() => { setColumnModalOpen(false); setNewColumnName('') }}
+            >
+              Annuler
+            </Button>
+            <Button type="submit" size="sm" className="flex-1 justify-center" disabled={!newColumnName.trim()}>
+              Ajouter
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Schedule modal */}
       <Modal

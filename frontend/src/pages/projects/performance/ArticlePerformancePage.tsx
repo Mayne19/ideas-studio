@@ -11,11 +11,14 @@ import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import { formatDate } from '@/utils/format'
 
-type Period = '7d' | '30d' | '90d'
+type Period = '1d' | '7d' | '30d' | '90d' | '180d' | '365d'
 const PERIODS: { value: Period; label: string }[] = [
-  { value: '7d', label: '7 j' },
-  { value: '30d', label: '30 j' },
-  { value: '90d', label: '90 j' },
+  { value: '1d', label: '1 jour' },
+  { value: '7d', label: '7 jours' },
+  { value: '30d', label: '30 jours' },
+  { value: '90d', label: '90 jours' },
+  { value: '180d', label: '6 mois' },
+  { value: '365d', label: '1 an' },
 ]
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -34,7 +37,7 @@ function SimpleRow({ label, value }: { label: string; value: number }) {
 export default function ArticlePerformancePage() {
   const { projectId, articleId } = useParams<{ projectId: string; articleId: string }>()
   const navigate = useNavigate()
-  const [period, setPeriod] = useState<Period>('30d')
+  const [period, setPeriod] = useState<Period>('1d')
   const [data, setData] = useState<ArticlePerformance | null>(null)
   const [loadStatus, setLoadStatus] = useState<'loading' | 'success' | 'error'>('loading')
 

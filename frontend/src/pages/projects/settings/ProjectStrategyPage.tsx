@@ -58,7 +58,7 @@ export default function ProjectStrategyPage() {
       )}
 
       {/* Editorial positioning */}
-      <div className="rounded-[16px] border border-border bg-surface p-5 flex flex-col gap-4">
+      <div className="rounded-[22px] bg-surface p-5 flex flex-col gap-4">
         <p className="text-[12px] font-semibold text-secondary uppercase tracking-wide">Positionnement éditorial</p>
         <Textarea
           label="Audience cible"
@@ -78,7 +78,7 @@ export default function ProjectStrategyPage() {
       </div>
 
       {/* Planned fields — coming soon */}
-      <div className="rounded-[16px] border border-border bg-[#fafafa] p-5 flex flex-col gap-3">
+      <div className="rounded-[22px] bg-[#fafafa] p-5 flex flex-col gap-3">
         <div className="flex items-center gap-2">
           <p className="text-[12px] font-semibold text-secondary uppercase tracking-wide">Stratégie avancée</p>
           <span className="rounded-full bg-[#f0f0f2] px-2 py-0.5 text-[10px] font-medium text-tertiary">Bientôt</span>

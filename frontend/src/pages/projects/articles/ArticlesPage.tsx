@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Plus, FileText, ExternalLink, Calendar, Trash2 } from 'lucide-react'
+import { Plus, FileText, Pencil, Calendar, Trash2 } from 'lucide-react'
 import { listArticles, createArticle, publishArticle, unpublishArticle, markReadyArticle, archiveArticle, scheduleArticle, analyzeSeoArticle, deleteArticle } from '@/api/articles'
 import type { CreateArticlePayload } from '@/api/articles'
 import { listCategories } from '@/api/categories'
@@ -24,17 +24,27 @@ const ALL_STATUSES: ArticleStatus[] = [
   'ready_to_publish', 'scheduled', 'published', 'unpublished', 'archived', 'failed',
 ]
 
-function ScorePill({ label, value }: { label: string; value: number }) {
-  const color = value >= 70
+const ARTICLE_TABLE_GRID = 'lg:grid-cols-[minmax(300px,1fr)_72px_98px_86px_74px_106px_168px]'
+
+function scoreTone(value: number | null) {
+  if (value === null) return 'bg-[#f0f0f2] text-tertiary'
+  return value >= 70
     ? 'bg-success/10 text-[#1a7a3a]'
     : value >= 40
     ? 'bg-warning/10 text-[#c07000]'
     : 'bg-danger/10 text-danger'
+}
+
+function ScorePill({ label, value }: { label: string; value: number | null }) {
   return (
-    <span className={`hidden lg:inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-medium w-14 ${color}`}>
-      {label.slice(0, 3)} {Math.round(value)}
+    <span className={`inline-flex w-fit items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-medium lg:w-full ${scoreTone(value)}`}>
+      {label} {value === null ? '—' : Math.round(value)}
     </span>
   )
+}
+
+function EmptyScore() {
+  return <ScorePill label="" value={null} />
 }
 
 function ArticleRow({
@@ -61,19 +71,18 @@ function ArticleRow({
   ]
 
   return (
-    <div className="flex items-center gap-3 rounded-[14px] bg-[#f9f9fb] px-4 py-3.5 group hover:bg-[#f0f0f2] transition-colors">
-      <div className="flex-1 min-w-0">
-        <p
-          className="text-[13px] font-medium text-primary truncate cursor-pointer hover:text-accent transition-colors"
+    <div className={`grid gap-3 rounded-[14px] bg-[#f9f9fb] px-4 py-3 transition-colors hover:bg-[#f0f0f2] lg:items-center ${ARTICLE_TABLE_GRID}`}>
+      <div className="min-w-0">
+        <button
+          type="button"
+          className="block max-w-full text-left text-[13px] font-medium leading-snug text-primary transition-colors hover:text-accent [overflow-wrap:anywhere]"
           onClick={() => onEdit(article)}
         >
           {article.title}
-        </p>
-        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-tertiary flex-wrap">
-          {category && <span className="text-accent/80 font-medium">{category.name}</span>}
-          {category && article.keyword && <span>·</span>}
-          {article.keyword && <span className="truncate max-w-[200px]">{article.keyword}</span>}
-          {(category || article.keyword) && <span>·</span>}
+        </button>
+        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-tertiary">
+          <span className="font-medium text-accent/80">{category?.name ?? 'Sans catégorie'}</span>
+          <span>·</span>
           <span>{formatDate(article.updated_at)}</span>
           {article.word_count > 0 && <><span>·</span><span>{article.word_count} mots</span></>}
           {article.scheduled_at && (
@@ -85,36 +94,37 @@ function ArticleRow({
           )}
         </div>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        {article.seo_score !== null
-          ? <ScorePill label="SEO" value={article.seo_score} />
-          : <span className="hidden lg:inline-block w-14" />
-        }
-        {article.readability_score !== null
-          ? <ScorePill label="Lisibilité" value={article.readability_score} />
-          : <span className="hidden lg:inline-block w-14" />
-        }
-        {article.quality_score !== null
-          ? <ScorePill label="Qualité" value={article.quality_score} />
-          : <span className="hidden lg:inline-block w-14" />
-        }
-        {article.eeat_score !== null
-          ? <ScorePill label="EEAT" value={article.eeat_score} />
-          : <span className="hidden lg:inline-block w-12" />
-        }
+      <div className="flex flex-wrap items-center gap-1.5 lg:block">
+        {article.seo_score !== null ? <ScorePill label="SEO" value={article.seo_score} /> : <EmptyScore />}
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5 lg:block">
+        {article.readability_score !== null ? <ScorePill label="Lisibilité" value={article.readability_score} /> : <EmptyScore />}
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5 lg:block">
+        {article.quality_score !== null ? <ScorePill label="Qualité" value={article.quality_score} /> : <EmptyScore />}
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5 lg:block">
+        {article.eeat_score !== null ? <ScorePill label="EEAT" value={article.eeat_score} /> : <EmptyScore />}
+      </div>
+      <div className="flex items-center lg:justify-start">
         <StatusBadge status={article.status} />
+      </div>
+      <div className="flex items-center gap-1.5 lg:justify-end">
         <button
+          type="button"
           onClick={() => onEdit(article)}
-          className="flex items-center gap-1.5 rounded-[8px] bg-accent px-2.5 py-1 text-[12px] font-medium text-white hover:bg-accent/90 transition-colors shrink-0"
+          className="flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-[8px] bg-accent px-3 text-[12px] font-medium text-white transition-colors hover:bg-accent/90"
+          title="Éditer"
         >
-          <ExternalLink size={11} />
+          <Pencil size={12} />
           Éditer
         </button>
         {allActions.length > 0 && (
           <select
             onChange={(e) => { if (e.target.value) { onAction(e.target.value, article); e.target.value = '' } }}
-            className="text-[12px] text-tertiary bg-transparent border border-border rounded-[8px] px-2 py-1 cursor-pointer hover:bg-[#e5e5e7] transition-colors"
+            className="h-8 w-[82px] cursor-pointer rounded-[8px] border border-border bg-surface px-1.5 text-[11px] text-secondary transition-colors hover:bg-[#e5e5e7]"
             defaultValue=""
+            aria-label={`Actions pour ${article.title}`}
           >
             <option value="" disabled>Actions</option>
             {allActions.map((a) => (
@@ -340,7 +350,7 @@ export default function ArticlesPage() {
               options={categoryOptions}
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="w-44"
+              className="w-56"
             />
           )}
         </div>
@@ -366,17 +376,14 @@ export default function ArticlesPage() {
         )}
         {status === 'success' && articles.length > 0 && (
           <>
-            {/* Column headers */}
-            <div className="hidden lg:flex items-center gap-3 px-4 pb-1.5 text-[11px] font-medium text-tertiary uppercase tracking-wide">
-              <div className="flex-1 min-w-0">Titre / Catégorie</div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="w-14 text-center">SEO</span>
-                <span className="w-14 text-center">Lisibilité</span>
-                <span className="w-14 text-center">Qualité</span>
-                <span className="w-12 text-center">EEAT</span>
-                <span className="w-20 text-center">Statut</span>
-                <span className="w-[76px]" />
-              </div>
+            <div className={`hidden gap-3 px-4 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-tertiary lg:grid ${ARTICLE_TABLE_GRID}`}>
+              <div>Titre / Catégorie</div>
+              <div className="text-center">SEO</div>
+              <div className="text-center">Lisibilité</div>
+              <div className="text-center">Qualité</div>
+              <div className="text-center">EEAT</div>
+              <div>Statut</div>
+              <div className="text-right">Actions</div>
             </div>
             <div className="flex flex-col gap-1.5">
               {articles.map((article) => (
@@ -416,7 +423,7 @@ export default function ArticlesPage() {
             <input
               type="datetime-local"
               value={scheduleDate}
-onChange={(e) => setScheduleDate(e.target.value)}
+              onChange={(e) => setScheduleDate(e.target.value)}
               className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
             />
           </div>

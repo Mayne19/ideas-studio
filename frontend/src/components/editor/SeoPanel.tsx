@@ -31,7 +31,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 function ScoreRing({ label, score }: { label: string; score: number | null }) {
   const val = score ?? 0
-  const color = val >= 70 ? '#247a3d' : val >= 40 ? '#b36a00' : '#c9352b'
+  const color = val >= 70 ? '#31c96b' : val >= 40 ? '#ffad33' : '#ff6258'
   const r = 42
   const circ = 2 * Math.PI * r
   const dash = (val / 100) * circ
@@ -39,7 +39,7 @@ function ScoreRing({ label, score }: { label: string; score: number | null }) {
   return (
     <div className="flex flex-col items-center gap-1.5 rounded-[12px] border border-border bg-[#f9f9fb] px-2 py-3">
       <svg width="112" height="112" viewBox="0 0 112 112" aria-label={`${label} ${Math.round(val)}`}>
-        <circle cx="56" cy="56" r={r} fill="none" stroke="#e5e5e7" strokeWidth="9" />
+        <circle cx="56" cy="56" r={r} fill="none" stroke="#ececf0" strokeWidth="9" />
         <circle
           cx="56"
           cy="56"
@@ -92,8 +92,8 @@ function ReadinessBlock({ check, hasTitleH1 }: { check: ReadyCheck; hasTitleH1: 
     : check.blocking_issues
   const hasBlocking = blockingIssues.length > 0
   const config = check.can_publish || !hasBlocking
-    ? { icon: <CheckCircle size={13} />, label: 'Publication readiness: pret ou a verifier', cls: 'bg-success/8 text-[#1a7a3a]' }
-    : { icon: <XCircle size={13} />, label: 'Publication readiness: bloque', cls: 'bg-danger/8 text-danger' }
+    ? { icon: <CheckCircle size={13} />, label: 'Publication readiness: pret ou a verifier', cls: 'bg-success/10 text-[#218044]' }
+    : { icon: <XCircle size={13} />, label: 'Publication readiness: bloque', cls: 'bg-danger/8 text-[#d93b33]' }
 
   return (
     <div className={`rounded-[10px] px-3 py-2.5 ${config.cls}`}>
@@ -120,12 +120,22 @@ function isMissingH1Issue(issue: SeoIssue): boolean {
 export default function SeoPanel({
   article,
   projectId,
+  onBeforeAnalyze,
+  initialAnalysis = null,
+  initialReadiness = null,
+  onAnalysisUpdate,
+  onReadinessUpdate,
 }: {
   article: EditorArticle
   projectId: string
+  onBeforeAnalyze?: () => Promise<void> | void
+  initialAnalysis?: SeoAnalysis | null
+  initialReadiness?: ReadyCheck | null
+  onAnalysisUpdate?: (analysis: SeoAnalysis) => void
+  onReadinessUpdate?: (check: ReadyCheck) => void
 }) {
-  const [analysis, setAnalysis] = useState<SeoAnalysis | null>(null)
-  const [readiness, setReadiness] = useState<ReadyCheck | null>(null)
+  const [analysis, setAnalysis] = useState<SeoAnalysis | null>(initialAnalysis)
+  const [readiness, setReadiness] = useState<ReadyCheck | null>(initialReadiness)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -137,11 +147,14 @@ export default function SeoPanel({
     setLoading(true)
     setError('')
     try {
+      await onBeforeAnalyze?.()
       const result = await analyzeArticle(projectId, article.id)
       setAnalysis(result)
+      onAnalysisUpdate?.(result)
       try {
         const check = await readyCheck(projectId, article.id)
         setReadiness(check)
+        onReadinessUpdate?.(check)
       } catch {
         // Readiness is helpful but should not hide analysis results.
       }

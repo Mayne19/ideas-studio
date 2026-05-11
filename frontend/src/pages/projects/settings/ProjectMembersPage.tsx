@@ -234,7 +234,7 @@ export default function ProjectMembersPage() {
           )}
 
           {/* Email invitation — coming soon */}
-          <div className="rounded-[12px] border border-border bg-[#f9f9fb] px-4 py-3 flex flex-col gap-2">
+          <div className="rounded-[16px] bg-[#f9f9fb] px-4 py-3 flex flex-col gap-2">
             <p className="text-[13px] font-medium text-primary">Invitation par email</p>
             <p className="text-[12px] text-secondary leading-snug">
               L'invitation par email sera disponible prochainement.

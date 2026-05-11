@@ -47,7 +47,7 @@ export default function ProjectProvidersPage() {
         {PROVIDERS.map((provider) => (
           <div
             key={provider.name}
-            className="flex items-center gap-4 rounded-[14px] border border-border bg-surface px-4 py-3"
+            className="flex items-center gap-4 rounded-[16px] bg-surface px-4 py-3"
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">

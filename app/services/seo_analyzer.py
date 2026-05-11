@@ -1,5 +1,6 @@
 import json
 import re
+from html import unescape
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
@@ -7,12 +8,39 @@ from app.models.article import Article
 from app.models.seo_analysis import SeoAnalysis
 
 
-def _parse_markdown(content: str) -> dict:
-    lines = content.splitlines()
-    h1_count = sum(1 for l in lines if re.match(r"^# [^#]", l))
-    h2_count = sum(1 for l in lines if re.match(r"^## [^#]", l))
-    h3_count = sum(1 for l in lines if re.match(r"^### [^#]", l))
-    h1_text = next((l[2:].strip() for l in lines if re.match(r"^# [^#]", l)), "")
+def _strip_html(value: str) -> str:
+    with_breaks = re.sub(r"</(p|div|li|h[1-6]|blockquote|tr)>", "\n", value, flags=re.IGNORECASE)
+    return unescape(re.sub(r"<[^>]+>", " ", with_breaks))
+
+
+def _html_heading_texts(content: str, level: int) -> list[str]:
+    pattern = rf"<h{level}[^>]*>(.*?)</h{level}>"
+    return [
+        _strip_html(match).strip()
+        for match in re.findall(pattern, content, flags=re.IGNORECASE | re.DOTALL)
+        if _strip_html(match).strip()
+    ]
+
+
+def _parse_markdown(content: str, title: str = "") -> dict:
+    has_html = bool(re.search(r"<[a-z][\s\S]*>", content, flags=re.IGNORECASE))
+    if has_html:
+        h1_texts = _html_heading_texts(content, 1)
+        h2_texts = _html_heading_texts(content, 2)
+        h3_texts = _html_heading_texts(content, 3)
+        text_content = _strip_html(content)
+        lines = [line.strip() for line in text_content.splitlines() if line.strip()]
+        h1_count = len(h1_texts) or (1 if title.strip() else 0)
+        h2_count = len(h2_texts)
+        h3_count = len(h3_texts)
+        h1_text = h1_texts[0] if h1_texts else title.strip()
+    else:
+        lines = content.splitlines()
+        text_content = content
+        h1_count = sum(1 for l in lines if re.match(r"^# [^#]", l)) or (1 if title.strip() else 0)
+        h2_count = sum(1 for l in lines if re.match(r"^## [^#]", l))
+        h3_count = sum(1 for l in lines if re.match(r"^### [^#]", l))
+        h1_text = next((l[2:].strip() for l in lines if re.match(r"^# [^#]", l)), title.strip())
 
     paragraphs = []
     current = []
@@ -33,10 +61,10 @@ def _parse_markdown(content: str) -> dict:
             intro = p
             break
 
-    sentences = re.split(r"[.!?]+", content)
+    sentences = re.split(r"[.!?]+", text_content)
     sentences = [s.strip() for s in sentences if s.strip() and not s.strip().startswith("#")]
 
-    words = content.split()
+    words = text_content.split()
     word_count = len(words)
 
     has_conclusion = any(
@@ -70,6 +98,17 @@ def _issue(type_: str, category: str, severity: str, message: str, suggestion: s
     }
 
 
+def _keyword_in_text(keyword: str, text: str) -> bool:
+    keyword = keyword.lower().strip()
+    text = text.lower()
+    if not keyword:
+        return True
+    if keyword in text:
+        return True
+    tokens = [token for token in re.split(r"[^a-z0-9àâäéèêëîïôöùûüç]+", keyword) if len(token) > 2]
+    return bool(tokens) and all(token in text for token in tokens)
+
+
 def _run_seo_checks(article: Article, parsed: dict) -> list[dict]:
     issues = []
     keyword = (article.keyword or "").lower().strip()
@@ -77,7 +116,7 @@ def _run_seo_checks(article: Article, parsed: dict) -> list[dict]:
     title_lower = (article.title or "").lower()
 
     # Keyword in title
-    if keyword and keyword not in title_lower:
+    if keyword and not _keyword_in_text(keyword, title_lower):
         issues.append(_issue(
             "keyword_in_title", "seo", "critical",
             "Le mot-clé principal n'est pas dans le titre.",
@@ -86,7 +125,7 @@ def _run_seo_checks(article: Article, parsed: dict) -> list[dict]:
         ))
 
     # Keyword in H1
-    if keyword and parsed["h1_text"] and keyword not in parsed["h1_text"].lower():
+    if keyword and parsed["h1_text"] and not _keyword_in_text(keyword, parsed["h1_text"]):
         issues.append(_issue(
             "keyword_in_h1", "seo", "warning",
             "Le mot-clé principal n'est pas dans le H1.",
@@ -95,7 +134,7 @@ def _run_seo_checks(article: Article, parsed: dict) -> list[dict]:
         ))
 
     # Keyword in intro
-    if keyword and parsed["intro"] and keyword not in parsed["intro"].lower():
+    if keyword and parsed["intro"] and not _keyword_in_text(keyword, parsed["intro"]):
         issues.append(_issue(
             "keyword_in_intro", "seo", "warning",
             "Le mot-clé principal n'apparaît pas dans l'introduction.",
@@ -189,7 +228,7 @@ def _run_seo_checks(article: Article, parsed: dict) -> list[dict]:
         ))
 
     # Keyword in meta title
-    if keyword and meta_title and keyword not in meta_title.lower():
+    if keyword and meta_title and not _keyword_in_text(keyword, meta_title):
         issues.append(_issue(
             "keyword_in_meta_title", "seo", "warning",
             "Le mot-clé principal n'est pas dans le meta title.",
@@ -441,7 +480,7 @@ def analyze_article(db: Session, article_id: str) -> SeoAnalysis:
         raise ValueError(f"Article {article_id} not found")
 
     content = article.content or ""
-    parsed = _parse_markdown(content)
+    parsed = _parse_markdown(content, article.title or "")
 
     seo_issues = _run_seo_checks(article, parsed)
     readability_issues = _run_readability_checks(parsed)

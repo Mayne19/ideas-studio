@@ -35,7 +35,7 @@ function MediaCard({ asset, onDelete }: { asset: MediaAsset; onDelete: () => voi
   }
 
   return (
-    <div className="group flex flex-col rounded-[14px] border border-border bg-surface overflow-hidden">
+    <div className="group flex flex-col rounded-[16px] bg-surface overflow-hidden">
       <div className="relative bg-[#f5f5f7] h-36 flex items-center justify-center">
         {asset.mime_type?.startsWith('image/') ? (
           <img src={asset.url} alt={asset.alt_text ?? ''} className="w-full h-full object-cover" />

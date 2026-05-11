@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
-import { lazy, Suspense } from 'react'
-import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { createBrowserRouter, Navigate, useRouteError } from 'react-router-dom'
 import LoginPage from '@/pages/auth/LoginPage'
 import RegisterPage from '@/pages/auth/RegisterPage'
 import ProjectsPage from '@/pages/projects/ProjectsPage'
@@ -32,6 +32,48 @@ const ProjectProvidersPage = lazy(() => import('@/pages/projects/settings/Projec
 const MediaPage = lazy(() => import('@/pages/projects/media/MediaPage'))
 const AccountPage = lazy(() => import('@/pages/account/AccountPage'))
 
+function RouteErrorFallback() {
+  const error = useRouteError()
+  const message = error instanceof Error ? error.message : String(error)
+  const isChunkError =
+    message.includes('dynamically imported module') ||
+    message.includes('Failed to fetch dynamically imported module') ||
+    message.includes('Importing a module script failed')
+
+  useEffect(() => {
+    if (!isChunkError) return
+    const key = `ideas-studio:chunk-reload:${window.location.pathname}`
+    if (window.sessionStorage.getItem(key)) return
+    window.sessionStorage.setItem(key, '1')
+    window.location.reload()
+  }, [isChunkError])
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-app px-4">
+      <div className="w-full max-w-md rounded-[18px] border border-border bg-surface p-6 text-center shadow-soft">
+        <p className="text-[15px] font-semibold text-primary">
+          {isChunkError ? "L'application vient d'être mise à jour." : 'Impossible de charger cette page.'}
+        </p>
+        <p className="mt-2 text-[13px] leading-relaxed text-secondary">
+          {isChunkError
+            ? 'Rechargez la page pour récupérer les derniers fichiers du frontend.'
+            : 'Une erreur technique empêche cette page de s’afficher pour le moment.'}
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            window.sessionStorage.removeItem(`ideas-studio:chunk-reload:${window.location.pathname}`)
+            window.location.reload()
+          }}
+          className="mt-4 rounded-[10px] bg-accent px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-accent/90"
+        >
+          Recharger
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export const router = createBrowserRouter([
   {
     path: '/login',
@@ -48,6 +90,7 @@ export const router = createBrowserRouter([
         <AppShell />
       </ProtectedRoute>
     ),
+    errorElement: <RouteErrorFallback />,
     children: [
       {
         index: true,
@@ -228,5 +271,4 @@ export const router = createBrowserRouter([
     element: <Navigate to="/" replace />,
   },
 ])
-
 

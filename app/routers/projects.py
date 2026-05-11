@@ -77,7 +77,10 @@ def connect_info(
         domain=project.domain,
         status=project.status,
         public_tracking_key=project.public_tracking_key,
+        secret_api_key=project.secret_api_key,
         secret_api_key_masked=masked,
+        connected_at=project.connected_at,
+        last_seen_at=project.last_seen_at,
         snippet=snippet,
         public_api_endpoints={
             "articles": f"{settings.APP_URL}/api/public/projects/{project.id}/articles",

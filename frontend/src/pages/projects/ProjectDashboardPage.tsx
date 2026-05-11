@@ -15,6 +15,7 @@ import type { Article, Category, OptimizationRecommendation } from '@/types'
 import { Card } from '@/components/ui/Card'
 import StatusBadge from '@/components/ui/StatusBadge'
 import LoadingState from '@/components/ui/LoadingState'
+import Modal from '@/components/ui/Modal'
 import { formatDate } from '@/utils/format'
 
 function timeAgo(iso: string): string {
@@ -34,26 +35,42 @@ function KpiCard({
   value: string | number
   suffix?: string
   label: string
-  trend?: string
+  trend?: string | null
   onClick?: () => void
 }) {
+  const trendClass = trend?.startsWith('+')
+    ? 'bg-success/10 text-[#1a7a3a]'
+    : trend?.startsWith('-')
+      ? 'bg-danger/10 text-danger'
+      : 'text-tertiary'
+
   return (
     <div
-      className={`rounded-[16px] border border-border bg-surface p-4 flex flex-col gap-2 ${onClick ? 'cursor-pointer hover:border-accent/40 transition-colors' : ''}`}
+      className={`rounded-[22px] bg-surface p-4 flex flex-col justify-between gap-2 ${onClick ? 'cursor-pointer transition-colors hover:bg-white' : ''}`}
       onClick={onClick}
     >
-      <span className="text-accent">{icon}</span>
+      <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-accent/10 text-accent">{icon}</span>
       <p className="text-[24px] font-semibold text-primary tracking-tight leading-none">
         {value}
         {suffix && <span className="text-[14px] font-normal text-tertiary ml-0.5">{suffix}</span>}
       </p>
       <div className="flex items-center justify-between">
         <p className="text-[12px] text-tertiary">{label}</p>
-        {trend && <span className="text-[11px] font-medium text-[#1a7a3a]">{trend}</span>}
+        {trend !== undefined && (
+          <span className={`rounded-full px-1.5 py-0.5 text-[11px] font-medium ${trendClass}`}>{trend ?? '—'}</span>
+        )}
       </div>
     </div>
   )
 }
+
+const DEMO_KPI_TRENDS = {
+  seo: '+8%',
+  views: '+12%',
+  readingTime: '-3%',
+  published: '+5%',
+  inProgress: '-2%',
+} as const
 
 const TODO_ACCENT = {
   warning: 'bg-warning/8 text-[#c07000]',
@@ -83,9 +100,10 @@ type ActivityEvent = {
 
 type DashboardData = {
   recentArticles: Article[]
+  activityArticles: Article[]
   categories: Category[]
   publishedCount: number
-  writingCount: number
+  inProgressCount: number
   ideasCount: number
   reviewNeededCount: number
   readyCount: number
@@ -97,16 +115,58 @@ type DashboardData = {
   avgReadingTime: number | null
 }
 
+const IN_PROGRESS_STATUSES = new Set<Article['status']>([
+  'draft',
+  'outline_ready',
+  'writing_requested',
+  'writing_in_progress',
+  'draft_ready',
+  'review_needed',
+  'correction_needed',
+  'ready_to_publish',
+  'scheduled',
+  'update_recommended',
+])
+
+function isFilledScore(score: number | null | undefined): score is number {
+  return typeof score === 'number' && Number.isFinite(score)
+}
+
+function scoreOnTen(score: number | null | undefined): string {
+  if (!isFilledScore(score)) return '—'
+  const normalized = score > 10 ? score / 10 : score
+  return normalized.toFixed(1)
+}
+
+function scoreTone(score: number | null | undefined): string {
+  if (!isFilledScore(score)) return 'bg-[#f0f0f2] text-tertiary'
+  if (score >= 70) return 'bg-success/10 text-[#1a7a3a]'
+  if (score >= 40) return 'bg-warning/10 text-[#c07000]'
+  return 'bg-danger/10 text-danger'
+}
+
+function ArticleScoreBadge({ label, value }: { label: string; value: number | null }) {
+  return (
+    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${scoreTone(value)}`}>
+      {label} {isFilledScore(value) ? Math.round(value) : '—'}
+    </span>
+  )
+}
+
+function getArticleDate(article: Article): string {
+  return article.published_at ?? article.scheduled_at ?? article.updated_at ?? article.created_at
+}
+
 function deriveActivityEvents(articles: Article[], projectId: string): ActivityEvent[] {
   const events: ActivityEvent[] = []
-  for (const a of articles.slice(0, 10)) {
+  for (const a of articles.slice(0, 20)) {
     if (a.status === 'published') {
       events.push({
         id: `pub-${a.id}`,
         icon: <Send size={11} />,
         label: 'Article publié',
         articleTitle: a.title,
-        time: timeAgo(a.updated_at),
+        time: timeAgo(a.published_at ?? a.updated_at),
         href: `/projects/${projectId}/articles/${a.id}/edit`,
       })
     } else if (a.status === 'scheduled') {
@@ -115,7 +175,7 @@ function deriveActivityEvents(articles: Article[], projectId: string): ActivityE
         icon: <Clock size={11} />,
         label: 'Publication programmée',
         articleTitle: a.title,
-        time: timeAgo(a.updated_at),
+        time: timeAgo(a.scheduled_at ?? a.updated_at),
         href: `/projects/${projectId}/articles/${a.id}/edit`,
       })
     } else if (a.status === 'idea_proposed' || a.status === 'idea_priority') {
@@ -124,7 +184,7 @@ function deriveActivityEvents(articles: Article[], projectId: string): ActivityE
         icon: <Lightbulb size={11} />,
         label: 'Idée créée',
         articleTitle: a.title,
-        time: timeAgo(a.updated_at),
+        time: timeAgo(a.created_at),
         href: `/projects/${projectId}/ideas`,
       })
     } else if (a.status === 'draft_ready' || a.status === 'review_needed') {
@@ -156,7 +216,7 @@ function deriveActivityEvents(articles: Article[], projectId: string): ActivityE
       })
     }
   }
-  return events.slice(0, 7)
+  return events
 }
 
 export default function ProjectDashboardPage() {
@@ -165,51 +225,49 @@ export default function ProjectDashboardPage() {
   const { project, loading: projectLoading } = useProject()
   const { user } = useAuth()
   const [data, setData] = useState<DashboardData | null>(null)
+  const [activityModalOpen, setActivityModalOpen] = useState(false)
 
   useEffect(() => {
     if (!projectId) return
     Promise.allSettled([
-      listArticles(projectId, { limit: 15 }),
-      listArticles(projectId, { status: 'published', limit: 200 }),
-      listArticles(projectId, { status: 'writing_in_progress', limit: 100 }),
-      listArticles(projectId, { status: 'idea_proposed', limit: 100 }),
-      listArticles(projectId, { status: 'idea_priority', limit: 100 }),
-      listArticles(projectId, { status: 'review_needed', limit: 100 }),
-      listArticles(projectId, { status: 'ready_to_publish', limit: 100 }),
-      listArticles(projectId, { status: 'scheduled', limit: 100 }),
-      listArticles(projectId, { status: 'failed', limit: 100 }),
+      listArticles(projectId, { limit: 500 }),
       listRecommendations(projectId),
       getPerformanceSummary(projectId, '30d'),
       listCategories(projectId),
-    ]).then(([recent, published, writing, proposed, priority, review, ready, scheduled, failed, recs, perf, cats]) => {
-      const recentArticles =
-        recent.status === 'fulfilled'
-          ? [...recent.value]
-              .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
-              .slice(0, 8)
+    ]).then(([articles, recs, perf, cats]) => {
+      const allArticles =
+        articles.status === 'fulfilled'
+          ? [...articles.value].sort((a, b) => getArticleDate(b).localeCompare(getArticleDate(a)))
           : []
+      const recentArticles =
+        allArticles
+          .filter((article) => !article.status.startsWith('idea_'))
+          .slice(0, 8)
+      const activityArticles = allArticles.slice(0, 20)
       const categories = cats.status === 'fulfilled' ? cats.value : []
-      const publishedArticles = published.status === 'fulfilled' ? published.value : []
-      const scored = publishedArticles.filter((a) => a.seo_score !== null)
+      const contentArticles = allArticles.filter((article) => !article.status.startsWith('idea_'))
+      const publishedArticles = allArticles.filter((article) => article.status === 'published')
+      const inProgressArticles = allArticles.filter((article) => IN_PROGRESS_STATUSES.has(article.status))
+      const scored = contentArticles.filter((a) => a.seo_score !== null)
       const avgSeoScore = scored.length > 0
         ? scored.reduce((s, a) => s + (a.seo_score ?? 0), 0) / scored.length
         : null
-      const worded = publishedArticles.filter((a) => a.word_count > 0)
+      const worded = contentArticles.filter((a) => a.word_count > 0)
       const avgReadingTime = worded.length > 0
         ? Math.round(worded.reduce((s, a) => s + a.word_count, 0) / worded.length / 200)
         : null
       setData({
         recentArticles,
+        activityArticles,
         categories,
         publishedCount: publishedArticles.length,
-        writingCount:   writing.status === 'fulfilled'   ? writing.value.length   : 0,
+        inProgressCount: inProgressArticles.length,
         ideasCount:
-          (proposed.status === 'fulfilled' ? proposed.value.length : 0) +
-          (priority.status === 'fulfilled' ? priority.value.length : 0),
-        reviewNeededCount: review.status === 'fulfilled' ? review.value.length : 0,
-        readyCount:     ready.status === 'fulfilled'     ? ready.value.length     : 0,
-        scheduledCount: scheduled.status === 'fulfilled' ? scheduled.value.length : 0,
-        failedCount:    failed.status === 'fulfilled'    ? failed.value.length    : 0,
+          allArticles.filter((article) => article.status === 'idea_proposed' || article.status === 'idea_priority').length,
+        reviewNeededCount: allArticles.filter((article) => article.status === 'review_needed').length,
+        readyCount: allArticles.filter((article) => article.status === 'ready_to_publish').length,
+        scheduledCount: allArticles.filter((article) => article.status === 'scheduled').length,
+        failedCount: allArticles.filter((article) => article.status === 'failed').length,
         pendingRecs:
           recs.status === 'fulfilled'
             ? recs.value.filter((r) => r.status === 'pending')
@@ -285,15 +343,14 @@ export default function ProjectDashboardPage() {
     }
   }
 
-  const activityEvents = data ? deriveActivityEvents(data.recentArticles, projectId ?? '') : []
+  const activityEvents = data ? deriveActivityEvents(data.activityArticles, projectId ?? '') : []
+  const visibleActivityEvents = activityEvents.slice(0, 5)
 
-  const seoValue = data?.avgSeoScore != null
-    ? (data.avgSeoScore / 10).toFixed(1)
-    : '—'
+  const seoValue = scoreOnTen(data?.avgSeoScore)
 
   const summaryText = (() => {
     if (!data) return 'Chargement de vos données…'
-    if (data.publishedCount === 0 && data.writingCount === 0 && data.ideasCount === 0) {
+    if (data.publishedCount === 0 && data.inProgressCount === 0 && data.ideasCount === 0) {
       return 'Commencez par créer votre premier article ou générer des idées.'
     }
     if (!isConnected && data.publishedCount > 0) {
@@ -355,14 +412,16 @@ export default function ProjectDashboardPage() {
         <KpiCard
           icon={<BarChart2 size={17} />}
           value={seoValue}
-          suffix={data?.avgSeoScore != null ? '/10' : undefined}
-          label="SEO moyen"
+          suffix="/10"
+          label="Score SEO moyen"
+          trend={DEMO_KPI_TRENDS.seo}
           onClick={() => navigate(`/projects/${projectId}/performance`)}
         />
         <KpiCard
           icon={<Globe size={17} />}
           value={data?.totalViews != null ? data.totalViews.toLocaleString('fr-FR') : '—'}
           label="Vues du mois"
+          trend={DEMO_KPI_TRENDS.views}
           onClick={() => navigate(`/projects/${projectId}/traffic`)}
         />
         <KpiCard
@@ -370,17 +429,20 @@ export default function ProjectDashboardPage() {
           value={data?.avgReadingTime != null ? data.avgReadingTime : '—'}
           suffix={data?.avgReadingTime != null ? ' min' : undefined}
           label="Temps moyen"
+          trend={DEMO_KPI_TRENDS.readingTime}
         />
         <KpiCard
           icon={<FileText size={17} />}
           value={data?.publishedCount ?? '—'}
           label="Publiés"
+          trend={DEMO_KPI_TRENDS.published}
           onClick={() => navigate(`/projects/${projectId}/articles`)}
         />
         <KpiCard
           icon={<PenLine size={17} />}
-          value={data?.writingCount ?? '—'}
+          value={data?.inProgressCount ?? '—'}
           label="En cours"
+          trend={DEMO_KPI_TRENDS.inProgress}
           onClick={() => navigate(`/projects/${projectId}/articles`)}
         />
       </div>
@@ -411,47 +473,43 @@ export default function ProjectDashboardPage() {
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col divide-y divide-border">
+              <div className="flex flex-col gap-1">
                 {data.recentArticles.map((a) => {
                   const cat = data.categories.find((c) => c.id === a.category_id)
                   return (
-                    <div key={a.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                    <button
+                      key={a.id}
+                      onClick={() => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
+                      className="flex min-w-0 items-start gap-3 rounded-[12px] px-2 py-2.5 text-left transition-colors hover:bg-[#f5f5f7]"
+                    >
                       <div className="flex-1 min-w-0">
-                        <p className="truncate text-[13px] font-medium text-primary">{a.title}</p>
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          {cat && (
-                            <span className="text-[10px] font-medium text-accent/80">{cat.name}</span>
-                          )}
-                          <StatusBadge status={a.status} />
-                          {a.seo_score !== null && (
-                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
-                              a.seo_score >= 70 ? 'bg-success/10 text-[#1a7a3a]' :
-                              a.seo_score >= 40 ? 'bg-warning/10 text-[#c07000]' : 'bg-danger/10 text-danger'
-                            }`}>
-                              SEO {Math.round(a.seo_score)}
-                            </span>
-                          )}
-                          <span className="text-[10px] text-tertiary flex items-center gap-0.5 ml-auto">
-                            <Clock size={9} />
-                            {timeAgo(a.updated_at)}
+                        <p className="text-[13px] font-medium leading-snug text-primary break-words">{a.title}</p>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                          <span className="min-w-[96px] text-[10px] font-medium text-accent/80">
+                            {cat?.name ?? 'Sans catégorie'}
+                          </span>
+                          <span className="flex flex-wrap items-center gap-1.5">
+                            <ArticleScoreBadge label="SEO" value={a.seo_score} />
+                            <ArticleScoreBadge label="Lisibilité" value={a.readability_score} />
+                            <ArticleScoreBadge label="Qualité" value={a.quality_score} />
+                            <ArticleScoreBadge label="EEAT" value={a.eeat_score} />
+                          </span>
+                          <span className="min-w-[86px]">
+                            <StatusBadge status={a.status} />
                           </span>
                         </div>
                       </div>
-                      <button
-                        onClick={() => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
-                        className="shrink-0 flex items-center gap-1 rounded-[8px] border border-border px-2.5 py-1 text-[11px] font-medium text-secondary hover:bg-accent hover:text-white hover:border-accent transition-colors"
-                      >
-                        <Edit3 size={10} />
-                        Éditer
-                      </button>
-                    </div>
+                      <div className="flex shrink-0 items-center gap-1 pt-0.5 text-[10px] text-tertiary">
+                        <Clock size={9} />
+                        <span>{formatDate(getArticleDate(a))}</span>
+                      </div>
+                    </button>
                   )
                 })}
               </div>
             )}
           </Card>
         </div>
-
         {/* Right — col-span-1 — À faire + Activité stacked */}
         <div className="flex flex-col gap-4">
           {/* À faire maintenant */}
@@ -479,12 +537,23 @@ export default function ProjectDashboardPage() {
 
           {/* Activité récente */}
           <Card className="flex-1">
-            <p className="text-[12px] font-semibold text-secondary uppercase tracking-wide mb-3">Activité récente</p>
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-[12px] font-semibold text-secondary uppercase tracking-wide">Activité récente</p>
+              {activityEvents.length > 5 && (
+                <button
+                  type="button"
+                  onClick={() => setActivityModalOpen(true)}
+                  className="text-[11px] text-accent hover:underline"
+                >
+                  Voir tout →
+                </button>
+              )}
+            </div>
             {activityEvents.length === 0 ? (
-              <p className="text-[12px] text-tertiary text-center py-4">Aucune activité récente.</p>
+              <p className="text-[12px] text-tertiary text-center py-4">Aucune activité récente disponible pour le moment.</p>
             ) : (
               <div className="flex flex-col gap-0.5">
-                {activityEvents.map((ev) => (
+                {visibleActivityEvents.map((ev) => (
                   <button
                     key={ev.id}
                     onClick={() => navigate(ev.href)}
@@ -505,6 +574,42 @@ export default function ProjectDashboardPage() {
           </Card>
         </div>
       </div>
+
+      <Modal
+        open={activityModalOpen}
+        onClose={() => setActivityModalOpen(false)}
+        title="Toutes les activités récentes"
+        size="lg"
+      >
+        {activityEvents.length === 0 ? (
+          <p className="text-[13px] text-tertiary">Aucune activité récente disponible pour le moment.</p>
+        ) : (
+          <div className="max-h-[520px] overflow-y-auto pr-1">
+            <div className="flex flex-col gap-1">
+              {activityEvents.map((ev) => (
+                <button
+                  key={ev.id}
+                  type="button"
+                  onClick={() => {
+                    setActivityModalOpen(false)
+                    navigate(ev.href)
+                  }}
+                  className="flex items-start gap-2 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-[#f5f5f7]"
+                >
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/8 text-accent">
+                    {ev.icon}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[12px] font-medium text-secondary">{ev.label}</p>
+                    <p className="truncate text-[12px] text-primary">{ev.articleTitle}</p>
+                  </div>
+                  <span className="mt-0.5 shrink-0 text-[11px] text-tertiary">{ev.time}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

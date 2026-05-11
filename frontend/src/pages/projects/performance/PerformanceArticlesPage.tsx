@@ -9,12 +9,15 @@ import ErrorState from '@/components/ui/ErrorState'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 
-type Period = '7d' | '30d' | '90d'
+type Period = '1d' | '7d' | '30d' | '90d' | '180d' | '365d'
 
 const PERIODS: { value: Period; label: string }[] = [
-  { value: '7d',  label: '7 jours' },
+  { value: '1d', label: '1 jour' },
+  { value: '7d', label: '7 jours' },
   { value: '30d', label: '30 jours' },
   { value: '90d', label: '90 jours' },
+  { value: '180d', label: '6 mois' },
+  { value: '365d', label: '1 an' },
 ]
 
 function SeoBar({ score }: { score: number | null }) {
@@ -35,7 +38,7 @@ export default function PerformanceArticlesPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
   const [articles, setArticles] = useState<ArticlePerformanceBrief[]>([])
-  const [period, setPeriod] = useState<Period>('30d')
+  const [period, setPeriod] = useState<Period>('1d')
   const [loadStatus, setLoadStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [tick, setTick] = useState(0)
 

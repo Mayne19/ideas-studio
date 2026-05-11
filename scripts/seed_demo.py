@@ -128,12 +128,35 @@ def seed_categories(db, project: Project) -> dict[str, Category]:
 
 def article_content(title: str, keyword: str) -> str:
     return (
-        f"<h2>{title}</h2>"
-        f"<p>Cet article démo sert à tester le workflow éditorial Ideas Studio autour du mot-clé <strong>{keyword}</strong>.</p>"
-        "<p>Il contient un angle, une intention de recherche, des scores qualité et des métadonnées pour alimenter les vues projet.</p>"
-        "<h3>Points clés</h3>"
-        "<ul><li>Identifier l'opportunité SEO.</li><li>Structurer le contenu pour la recherche.</li><li>Prioriser les actions mesurables.</li></ul>"
-        "<p>La version complète peut être enrichie depuis l'éditeur une fois le scénario validé.</p>"
+        f"<h2>Pourquoi {keyword} mérite un vrai pilotage</h2>"
+        f"<p>Cet article démo sert à tester le workflow éditorial Ideas Studio autour du mot-clé <strong>{keyword}</strong>. "
+        "Il contient volontairement plusieurs formats : paragraphes, liens, listes, tableau, citation, code, image et FAQ.</p>"
+        "<p>L'objectif est de vérifier que l'éditeur, la preview et l'analyse affichent correctement les contenus longs, les interlignes et les blocs enrichis.</p>"
+        "<blockquote>Un bon contenu éditorial doit rester lisible, mesurable et actionnable, même lorsqu'il combine plusieurs formats.</blockquote>"
+        "<h2>Méthode étape par étape</h2>"
+        "<ol><li>Définir l'intention de recherche principale.</li><li>Construire un plan clair avec des H2 et H3.</li><li>Ajouter des exemples concrets et des liens utiles.</li><li>Relire le contenu avant publication.</li></ol>"
+        "<p>Pour approfondir la partie technique, consultez "
+        "<a href=\"https://developers.google.com/search/docs\" target=\"_blank\" rel=\"noopener noreferrer\">Google Search Central</a>.</p>"
+        "<h3>Checklist de publication</h3>"
+        "<ul data-type=\"taskList\"><li data-type=\"taskItem\" data-checked=\"true\"><label><input type=\"checkbox\" checked=\"checked\"></label><div><p>Vérifier le titre et la meta description.</p></div></li><li data-type=\"taskItem\" data-checked=\"false\"><label><input type=\"checkbox\"></label><div><p>Ajouter une image dans le contenu.</p></div></li><li data-type=\"taskItem\" data-checked=\"false\"><label><input type=\"checkbox\"></label><div><p>Contrôler les scores SEO, lisibilité, qualité et EEAT.</p></div></li></ul>"
+        "<h2>Tableau de priorisation</h2>"
+        "<table><tbody><tr><th>Action</th><th>Impact</th><th>Effort</th></tr><tr><td>Optimiser le titre</td><td>Élevé</td><td>Faible</td></tr><tr><td>Ajouter des exemples</td><td>Moyen</td><td>Moyen</td></tr><tr><td>Mettre à jour les liens internes</td><td>Élevé</td><td>Faible</td></tr></tbody></table>"
+        "<hr>"
+        "<h3>Exemple d'image intégrée</h3>"
+        "<p>L'image ci-dessous permet de vérifier que les médias respectent la largeur du texte dans la preview.</p>"
+        "<img src=\"https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1000&q=80\" alt=\"Espace de travail éditorial\">"
+        "<h2>Mesure et amélioration continue</h2>"
+        "<p>Le suivi doit associer les vues, le temps moyen, les conversions et les signaux qualitatifs. "
+        f"Dans cette démonstration, le mot-clé <strong>{keyword}</strong> apparaît naturellement dans les sections clés.</p>"
+        "<p>Une équipe éditoriale peut ensuite comparer la performance par catégorie, identifier les contenus qui stagnent et décider quelles pages méritent une mise à jour prioritaire. "
+        "Cette logique donne un cadre simple pour passer d'une intuition éditoriale à une décision mesurable.</p>"
+        "<p>Le contenu doit également rester agréable à lire : phrases courtes, sections équilibrées, exemples concrets, tableaux utiles et liens vérifiés. "
+        "Ces éléments permettent de tester la lisibilité dans la preview comme dans l'éditeur final.</p>"
+        "<h3>Exemple de synthèse opérationnelle</h3>"
+        "<p>Avant publication, l'équipe vérifie le titre, la promesse, la structure, les médias, la FAQ et les signaux EEAT. "
+        "Après publication, elle suit les impressions, les clics, le temps moyen et les optimisations recommandées.</p>"
+        "<pre><code>score_global = (seo + lisibilite + qualite + eeat) / 4</code></pre>"
+        "<p>Cette base de test permet de visualiser une page article complète avant de brancher des données réelles plus riches.</p>"
     )
 
 
@@ -185,6 +208,16 @@ def seed_article(db, project: Project, category: Category, data: dict) -> Articl
         )
         db.add(article)
         db.flush()
+    else:
+        current_words = calculate_word_count(article.content)
+        if current_words < 250:
+            content = data.get("content") or article_content(data["title"], data["keyword"])
+            article.content = content
+            article.word_count = calculate_word_count(content)
+            article.faq_json = json_dumps(data["faq"])
+            article.callouts_json = json_dumps(data["callouts"])
+            article.content_blocks_json = json_dumps(data["content_blocks"])
+            article.updated_at = now
     return article
 
 

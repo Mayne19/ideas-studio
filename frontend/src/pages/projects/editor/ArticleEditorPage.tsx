@@ -9,6 +9,10 @@ import ImageExtension from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
+import { Table } from '@tiptap/extension-table'
+import { TableRow } from '@tiptap/extension-table-row'
+import { TableHeader } from '@tiptap/extension-table-header'
+import { TableCell } from '@tiptap/extension-table-cell'
 import {
   Eye, BarChart2, Settings, History, Loader2, RefreshCw,
   AlertCircle, MessageCircle, ChevronDown, ChevronUp, Plus, Trash2,
@@ -17,12 +21,18 @@ import {
 import { getEditorArticle, autosaveArticle } from '@/api/editor'
 import { listCategories } from '@/api/categories'
 import { listMembers } from '@/api/members'
-import { createComment } from '@/api/comments'
+import {
+  createComment,
+  deleteComment,
+  listComments,
+  resolveComment,
+  type ArticleComment,
+} from '@/api/comments'
 import {
   publishArticle, unpublishArticle, markReadyArticle, archiveArticle, scheduleArticle,
 } from '@/api/articles'
 import { ApiError } from '@/api/client'
-import type { EditorArticle, Category, ProjectMember } from '@/types'
+import type { EditorArticle, Category, ProjectMember, SeoAnalysis, ReadyCheck } from '@/types'
 import EditorToolbar from '@/components/editor/EditorToolbar'
 import AutosaveIndicator from '@/components/editor/AutosaveIndicator'
 import SeoPanel from '@/components/editor/SeoPanel'
@@ -112,6 +122,30 @@ function translateError(err: unknown): string {
   return 'Une erreur inattendue est survenue.'
 }
 
+function parseFaqItems(value: unknown): FaqItem[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is FaqItem =>
+      item !== null &&
+      typeof item === 'object' &&
+      typeof (item as FaqItem).question === 'string' &&
+      typeof (item as FaqItem).answer === 'string'
+    )
+  }
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      return parseFaqItems(JSON.parse(value))
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
+function serializeFaqItems(items: FaqItem[]) {
+  const filled = items.filter((item) => item.question.trim() || item.answer.trim())
+  return filled.length > 0 ? JSON.stringify(filled) : null
+}
+
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export default function ArticleEditorPage() {
@@ -129,6 +163,8 @@ export default function ArticleEditorPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('edit')
   const [rightTab, setRightTab] = useState<RightTab>('publish')
   const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>('idle')
+  const [latestSeoAnalysis, setLatestSeoAnalysis] = useState<SeoAnalysis | null>(null)
+  const [latestReadyCheck, setLatestReadyCheck] = useState<ReadyCheck | null>(null)
 
   // Content fields
   const [metaFields, setMetaFields] = useState<MetaFields>(EMPTY_META)
@@ -150,6 +186,9 @@ export default function ArticleEditorPage() {
   // Inline comment state
   const [commentAnchor, setCommentAnchor] = useState<CommentAnchor | null>(null)
   const [selectedCommentId, setSelectedCommentId] = useState<string | null>(null)
+  const [selectedCommentPopup, setSelectedCommentPopup] = useState<{ top: number; left: number } | null>(null)
+  const [comments, setComments] = useState<ArticleComment[]>([])
+  const [commentsLoading, setCommentsLoading] = useState(true)
   const [commentInput, setCommentInput] = useState('')
   const [sendingComment, setSendingComment] = useState(false)
   const [commentRefreshKey, setCommentRefreshKey] = useState(0)
@@ -161,6 +200,7 @@ export default function ArticleEditorPage() {
   const faqRef = useRef<FaqItem[]>([])
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingSaveRef = useRef(false)
+  const titleRef = useRef<HTMLTextAreaElement>(null)
 
   // Navigation blocker
   const blocker = useBlocker(
@@ -180,20 +220,32 @@ export default function ArticleEditorPage() {
       Placeholder.configure({ placeholder: 'Commencez à rédiger votre article…' }),
       TaskList,
       TaskItem.configure({ nested: true }),
+      Table.configure({
+        resizable: true,
+        HTMLAttributes: { class: 'editor-table' },
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
       CommentMark,
     ],
     content: '',
     editable: true,
     editorProps: {
       attributes: {
-        class: 'tiptap-content min-h-[58vh] px-10 pb-10 pt-2',
+        class: 'tiptap-content min-h-[58vh] px-10 pb-10 pt-0 [&>*:first-child]:mt-0',
       },
       handleClick: (_view, _pos, event) => {
         const target = event.target as HTMLElement
         const marked = target.closest('[data-comment-id]') as HTMLElement | null
         if (!marked) return false
-        setSelectedCommentId(marked.getAttribute('data-comment-id'))
-        setRightTab('publish')
+        const commentId = marked.getAttribute('data-comment-id')
+        if (!commentId) return false
+        setSelectedCommentId(commentId)
+        setSelectedCommentPopup({
+          top: Math.max(12, Math.min(event.clientY + 12, window.innerHeight - 220)),
+          left: Math.max(12, Math.min(event.clientX + 12, window.innerWidth - 292)),
+        })
         return false
       },
     },
@@ -206,7 +258,7 @@ export default function ArticleEditorPage() {
     if (editor) editor.setEditable(viewMode === 'edit')
   }, [editor, viewMode])
 
-  const activeRightTab: RightTab = viewMode === 'comment' ? 'publish' : rightTab
+  const activeRightTab: RightTab = rightTab
 
   // ─── Autosave ───────────────────────────────────────────────────────────────
 
@@ -227,7 +279,7 @@ export default function ArticleEditorPage() {
         meta_description: metaRef.current.meta_description || undefined,
         cover_image_url: coverRef.current || undefined,
         category_id: metaRef.current.category_id || undefined,
-        faq_json: faqRef.current.length > 0 ? faqRef.current : null,
+        faq_json: serializeFaqItems(faqRef.current),
       })
         .then(() => {
           pendingSaveRef.current = false
@@ -241,33 +293,44 @@ export default function ArticleEditorPage() {
     }, 2000)
   }, [projectId, articleId])
 
-  function handleSaveNow() {
+  const handleSaveNow = useCallback(async () => {
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
     const pid = projectId
     const aid = articleId
     if (!pid || !aid) return
     setAutosaveStatus('saving')
-    autosaveArticle(pid, aid, {
-      content: editor?.getHTML() ?? '',
-      title: metaRef.current.title || undefined,
-      slug: metaRef.current.slug || undefined,
-      excerpt: metaRef.current.excerpt || undefined,
-      meta_title: metaRef.current.meta_title || undefined,
-      meta_description: metaRef.current.meta_description || undefined,
-      cover_image_url: coverRef.current || undefined,
-      category_id: metaRef.current.category_id || undefined,
-      faq_json: faqRef.current.length > 0 ? faqRef.current : null,
-    })
-      .then(() => {
-        pendingSaveRef.current = false
-        setAutosaveStatus('saved')
-        setTimeout(() => setAutosaveStatus('idle'), 3000)
+    try {
+      await autosaveArticle(pid, aid, {
+        content: editor?.getHTML() ?? '',
+        title: metaRef.current.title || undefined,
+        slug: metaRef.current.slug || undefined,
+        excerpt: metaRef.current.excerpt || undefined,
+        meta_title: metaRef.current.meta_title || undefined,
+        meta_description: metaRef.current.meta_description || undefined,
+        cover_image_url: coverRef.current || undefined,
+        category_id: metaRef.current.category_id || undefined,
+        faq_json: serializeFaqItems(faqRef.current),
       })
-      .catch(() => {
-        pendingSaveRef.current = false
-        setAutosaveStatus('error')
-      })
-  }
+      pendingSaveRef.current = false
+      setAutosaveStatus('saved')
+      setTimeout(() => setAutosaveStatus('idle'), 3000)
+    } catch {
+      pendingSaveRef.current = false
+      setAutosaveStatus('error')
+    }
+  }, [articleId, editor, projectId])
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        void handleSaveNow()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [handleSaveNow])
 
   useEffect(() => {
     function handleBeforeUnload(e: BeforeUnloadEvent) {
@@ -289,6 +352,8 @@ export default function ArticleEditorPage() {
       .then(([art, cats, mems]) => {
         setCategories(cats)
         setMembers(mems)
+        setLatestSeoAnalysis(null)
+        setLatestReadyCheck(null)
         setSelectedAuthorId(mems.find((m) => m.user_id === user?.id)?.user_id ?? mems[0]?.user_id ?? '')
         setArticle(art)
         const meta: MetaFields = {
@@ -305,7 +370,7 @@ export default function ArticleEditorPage() {
         const cover = art.cover_image_url ?? ''
         setCoverImageUrl(cover)
         coverRef.current = cover
-        const faq = Array.isArray(art.faq_json) ? (art.faq_json as FaqItem[]) : []
+        const faq = parseFaqItems(art.faq_json)
         setFaqItems(faq)
         faqRef.current = faq
         setIsGenerating(GENERATING_STATUSES.includes(art.status))
@@ -319,6 +384,34 @@ export default function ArticleEditorPage() {
       editor.commands.setContent(article.content)
     }
   }, [editor, loadStatus, article?.content])
+
+  useEffect(() => {
+    if (!articleId) return
+    let active = true
+    Promise.resolve().then(() => { if (active) setCommentsLoading(true) })
+    listComments(articleId)
+      .then((items) => {
+        if (active) setComments(items)
+      })
+      .catch(() => {
+        if (active) setComments([])
+      })
+      .finally(() => {
+        if (active) setCommentsLoading(false)
+      })
+    return () => { active = false }
+  }, [articleId, commentRefreshKey])
+
+  useEffect(() => {
+    if (!selectedCommentId) return
+    const stillVisible = comments.some((comment) => comment.id === selectedCommentId && !comment.resolved)
+    if (!stillVisible) {
+      Promise.resolve().then(() => {
+        setSelectedCommentId(null)
+        setSelectedCommentPopup(null)
+      })
+    }
+  }, [comments, selectedCommentId])
 
   // ─── Generation polling ──────────────────────────────────────────────────────
 
@@ -350,6 +443,9 @@ export default function ArticleEditorPage() {
           const cov = art.cover_image_url ?? ''
           setCoverImageUrl(cov)
           coverRef.current = cov
+          const faq = parseFaqItems(art.faq_json)
+          setFaqItems(faq)
+          faqRef.current = faq
           if (editor && art.content) editor.commands.setContent(art.content)
         }
       } catch { /* ignore poll errors */ }
@@ -377,6 +473,9 @@ export default function ArticleEditorPage() {
         const cov = art.cover_image_url ?? ''
         setCoverImageUrl(cov)
         coverRef.current = cov
+        const faq = parseFaqItems(art.faq_json)
+        setFaqItems(faq)
+        faqRef.current = faq
         if (editor && art.content) editor.commands.setContent(art.content)
       }
     } catch { /* ignore */ }
@@ -389,6 +488,7 @@ export default function ArticleEditorPage() {
 
     function handleMouseUp(e: MouseEvent) {
       if (commentPopoverRef.current?.contains(e.target as Node)) return
+      setSelectedCommentPopup(null)
       const sel = window.getSelection()
       if (!sel || sel.rangeCount === 0) { setCommentAnchor(null); return }
       const text = sel.toString().trim()
@@ -402,13 +502,15 @@ export default function ArticleEditorPage() {
       } catch {
         // Keep the ProseMirror selection as fallback.
       }
-      if (from === to) { setCommentAnchor(null); return }
+      const start = Math.min(from, to)
+      const end = Math.max(from, to)
+      if (start === end) { setCommentAnchor(null); return }
       const range = rangeForPosition
       const rect = range.getBoundingClientRect()
       if (rect.width === 0 && rect.height === 0) { setCommentAnchor(null); return }
       const top = rect.bottom + 8
       const left = Math.max(8, Math.min(rect.left, window.innerWidth - 264))
-      setCommentAnchor({ text, top, left, from, to })
+      setCommentAnchor({ text, top, left, from: start, to: end })
       setCommentInput('')
     }
 
@@ -445,6 +547,13 @@ export default function ArticleEditorPage() {
     e.currentTarget.style.height = 'auto'
     e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`
   }
+
+  useEffect(() => {
+    const title = titleRef.current
+    if (!title) return
+    title.style.height = 'auto'
+    title.style.height = `${title.scrollHeight}px`
+  }, [metaFields.title])
 
   function handleFaqChange(index: number, field: keyof FaqItem, value: string) {
     const next = faqItems.map((item, i) => i === index ? { ...item, [field]: value } : item)
@@ -509,10 +618,6 @@ export default function ArticleEditorPage() {
     if (!articleId || !commentAnchor || !commentInput.trim() || !editor) return
     setSendingComment(true)
     try {
-      const quoted = commentAnchor.text
-        ? `« ${commentAnchor.text.slice(0, 120)}${commentAnchor.text.length > 120 ? '…' : ''} » — ${commentInput.trim()}`
-        : commentInput.trim()
-      void quoted
       const comment = await createComment(articleId, commentInput.trim(), commentAnchor.text)
       editor.setEditable(true)
       editor
@@ -524,7 +629,9 @@ export default function ArticleEditorPage() {
       editor.commands.setTextSelection(commentAnchor.to)
       editor.setEditable(viewMode === 'edit')
       scheduleAutosave(editor.getHTML())
+      setComments((prev) => [comment, ...prev.filter((item) => item.id !== comment.id)])
       setSelectedCommentId(comment.id)
+      setSelectedCommentPopup(null)
       setCommentAnchor(null)
       setCommentInput('')
       setCommentRefreshKey((k) => k + 1)
@@ -532,6 +639,42 @@ export default function ArticleEditorPage() {
     finally {
       setSendingComment(false)
     }
+  }
+
+  function removeCommentMark(commentId: string) {
+    if (!editor) return
+    const markType = editor.schema.marks['commentMark']
+    if (!markType) return
+
+    let tr = editor.state.tr
+    editor.state.doc.descendants((node, pos) => {
+      if (!node.isText) return
+      const hasComment = node.marks.some((mark) => mark.type === markType && mark.attrs['id'] === commentId)
+      if (hasComment) tr = tr.removeMark(pos, pos + node.nodeSize, markType)
+    })
+
+    if (tr.docChanged) {
+      editor.view.dispatch(tr)
+      scheduleAutosave(editor.getHTML())
+    }
+  }
+
+  async function handleResolveInlineComment(id: string, resolved = true) {
+    const updated = await resolveComment(id, resolved)
+    setComments((prev) => prev.map((comment) => comment.id === id ? updated : comment))
+    if (resolved) {
+      removeCommentMark(id)
+      setSelectedCommentId(null)
+      setSelectedCommentPopup(null)
+    }
+  }
+
+  async function handleDeleteInlineComment(id: string) {
+    await deleteComment(id)
+    removeCommentMark(id)
+    setComments((prev) => prev.filter((comment) => comment.id !== id))
+    setSelectedCommentId(null)
+    setSelectedCommentPopup(null)
   }
 
   // ─── Derived values ──────────────────────────────────────────────────────────
@@ -545,6 +688,7 @@ export default function ArticleEditorPage() {
 
   const isEditable = viewMode === 'edit'
   const busy = actionLoading !== null
+  const selectedComment = comments.find((comment) => comment.id === selectedCommentId) ?? null
 
   // ─── Loading / error ─────────────────────────────────────────────────────────
 
@@ -610,15 +754,15 @@ export default function ArticleEditorPage() {
 
       {/* 3-card layout */}
       {!isGenerating && !generationTimedOut && (
-        <div className="flex flex-1 items-start gap-4 overflow-y-auto p-4">
+        <div className="grid min-h-0 flex-1 grid-cols-[56px_minmax(0,1fr)_300px] items-start gap-4 overflow-y-auto overflow-x-hidden p-4 max-xl:grid-cols-[52px_minmax(0,1fr)_280px]">
 
           {/* ── LEFT: Toolbar card ── */}
-          <div className="sticky top-0 flex max-h-[calc(100vh-112px)] w-[56px] shrink-0 flex-col overflow-y-auto rounded-[14px] border border-border bg-surface">
-            <EditorToolbar editor={editor} onSave={handleSaveNow} projectId={projectId} disabled={viewMode !== 'edit'} />
+          <div className="sticky top-0 flex max-h-[calc(100vh-112px)] min-w-0 flex-col overflow-y-auto rounded-[14px] border border-border bg-surface">
+            <EditorToolbar editor={editor} projectId={projectId} articleId={articleId} disabled={viewMode !== 'edit'} />
           </div>
 
           {/* ── CENTER: Article card ── */}
-          <div className={`flex min-w-0 flex-[1_1_64%] flex-col overflow-hidden rounded-[14px] border border-border bg-surface ${!isEditable ? 'bg-[#fafafa]' : ''}`}>
+          <div className={`flex min-w-0 flex-col overflow-hidden rounded-[14px] border border-border bg-surface ${!isEditable ? 'bg-[#fafafa]' : ''}`}>
 
             {/* Internal bar */}
             <div className="flex items-center justify-between gap-2 px-4 py-2 border-b border-border shrink-0 bg-surface">
@@ -684,7 +828,7 @@ export default function ArticleEditorPage() {
                   className="flex items-center gap-1 text-[11px] text-secondary hover:text-primary transition-colors rounded-[6px] px-2 py-1 hover:bg-[#f0f0f2]"
                 >
                   <Eye size={12} />
-                  Aperçu
+                  Prévisualiser
                 </button>
                 <button
                   onClick={() => editor?.chain().focus().undo().run()}
@@ -719,13 +863,14 @@ export default function ArticleEditorPage() {
               )}
 
               {/* Title */}
-              <div className="px-10 pt-8 pb-4">
+              <div className="px-10 pt-7 pb-2">
                 <textarea
+                  ref={titleRef}
                   value={metaFields.title}
                   onChange={handleTitleInput}
                   readOnly={!isEditable}
                   placeholder="Titre de l'article…"
-                  rows={Math.max(1, Math.ceil((metaFields.title.length || 1) / 42))}
+                  rows={1}
                   className={`block w-full max-w-full resize-none overflow-hidden whitespace-normal break-words bg-transparent text-[28px] font-bold leading-tight text-primary outline-none placeholder:text-tertiary/40 [overflow-wrap:anywhere] ${!isEditable ? 'cursor-default' : ''}`}
                 />
               </div>
@@ -778,7 +923,7 @@ export default function ArticleEditorPage() {
                       className="flex items-center gap-1.5 text-[12px] text-accent hover:underline"
                     >
                       <Plus size={13} />
-                      Ajouter une question
+                      Ajouter FAQ
                     </button>
                   </div>
                 )}
@@ -806,7 +951,7 @@ export default function ArticleEditorPage() {
           </div>
 
           {/* ── RIGHT: Panel card ── */}
-          <div className="sticky top-0 flex max-h-[calc(100vh-112px)] w-[290px] shrink-0 flex-col overflow-hidden rounded-[14px] border border-border bg-surface">
+          <div className="sticky top-0 flex max-h-[calc(100vh-112px)] min-w-0 flex-col overflow-hidden rounded-[14px] border border-border bg-surface">
 
             {/* Tab bar */}
             <div className="flex border-b border-border shrink-0">
@@ -835,7 +980,7 @@ export default function ArticleEditorPage() {
 
                   {/* 1. Statut */}
                   <div className="p-3 flex items-center justify-between">
-                    <span className="text-[11px] font-medium text-secondary">Statut</span>
+                    <span className="text-[11px] font-medium text-secondary">Statut humain</span>
                     <StatusBadge status={article.status} />
                   </div>
 
@@ -1029,7 +1174,18 @@ export default function ArticleEditorPage() {
                         Commentaire selectionne dans le texte.
                       </p>
                     )}
-                    <CommentsPanel key={commentRefreshKey} articleId={articleId!} />
+                    <CommentsPanel
+                      articleId={articleId!}
+                      comments={comments}
+                      loading={commentsLoading}
+                      selectedCommentId={selectedCommentId}
+                      onResolve={handleResolveInlineComment}
+                      onDelete={handleDeleteInlineComment}
+                      onSelect={(comment) => {
+                        setSelectedCommentId(comment.id)
+                        setSelectedCommentPopup(null)
+                      }}
+                    />
                   </div>
 
                   {/* Error */}
@@ -1076,7 +1232,33 @@ export default function ArticleEditorPage() {
               {/* ── Analyse tab ── */}
               {activeRightTab === 'analyse' && (
                 <div className="p-3">
-                  <SeoPanel article={{ ...article, title: metaFields.title }} projectId={projectId!} />
+                  <SeoPanel
+                    article={{ ...article, title: metaFields.title }}
+                    projectId={projectId!}
+                    onBeforeAnalyze={handleSaveNow}
+                    initialAnalysis={latestSeoAnalysis}
+                    initialReadiness={latestReadyCheck}
+                    onAnalysisUpdate={(analysis) => {
+                      setLatestSeoAnalysis(analysis)
+                      setArticle((prev) => prev ? {
+                        ...prev,
+                        seo_score: analysis.seo_score,
+                        readability_score: analysis.readability_score,
+                        quality_score: analysis.quality_score,
+                        eeat_score: analysis.eeat_score,
+                        readiness_status: analysis.readiness_status,
+                        latest_analysis: {
+                          seo_score: analysis.seo_score,
+                          readability_score: analysis.readability_score,
+                          quality_score: analysis.quality_score,
+                          eeat_score: analysis.eeat_score,
+                          readiness_status: analysis.readiness_status,
+                          created_at: analysis.created_at,
+                        },
+                      } : prev)
+                    }}
+                    onReadinessUpdate={setLatestReadyCheck}
+                  />
                 </div>
               )}
 
@@ -1086,6 +1268,7 @@ export default function ArticleEditorPage() {
                   <VersionsPanel
                     projectId={projectId!}
                     articleId={articleId!}
+                    members={members}
                     onRestore={(restored) => {
                       setArticle(restored)
                       const meta: MetaFields = {
@@ -1146,6 +1329,36 @@ export default function ArticleEditorPage() {
             >
               {sendingComment ? <Loader2 size={11} className="animate-spin" /> : <Send size={11} />}
               Commenter
+            </button>
+          </div>
+        </div>
+      )}
+
+      {selectedComment && selectedCommentPopup && (
+        <div
+          style={{ top: selectedCommentPopup.top, left: selectedCommentPopup.left, boxShadow: '0 20px 60px rgba(0,0,0,0.14)' }}
+          className="fixed z-50 w-[280px] rounded-[14px] border border-border bg-surface p-3"
+        >
+          {selectedComment.selected_text && (
+            <p className="mb-2 rounded-[8px] bg-accent/6 px-2 py-1 text-[10px] leading-snug text-secondary">
+              «{selectedComment.selected_text.slice(0, 110)}{selectedComment.selected_text.length > 110 ? '…' : ''}»
+            </p>
+          )}
+          <p className="text-[12px] leading-snug text-primary">{selectedComment.text}</p>
+          <div className="mt-3 flex gap-1.5">
+            <button
+              onClick={() => void handleResolveInlineComment(selectedComment.id, true)}
+              className="flex flex-1 items-center justify-center gap-1 rounded-[8px] bg-success/10 py-1.5 text-[11px] font-medium text-[#1a7a3a] transition-colors hover:bg-success/15"
+            >
+              <Check size={11} />
+              Valider
+            </button>
+            <button
+              onClick={() => void handleDeleteInlineComment(selectedComment.id)}
+              className="flex flex-1 items-center justify-center gap-1 rounded-[8px] border border-border py-1.5 text-[11px] font-medium text-danger transition-colors hover:bg-danger/5"
+            >
+              <Trash2 size={11} />
+              Supprimer
             </button>
           </div>
         </div>

@@ -16,19 +16,24 @@ function timeAgo(iso: string): string {
 
 function CommentItem({
   comment,
+  selected,
   onResolve,
   onDelete,
+  onSelect,
 }: {
   comment: ArticleComment
-  onResolve: (id: string, resolved: boolean) => void
-  onDelete: (id: string) => void
+  selected?: boolean
+  onResolve: (id: string, resolved: boolean) => Promise<void> | void
+  onDelete: (id: string) => Promise<void> | void
+  onSelect?: (comment: ArticleComment) => void
 }) {
   const [toggling, setToggling] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
   async function handleResolve() {
+    if (comment.resolved) return
     setToggling(true)
-    try { await onResolve(comment.id, !comment.resolved) } finally { setToggling(false) }
+    try { await onResolve(comment.id, true) } finally { setToggling(false) }
   }
 
   async function handleDelete() {
@@ -37,25 +42,45 @@ function CommentItem({
   }
 
   return (
-    <div className={`rounded-[10px] border p-3 ${comment.resolved ? 'border-border bg-[#f9f9fb] opacity-65' : 'border-border bg-surface'}`}>
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onSelect?.(comment)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') onSelect?.(comment)
+      }}
+      className={`rounded-[10px] border p-3 text-left transition-colors ${
+        selected
+          ? 'border-accent bg-accent/6'
+          : comment.resolved
+            ? 'border-border bg-[#f9f9fb] opacity-65'
+            : 'border-border bg-surface'
+      } ${onSelect ? 'cursor-pointer hover:border-accent/50' : ''}`}
+    >
       <div className="mb-1.5 flex items-center justify-between">
         <span className="text-[11px] font-semibold text-primary">{comment.author_name}</span>
         <div className="flex items-center gap-1">
           <span className="text-[10px] text-tertiary">{timeAgo(comment.created_at)}</span>
           <button
-            onClick={handleResolve}
+            onClick={(event) => {
+              event.stopPropagation()
+              void handleResolve()
+            }}
             disabled={toggling}
             className={`flex h-5 w-5 items-center justify-center rounded-full transition-colors ${
               comment.resolved
                 ? 'bg-success/10 text-[#1a7a3a]'
                 : 'text-tertiary hover:bg-success/10 hover:text-[#1a7a3a]'
             }`}
-            title={comment.resolved ? 'Marquer ouvert' : 'Marquer resolu'}
+            title={comment.resolved ? 'Resolu' : 'Valider le commentaire'}
           >
             {toggling ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
           </button>
           <button
-            onClick={handleDelete}
+            onClick={(event) => {
+              event.stopPropagation()
+              void handleDelete()
+            }}
             disabled={deleting}
             className="flex h-5 w-5 items-center justify-center rounded-full text-tertiary transition-colors hover:bg-danger/10 hover:text-danger"
             title="Supprimer"
@@ -80,25 +105,55 @@ function CommentItem({
   )
 }
 
-export default function CommentsPanel({ articleId }: { articleId: string }) {
-  const [comments, setComments] = useState<ArticleComment[]>([])
-  const [loading, setLoading] = useState(true)
+export default function CommentsPanel({
+  articleId,
+  comments: managedComments,
+  loading: managedLoading,
+  selectedCommentId,
+  onResolve,
+  onDelete,
+  onSelect,
+}: {
+  articleId: string
+  comments?: ArticleComment[]
+  loading?: boolean
+  selectedCommentId?: string | null
+  onResolve?: (id: string, resolved: boolean) => Promise<void> | void
+  onDelete?: (id: string) => Promise<void> | void
+  onSelect?: (comment: ArticleComment) => void
+}) {
+  const [localComments, setLocalComments] = useState<ArticleComment[]>([])
+  const [localLoading, setLocalLoading] = useState(true)
+  const comments = managedComments ?? localComments
+  const loading = managedLoading ?? localLoading
 
   useEffect(() => {
+    if (managedComments) return
+    let active = true
+    Promise.resolve().then(() => { if (active) setLocalLoading(true) })
     listComments(articleId)
-      .then(setComments)
+      .then((items) => { if (active) setLocalComments(items) })
       .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [articleId])
+      .finally(() => { if (active) setLocalLoading(false) })
+    return () => { active = false }
+  }, [articleId, managedComments])
 
   async function handleResolve(id: string, resolved: boolean) {
+    if (onResolve) {
+      await onResolve(id, resolved)
+      return
+    }
     const updated = await resolveComment(id, resolved)
-    setComments((prev) => prev.map((c) => c.id === id ? updated : c))
+    setLocalComments((prev) => prev.map((c) => c.id === id ? updated : c))
   }
 
   async function handleDelete(id: string) {
+    if (onDelete) {
+      await onDelete(id)
+      return
+    }
     await deleteComment(id)
-    setComments((prev) => prev.filter((c) => c.id !== id))
+    setLocalComments((prev) => prev.filter((c) => c.id !== id))
   }
 
   const open = comments.filter((c) => !c.resolved)
@@ -127,7 +182,14 @@ export default function CommentsPanel({ articleId }: { articleId: string }) {
             Ouverts ({open.length})
           </p>
           {open.map((c) => (
-            <CommentItem key={c.id} comment={c} onResolve={handleResolve} onDelete={handleDelete} />
+            <CommentItem
+              key={c.id}
+              comment={c}
+              selected={selectedCommentId === c.id}
+              onResolve={handleResolve}
+              onDelete={handleDelete}
+              onSelect={onSelect}
+            />
           ))}
         </div>
       )}
@@ -138,7 +200,14 @@ export default function CommentsPanel({ articleId }: { articleId: string }) {
             Resolus ({resolved.length})
           </p>
           {resolved.map((c) => (
-            <CommentItem key={c.id} comment={c} onResolve={handleResolve} onDelete={handleDelete} />
+            <CommentItem
+              key={c.id}
+              comment={c}
+              selected={selectedCommentId === c.id}
+              onResolve={handleResolve}
+              onDelete={handleDelete}
+              onSelect={onSelect}
+            />
           ))}
         </div>
       )}

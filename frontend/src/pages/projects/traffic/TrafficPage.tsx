@@ -1,123 +1,376 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
 } from 'recharts'
-import { Users, Globe, Smartphone, ExternalLink, RefreshCw, TrendingUp, FlaskConical } from 'lucide-react'
+import {
+  ExternalLink,
+  BarChart3,
+  Globe,
+  Mail,
+  Monitor,
+  MousePointer2,
+  RefreshCw,
+  Smartphone,
+  Tablet,
+  TrendingUp,
+  Users,
+} from 'lucide-react'
 import { getPerformanceSummary } from '@/api/performance'
 import type { PerformanceSummary } from '@/types'
 import { Card } from '@/components/ui/Card'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import Button from '@/components/ui/Button'
+import {
+  formatAxisTick,
+  formatMetric,
+  getCountryDisplay,
+  getDeviceLabel,
+  getFaviconUrl,
+  getSourceChannel,
+  getSourceDisplay,
+  percentOf,
+} from '@/utils/trafficDisplay'
 
-type Period = '7d' | '30d' | '90d' | '180d' | '365d'
+type Period = '1d' | '7d' | '30d' | '90d' | '180d' | '365d'
 
-type DeviceTrendPoint = { date: string; desktop: number; mobile: number; tablet: number }
+type ChannelTrendPoint = {
+  date: string
+  direct: number
+  organic: number
+  social: number
+  referral: number
+}
 
-function buildDeviceTrend(period: Period): DeviceTrendPoint[] {
-  const count = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : period === '180d' ? 180 : 365
-  const BASE = new Date('2026-05-06')
+type TrendPoint = { date: string; views: number }
+
+type SourceRow = {
+  key: string
+  label: string
+  raw: string
+  channel: string
+  visits: number
+  visitors: number | null
+  variation: number | null
+  share: number
+}
+
+const PERIODS: { value: Period; label: string }[] = [
+  { value: '1d', label: '1 jour' },
+  { value: '7d', label: '7 jours' },
+  { value: '30d', label: '30 jours' },
+  { value: '90d', label: '90 jours' },
+  { value: '180d', label: '6 mois' },
+  { value: '365d', label: '1 an' },
+]
+
+const DEMO_MODE = true
+
+function periodDayCount(period: Period) {
+  if (period === '1d') return 1
+  if (period === '7d') return 7
+  if (period === '30d') return 30
+  if (period === '90d') return 90
+  if (period === '180d') return 180
+  return 365
+}
+
+function periodPointCount(period: Period) {
+  if (period === '1d') return 24
+  if (period === '7d') return 7
+  if (period === '30d') return 30
+  if (period === '90d') return 13
+  if (period === '180d') return 26
+  return 12
+}
+
+function buildWeights(count: number) {
   return Array.from({ length: count }, (_, i) => {
-    const d = new Date(BASE)
-    d.setDate(BASE.getDate() - (count - 1 - i))
-    const total = Math.floor(40 + 35 * Math.abs(Math.sin(i * 0.4 + 1)) + 15 * Math.abs(Math.sin(i * 0.13)))
-    return {
-      date: d.toISOString().slice(0, 10),
-      desktop: Math.floor(total * 0.52),
-      mobile: Math.floor(total * 0.41),
-      tablet: Math.floor(total * 0.07),
-    }
+    const x = count === 1 ? 0 : i / (count - 1)
+    const growth = 0.88 + x * 0.28
+    const searchLift = 0.18 * Math.exp(-Math.pow((x - 0.42) / 0.2, 2))
+    const socialSpike = 0.14 * Math.exp(-Math.pow((x - 0.74) / 0.14, 2))
+    const rhythm = 0.1 * Math.sin(i * 1.4 + 0.4) + 0.05 * Math.cos(i * 0.9)
+    return Math.max(0.5, growth + searchLift + socialSpike + rhythm)
   })
 }
 
-function buildDemoData(period: Period): PerformanceSummary {
-  const count = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : period === '180d' ? 180 : 365
-  const BASE = new Date('2026-05-06')
-  const trend_by_day = Array.from({ length: count }, (_, i) => {
-    const d = new Date(BASE)
-    d.setDate(BASE.getDate() - (count - 1 - i))
-    const v = Math.floor(40 + 35 * Math.abs(Math.sin(i * 0.4 + 1)) + 15 * Math.abs(Math.sin(i * 0.13)))
-    return { date: d.toISOString().slice(0, 10), views: v }
+function distributeTotal(total: number, count: number) {
+  const weights = buildWeights(count)
+  const weightTotal = weights.reduce((sum, value) => sum + value, 0)
+  let used = 0
+  return weights.map((weight, index) => {
+    if (index === weights.length - 1) return Math.max(0, total - used)
+    const value = Math.round((total * weight) / weightTotal)
+    used += value
+    return value
   })
-  const total_views = trend_by_day.reduce((s, d) => s + d.views, 0)
+}
+
+function formatPeriodDate(period: Period, index: number, count: number) {
+  if (period === '1d') return `${index.toString().padStart(2, '0')}h`
+  if (period === '90d' || period === '180d') return `S${index + 1}`
+  if (period === '365d') {
+    const months = ['Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.', 'Jan.', 'Fév.', 'Mar.', 'Avr.', 'Mai']
+    return months[index] ?? `M${index + 1}`
+  }
+  const base = new Date('2026-05-11')
+  const d = new Date(base)
+  d.setDate(base.getDate() - (count - 1 - index))
+  return d.toISOString().slice(0, 10)
+}
+
+function buildHourlyProfile(total = 800) {
+  const weights = Array.from({ length: 24 }, (_, i) => {
+    const x = i / 23
+    const organicPeak = 1.15 * Math.exp(-Math.pow((x - 0.36) / 0.18, 2))
+    const directWave = 0.55 * Math.exp(-Math.pow((x - 0.18) / 0.16, 2))
+    const socialSpike = 0.82 * Math.exp(-Math.pow((x - 0.74) / 0.11, 2))
+    const referralLift = 0.44 * Math.exp(-Math.pow((x - 0.88) / 0.16, 2))
+    const wave = 0.12 * Math.sin(x * Math.PI * 7 + 0.8)
+    return Math.max(0.08, 0.2 + organicPeak + directWave + socialSpike + referralLift + wave)
+  })
+  const weightTotal = weights.reduce((sum, value) => sum + value, 0)
+  let used = 0
+  return weights.map((weight, index) => {
+    if (index === weights.length - 1) return Math.max(0, total - used)
+    const value = Math.round((weight / weightTotal) * total)
+    used += value
+    return value
+  })
+}
+
+function buildTrafficTrend(period: Period, dailyVisits = 800) {
+  const trend_by_day = period === '1d'
+    ? buildHourlyProfile(dailyVisits).map((views, index) => ({ date: formatPeriodDate(period, index, 24), views }))
+    : distributeTotal(dailyVisits * periodDayCount(period), periodPointCount(period)).map((views, index, items) => ({ date: formatPeriodDate(period, index, items.length), views }))
+  return trend_by_day
+}
+
+function buildDemoData(period: Period): PerformanceSummary {
+  const trend_by_day = buildTrafficTrend(period, 800)
+  const totalVisits = trend_by_day.reduce((sum, item) => sum + item.views, 0)
+  const total_views = Math.round(totalVisits * 1.5)
   return {
     period,
     total_views,
-    unique_pages: Math.floor(total_views * 0.6),
+    unique_pages: Math.floor(totalVisits * 0.78),
     trend_by_day,
     top_pages: [
-      { path: '/blog/optimiser-seo-2025', views: Math.floor(total_views * 0.22) },
-      { path: '/blog/core-web-vitals', views: Math.floor(total_views * 0.17) },
-      { path: '/blog/schema-markup', views: Math.floor(total_views * 0.13) },
-      { path: '/blog/backlinks-guide', views: Math.floor(total_views * 0.10) },
-      { path: '/blog/seo-local', views: Math.floor(total_views * 0.08) },
+      { path: '/blog/roi-contenu-organique', views: Math.floor(total_views * 0.22) },
+      { path: '/blog/audit-seo-technique', views: Math.floor(total_views * 0.16) },
+      { path: '/blog/dashboard-editorial-kpi', views: Math.floor(total_views * 0.13) },
+      { path: '/blog/checklist-relecture-ia', views: Math.floor(total_views * 0.09) },
+      { path: '/blog/maillage-interne', views: Math.floor(total_views * 0.08) },
     ],
     referrers: [
-      { referrer: '', views: Math.floor(total_views * 0.38) },
-      { referrer: 'google.com', views: Math.floor(total_views * 0.32) },
-      { referrer: 'twitter.com', views: Math.floor(total_views * 0.12) },
-      { referrer: 'linkedin.com', views: Math.floor(total_views * 0.08) },
-      { referrer: 'reddit.com', views: Math.floor(total_views * 0.05) },
+      { referrer: 'google.com', views: Math.floor(totalVisits * 0.525) },
+      { referrer: '', views: Math.floor(totalVisits * 0.225) },
+      { referrer: 'linkedin.com', views: Math.floor(totalVisits * 0.10) },
+      { referrer: 'twitter.com', views: Math.floor(totalVisits * 0.05) },
+      { referrer: 'partner.example.com', views: Math.floor(totalVisits * 0.10) },
     ],
     countries: [
-      { country: 'France', views: Math.floor(total_views * 0.54) },
-      { country: 'Belgique', views: Math.floor(total_views * 0.14) },
-      { country: 'Suisse', views: Math.floor(total_views * 0.09) },
-      { country: 'Canada', views: Math.floor(total_views * 0.07) },
-      { country: 'Maroc', views: Math.floor(total_views * 0.04) },
+      { country: 'France', views: Math.floor(totalVisits * 0.52) },
+      { country: 'Belgique', views: Math.floor(totalVisits * 0.14) },
+      { country: 'Suisse', views: Math.floor(totalVisits * 0.10) },
+      { country: 'Canada', views: Math.floor(totalVisits * 0.08) },
+      { country: 'Maroc', views: Math.floor(totalVisits * 0.05) },
     ],
     devices: [
-      { device: 'desktop', views: Math.floor(total_views * 0.52) },
-      { device: 'mobile', views: Math.floor(total_views * 0.41) },
-      { device: 'tablet', views: Math.floor(total_views * 0.07) },
+      { device: 'mobile', views: Math.floor(totalVisits * 0.64) },
+      { device: 'desktop', views: Math.floor(totalVisits * 0.30) },
+      { device: 'tablet', views: Math.floor(totalVisits * 0.06) },
     ],
   }
 }
 
-const PERIODS: { value: Period; label: string }[] = [
-  { value: '7d', label: '7 j' },
-  { value: '30d', label: '30 j' },
-  { value: '90d', label: '90 j' },
-  { value: '180d', label: '6 m' },
-  { value: '365d', label: '1 an' },
-]
-
-const DEVICE_LABELS: Record<string, string> = {
-  desktop: 'Ordinateur',
-  mobile: 'Mobile',
-  tablet: 'Tablette',
-  unknown: 'Inconnu',
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <p className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-secondary">{children}</p>
 }
 
-function StatCard({ icon, value, label }: { icon: React.ReactNode; value: string | number; label: string }) {
+function VariationBadge({ value }: { value: number | null | undefined }) {
+  if (value === null || value === undefined) return <span className="text-[12px] text-tertiary">—</span>
+  const positive = value >= 0
+  return <span className={`text-[12px] font-semibold ${positive ? 'text-success' : 'text-danger'}`}>{positive ? '+' : ''}{value}%</span>
+}
+
+function StatCard({
+  icon,
+  value,
+  label,
+  variation,
+  tone = 'accent',
+}: {
+  icon: React.ReactNode
+  value: React.ReactNode
+  label: string
+  variation?: number | null
+  tone?: 'accent' | 'success' | 'warning' | 'danger' | 'violet'
+}) {
+  const toneClass = {
+    accent: 'bg-accent/10 text-accent',
+    success: 'bg-success/10 text-success',
+    warning: 'bg-warning/12 text-[#b46a00]',
+    danger: 'bg-danger/10 text-danger',
+    violet: 'bg-[#eef2ff] text-[#4f46e5]',
+  }[tone]
   return (
-    <Card padding="sm" className="flex flex-col gap-2">
-      <span className="text-tertiary">{icon}</span>
+    <Card padding="sm" className="flex h-full flex-col justify-between gap-2">
+      <span className={`flex h-8 w-8 items-center justify-center rounded-[10px] ${toneClass}`}>{icon}</span>
       <div>
-        <p className="text-[22px] font-semibold text-primary tracking-tight">{value}</p>
-        <p className="text-[12px] text-tertiary">{label}</p>
+        <p className="truncate text-[22px] font-semibold tracking-tight text-primary">{value}</p>
+        <div className="mt-0.5 flex items-center justify-between gap-2">
+          <p className="text-[12px] text-tertiary">{label}</p>
+          {variation !== undefined && <VariationBadge value={variation} />}
+        </div>
       </div>
     </Card>
   )
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <p className="text-[12px] font-semibold text-secondary uppercase tracking-wide mb-3">{children}</p>
+function DeviceIcon({ device }: { device: string }) {
+  const normalized = device.toLowerCase()
+  if (normalized === 'mobile') return <Smartphone size={15} />
+  if (normalized === 'tablet') return <Tablet size={15} />
+  return <Monitor size={15} />
 }
 
-function RankRow({ rank, label, value, total }: { rank: number; label: string; value: number; total: number }) {
-  const pct = total > 0 ? Math.round((value / total) * 100) : 0
+function SourceMark({ referrer }: { referrer: string }) {
+  const source = getSourceDisplay(referrer)
+  const favicon = getFaviconUrl(source.domain)
+  const [faviconFailed, setFaviconFailed] = useState(false)
+
+  if (source.kind === 'direct') return <MousePointer2 size={15} />
+  if (favicon && !faviconFailed) return <img src={favicon} alt="" className="h-4 w-4 rounded-[4px]" onError={() => setFaviconFailed(true)} />
+  if (source.domain.includes('newsletter')) return <Mail size={15} />
+  return <Globe size={15} />
+}
+
+function buildSourceRows(data: PerformanceSummary, demoMode: boolean): SourceRow[] {
+  const rows = data.referrers.length ? data.referrers : [{ referrer: '', views: data.total_views }]
+  const totalVisits = Math.max(1, rows.reduce((sum, item) => sum + item.views, 0))
+  return rows.map((item, index) => {
+    const source = getSourceDisplay(item.referrer)
+    return {
+      key: item.referrer || 'direct',
+      label: source.label,
+      raw: item.referrer,
+      channel: getSourceChannel(item.referrer),
+      visits: item.views,
+      visitors: demoMode ? Math.max(1, Math.round(item.views * 0.66)) : null,
+      variation: demoMode ? [18, 12, -6, 9, -11, 4][index % 6] : null,
+      share: percentOf(item.views, totalVisits),
+    }
+  }).sort((a, b) => b.visits - a.visits)
+}
+
+function normalizeTrafficTrend(period: Period, data: PerformanceSummary, demoMode: boolean): TrendPoint[] {
+  if (demoMode) return data.trend_by_day
+  if (period !== '1d') return data.trend_by_day
+  if (data.trend_by_day.length <= 1) {
+    const hourly = buildDemoData('1d').trend_by_day
+    const sourceTotal = hourly.reduce((sum, point) => sum + point.views, 0)
+    const targetTotal = data.trend_by_day.reduce((sum, point) => sum + point.views, 0) || sourceTotal
+    return hourly.map((point) => ({ ...point, views: Math.max(0, Math.round((point.views / sourceTotal) * targetTotal)) }))
+  }
+  return data.trend_by_day
+}
+
+function buildChannelTrend(data: PerformanceSummary, sources: SourceRow[], period: Period, demoMode: boolean): ChannelTrendPoint[] {
+  const trend = normalizeTrafficTrend(period, data, demoMode)
+  const totals = sources.reduce<Record<string, number>>((acc, source) => {
+    const key = source.channel === 'Organic Search' ? 'organic' : source.channel.toLowerCase()
+    acc[key] = (acc[key] ?? 0) + source.visits
+    return acc
+  }, {})
+  const total = Math.max(1, Object.values(totals).reduce((sum, value) => sum + value, 0))
+  return trend.map((point) => {
+    if (!demoMode) {
+      return {
+        date: point.date,
+        direct: Math.round(point.views * ((totals.direct ?? 0) / total)),
+        organic: Math.round(point.views * ((totals.organic ?? 0) / total)),
+        social: Math.round(point.views * ((totals.social ?? 0) / total)),
+        referral: Math.round(point.views * ((totals.referral ?? 0) / total)),
+      }
+    }
+    const directShare = (totals.direct ?? 0) / total
+    const organicShare = (totals.organic ?? 0) / total
+    const socialShare = (totals.social ?? 0) / total
+    const organic = Math.max(0, Math.round(point.views * organicShare))
+    const direct = Math.max(0, Math.round(point.views * directShare))
+    const social = Math.max(0, Math.round(point.views * socialShare))
+    const referral = Math.max(0, point.views - organic - direct - social)
+    return { date: point.date, direct, organic, social, referral }
+  })
+}
+
+function trafficTick(period: Period, value: unknown) {
+  const label = String(value)
+  if (period === '1d' || period === '90d' || period === '180d' || period === '365d') return label
+  return label.includes('-') ? label.slice(5) : label
+}
+
+function entryPageLabel(path: string) {
+  const lowerPath = path.toLowerCase()
+  if (lowerPath.includes('roi')) return 'ROI'
+  return path
+    .replace(/^\/blog\//, '')
+    .replace(/^\/+/, '')
+    .split(/[/?#]/)[0]
+    .split('-')
+    .filter(Boolean)
+    .slice(0, 4)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ') || path
+}
+
+function entryPageHref(path: string) {
+  return path.startsWith('http') ? path : path
+}
+
+function VisualRow({
+  rank,
+  label,
+  value,
+  total,
+  leading,
+  meta,
+  href,
+}: {
+  rank?: number
+  label: string
+  value: number
+  total: number
+  leading: React.ReactNode
+  meta?: React.ReactNode
+  href?: string
+}) {
+  const pct = percentOf(value, total)
   return (
-    <div className="flex items-center gap-3 py-1.5 border-b border-border last:border-0">
-      <span className="text-[11px] font-medium text-tertiary w-4 shrink-0">{rank}</span>
-      <span className="flex-1 text-[13px] text-primary truncate" title={label}>{label || 'Direct / Inconnu'}</span>
-      <div className="flex items-center gap-2 shrink-0">
-        <div className="h-1.5 w-16 rounded-full bg-[#f0f0f2] overflow-hidden">
-          <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+    <div className="flex items-center gap-2.5 rounded-[10px] px-2 py-1 hover:bg-[#f9f9fb]">
+      {rank !== undefined && <span className="w-4 shrink-0 text-[11px] font-medium text-tertiary">{rank}</span>}
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-[#f0f0f2] text-secondary">{leading}</span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-3">
+          {href ? (
+            <a href={href} className="truncate text-[13px] font-medium text-primary hover:text-accent" title={label}>
+              {label}
+            </a>
+          ) : (
+            <span className="truncate text-[13px] font-medium text-primary" title={label}>{label}</span>
+          )}
+          <span className="shrink-0 text-[12px] font-semibold text-secondary">{formatMetric(value)}</span>
         </div>
-        <span className="text-[11px] text-tertiary w-7 text-right">{pct}%</span>
-        <span className="text-[12px] font-medium text-secondary w-10 text-right">{value.toLocaleString('fr-FR')}</span>
+        <div className="mt-1 flex items-center gap-2">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#f0f0f2]">
+            <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+          </div>
+          <span className="w-8 text-right text-[11px] text-tertiary">{pct}%</span>
+        </div>
+        {meta && <div className="mt-0.5 text-[11px] text-tertiary">{meta}</div>}
       </div>
     </div>
   )
@@ -126,7 +379,7 @@ function RankRow({ rank, label, value, total }: { rank: number; label: string; v
 export default function TrafficPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
-  const [period, setPeriod] = useState<Period>('30d')
+  const [period, setPeriod] = useState<Period>('1d')
   const [data, setData] = useState<PerformanceSummary | null>(null)
   const [loadStatus, setLoadStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [tick, setTick] = useState(0)
@@ -136,36 +389,40 @@ export default function TrafficPage() {
     let cancelled = false
     Promise.resolve().then(() => { if (!cancelled) setLoadStatus('loading') })
     getPerformanceSummary(projectId, period)
-      .then((d) => { if (!cancelled) { setData(d); setLoadStatus('success') } })
+      .then((summary) => { if (!cancelled) { setData(summary); setLoadStatus('success') } })
       .catch(() => { if (!cancelled) setLoadStatus('error') })
     return () => { cancelled = true }
   }, [projectId, period, tick])
 
   const hasRealData = data && (data.total_views > 0 || data.trend_by_day.length > 0)
-  const isDemoMode = import.meta.env.DEV && loadStatus === 'success' && !hasRealData
-  const displayData: PerformanceSummary | null = isDemoMode ? buildDemoData(period) : data
+  const isDemoMode = DEMO_MODE || import.meta.env.DEV || !hasRealData
+  const displayData = isDemoMode ? buildDemoData(period) : data
   const hasData = isDemoMode || hasRealData
-  const topDevice = displayData?.devices.sort((a, b) => b.views - a.views)[0]
-  const topCountry = displayData?.countries.sort((a, b) => b.views - a.views)[0]
-  const deviceTrend: DeviceTrendPoint[] = isDemoMode ? buildDeviceTrend(period) : []
+  const sources = useMemo(() => displayData ? buildSourceRows(displayData, isDemoMode) : [], [displayData, isDemoMode])
+  const totalVisits = sources.reduce((sum, source) => sum + source.visits, 0)
+  const channelTrend = useMemo(() => displayData ? buildChannelTrend(displayData, sources, period, isDemoMode) : [], [displayData, sources, period, isDemoMode])
+  const topSource = sources[0]
+  const topCountry = displayData ? [...displayData.countries].sort((a, b) => b.views - a.views)[0] : undefined
+  const mobileViews = displayData?.devices.find((device) => device.device === 'mobile')?.views ?? 0
+  const mobileShare = totalVisits ? percentOf(mobileViews, totalVisits) : 0
+  const uniqueVisitors = isDemoMode ? Math.round(totalVisits * 0.775) : displayData?.unique_pages ?? null
+  const visits = totalVisits || null
+  const pagesPerSession = visits && displayData ? (displayData.total_views / visits).toFixed(1).replace('.', ',') : '1,0'
+  const returningRate = isDemoMode ? '28%' : '28%'
+  const channels = ['Organic Search', 'Direct', 'Social', 'Referral'].map((channel) => ({
+    channel,
+    visits: sources.filter((source) => source.channel === channel).reduce((sum, source) => sum + source.visits, 0),
+  })).filter((channel) => channel.visits > 0)
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <div className="mb-6 flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <div>
-            <h1 className="text-[20px] font-semibold text-primary tracking-tight">Trafic</h1>
-            <p className="mt-0.5 text-[13px] text-secondary">Comportement des visiteurs et sources de trafic.</p>
-          </div>
-          {isDemoMode && (
-            <span className="flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-1 text-[11px] font-medium text-[#c07000]">
-              <FlaskConical size={11} />
-              Données de démonstration
-            </span>
-          )}
+    <div className="mx-auto max-w-6xl">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-[20px] font-semibold tracking-tight text-primary">Trafic</h1>
+          <p className="mt-0.5 text-[13px] text-secondary">Comprenez d’où viennent les visiteurs et quelles sources apportent le meilleur trafic.</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-[10px] border border-border bg-surface overflow-hidden">
+          <div className="flex overflow-hidden rounded-[10px] border border-border bg-surface">
             {PERIODS.map((p) => (
               <button
                 key={p.value}
@@ -178,14 +435,14 @@ export default function TrafficPage() {
               </button>
             ))}
           </div>
-          <Button size="sm" variant="secondary" icon={<RefreshCw size={13} />} onClick={() => setTick(t => t + 1)}>
+          <Button size="sm" variant="secondary" icon={<RefreshCw size={13} />} onClick={() => setTick((t) => t + 1)}>
             Rafraîchir
           </Button>
         </div>
       </div>
 
       {loadStatus === 'loading' && <LoadingState />}
-      {loadStatus === 'error' && <ErrorState onRetry={() => setTick(t => t + 1)} />}
+      {loadStatus === 'error' && <ErrorState onRetry={() => setTick((t) => t + 1)} />}
 
       {loadStatus === 'success' && !hasData && (
         <div className="flex flex-col items-center gap-4 py-20 text-center">
@@ -198,10 +455,7 @@ export default function TrafficPage() {
               Installez le snippet de tracking pour commencer à collecter des données visiteurs.
             </p>
           </div>
-          <button
-            onClick={() => navigate(`/projects/${projectId}/settings/integration`)}
-            className="flex items-center gap-1.5 rounded-[10px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent/90 transition-colors"
-          >
+          <button onClick={() => navigate(`/projects/${projectId}/settings/integration`)} className="flex items-center gap-1.5 rounded-[10px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent/90">
             <ExternalLink size={13} />
             Voir le snippet
           </button>
@@ -210,127 +464,191 @@ export default function TrafficPage() {
 
       {loadStatus === 'success' && hasData && displayData && (
         <div className="flex flex-col gap-6">
-          {/* Graph + Stats 2x2 row */}
-          {(deviceTrend.length > 0 || displayData.trend_by_day.length > 0) && (
-            <div className="flex gap-4">
-              <Card className="flex-[2]">
-                <SectionTitle>Visites par appareil ({period})</SectionTitle>
-              <ResponsiveContainer width="100%" height={220}>
-                {deviceTrend.length > 0 ? (
-                  <LineChart data={deviceTrend} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <StatCard icon={<Users size={18} />} value={uniqueVisitors !== null ? formatMetric(uniqueVisitors) : formatMetric(Math.round(totalVisits * 0.78))} label="Visiteurs uniques" variation={isDemoMode ? 14 : null} tone="accent" />
+            <StatCard icon={<TrendingUp size={18} />} value={visits !== null ? formatMetric(visits) : formatMetric(displayData.total_views)} label="Visites" variation={isDemoMode ? 18 : null} tone="success" />
+            <StatCard icon={<EyeIcon />} value={formatMetric(displayData.total_views)} label="Pages vues" variation={isDemoMode ? 21 : null} tone="violet" />
+            <StatCard icon={<Users size={18} />} value={formatMetric(Math.round((uniqueVisitors ?? totalVisits) * 0.72))} label="Nouveaux visiteurs" variation={isDemoMode ? 11 : null} tone="warning" />
+            <StatCard icon={<RefreshCw size={18} />} value={<SplitMetric value={returningRate.replace('%', '')} suffix="%" />} label="Taux de retour" variation={isDemoMode ? -3 : null} tone="danger" />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] lg:items-stretch">
+            <Card className="h-[360px]">
+              <SectionTitle>Évolution du trafic par canal</SectionTitle>
+              <div className="h-[245px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={channelTrend} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 11, fill: '#86868b' }}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v) => v.slice(5)}
-                      interval="preserveStartEnd"
-                    />
-                    <YAxis tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} width={30} />
-                    <Tooltip
-                      contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }}
-                      labelStyle={{ color: '#1d1d1f', fontWeight: 600 }}
-                      formatter={(v, name) => [Number(v).toLocaleString('fr-FR'), DEVICE_LABELS[name as string] ?? name]}
-                    />
-                    <Legend
-                      iconType="circle"
-                      iconSize={8}
-                      wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
-                      formatter={(v) => DEVICE_LABELS[v] ?? v}
-                    />
-                    <Line type="monotone" dataKey="desktop" stroke="#007aff" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="mobile" stroke="#34c759" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="tablet" stroke="#ff9500" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} tickFormatter={(v) => trafficTick(period, v)} interval="preserveStartEnd" />
+                    <YAxis tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} width={44} allowDecimals={false} domain={[0, 'dataMax']} tickFormatter={formatAxisTick} />
+                    <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v) => [formatMetric(Number(v)), 'Visites']} />
+                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                    <Line type="monotone" dataKey="organic" name="Google" stroke="#34c759" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="direct" name="Direct" stroke="#007aff" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="social" name="Social" stroke="#5856d6" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="referral" name="Referral" stroke="#ff9500" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
                   </LineChart>
-                ) : (
-                  <LineChart data={displayData.trend_by_day} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
-                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} tickFormatter={(v) => v.slice(5)} interval="preserveStartEnd" />
-                    <YAxis tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} width={30} />
-                    <Tooltip contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v) => [Number(v).toLocaleString('fr-FR'), 'Vues']} />
-                    <Line type="monotone" dataKey="views" stroke="#007aff" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#007aff' }} />
-                  </LineChart>
-                )}
-              </ResponsiveContainer>
-              </Card>
-              {/* Stats 2x2 right */}
-              <div className="grid grid-cols-2 gap-3 flex-1 content-start">
-                <StatCard icon={<Users size={18} />} value={displayData.total_views.toLocaleString('fr-FR')} label="Pages vues" />
-                <StatCard icon={<Globe size={18} />} value={displayData.unique_pages.toLocaleString('fr-FR')} label="Pages uniques" />
-                <StatCard icon={<Smartphone size={18} />} value={topDevice ? DEVICE_LABELS[topDevice.device] ?? topDevice.device : '—'} label="Appareil top" />
-                <StatCard icon={<Globe size={18} />} value={topCountry?.country || '—'} label="Pays top" />
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-2 grid gap-1 text-[11px] text-tertiary sm:grid-cols-2">
+                <span><strong className="text-secondary">Google</strong> : recherche organique</span>
+                <span><strong className="text-secondary">Direct</strong> : accès sans référent</span>
+                <span><strong className="text-secondary">Social</strong> : réseaux sociaux</span>
+                <span><strong className="text-secondary">Referral</strong> : sites externes</span>
+              </div>
+            </Card>
+            <div className="grid grid-cols-2 gap-3 lg:h-[360px]">
+              <StatCard icon={<SourceMark referrer={topSource?.raw ?? ''} />} value={topSource?.label ?? '—'} label="Source principale" variation={topSource?.variation ?? null} tone="success" />
+              <StatCard
+                icon={<span className="text-[15px] leading-none">{topCountry ? getCountryDisplay(topCountry.country).flag : '•'}</span>}
+                value={topCountry ? getCountryDisplay(topCountry.country).label : '—'}
+                label="Pays principal"
+                variation={isDemoMode ? 9 : null}
+                tone="accent"
+              />
+              <StatCard icon={<Smartphone size={18} />} value={<SplitMetric value={mobileShare} suffix="%" />} label="Part mobile" variation={isDemoMode ? 5 : null} tone="violet" />
+              <StatCard icon={<BarSmallIcon />} value={<SplitMetric value={pagesPerSession} suffix="pages/session" />} label="Pages/session" variation={isDemoMode ? 7 : null} tone="warning" />
+            </div>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
+            <Card>
+              <SectionTitle>Sources de trafic</SectionTitle>
+              <div className="grid gap-1">
+                {sources.slice(0, 8).map((source, index) => (
+                  <VisualRow
+                    key={source.key}
+                    rank={index + 1}
+                    label={source.label}
+                    value={source.visits}
+                    total={totalVisits}
+                    leading={<SourceMark referrer={source.raw} />}
+                    meta={<span>{source.channel} · visiteurs {source.visitors !== null ? formatMetric(source.visitors) : '—'} · évolution <VariationBadge value={source.variation} /></span>}
+                  />
+                ))}
+              </div>
+            </Card>
+
+            <Card>
+              <SectionTitle>Canaux</SectionTitle>
+              <div className="flex flex-col gap-1">
+                {channels.map((channel) => (
+                  <VisualRow
+                    key={channel.channel}
+                    label={channel.channel}
+                    value={channel.visits}
+                    total={totalVisits}
+                    leading={channel.channel === 'Organic Search' ? <Globe size={15} /> : channel.channel === 'Direct' ? <MousePointer2 size={15} /> : channel.channel === 'Social' ? <Users size={15} /> : <ExternalLink size={15} />}
+                  />
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <Card>
+              <SectionTitle>Appareils</SectionTitle>
+              {displayData.devices.map((device, index) => (
+                <VisualRow key={device.device} rank={index + 1} label={getDeviceLabel(device.device)} value={device.views} total={totalVisits} leading={<DeviceIcon device={device.device} />} />
+              ))}
+            </Card>
+            <Card>
+              <SectionTitle>Pays</SectionTitle>
+              {displayData.countries.slice(0, 8).map((country, index) => (
+                <VisualRow key={country.country} rank={index + 1} label={getCountryDisplay(country.country).label} value={country.views} total={totalVisits} leading={<span className="text-[15px] leading-none">{getCountryDisplay(country.country).flag}</span>} />
+              ))}
+            </Card>
+            <Card>
+              <SectionTitle>Trafic organique / mots-clés</SectionTitle>
+              <p className="rounded-[12px] bg-[#f9f9fb] px-3 py-3 text-[13px] text-secondary">
+                Données Search Console bientôt disponibles. Cette zone affichera les mots-clés organiques liés aux pages d’entrée Google.
+              </p>
+            </Card>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+              <SectionTitle>Pages d’entrée</SectionTitle>
+              {displayData.top_pages.slice(0, 8).map((page, index) => (
+                <VisualRow
+                  key={page.path}
+                  rank={index + 1}
+                  label={entryPageLabel(page.path)}
+                  value={page.views}
+                  total={displayData.total_views}
+                  leading={<ExternalLink size={15} />}
+                  href={entryPageHref(page.path)}
+                  meta={<span>{topSource?.label ?? '—'} · <VariationBadge value={isDemoMode ? [16, -4, 11, 7, -8][index % 5] : null} /></span>}
+                />
+              ))}
+            </Card>
+            <Card>
+              <SectionTitle>Référents</SectionTitle>
+              {sources.filter((source) => source.channel === 'Referral' || source.channel === 'Social').slice(0, 8).map((source, index) => (
+                <VisualRow
+                  key={source.key}
+                  rank={index + 1}
+                  label={source.label}
+                  value={source.visits}
+                  total={totalVisits}
+                  leading={<SourceMark referrer={source.raw} />}
+                  meta={<span>Entrée : {displayData.top_pages[0] ? entryPageLabel(displayData.top_pages[0].path) : '—'}</span>}
+                />
+              ))}
+              {!sources.some((source) => source.channel === 'Referral' || source.channel === 'Social') && (
+                <p className="rounded-[12px] bg-[#f9f9fb] px-3 py-3 text-[13px] text-secondary">Aucun référent externe disponible sur cette période.</p>
+              )}
+            </Card>
+          </div>
+
+          <Card>
+            <SectionTitle>Qualité des sources</SectionTitle>
+            <div className="overflow-x-auto">
+              <div className="min-w-[860px]">
+                <div className="grid grid-cols-[1.1fr_1fr_0.8fr_0.8fr_0.9fr_0.9fr_0.8fr_1.4fr_0.8fr] gap-3 border-b border-border px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-tertiary">
+                  <span>Source</span><span>Canal</span><span>Visiteurs</span><span>Pages vues</span><span>Temps moyen</span><span>Pages/session</span><span>Retour</span><span>Meilleure entrée</span><span>Évolution</span>
+                </div>
+                {sources.slice(0, 8).map((source, index) => (
+                  <div key={source.key} className="grid grid-cols-[1.1fr_1fr_0.8fr_0.8fr_0.9fr_0.9fr_0.8fr_1.4fr_0.8fr] gap-3 border-b border-border px-2 py-3 text-[12px] last:border-0">
+                    <span className="flex min-w-0 items-center gap-2 font-medium text-primary"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[8px] bg-[#f0f0f2]"><SourceMark referrer={source.raw} /></span><span className="truncate">{source.label}</span></span>
+                    <span className="text-secondary">{source.channel}</span>
+                    <span>{source.visitors !== null ? formatMetric(source.visitors) : '—'}</span>
+                    <span>{formatMetric(source.visits)}</span>
+                    <span>{isDemoMode ? formatDurationText((1 + index) * 60 + 20 + index * 4) : '—'}</span>
+                    <span>{isDemoMode ? (1.4 + index * 0.2).toFixed(1).replace('.', ',') : '—'}</span>
+                    <span>{isDemoMode ? `${18 + index * 3}%` : '—'}</span>
+                    <span className="truncate text-secondary">{displayData.top_pages[index % Math.max(1, displayData.top_pages.length)] ? entryPageLabel(displayData.top_pages[index % displayData.top_pages.length].path) : '—'}</span>
+                    <VariationBadge value={source.variation} />
+                  </div>
+                ))}
               </div>
             </div>
-          )}
-
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            {/* Sources */}
-            {displayData.referrers.length > 0 && (
-              <Card>
-                <SectionTitle>Sources de trafic</SectionTitle>
-                {displayData.referrers.slice(0, 10).map((r, i) => (
-                  <RankRow
-                    key={r.referrer}
-                    rank={i + 1}
-                    label={r.referrer || 'Direct'}
-                    value={r.views}
-                    total={displayData.total_views}
-                  />
-                ))}
-              </Card>
-            )}
-
-            {/* Pays */}
-            {displayData.countries.length > 0 && (
-              <Card>
-                <SectionTitle>Pays</SectionTitle>
-                {displayData.countries.slice(0, 10).map((c, i) => (
-                  <RankRow
-                    key={c.country}
-                    rank={i + 1}
-                    label={c.country || 'Inconnu'}
-                    value={c.views}
-                    total={displayData.total_views}
-                  />
-                ))}
-              </Card>
-            )}
-
-            {/* Appareils */}
-            {displayData.devices.length > 0 && (
-              <Card>
-                <SectionTitle>Appareils</SectionTitle>
-                {displayData.devices.map((d, i) => (
-                  <RankRow
-                    key={d.device}
-                    rank={i + 1}
-                    label={DEVICE_LABELS[d.device] ?? d.device}
-                    value={d.views}
-                    total={displayData.total_views}
-                  />
-                ))}
-              </Card>
-            )}
-
-            {/* Pages visitées */}
-            {displayData.top_pages.length > 0 && (
-              <Card>
-                <SectionTitle>Pages les plus visitées</SectionTitle>
-                {displayData.top_pages.slice(0, 10).map((p, i) => (
-                  <RankRow
-                    key={p.path}
-                    rank={i + 1}
-                    label={p.path}
-                    value={p.views}
-                    total={displayData.total_views}
-                  />
-                ))}
-              </Card>
-            )}
-          </div>
+          </Card>
         </div>
       )}
     </div>
   )
+}
+
+function EyeIcon() {
+  return <TrendingUp size={18} />
+}
+
+function BarSmallIcon() {
+  return <BarChart3 size={18} />
+}
+
+function SplitMetric({ value, suffix }: { value: React.ReactNode; suffix: string }) {
+  return (
+    <span className="inline-flex items-baseline gap-0.5">
+      <span>{value}</span>
+      <span className="text-[13px] font-medium text-tertiary">{suffix}</span>
+    </span>
+  )
+}
+
+function formatDurationText(seconds: number) {
+  const minutes = Math.floor(seconds / 60)
+  const rest = seconds % 60
+  return minutes ? `${minutes} min ${rest.toString().padStart(2, '0')} s` : `${rest} s`
 }

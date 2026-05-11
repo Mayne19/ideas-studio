@@ -7,6 +7,7 @@ class CategoryCreate(BaseModel):
     name: str
     slug: Optional[str] = None
     description: Optional[str] = None
+    color: Optional[str] = None
     priority: int = 0
     target_frequency: Optional[int] = None
 
@@ -15,6 +16,7 @@ class CategoryUpdate(BaseModel):
     name: Optional[str] = None
     slug: Optional[str] = None
     description: Optional[str] = None
+    color: Optional[str] = None
     priority: Optional[int] = None
     target_frequency: Optional[int] = None
 
@@ -27,6 +29,7 @@ class CategoryPublic(BaseModel):
     name: str
     slug: str
     description: Optional[str]
+    color: Optional[str]
     priority: int
     target_frequency: Optional[int]
     created_at: datetime

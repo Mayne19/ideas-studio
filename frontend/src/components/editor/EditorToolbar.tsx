@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { Editor } from '@tiptap/react'
 import {
   Bold,
@@ -11,16 +12,21 @@ import {
   Pilcrow,
   List,
   ListOrdered,
-  CheckSquare,
   Quote,
   Terminal,
-  Minus,
-  Link,
   Image,
-  Save,
   Loader2,
+  Link2,
+  Minus,
+  Table2,
+  Unlink2,
 } from 'lucide-react'
 import { uploadMedia } from '@/api/media'
+
+type PopoverKind = 'link' | 'table' | 'image'
+type SavedRange = { from: number; to: number }
+
+const POPOVER_WIDTH = 296
 
 function ToolBtn({
   onClick,
@@ -29,7 +35,7 @@ function ToolBtn({
   title,
   children,
 }: {
-  onClick: () => void
+  onClick: (event: React.MouseEvent<HTMLButtonElement>) => void
   active?: boolean
   disabled?: boolean
   title: string
@@ -58,29 +64,57 @@ function Sep() {
 
 export default function EditorToolbar({
   editor,
-  onSave,
   projectId,
+  articleId,
   disabled = false,
 }: {
   editor: Editor | null
-  onSave?: () => void
   projectId?: string
+  articleId?: string
   disabled?: boolean
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
+  const [activePopover, setActivePopover] = useState<PopoverKind | null>(null)
+  const [popoverPosition, setPopoverPosition] = useState({ top: 120, left: 120 })
+  const [savedRange, setSavedRange] = useState<SavedRange | null>(null)
+  const [linkText, setLinkText] = useState('')
+  const [linkUrl, setLinkUrl] = useState('')
+  const [tableRows, setTableRows] = useState(3)
+  const [tableCols, setTableCols] = useState(3)
+  const [tableHeader, setTableHeader] = useState(true)
+  const [imageUrl, setImageUrl] = useState('')
+  const [imageAlt, setImageAlt] = useState('')
 
   if (!editor) return null
 
-  function handleLink() {
-    const prev = editor!.getAttributes('link').href as string | undefined
-    const url = window.prompt('URL du lien', prev ?? 'https://')
-    if (url === null) return
-    if (url === '') {
-      editor!.chain().focus().extendMarkRange('link').unsetLink().run()
-    } else {
-      editor!.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
-    }
+  function placePopover(event: React.MouseEvent<HTMLButtonElement>, kind: PopoverKind) {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const left = Math.min(rect.right + 28, window.innerWidth - POPOVER_WIDTH - 16)
+    setPopoverPosition({
+      top: Math.max(16, Math.min(rect.top - 8, window.innerHeight - 300)),
+      left: Math.max(16, left),
+    })
+    setActivePopover((current) => (current === kind ? null : kind))
+  }
+
+  function escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+  }
+
+  function escapeAttr(value: string): string {
+    return escapeHtml(value).replace(/'/g, '&#39;')
+  }
+
+  function normalizeUrl(value: string): string {
+    const trimmed = value.trim()
+    if (!trimmed) return ''
+    if (/^(https?:|mailto:|tel:|\/|#)/i.test(trimmed)) return trimmed
+    return `https://${trimmed}`
   }
 
   async function handleImageFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -89,7 +123,7 @@ export default function EditorToolbar({
 
     setUploading(true)
     try {
-      const media = await uploadMedia(projectId, file)
+      const media = await uploadMedia(projectId, file, articleId)
       editor!.chain().focus().setImage({ src: media.url, alt: media.alt_text ?? media.filename ?? '' }).run()
     } finally {
       setUploading(false)
@@ -97,17 +131,76 @@ export default function EditorToolbar({
     }
   }
 
+  function openLinkPopover(event: React.MouseEvent<HTMLButtonElement>) {
+    const { from, to, empty } = editor!.state.selection
+    const previousUrl = editor!.getAttributes('link').href as string | undefined
+    setSavedRange({ from, to })
+    setLinkText(empty ? '' : editor!.state.doc.textBetween(from, to, ' '))
+    setLinkUrl(previousUrl ?? '')
+    placePopover(event, 'link')
+  }
+
+  function applyLink() {
+    const url = normalizeUrl(linkUrl)
+    const text = linkText.trim()
+    if (!url || !savedRange) return
+
+    if (savedRange.from === savedRange.to) {
+      if (!text) return
+      editor!.chain().focus().setTextSelection(savedRange.from).insertContent(
+        `<a href="${escapeAttr(url)}">${escapeHtml(text)}</a>`
+      ).run()
+    } else {
+      const selectedText = editor!.state.doc.textBetween(savedRange.from, savedRange.to, ' ')
+      editor!.chain().focus().setTextSelection(savedRange).insertContent(
+        `<a href="${escapeAttr(url)}">${escapeHtml(text || selectedText || url)}</a>`
+      ).run()
+    }
+
+    setActivePopover(null)
+    setLinkText('')
+    setLinkUrl('')
+  }
+
+  function removeLink() {
+    const range = savedRange ?? editor!.state.selection
+    editor!.chain().focus().setTextSelection(range).extendMarkRange('link').unsetLink().run()
+    setActivePopover(null)
+  }
+
+  function openTablePopover(event: React.MouseEvent<HTMLButtonElement>) {
+    placePopover(event, 'table')
+  }
+
+  function insertTable() {
+    editor!.chain().focus().insertTable({
+      rows: Math.max(1, Math.min(12, tableRows)),
+      cols: Math.max(1, Math.min(8, tableCols)),
+      withHeaderRow: tableHeader,
+    }).run()
+    setActivePopover(null)
+  }
+
+  function openImagePopover(event: React.MouseEvent<HTMLButtonElement>) {
+    setImageUrl('')
+    setImageAlt('')
+    placePopover(event, 'image')
+  }
+
+  function insertImageUrl() {
+    const src = normalizeUrl(imageUrl)
+    if (!src) return
+    editor!.chain().focus().setImage({ src, alt: imageAlt.trim() }).run()
+    setActivePopover(null)
+  }
+
+  function deleteSelectedImage() {
+    editor!.chain().focus().deleteSelection().run()
+    setActivePopover(null)
+  }
+
   return (
     <div className={`flex h-full flex-col items-center gap-0.5 overflow-y-auto px-1 py-2 ${disabled ? 'pointer-events-none opacity-45' : ''}`}>
-      {onSave && (
-        <>
-          <ToolBtn onClick={onSave} title="Sauvegarder">
-            <Save size={15} />
-          </ToolBtn>
-          <Sep />
-        </>
-      )}
-
       <ToolBtn onClick={() => editor.chain().focus().setParagraph().run()} active={editor.isActive('paragraph') && !editor.isActive('heading')} title="Paragraphe">
         <Pilcrow size={15} />
       </ToolBtn>
@@ -135,6 +228,9 @@ export default function EditorToolbar({
       <ToolBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} title="Souligne">
         <Underline size={15} />
       </ToolBtn>
+      <ToolBtn onClick={openLinkPopover} active={editor.isActive('link')} title="Lien">
+        {editor.isActive('link') ? <Unlink2 size={15} /> : <Link2 size={15} />}
+      </ToolBtn>
 
       <Sep />
 
@@ -144,12 +240,6 @@ export default function EditorToolbar({
       <ToolBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Liste numerotee">
         <ListOrdered size={15} />
       </ToolBtn>
-      <ToolBtn onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')} title="Checklist">
-        <CheckSquare size={15} />
-      </ToolBtn>
-
-      <Sep />
-
       <ToolBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Citation">
         <Quote size={15} />
       </ToolBtn>
@@ -159,20 +249,177 @@ export default function EditorToolbar({
       <ToolBtn onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Separateur">
         <Minus size={15} />
       </ToolBtn>
+      <ToolBtn onClick={openTablePopover} active={editor.isActive('table')} title="Tableau">
+        <Table2 size={15} />
+      </ToolBtn>
 
       <Sep />
 
-      <ToolBtn onClick={handleLink} active={editor.isActive('link')} title="Lien">
-        <Link size={15} />
-      </ToolBtn>
       <ToolBtn
-        onClick={() => fileRef.current?.click()}
+        onClick={openImagePopover}
         disabled={!projectId || uploading}
         title={projectId ? 'Image' : 'Image indisponible'}
       >
         {uploading ? <Loader2 size={15} className="animate-spin" /> : <Image size={15} />}
       </ToolBtn>
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageFile} />
+
+      {activePopover && createPortal((
+        <div
+          style={{
+            top: popoverPosition.top,
+            left: popoverPosition.left,
+            zIndex: 2147483647,
+            backgroundColor: '#fff',
+          }}
+          className="fixed w-[296px] rounded-[16px] border border-border-strong p-3 text-left shadow-[0_24px_80px_rgba(0,0,0,0.34)] ring-1 ring-black/10"
+        >
+          <span className="absolute left-[-7px] top-6 h-3.5 w-3.5 rotate-45 border-b border-l border-border-strong bg-white" />
+          {activePopover === 'link' && (
+            <div className="relative flex flex-col gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary">Lien</p>
+              <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                Texte
+                <input
+                  value={linkText}
+                  onChange={(event) => setLinkText(event.target.value)}
+                  placeholder="Texte du lien"
+                  className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                URL
+                <input
+                  value={linkUrl}
+                  onChange={(event) => setLinkUrl(event.target.value)}
+                  placeholder="https://exemple.com"
+                  className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
+                />
+              </label>
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <button type="button" onClick={() => setActivePopover(null)} className="text-[12px] text-tertiary hover:text-secondary">Annuler</button>
+                <div className="flex items-center gap-2">
+                  {editor.isActive('link') && (
+                    <button type="button" onClick={removeLink} className="rounded-[8px] px-2 py-1 text-[12px] font-medium text-danger hover:bg-danger/5">
+                      Retirer
+                    </button>
+                  )}
+                  <button type="button" onClick={applyLink} className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-medium text-white">
+                    Appliquer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activePopover === 'table' && (
+            <div className="relative flex flex-col gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary">Tableau</p>
+              {!editor.isActive('table') ? (
+                <>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                      Lignes
+                      <input
+                        type="number"
+                        min={1}
+                        max={12}
+                        value={tableRows}
+                        onChange={(event) => setTableRows(Number(event.target.value))}
+                        className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                      Colonnes
+                      <input
+                        type="number"
+                        min={1}
+                        max={8}
+                        value={tableCols}
+                        onChange={(event) => setTableCols(Number(event.target.value))}
+                        className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
+                      />
+                    </label>
+                  </div>
+                  <label className="flex items-center gap-2 text-[12px] text-secondary">
+                    <input
+                      type="checkbox"
+                      checked={tableHeader}
+                      onChange={(event) => setTableHeader(event.target.checked)}
+                    />
+                    Ligne d'en-tête
+                  </label>
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <button type="button" onClick={() => setActivePopover(null)} className="text-[12px] text-tertiary hover:text-secondary">Annuler</button>
+                    <button type="button" onClick={insertTable} className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-medium text-white">
+                      Insérer
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button type="button" onClick={() => editor.chain().focus().addRowAfter().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-[#f5f5f7]">+ ligne</button>
+                    <button type="button" onClick={() => editor.chain().focus().deleteRow().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-[#f5f5f7]">- ligne</button>
+                    <button type="button" onClick={() => editor.chain().focus().addColumnAfter().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-[#f5f5f7]">+ colonne</button>
+                    <button type="button" onClick={() => editor.chain().focus().deleteColumn().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-[#f5f5f7]">- colonne</button>
+                  </div>
+                  <button type="button" onClick={() => { editor.chain().focus().deleteTable().run(); setActivePopover(null) }} className="mt-1 rounded-[8px] px-2 py-1.5 text-[12px] font-medium text-danger hover:bg-danger/5">
+                    Supprimer le tableau
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          {activePopover === 'image' && (
+            <div className="relative flex flex-col gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary">Image</p>
+              {editor.isActive('image') && (
+                <button
+                  type="button"
+                  onClick={deleteSelectedImage}
+                  className="rounded-[9px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[12px] font-medium text-danger hover:bg-danger/10"
+                >
+                  Supprimer l'image sélectionnée
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="rounded-[9px] border border-border px-2.5 py-2 text-[12px] font-medium text-secondary hover:bg-[#f5f5f7] disabled:opacity-50"
+              >
+                {uploading ? 'Upload en cours...' : 'Choisir un fichier'}
+              </button>
+              <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                URL de l'image
+                <input
+                  value={imageUrl}
+                  onChange={(event) => setImageUrl(event.target.value)}
+                  placeholder="https://exemple.com/image.jpg"
+                  className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                Texte alternatif
+                <input
+                  value={imageAlt}
+                  onChange={(event) => setImageAlt(event.target.value)}
+                  placeholder="Description courte"
+                  className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
+                />
+              </label>
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button type="button" onClick={() => setActivePopover(null)} className="text-[12px] text-tertiary hover:text-secondary">Annuler</button>
+                <button type="button" onClick={insertImageUrl} className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-medium text-white">
+                  Insérer l'URL
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ), document.body)}
     </div>
   )
 }

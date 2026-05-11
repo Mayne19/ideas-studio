@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Plus, Pencil, Trash2, FolderOpen, RefreshCw, Info } from 'lucide-react'
+import { Plus, Pencil, Trash2, FolderOpen, RefreshCw, Info, Palette } from 'lucide-react'
 import { listCategories, createCategory, updateCategory, deleteCategory } from '@/api/categories'
 import type { CreateCategoryPayload, UpdateCategoryPayload } from '@/api/categories'
 import type { Category } from '@/types'
@@ -13,6 +13,85 @@ import EmptyState from '@/components/ui/EmptyState'
 import ErrorState from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 
+const CATEGORY_COLORS = [
+  '#007aff',
+  '#34c759',
+  '#ff9500',
+  '#ff3b30',
+  '#5856d6',
+  '#00a0a8',
+  '#c07000',
+  '#8e8e93',
+]
+
+const DEFAULT_CATEGORY_COLOR = '#007aff'
+
+function isValidHexColor(value: string | null | undefined): value is string {
+  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)
+}
+
+function fallbackColorFromName(name: string): string {
+  const total = name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0)
+  return CATEGORY_COLORS[total % CATEGORY_COLORS.length] ?? DEFAULT_CATEGORY_COLOR
+}
+
+function categoryColor(category: Pick<Category, 'name' | 'color'>): string {
+  return isValidHexColor(category.color) ? category.color : fallbackColorFromName(category.name)
+}
+
+function normalizeColor(value: string): string {
+  return isValidHexColor(value) ? value : DEFAULT_CATEGORY_COLOR
+}
+
+function CategoryColorField({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (value: string) => void
+}) {
+  const selected = normalizeColor(value)
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <label className="text-[13px] font-medium text-primary">Couleur</label>
+        <div className="flex items-center gap-2 rounded-[10px] border border-border bg-[#f9f9fb] px-2 py-1">
+          <span
+            className="h-4 w-4 rounded-full border border-black/10"
+            style={{ backgroundColor: selected }}
+            aria-hidden="true"
+          />
+          <span className="font-mono text-[11px] uppercase text-secondary">{selected}</span>
+          <input
+            type="color"
+            value={selected}
+            onChange={(e) => onChange(e.target.value)}
+            className="h-6 w-7 cursor-pointer rounded border-0 bg-transparent p-0"
+            aria-label="Choisir une couleur personnalisée"
+          />
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {CATEGORY_COLORS.map((color) => (
+          <button
+            key={color}
+            type="button"
+            onClick={() => onChange(color)}
+            className={`h-7 w-7 rounded-full border transition-all ${
+              selected.toLowerCase() === color.toLowerCase()
+                ? 'border-primary ring-2 ring-accent/20'
+                : 'border-black/10 hover:scale-105'
+            }`}
+            style={{ backgroundColor: color }}
+            aria-label={`Choisir ${color}`}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function CategoryRow({
   category,
   onEdit,
@@ -22,15 +101,39 @@ function CategoryRow({
   onEdit: (c: Category) => void
   onDelete: (c: Category) => void
 }) {
+  const color = categoryColor(category)
+
   return (
     <div className="flex items-center gap-3 rounded-[14px] bg-[#f9f9fb] px-4 py-3">
+      <span
+        className="h-9 w-1.5 shrink-0 rounded-full"
+        style={{ backgroundColor: color }}
+        aria-hidden="true"
+      />
       <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-medium text-primary truncate">{category.name}</p>
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            className="h-2.5 w-2.5 shrink-0 rounded-full border border-black/10"
+            style={{ backgroundColor: color }}
+            aria-hidden="true"
+          />
+          <p className="truncate text-[13px] font-medium text-primary">{category.name}</p>
+        </div>
         {category.description && (
           <p className="text-[12px] text-tertiary truncate mt-0.5">{category.description}</p>
         )}
       </div>
       <div className="flex items-center gap-3 text-[12px] text-tertiary shrink-0">
+        <span
+          className="rounded-full border px-2 py-0.5 font-medium"
+          style={{
+            borderColor: `${color}30`,
+            backgroundColor: `${color}12`,
+            color,
+          }}
+        >
+          {category.color ? category.color.toUpperCase() : 'Couleur auto'}
+        </span>
         {category.target_frequency !== null && (
           <span>{category.target_frequency} art./mois</span>
         )}
@@ -59,11 +162,18 @@ function CategoryRow({
 type FormState = {
   name: string
   description: string
+  color: string
   priority: string
   target_frequency: string
 }
 
-const EMPTY_FORM: FormState = { name: '', description: '', priority: '0', target_frequency: '' }
+const EMPTY_FORM: FormState = {
+  name: '',
+  description: '',
+  color: DEFAULT_CATEGORY_COLOR,
+  priority: '0',
+  target_frequency: '',
+}
 
 export default function CategoriesPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -101,6 +211,7 @@ export default function CategoriesPage() {
     setForm({
       name: c.name,
       description: c.description ?? '',
+      color: categoryColor(c),
       priority: String(c.priority),
       target_frequency: c.target_frequency !== null ? String(c.target_frequency) : '',
     })
@@ -119,6 +230,7 @@ export default function CategoriesPage() {
         const payload: UpdateCategoryPayload = {
           name: form.name.trim(),
           description: form.description.trim() || null,
+          color: normalizeColor(form.color),
           priority: parseInt(form.priority) || 0,
           target_frequency: freq,
         }
@@ -127,6 +239,7 @@ export default function CategoriesPage() {
         const payload: CreateCategoryPayload = {
           name: form.name.trim(),
           description: form.description.trim() || undefined,
+          color: normalizeColor(form.color),
           priority: parseInt(form.priority) || 0,
           target_frequency: freq ?? undefined,
         }
@@ -176,7 +289,7 @@ export default function CategoriesPage() {
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-medium text-primary">Synchronisation depuis votre site</p>
             <p className="mt-0.5 text-[12px] text-secondary">
-              Quand votre site sera connecté, Ideas Studio pourra importer automatiquement les catégories et contenus déjà publiés.
+              Synchronisation depuis le site bientôt disponible. Elle importera les catégories et leurs couleurs si le backend connecté les fournit.
             </p>
           </div>
           <button
@@ -185,7 +298,7 @@ export default function CategoriesPage() {
             title="Disponible quand votre site est connecté"
           >
             <RefreshCw size={12} />
-            Synchroniser
+            Synchroniser depuis le site
           </button>
         </div>
 
@@ -243,6 +356,16 @@ export default function CategoriesPage() {
             placeholder="Articles sur les techniques SEO..."
             rows={2}
           />
+          <div className="rounded-[16px] bg-[#f9f9fb] p-3">
+            <div className="mb-2 flex items-center gap-2 text-[12px] font-medium uppercase tracking-[0.04em] text-tertiary">
+              <Palette size={13} />
+              Apparence
+            </div>
+            <CategoryColorField
+              value={form.color}
+              onChange={(color) => setForm((f) => ({ ...f, color }))}
+            />
+          </div>
           <div className="flex gap-3">
             <Input
               label="Priorité"

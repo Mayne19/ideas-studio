@@ -39,7 +39,10 @@ export type ConnectInfo = {
   domain: string | null
   status: string
   public_tracking_key: string
+  secret_api_key: string | null
   secret_api_key_masked: string
+  connected_at: string | null
+  last_seen_at: string | null
   snippet: string
   public_api_endpoints: Record<string, string>
 }
@@ -150,6 +153,7 @@ export type Category = {
   name: string
   slug: string
   description: string | null
+  color: string | null
   priority: number
   target_frequency: number | null
   created_at: string

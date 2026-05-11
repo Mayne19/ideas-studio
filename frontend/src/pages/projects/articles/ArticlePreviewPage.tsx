@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import StatusBadge from '@/components/ui/StatusBadge'
+import { useAuth } from '@/context/AuthContext'
 import { formatDate } from '@/utils/format'
 
 type FaqItem = { question: string; answer: string }
@@ -22,6 +23,9 @@ function escapeHtml(value: string): string {
 
 function sanitizeHtml(html: string): string {
   return html
+    .replace(/<span([^>]*data-comment-id=["'][^"']+["'][^>]*)>/gi, '<span$1>')
+    .replace(/\sclass=["'][^"']*comment-mark[^"']*["']/gi, '')
+    .replace(/\sdata-comment-id=["'][^"']+["']/gi, '')
     .replace(/<p>\s*#[^<\s][^<]*<\/p>/gi, '')
     .replace(/<p>\s*(extrait|excerpt)\s*:?\s*[^<]*<\/p>/gi, '')
 }
@@ -48,22 +52,41 @@ function stripHtml(value: string): string {
   return value.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
 }
 
-function buildOutline(html: string, title: string): OutlineItem[] {
+function parseFaqItems(value: unknown): FaqItem[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is FaqItem =>
+      item !== null &&
+      typeof item === 'object' &&
+      typeof (item as FaqItem).question === 'string' &&
+      typeof (item as FaqItem).answer === 'string'
+    )
+  }
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      return parseFaqItems(JSON.parse(value))
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
+function buildOutline(html: string): OutlineItem[] {
   const outline: OutlineItem[] = []
-  if (title.trim()) outline.push({ id: 'article-title', level: 1, text: title.trim() })
 
   const headingRegex = /<h([2-4])[^>]*>([\s\S]*?)<\/h\1>/gi
   let match: RegExpExecArray | null
   while ((match = headingRegex.exec(html)) !== null) {
     const text = stripHtml(match[2] ?? '')
-    if (text) outline.push({ id: `section-${outline.length}`, level: Number(match[1]), text })
+    const id = match[0].match(/\sid=["']([^"']+)["']/i)?.[1] ?? `section-${outline.length}`
+    if (text) outline.push({ id, level: Number(match[1]), text })
   }
 
   return outline
 }
 
 function withHeadingIds(html: string): string {
-  let index = 1
+  let index = 0
   return html.replace(/<h([2-4])([^>]*)>/gi, (match, level, attrs) => {
     if (String(attrs).includes('id=')) return match
     const id = `section-${index++}`
@@ -71,9 +94,14 @@ function withHeadingIds(html: string): string {
   })
 }
 
+function countWordsFromHtml(html: string): number {
+  return stripHtml(html).split(/\s+/).filter(Boolean).length
+}
+
 export default function ArticlePreviewPage() {
   const { projectId, articleId } = useParams<{ projectId: string; articleId: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [article, setArticle] = useState<EditorArticle | null>(null)
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
 
@@ -96,12 +124,15 @@ export default function ArticlePreviewPage() {
     }} />
   }
 
-  const faqItems = Array.isArray(article.faq_json) ? (article.faq_json as FaqItem[]) : []
+  const faqItems = parseFaqItems(article.faq_json)
   const renderedContent = article.content ? withHeadingIds(renderContent(article.content)) : ''
-  const outline = buildOutline(renderedContent, article.title)
+  const outline = buildOutline(renderedContent)
+  const wordCount = article.word_count > 0 ? article.word_count : countWordsFromHtml(renderedContent)
+  const readingTime = wordCount > 0 ? Math.max(1, Math.round(wordCount / 200)) : null
+  const authorName = user?.name ?? '—'
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-[1034px]">
       <div className="mb-6 flex items-center justify-between">
         <button
           onClick={() => navigate(-1)}
@@ -119,47 +150,39 @@ export default function ArticlePreviewPage() {
         </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <aside className="lg:sticky lg:top-4 lg:self-start">
-          <div className="rounded-[14px] border border-border bg-surface p-4">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-tertiary">Plan</p>
-            <nav className="flex flex-col gap-1.5">
-              {outline.map((item) => (
-                <a
-                  key={item.id}
-                  href={`#${item.id}`}
-                  className={`truncate text-[12px] text-secondary hover:text-primary ${item.level === 3 ? 'pl-3' : item.level === 4 ? 'pl-6' : ''}`}
-                >
-                  {item.text}
-                </a>
-              ))}
-            </nav>
-          </div>
-        </aside>
-
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,760px)_250px]">
         <article className="min-w-0">
           <div className="mb-8">
-            <div className="mb-3 flex items-center gap-2">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
               <StatusBadge status={article.status} />
               <span className="text-[12px] text-tertiary">
                 Mis a jour le {formatDate(article.updated_at)}
               </span>
+              <span className="text-[12px] text-tertiary">·</span>
+              <span className="text-[12px] text-tertiary">Auteur : {authorName}</span>
+              <span className="text-[12px] text-tertiary">·</span>
+              <span className="text-[12px] text-tertiary">
+                {readingTime ? `${readingTime} min de lecture` : 'Temps de lecture —'}
+              </span>
             </div>
+            <p className="mb-4 max-w-[680px] text-[14px] leading-relaxed text-secondary">
+              {article.meta_description?.trim() || 'Meta description —'}
+            </p>
+            <h1 id="article-title" className="mb-5 max-w-[760px] text-[32px] font-bold leading-tight text-primary [overflow-wrap:anywhere]">
+              {article.title}
+            </h1>
             {article.cover_image_url && (
               <img
                 src={article.cover_image_url}
                 alt=""
-                className="mb-6 h-48 w-full rounded-[14px] object-cover"
+                className="mb-8 aspect-[16/7] w-full rounded-[14px] object-cover"
               />
             )}
-            <h1 id="article-title" className="mb-3 text-[28px] font-bold leading-tight tracking-tight text-primary">
-              {article.title}
-            </h1>
           </div>
 
           {article.content ? (
             <div
-              className="prose prose-sm max-w-none text-[15px] leading-relaxed text-primary [&_a]:text-accent [&_blockquote]:border-l-4 [&_blockquote]:border-accent [&_blockquote]:pl-4 [&_blockquote]:text-secondary [&_h1]:text-[24px] [&_h1]:font-bold [&_h2]:text-[20px] [&_h2]:font-semibold [&_h3]:text-[17px] [&_h3]:font-semibold [&_li]:my-1 [&_ol]:my-3 [&_p]:my-3 [&_strong]:font-semibold [&_ul]:my-3"
+              className="max-w-[760px] text-[16px] leading-[1.78] text-primary [&_a]:text-accent [&_a]:underline [&_a]:underline-offset-2 [&_blockquote]:my-6 [&_blockquote]:rounded-r-[10px] [&_blockquote]:border-l-4 [&_blockquote]:border-accent [&_blockquote]:bg-accent/5 [&_blockquote]:px-4 [&_blockquote]:py-3 [&_blockquote]:text-secondary [&_blockquote]:italic [&_code]:rounded-[5px] [&_code]:bg-[#f0f0f2] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[13px] [&_code]:text-primary [&_em]:italic [&_h1]:mb-4 [&_h1]:mt-7 [&_h1]:text-[26px] [&_h1]:font-bold [&_h1]:leading-tight [&_h2]:mb-3 [&_h2]:mt-8 [&_h2]:text-[22px] [&_h2]:font-semibold [&_h2]:leading-snug [&_h3]:mb-2.5 [&_h3]:mt-6 [&_h3]:text-[18px] [&_h3]:font-semibold [&_h3]:leading-snug [&_h4]:mb-2 [&_h4]:mt-5 [&_h4]:text-[16px] [&_h4]:font-semibold [&_hr]:my-8 [&_hr]:border-border [&_img]:my-7 [&_img]:w-full [&_img]:rounded-[14px] [&_img]:object-cover [&_li]:my-0.5 [&_li]:leading-[1.55] [&_li_p]:my-0 [&_ol]:my-5 [&_ol]:list-decimal [&_ol]:pl-9 [&_p]:my-4 [&_pre]:my-6 [&_pre]:overflow-x-auto [&_pre]:rounded-[12px] [&_pre]:bg-[#111318] [&_pre]:p-4 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-[13px] [&_pre_code]:text-white [&_strong]:font-semibold [&_table]:my-7 [&_table]:w-full [&_table]:border-collapse [&_table]:overflow-hidden [&_table]:rounded-[12px] [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1 [&_td]:leading-tight [&_td_p]:my-0 [&_th]:border [&_th]:border-border [&_th]:bg-[#f5f5f7] [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:font-semibold [&_th]:leading-tight [&_th_p]:my-0 [&_u]:underline [&_ul]:my-5 [&_ul]:list-disc [&_ul]:pl-9 [&_ul[data-type='taskList']]:list-none [&_ul[data-type='taskList']]:pl-0 [&_ul[data-type='taskList']_li]:flex [&_ul[data-type='taskList']_li]:gap-2"
               dangerouslySetInnerHTML={{ __html: renderedContent }}
             />
           ) : (
@@ -189,6 +212,27 @@ export default function ArticlePreviewPage() {
             </section>
           )}
         </article>
+
+        <aside className="lg:sticky lg:top-4 lg:self-start">
+          <div className="rounded-[14px] border border-border bg-surface p-4">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-tertiary">Plan</p>
+            <nav className="flex flex-col gap-1.5">
+              {outline.length > 0 ? (
+                outline.map((item) => (
+                  <a
+                    key={item.id}
+                    href={`#${item.id}`}
+                    className={`text-[12px] leading-snug text-secondary [overflow-wrap:anywhere] hover:text-primary ${item.level === 3 ? 'pl-3' : item.level === 4 ? 'pl-6' : ''}`}
+                  >
+                    {item.text}
+                  </a>
+                ))
+              ) : (
+                <span className="text-[12px] text-tertiary">Aucun sous-titre.</span>
+              )}
+            </nav>
+          </div>
+        </aside>
       </div>
     </div>
   )

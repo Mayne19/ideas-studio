@@ -32,6 +32,7 @@ def create_category(db: Session, data: CategoryCreate, project_id: str) -> Categ
         name=data.name,
         slug=slug,
         description=data.description,
+        color=data.color,
         priority=data.priority,
         target_frequency=data.target_frequency,
     )
