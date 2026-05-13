@@ -1,12 +1,13 @@
 import type { ProjectRole } from '@/types'
 
-type RoleBadgeVariant = 'gray' | 'blue' | 'orange' | 'green' | 'purple'
+type RoleBadgeVariant = 'gray' | 'blue' | 'orange' | 'green' | 'purple' | 'pink'
 
 const ROLE_LABELS: Record<ProjectRole, string> = {
   owner:  'Propriétaire',
   admin:  'Administrateur',
   editor: 'Éditeur',
   writer: 'Rédacteur',
+  designer: 'Designer',
   viewer: 'Lecteur',
 }
 
@@ -15,6 +16,7 @@ const ROLE_COLORS: Record<ProjectRole, RoleBadgeVariant> = {
   admin:  'blue',
   editor: 'green',
   writer: 'orange',
+  designer: 'pink',
   viewer: 'gray',
 }
 
@@ -23,6 +25,7 @@ const variantClasses: Record<RoleBadgeVariant, string> = {
   blue:   'bg-accent/10 text-accent',
   green:  'bg-success/10 text-[#1a7a3a]',
   orange: 'bg-warning/10 text-[#c07000]',
+  pink:   'bg-[#fff0f6] text-[#b83270]',
   gray:   'bg-[#f0f0f2] text-secondary',
 }
 

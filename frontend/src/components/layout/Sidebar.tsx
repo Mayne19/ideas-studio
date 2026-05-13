@@ -14,15 +14,19 @@ import {
   CalendarDays,
   TrendingUp,
   Bell,
+  HelpCircle,
   ImageIcon,
+  LogOut,
   PanelLeftClose,
   PanelLeftOpen,
   Check,
 } from 'lucide-react'
 import { useProject } from '@/context/ProjectContext'
+import { useAuth } from '@/context/AuthContext'
 import { listProjects } from '@/api/projects'
 import type { Project } from '@/types'
 import { cn } from '@/utils/cn'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 type NavItem = {
   label: string
@@ -81,12 +85,16 @@ function SidebarSection({ title, children, collapsed }: { title?: string; childr
 export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const { projectId } = useParams<{ projectId?: string }>()
   const { project } = useProject()
+  const { logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const inSettings = location.pathname.includes('/settings')
 
   const [projectsOpen, setProjectsOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(() => inSettings)
   const [projects, setProjects] = useState<Project[]>([])
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
   const dropRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -103,10 +111,22 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
 
   const sidebarWidth = collapsed ? 'w-14' : 'w-64'
 
+  async function handleLogout() {
+    setLoggingOut(true)
+    try {
+      await logout()
+      setLogoutConfirmOpen(false)
+      navigate('/login')
+    } finally {
+      setLoggingOut(false)
+    }
+  }
+
   return (
-    <aside
-      className={`flex h-full ${sidebarWidth} shrink-0 flex-col border-r border-border bg-surface transition-all duration-200 overflow-hidden`}
-    >
+    <>
+      <aside
+        className={`flex h-full ${sidebarWidth} shrink-0 flex-col border-r border-border bg-surface transition-all duration-200 overflow-hidden`}
+      >
       {/* Brand + collapse toggle */}
       <div className="flex h-[64px] items-center border-b border-border px-3 justify-between shrink-0">
         {!collapsed && (
@@ -138,7 +158,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[12px] font-medium text-primary">{project.name}</p>
-              <p className="truncate text-[11px] text-tertiary">{project.domain ?? '—'}</p>
+              <p className="truncate text-[11px] text-tertiary">{project.domain ?? 'Pas défini'}</p>
             </div>
             <ChevronDown size={12} className={`shrink-0 text-tertiary transition-transform ${projectsOpen ? 'rotate-180' : ''}`} />
           </button>
@@ -162,7 +182,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="truncate text-[12px] font-medium text-primary">{p.name}</p>
-                      <p className="truncate text-[11px] text-tertiary">{p.domain ?? '—'}</p>
+                      <p className="truncate text-[11px] text-tertiary">{p.domain ?? 'Pas défini'}</p>
                     </div>
                     {p.id === projectId && <Check size={12} className="text-accent shrink-0" />}
                   </button>
@@ -210,29 +230,51 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
               <SidebarLink to={`/projects/${projectId}/traffic`} icon={<TrendingUp size={16} />} label="Trafic" collapsed={collapsed} />
               <SidebarLink to={`/projects/${projectId}/recommendations`} icon={<Sparkles size={16} />} label="Optimisations" collapsed={collapsed} />
               <SidebarLink to={`/projects/${projectId}/notifications`} icon={<Bell size={16} />} label="Notifications" collapsed={collapsed} />
+              <SidebarLink to={`/projects/${projectId}/generate`} icon={<Zap size={16} />} label="Générer" collapsed={collapsed} />
             </SidebarSection>
 
             <SidebarSection title="Projet" collapsed={collapsed}>
               {!collapsed ? (
                 <>
-                  <NavLink
-                    to={`/projects/${projectId}/settings`}
+                  <div
                     className={cn(
-                      'flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-[13px] font-medium transition-colors duration-150',
+                      'flex items-center rounded-[10px] transition-colors duration-150',
                       inSettings ? 'bg-accent/10 text-accent' : 'text-secondary hover:bg-[#f0f0f2] hover:text-primary',
                     )}
                   >
-                    <Settings size={16} className="shrink-0" />
-                    Paramètres
-                  </NavLink>
-                  {inSettings && (
+                    <NavLink
+                      to={`/projects/${projectId}/settings`}
+                      onClick={() => setSettingsOpen(true)}
+                      className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-[13px] font-medium"
+                    >
+                      <Settings size={16} className="shrink-0" />
+                      <span className="truncate">Paramètres</span>
+                    </NavLink>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        setSettingsOpen((open) => !open)
+                      }}
+                      className="mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] text-current hover:bg-white/50"
+                      aria-label={settingsOpen ? 'Replier les paramètres' : 'Déplier les paramètres'}
+                    >
+                      <ChevronDown
+                        size={14}
+                        className={cn('transition-transform duration-150', settingsOpen && 'rotate-180')}
+                      />
+                    </button>
+                  </div>
+                  {settingsOpen && (
                     <div className="ml-4 flex flex-col gap-0.5 border-l border-border pl-3">
                       {[
                         { to: `/projects/${projectId}/settings`, label: 'Général', end: true },
                         { to: `/projects/${projectId}/settings/strategy`, label: 'Stratégie', end: false },
-                        { to: `/projects/${projectId}/settings/providers`, label: 'Providers', end: false },
-                        { to: `/projects/${projectId}/settings/members`, label: 'Équipe', end: false },
+                        { to: `/projects/${projectId}/settings/team`, label: 'Équipe', end: false },
                         { to: `/projects/${projectId}/settings/integration`, label: 'Intégration', end: false },
+                        { to: `/projects/${projectId}/settings/providers`, label: 'Providers', end: false },
+                        { to: `/account`, label: 'Profil', end: false },
                       ].map((item) => (
                         <NavLink
                           key={item.to}
@@ -256,22 +298,26 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
               )}
             </SidebarSection>
 
-            {/* Quick generate */}
-            <div className={cn('mt-auto pt-3 border-t border-border', collapsed && 'w-full')}>
-              <NavLink
-                to={`/projects/${projectId}/generate`}
-                title={collapsed ? 'Générer' : undefined}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-[13px] font-medium transition-colors',
-                    collapsed ? 'justify-center px-2' : '',
-                    isActive ? 'bg-accent/10 text-accent' : 'text-secondary hover:bg-accent/8 hover:text-accent',
-                  )
-                }
+            <div className={cn('mt-auto flex flex-col gap-0.5 border-t border-border pt-3', collapsed && 'w-full')}>
+              <SidebarLink
+                to="#"
+                icon={<HelpCircle size={16} />}
+                label="Help"
+                disabled
+                collapsed={collapsed}
+              />
+              <button
+                type="button"
+                onClick={() => setLogoutConfirmOpen(true)}
+                title={collapsed ? 'Se déconnecter' : undefined}
+                className={cn(
+                  'flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-[13px] font-medium text-secondary transition-colors hover:bg-[#f0f0f2] hover:text-primary',
+                  collapsed && 'justify-center px-2',
+                )}
               >
-                <Zap size={16} className="shrink-0" />
-                {!collapsed && 'Générer'}
-              </NavLink>
+                <LogOut size={16} className="shrink-0" />
+                {!collapsed && 'Déconnexion'}
+              </button>
             </div>
           </>
         ) : (
@@ -280,7 +326,16 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
           </SidebarSection>
         )}
       </nav>
-    </aside>
+      </aside>
+      <ConfirmModal
+        open={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        onConfirm={handleLogout}
+        title="Se déconnecter ?"
+        description="Vous allez quitter votre session Ideas Studio sur cet appareil."
+        confirmLabel="Se déconnecter"
+        loading={loggingOut}
+      />
+    </>
   )
 }
-

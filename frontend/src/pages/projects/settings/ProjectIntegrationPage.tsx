@@ -127,7 +127,7 @@ export default function ProjectIntegrationPage() {
                 className="inline-flex items-center gap-1.5 rounded-[8px] bg-[#f0f0f2] px-3 py-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-[#e5e5e7] hover:text-primary disabled:cursor-wait disabled:opacity-60"
               >
                 <RefreshCw size={12} className={isRefreshing ? 'animate-spin' : ''} />
-                Actualiser le statut
+                Rafraîchir le statut
               </button>
               {isConnected && (
                 <button
@@ -136,7 +136,7 @@ export default function ProjectIntegrationPage() {
                   title="Déconnexion bientôt disponible côté backend"
                 >
                   <Power size={12} />
-                  Déconnecter
+                  Déconnecter bientôt disponible
                 </button>
               )}
             </div>
@@ -191,8 +191,9 @@ export default function ProjectIntegrationPage() {
       {isConnected && (
         <button
           onClick={() => setShowInstructions((visible) => !visible)}
-          className="w-fit rounded-[10px] bg-[#f0f0f2] px-3.5 py-2 text-[13px] font-medium text-secondary transition-colors hover:bg-[#e5e5e7] hover:text-primary"
+          className="inline-flex w-fit items-center gap-2 rounded-[12px] bg-accent px-4 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-accent/90"
         >
+          <Code2 size={14} />
           {showInstructions ? 'Masquer les instructions d’installation' : 'Voir les instructions d’installation'}
         </button>
       )}

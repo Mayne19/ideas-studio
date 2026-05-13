@@ -2,7 +2,10 @@
   "name": "ideas-studio",
   "private": true,
   "scripts": {
-    "dev": "npm --prefix frontend run dev",
+    "dev": "bash scripts/dev.sh",
+    "dev:vite": "npm --prefix frontend run dev:vite",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "./venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload",
     "build": "npm --prefix frontend run build",
     "lint": "npm --prefix frontend run lint",
     "preview": "npm --prefix frontend run preview"

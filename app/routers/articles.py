@@ -9,6 +9,7 @@ from app.models.article import WRITER_EDITABLE_STATUSES
 from app.schemas.article import ArticleCreate, ArticleUpdate, ArticlePublic, ArticleScheduleRequest
 from app.services.article_service import (
     create_article,
+    delete_article,
     get_article_by_id,
     list_articles,
     update_article,
@@ -172,3 +173,19 @@ def unpublish_article_route(
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions to unpublish")
     return unpublish_article(db, article)
+
+
+@router.delete("/articles/{article_id}", status_code=204)
+def delete_article_route(
+    article_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    article = get_article_by_id(db, article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    member = get_member_for_project(db, current_user.id, article.project_id)
+    if not member or member.role not in _MANAGE_ROLES:
+        raise HTTPException(status_code=403, detail="Insufficient permissions to delete")
+    delete_article(db, article)
+    return None

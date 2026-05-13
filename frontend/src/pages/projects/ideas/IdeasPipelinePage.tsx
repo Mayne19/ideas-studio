@@ -453,7 +453,7 @@ export default function IdeasPipelinePage() {
               icon={<RefreshCw size={13} />}
               onClick={() => setTick((t) => t + 1)}
             >
-              Actualiser
+              Rafraîchir
             </Button>
             <Button
               size="sm"

@@ -29,7 +29,7 @@ function timeAgo(iso: string): string {
 }
 
 function KpiCard({
-  icon, value, suffix, label, trend, onClick,
+  icon, value, suffix, label, trend, onClick, tone = 'accent',
 }: {
   icon: React.ReactNode
   value: string | number
@@ -37,19 +37,28 @@ function KpiCard({
   label: string
   trend?: string | null
   onClick?: () => void
+  tone?: 'accent' | 'sky' | 'indigo' | 'violet' | 'orange' | 'success'
 }) {
   const trendClass = trend?.startsWith('+')
     ? 'bg-success/10 text-[#1a7a3a]'
     : trend?.startsWith('-')
       ? 'bg-danger/10 text-danger'
       : 'text-tertiary'
+  const iconTone = {
+    accent: 'bg-accent/10 text-accent',
+    sky: 'bg-sky-500/10 text-sky-600',
+    indigo: 'bg-indigo-500/10 text-indigo-600',
+    violet: 'bg-violet-500/10 text-violet-600',
+    orange: 'bg-orange-500/10 text-orange-600',
+    success: 'bg-success/10 text-[#1a7a3a]',
+  }[tone]
 
   return (
     <div
       className={`rounded-[22px] bg-surface p-4 flex flex-col justify-between gap-2 ${onClick ? 'cursor-pointer transition-colors hover:bg-white' : ''}`}
       onClick={onClick}
     >
-      <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-accent/10 text-accent">{icon}</span>
+      <span className={`flex h-8 w-8 items-center justify-center rounded-[10px] ${iconTone}`}>{icon}</span>
       <p className="text-[24px] font-semibold text-primary tracking-tight leading-none">
         {value}
         {suffix && <span className="text-[14px] font-normal text-tertiary ml-0.5">{suffix}</span>}
@@ -71,6 +80,8 @@ const DEMO_KPI_TRENDS = {
   published: '+5%',
   inProgress: '-2%',
 } as const
+
+const RECENT_ARTICLES_LIMIT = 7
 
 const TODO_ACCENT = {
   warning: 'bg-warning/8 text-[#c07000]',
@@ -239,10 +250,18 @@ export default function ProjectDashboardPage() {
         articles.status === 'fulfilled'
           ? [...articles.value].sort((a, b) => getArticleDate(b).localeCompare(getArticleDate(a)))
           : []
+      const contentRecentArticles = allArticles
+        .filter((article) => !article.status.startsWith('idea_'))
+        .slice(0, RECENT_ARTICLES_LIMIT)
       const recentArticles =
-        allArticles
-          .filter((article) => !article.status.startsWith('idea_'))
-          .slice(0, 8)
+        contentRecentArticles.length >= RECENT_ARTICLES_LIMIT
+          ? contentRecentArticles
+          : [
+              ...contentRecentArticles,
+              ...allArticles
+                .filter((article) => !contentRecentArticles.some((recent) => recent.id === article.id))
+                .slice(0, RECENT_ARTICLES_LIMIT - contentRecentArticles.length),
+            ]
       const activityArticles = allArticles.slice(0, 20)
       const categories = cats.status === 'fulfilled' ? cats.value : []
       const contentArticles = allArticles.filter((article) => !article.status.startsWith('idea_'))
@@ -415,6 +434,7 @@ export default function ProjectDashboardPage() {
           suffix="/10"
           label="Score SEO moyen"
           trend={DEMO_KPI_TRENDS.seo}
+          tone="accent"
           onClick={() => navigate(`/projects/${projectId}/performance`)}
         />
         <KpiCard
@@ -422,6 +442,7 @@ export default function ProjectDashboardPage() {
           value={data?.totalViews != null ? data.totalViews.toLocaleString('fr-FR') : '—'}
           label="Vues du mois"
           trend={DEMO_KPI_TRENDS.views}
+          tone="sky"
           onClick={() => navigate(`/projects/${projectId}/traffic`)}
         />
         <KpiCard
@@ -430,12 +451,14 @@ export default function ProjectDashboardPage() {
           suffix={data?.avgReadingTime != null ? ' min' : undefined}
           label="Temps moyen"
           trend={DEMO_KPI_TRENDS.readingTime}
+          tone="indigo"
         />
         <KpiCard
           icon={<FileText size={17} />}
           value={data?.publishedCount ?? '—'}
           label="Publiés"
           trend={DEMO_KPI_TRENDS.published}
+          tone="violet"
           onClick={() => navigate(`/projects/${projectId}/articles`)}
         />
         <KpiCard
@@ -443,6 +466,7 @@ export default function ProjectDashboardPage() {
           value={data?.inProgressCount ?? '—'}
           label="En cours"
           trend={DEMO_KPI_TRENDS.inProgress}
+          tone="orange"
           onClick={() => navigate(`/projects/${projectId}/articles`)}
         />
       </div>
@@ -451,7 +475,7 @@ export default function ProjectDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Left — col-span-2 — Articles récents only */}
         <div className="lg:col-span-2">
-          <Card className="h-full">
+          <Card className="flex h-full flex-col">
             <div className="flex items-center justify-between mb-4">
               <p className="text-[12px] font-semibold text-secondary uppercase tracking-wide">Articles récents</p>
               <button
@@ -473,28 +497,28 @@ export default function ProjectDashboardPage() {
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-1 flex-col justify-between gap-1">
                 {data.recentArticles.map((a) => {
                   const cat = data.categories.find((c) => c.id === a.category_id)
                   return (
                     <button
                       key={a.id}
                       onClick={() => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
-                      className="flex min-w-0 items-start gap-3 rounded-[12px] px-2 py-2.5 text-left transition-colors hover:bg-[#f5f5f7]"
+                      className="flex min-w-0 items-center gap-3 rounded-[12px] px-2 py-1 text-left transition-colors hover:bg-[#f5f5f7]"
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-medium leading-snug text-primary break-words">{a.title}</p>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                          <span className="min-w-[96px] text-[10px] font-medium text-accent/80">
+                        <div className="mt-1 flex flex-wrap items-center gap-y-1">
+                          <span className="mr-5 min-w-[112px] text-[10px] font-medium text-accent/80">
                             {cat?.name ?? 'Sans catégorie'}
                           </span>
-                          <span className="flex flex-wrap items-center gap-1.5">
+                          <span className="mr-5 flex flex-wrap items-center gap-1.5">
                             <ArticleScoreBadge label="SEO" value={a.seo_score} />
                             <ArticleScoreBadge label="Lisibilité" value={a.readability_score} />
                             <ArticleScoreBadge label="Qualité" value={a.quality_score} />
                             <ArticleScoreBadge label="EEAT" value={a.eeat_score} />
                           </span>
-                          <span className="min-w-[86px]">
+                          <span className="inline-flex min-w-[96px] items-center">
                             <StatusBadge status={a.status} />
                           </span>
                         </div>

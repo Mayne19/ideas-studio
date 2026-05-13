@@ -73,12 +73,12 @@ function heatmapTone(count: number): string {
   return 'bg-success'
 }
 
-function getYearHeatmapRows(year: number): { monthLabel: string; days: (Date | null)[] }[] {
+function getYearHeatmapWeeks(year: number): { monthLabel: string; days: (Date | null)[] }[] {
   const firstDay = new Date(year, 0, 1)
   const lastDay = new Date(year, 11, 31)
   const startOffset = (firstDay.getDay() + 6) % 7
   const cursor = new Date(year, 0, 1 - startOffset)
-  const rows: { monthLabel: string; days: (Date | null)[] }[] = []
+  const weeks: { monthLabel: string; days: (Date | null)[] }[] = []
 
   while (cursor <= lastDay || ((cursor.getDay() + 6) % 7) !== 0) {
     const days: (Date | null)[] = []
@@ -94,10 +94,10 @@ function getYearHeatmapRows(year: number): { monthLabel: string; days: (Date | n
       cursor.setDate(cursor.getDate() + 1)
     }
 
-    rows.push({ monthLabel, days })
+    weeks.push({ monthLabel, days })
   }
 
-  return rows
+  return weeks
 }
 
 function PublicationHeatmapPanel({
@@ -113,35 +113,51 @@ function PublicationHeatmapPanel({
   yearOptions: number[]
   onYearChange: (year: number) => void
 }) {
-  const heatmapRows = getYearHeatmapRows(heatmapYear)
+  const heatmapWeeks = getYearHeatmapWeeks(heatmapYear)
+  const weekColumnWidth = 'minmax(12px, 1fr)'
 
   return (
-    <Card padding="sm" className="lg:sticky lg:top-4">
-      <div className="mb-3">
-        <p className="text-[12px] font-semibold uppercase tracking-wide text-secondary">Activité de publication</p>
-        <p className="mt-0.5 text-[12px] text-tertiary">
-          {heatmapTotal} article{heatmapTotal > 1 ? 's' : ''} publié{heatmapTotal > 1 ? 's' : ''} en {heatmapYear}.
-        </p>
+    <Card padding="md" className="overflow-hidden">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[12px] font-semibold uppercase tracking-wide text-secondary">Activité de publication</p>
+          <p className="mt-0.5 text-[12px] text-tertiary">
+            {heatmapTotal} article{heatmapTotal > 1 ? 's' : ''} publié{heatmapTotal > 1 ? 's' : ''} en {heatmapYear}.
+          </p>
+        </div>
+        <select
+          value={heatmapYear}
+          onChange={(event) => onYearChange(Number(event.target.value))}
+          className="h-9 w-[92px] rounded-[10px] bg-[#f5f5f7] px-3 text-[12px] text-secondary outline-none transition-colors hover:bg-[#eeeeef] focus:ring-1 focus:ring-accent/20"
+          aria-label="Année de la heatmap"
+        >
+          {yearOptions.map((option) => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
       </div>
 
-      <div className="pb-1">
-        <div className="mx-auto w-fit max-w-full">
-          <div className="grid grid-cols-[34px_repeat(7,12px)] gap-x-1">
-            <span />
-            {DAY_NAMES.map((day) => (
-              <span key={day} className="text-center text-[8px] font-medium text-tertiary">
-                {day.slice(0, 1)}
-              </span>
-            ))}
-          </div>
+      <div className="pb-2">
+        <div
+          className="grid w-full gap-x-1 gap-y-1"
+          style={{ gridTemplateColumns: `32px repeat(${heatmapWeeks.length}, ${weekColumnWidth})` }}
+        >
+          <span />
+          {heatmapWeeks.map((week, index) => (
+            <span key={`month-${index}`} className="h-4 text-[10px] font-medium text-tertiary">
+              {week.monthLabel}
+            </span>
+          ))}
 
-          <div className="mt-1 flex flex-col gap-0.5">
-            {heatmapRows.map((row, rowIndex) => (
-              <div key={rowIndex} className="grid grid-cols-[34px_repeat(7,12px)] gap-x-1">
-                <span className="flex h-3 items-center text-[9px] font-medium text-tertiary">{row.monthLabel}</span>
-                {row.days.map((day, dayIndex) => {
+          {DAY_NAMES.map((dayName, dayIndex) => (
+            <div key={dayName} className="contents">
+              <span className="flex h-3 items-center text-[9px] font-medium text-tertiary">
+                {dayName.slice(0, 3)}
+              </span>
+              {heatmapWeeks.map((week, weekIndex) => {
+                const day = week.days[dayIndex]
                   if (!day) {
-                    return <span key={`${rowIndex}-empty-${dayIndex}`} className="h-3 w-3 rounded-[3px]" />
+                    return <span key={`${weekIndex}-${dayIndex}-empty`} className="h-3 w-full rounded-[3px]" />
                   }
 
                   const key = localDateKey(day)
@@ -152,34 +168,21 @@ function PublicationHeatmapPanel({
                       key={key}
                       title={label}
                       aria-label={label}
-                      className={`h-3 w-3 rounded-[3px] ${heatmapTone(activityCount)}`}
+                      className={`h-3 w-full rounded-[3px] ${heatmapTone(activityCount)}`}
                     />
                   )
-                })}
-              </div>
-            ))}
-          </div>
+              })}
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="mt-3 flex flex-col gap-2">
-        <div className="flex items-center justify-center gap-1.5 text-[10px] text-tertiary">
-          <span>Moins</span>
-          {[0, 1, 2, 4, 5].map((value) => (
-            <span key={value} className={`h-3 w-3 rounded-[3px] ${heatmapTone(value)}`} />
-          ))}
-          <span>Plus</span>
-        </div>
-        <select
-          value={heatmapYear}
-          onChange={(event) => onYearChange(Number(event.target.value))}
-          className="mx-auto h-8 w-[84px] rounded-[9px] border border-border bg-surface px-2 text-[12px] text-secondary outline-none transition-colors hover:bg-[#f5f5f7] focus:border-accent focus:ring-1 focus:ring-accent/20"
-          aria-label="Année de la heatmap"
-        >
-          {yearOptions.map((option) => (
-            <option key={option} value={option}>{option}</option>
-          ))}
-        </select>
+      <div className="mt-1 flex items-center justify-end gap-1.5 text-[10px] text-tertiary">
+        <span>Moins</span>
+        {[0, 1, 2, 4, 5].map((value) => (
+          <span key={value} className={`h-3 w-3 rounded-[3px] ${heatmapTone(value)}`} />
+        ))}
+        <span>Plus</span>
       </div>
     </Card>
   )
@@ -261,13 +264,13 @@ export default function CalendarPage() {
   ])).sort((a, b) => b - a)
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-5xl">
       {loadStatus === 'loading' && <LoadingState />}
       {loadStatus === 'error' && <ErrorState onRetry={() => setTick(t => t + 1)} />}
 
       {loadStatus === 'success' && (
-        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
-          <div className="min-w-0">
+        <div className="flex flex-col gap-5">
+          <div>
             <div className="mb-5">
               <h1 className="text-[20px] font-semibold text-primary tracking-tight">Calendrier éditorial</h1>
               <p className="mt-0.5 text-[13px] text-secondary">
@@ -300,7 +303,17 @@ export default function CalendarPage() {
                 Rafraîchir
               </Button>
             </div>
+          </div>
 
+          <PublicationHeatmapPanel
+            heatmapYear={heatmapYear}
+            heatmapTotal={heatmapTotal}
+            publishedByDay={publishedByDay}
+            yearOptions={yearOptions}
+            onYearChange={setHeatmapYear}
+          />
+
+          <div className="min-w-0">
             {articles.length === 0 && (
               <EmptyState
                 icon={<Calendar size={22} />}
@@ -445,16 +458,6 @@ export default function CalendarPage() {
               </div>
             )}
           </div>
-
-          <aside className="min-w-0">
-            <PublicationHeatmapPanel
-              heatmapYear={heatmapYear}
-              heatmapTotal={heatmapTotal}
-              publishedByDay={publishedByDay}
-              yearOptions={yearOptions}
-              onYearChange={setHeatmapYear}
-            />
-          </aside>
         </div>
       )}
     </div>

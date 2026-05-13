@@ -4,6 +4,7 @@ import { ChevronRight, LogOut, User, Bell, Search } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useProject } from '@/context/ProjectContext'
 import { cn } from '@/utils/cn'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 export default function Topbar() {
   const { user, logout } = useAuth()
@@ -13,6 +14,8 @@ export default function Topbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const notifRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLDivElement>(null)
@@ -40,8 +43,15 @@ export default function Topbar() {
   }, [notifOpen])
 
   async function handleLogout() {
-    setMenuOpen(false)
-    await logout()
+    setLoggingOut(true)
+    try {
+      setMenuOpen(false)
+      await logout()
+      setLogoutConfirmOpen(false)
+      navigate('/login')
+    } finally {
+      setLoggingOut(false)
+    }
   }
 
   const initials = user?.name
@@ -54,6 +64,7 @@ export default function Topbar() {
     : '?'
 
   return (
+    <>
     <header className="flex h-[64px] shrink-0 items-center justify-between border-b border-border bg-surface px-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-1.5 text-[13px]">
@@ -158,7 +169,7 @@ export default function Topbar() {
                 Mon compte
               </Link>
               <button
-                onClick={handleLogout}
+                onClick={() => setLogoutConfirmOpen(true)}
                 className={cn(
                   'flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2',
                   'text-[13px] text-secondary hover:bg-[#f0f0f2] hover:text-primary transition-colors',
@@ -172,5 +183,15 @@ export default function Topbar() {
         </div>
       </div>
     </header>
+    <ConfirmModal
+      open={logoutConfirmOpen}
+      onClose={() => setLogoutConfirmOpen(false)}
+      onConfirm={handleLogout}
+      title="Se déconnecter ?"
+      description="Vous allez quitter votre session Ideas Studio sur cet appareil."
+      confirmLabel="Se déconnecter"
+      loading={loggingOut}
+    />
+    </>
   )
 }

@@ -22,7 +22,7 @@ export type Project = {
   updated_at: string
 }
 
-export type ProjectRole = 'owner' | 'admin' | 'editor' | 'writer' | 'viewer'
+export type ProjectRole = 'owner' | 'admin' | 'editor' | 'writer' | 'designer' | 'viewer'
 
 export type ProjectMember = {
   id: string

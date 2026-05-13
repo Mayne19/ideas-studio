@@ -24,9 +24,9 @@ export default function NotificationsPage() {
       {/* Placeholder list */}
       <div className="flex flex-col gap-2">
         {[
-          { title: 'Analyse SEO disponible', desc: "L'analyse de votre article sera notifiée ici.", time: 'À venir' },
-          { title: 'Article publié avec succès', desc: 'Confirmation de publication et lien vers l\'article.', time: 'À venir' },
-          { title: 'Nouvelles recommandations', desc: "Des optimisations sont disponibles pour vos articles.", time: 'À venir' },
+          { title: 'Analyse SEO disponible', desc: "L'analyse de votre article sera notifiée ici.", time: 'Bientôt disponible' },
+          { title: 'Article publié avec succès', desc: 'Confirmation de publication et lien vers l\'article.', time: 'Bientôt disponible' },
+          { title: 'Nouvelles recommandations', desc: "Des optimisations sont disponibles pour vos articles.", time: 'Bientôt disponible' },
         ].map((item, i) => (
           <div
             key={i}

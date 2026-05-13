@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Plus, FileText, Pencil, Calendar, Trash2 } from 'lucide-react'
+import { Plus, FileText, Pencil, Calendar, Trash2, Sparkles } from 'lucide-react'
 import { listArticles, createArticle, publishArticle, unpublishArticle, markReadyArticle, archiveArticle, scheduleArticle, analyzeSeoArticle, deleteArticle } from '@/api/articles'
 import type { CreateArticlePayload } from '@/api/articles'
 import { listCategories } from '@/api/categories'
@@ -318,9 +318,19 @@ export default function ArticlesPage() {
               Gérez et rédigez vos articles SEO.
             </p>
           </div>
-          <Button icon={<Plus size={14} />} size="sm" onClick={() => setCreateOpen(true)}>
-            Nouvel article
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              icon={<Sparkles size={14} />}
+              size="sm"
+              variant="secondary"
+              onClick={() => navigate(`/projects/${projectId}/generate`)}
+            >
+              Générer
+            </Button>
+            <Button icon={<Plus size={14} />} size="sm" onClick={() => setCreateOpen(true)}>
+              Créer un article
+            </Button>
+          </div>
         </div>
 
         {/* Action error banner */}
@@ -493,7 +503,7 @@ export default function ArticlesPage() {
       <Modal
         open={createOpen}
         onClose={() => { setCreateOpen(false); setCreateError('') }}
-        title="Nouvel article"
+        title="Créer un article"
         size="sm"
       >
         <form onSubmit={handleCreate} className="flex flex-col gap-4">

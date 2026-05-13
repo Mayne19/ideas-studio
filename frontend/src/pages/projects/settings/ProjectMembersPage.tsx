@@ -1,8 +1,21 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { UserPlus, Trash2, Edit2, Info } from 'lucide-react'
+import {
+  Activity,
+  Crown,
+  Edit2,
+  Eye,
+  FilePenLine,
+  Info,
+  Palette,
+  PenLine,
+  Shield,
+  Trash2,
+  UserPlus,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { listMembers, addMember, updateMemberRole, removeMember } from '@/api/members'
-import type { ProjectMember } from '@/types'
+import type { ProjectMember, ProjectRole } from '@/types'
 import { useAuth } from '@/context/AuthContext'
 import { useProject } from '@/context/ProjectContext'
 import FormCard from '@/components/ui/FormCard'
@@ -22,6 +35,89 @@ const ASSIGNABLE_ROLES = [
   { value: 'editor', label: 'Éditeur' },
   { value: 'writer', label: 'Rédacteur' },
   { value: 'viewer', label: 'Lecteur' },
+]
+
+const ROLE_GUIDE: Array<{
+  role: ProjectRole
+  title: string
+  backendReady: boolean
+  icon: LucideIcon
+  permissions: string[]
+}> = [
+  {
+    role: 'owner',
+    title: 'Owner',
+    backendReady: true,
+    icon: Crown,
+    permissions: [
+      'Contrôle total du projet',
+      'Peut supprimer le projet',
+      'Gère le billing',
+      'Gère tous les membres',
+    ],
+  },
+  {
+    role: 'admin',
+    title: 'Admin',
+    backendReady: true,
+    icon: Shield,
+    permissions: [
+      'Gère le projet',
+      'Peut publier',
+      'Gère les paramètres',
+      'Gère les membres sauf owner',
+    ],
+  },
+  {
+    role: 'editor',
+    title: 'Editor',
+    backendReady: true,
+    icon: FilePenLine,
+    permissions: [
+      'Corrige les contenus',
+      'Modifie tous les articles',
+      'Valide et marque prêt',
+      'Ne publie pas en V1',
+    ],
+  },
+  {
+    role: 'writer',
+    title: 'Writer',
+    backendReady: true,
+    icon: PenLine,
+    permissions: [
+      'Crée des brouillons',
+      'Écrit du contenu',
+      'Modifie ses brouillons',
+      'Envoie en relecture',
+      'Ne publie pas',
+    ],
+  },
+  {
+    role: 'designer',
+    title: 'Designer',
+    backendReady: false,
+    icon: Palette,
+    permissions: [
+      'Accès médias',
+      'Upload images',
+      'Image de couverture',
+      'Visuels et bannières',
+      'Ne publie pas',
+      'Ne modifie pas forcément le texte',
+    ],
+  },
+  {
+    role: 'viewer',
+    title: 'Viewer',
+    backendReady: true,
+    icon: Eye,
+    permissions: [
+      'Lecture seule',
+      'Consulte articles et analyses',
+      'Ne modifie pas le projet',
+    ],
+  },
 ]
 
 function MemberRow({
@@ -171,7 +267,7 @@ export default function ProjectMembersPage() {
   }
 
   return (
-    <>
+    <div className="flex flex-col gap-5">
       <FormCard
         title="Membres de l'équipe"
         description="Gérez les accès et les rôles des membres de ce projet."
@@ -219,6 +315,67 @@ export default function ProjectMembersPage() {
         )}
       </FormCard>
 
+      <FormCard
+        title="Rôles et permissions"
+        description="Comprenez rapidement ce que chaque rôle peut faire dans Ideas Studio."
+      >
+        <div className="grid gap-2 md:grid-cols-2">
+          {ROLE_GUIDE.map((item) => {
+            const RoleIcon = item.icon
+
+            return (
+              <div key={item.role} className="rounded-[16px] bg-[#f9f9fb] px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] bg-white text-tertiary">
+                      <RoleIcon size={14} />
+                    </span>
+                    <p className="text-[13px] font-semibold text-primary">{item.title}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RoleBadge role={item.role} />
+                    {!item.backendReady && (
+                      <span className="rounded-full bg-[#f0f0f2] px-2 py-0.5 text-[10px] font-medium text-tertiary">
+                        Bientôt disponible
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <ul className="mt-2 flex flex-col gap-1">
+                  {item.permissions.map((permission) => (
+                    <li key={permission} className="text-[12px] leading-snug text-secondary">
+                      {permission}
+                    </li>
+                  ))}
+                </ul>
+                {!item.backendReady && (
+                  <p className="mt-2 text-[11px] leading-snug text-tertiary">
+                    Designer est documenté dans l'UI, mais n'est pas encore assignable côté API.
+                  </p>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </FormCard>
+
+      <FormCard
+        title="Activité équipe"
+        description="Suivez qui a modifié quoi, ajouté une image ou travaillé sur un article."
+      >
+        <div className="flex items-start gap-3 rounded-[16px] bg-[#f9f9fb] px-4 py-4">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-[#f0f0f2] text-tertiary">
+            <Activity size={16} />
+          </span>
+          <div>
+            <p className="text-[13px] font-medium text-primary">Activité équipe bientôt disponible</p>
+            <p className="mt-0.5 text-[12px] leading-relaxed text-secondary">
+              Le backend ne fournit pas encore de journal d'activité membre. Aucun faux événement n'est affiché.
+            </p>
+          </div>
+        </div>
+      </FormCard>
+
       {/* Add member modal */}
       <Modal
         open={addOpen}
@@ -252,6 +409,7 @@ export default function ProjectMembersPage() {
             options={ASSIGNABLE_ROLES}
             value={addRole}
             onChange={(e) => setAddRole(e.target.value)}
+            hint="Le rôle Designer est préparé dans l'UI, mais pas encore assignable côté backend."
           />
 
           {/* Developer section — collapsible */}
@@ -323,6 +481,7 @@ export default function ProjectMembersPage() {
             options={ASSIGNABLE_ROLES}
             value={editRole}
             onChange={(e) => setEditRole(e.target.value)}
+            hint="Designer n'est pas proposé ici pour éviter d'envoyer un rôle non supporté par l'API."
           />
           <div className="flex gap-2 pt-1">
             <Button
@@ -353,6 +512,6 @@ export default function ProjectMembersPage() {
         variant="danger"
       />
 
-    </>
+    </div>
   )
 }

@@ -67,7 +67,7 @@ function RouteErrorFallback() {
           }}
           className="mt-4 rounded-[10px] bg-accent px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-accent/90"
         >
-          Recharger
+          Rafraîchir
         </button>
       </div>
     </div>
@@ -135,6 +135,10 @@ export const router = createBrowserRouter([
           },
           {
             path: 'members',
+            element: <ProjectMembersPage />,
+          },
+          {
+            path: 'team',
             element: <ProjectMembersPage />,
           },
           {
@@ -271,4 +275,3 @@ export const router = createBrowserRouter([
     element: <Navigate to="/" replace />,
   },
 ])
-

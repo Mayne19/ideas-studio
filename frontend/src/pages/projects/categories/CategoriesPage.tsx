@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { Plus, Pencil, Trash2, FolderOpen, RefreshCw, Info, Palette } from 'lucide-react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { amber, blue, crimson, cyan, grass, indigo, orange, plum, slate, teal, tomato, violet } from '@radix-ui/colors'
+import { Plus, Pencil, Trash2, FolderOpen, RefreshCw, Info, Palette, ExternalLink } from 'lucide-react'
 import { listCategories, createCategory, updateCategory, deleteCategory } from '@/api/categories'
 import type { CreateCategoryPayload, UpdateCategoryPayload } from '@/api/categories'
-import type { Category } from '@/types'
+import { listArticles, patchArticle } from '@/api/articles'
+import type { Article, Category } from '@/types'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import ConfirmModal from '@/components/ui/ConfirmModal'
@@ -12,19 +14,26 @@ import Textarea from '@/components/ui/Textarea'
 import EmptyState from '@/components/ui/EmptyState'
 import ErrorState from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
+import StatusBadge from '@/components/ui/StatusBadge'
+import { formatDate } from '@/utils/format'
 
-const CATEGORY_COLORS = [
-  '#007aff',
-  '#34c759',
-  '#ff9500',
-  '#ff3b30',
-  '#5856d6',
-  '#00a0a8',
-  '#c07000',
-  '#8e8e93',
+const RADIX_CATEGORY_COLORS = [
+  { name: 'Bleu', value: blue.blue9 },
+  { name: 'Indigo', value: indigo.indigo9 },
+  { name: 'Violet', value: violet.violet9 },
+  { name: 'Prune', value: plum.plum9 },
+  { name: 'Cyan', value: cyan.cyan9 },
+  { name: 'Teal', value: teal.teal9 },
+  { name: 'Vert', value: grass.grass9 },
+  { name: 'Ambre', value: amber.amber9 },
+  { name: 'Orange', value: orange.orange9 },
+  { name: 'Tomate', value: tomato.tomato9 },
+  { name: 'Crimson', value: crimson.crimson9 },
+  { name: 'Slate', value: slate.slate9 },
 ]
 
-const DEFAULT_CATEGORY_COLOR = '#007aff'
+const CATEGORY_COLORS = RADIX_CATEGORY_COLORS.map((color) => color.value)
+const DEFAULT_CATEGORY_COLOR = blue.blue9
 
 function isValidHexColor(value: string | null | undefined): value is string {
   return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)
@@ -40,7 +49,7 @@ function categoryColor(category: Pick<Category, 'name' | 'color'>): string {
 }
 
 function normalizeColor(value: string): string {
-  return isValidHexColor(value) ? value : DEFAULT_CATEGORY_COLOR
+  return isValidHexColor(value) ? value.toLowerCase() : DEFAULT_CATEGORY_COLOR
 }
 
 function CategoryColorField({
@@ -51,9 +60,10 @@ function CategoryColorField({
   onChange: (value: string) => void
 }) {
   const selected = normalizeColor(value)
+  const isManualValid = isValidHexColor(value)
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
         <label className="text-[13px] font-medium text-primary">Couleur</label>
         <div className="flex items-center gap-2 rounded-[10px] border border-border bg-[#f9f9fb] px-2 py-1">
@@ -72,88 +82,233 @@ function CategoryColorField({
           />
         </div>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {CATEGORY_COLORS.map((color) => (
-          <button
-            key={color}
-            type="button"
-            onClick={() => onChange(color)}
-            className={`h-7 w-7 rounded-full border transition-all ${
-              selected.toLowerCase() === color.toLowerCase()
-                ? 'border-primary ring-2 ring-accent/20'
-                : 'border-black/10 hover:scale-105'
-            }`}
-            style={{ backgroundColor: color }}
-            aria-label={`Choisir ${color}`}
-          />
-        ))}
+      <div>
+        <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.04em] text-tertiary">Palette Radix</p>
+        <div className="grid grid-cols-6 gap-2">
+          {RADIX_CATEGORY_COLORS.map((color) => (
+            <button
+              key={color.value}
+              type="button"
+              onClick={() => onChange(color.value)}
+              className={`flex h-8 items-center justify-center rounded-[10px] border bg-white transition-all ${
+                selected.toLowerCase() === color.value.toLowerCase()
+                  ? 'border-primary ring-2 ring-accent/20'
+                  : 'border-black/5 hover:scale-[1.03]'
+              }`}
+              title={color.name}
+              aria-label={`Choisir ${color.name}`}
+            >
+              <span
+                className="h-4 w-4 rounded-full border border-black/10"
+                style={{ backgroundColor: color.value }}
+                aria-hidden="true"
+              />
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-[12px] font-medium text-secondary">Code hexadécimal</label>
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="#2563eb"
+          className={`w-full rounded-[10px] bg-white px-3 py-2 font-mono text-[13px] text-primary outline-none transition-colors ${
+            value && !isManualValid ? 'ring-1 ring-danger/40' : 'ring-1 ring-border focus:ring-accent/30'
+          }`}
+        />
+        {value && !isManualValid && (
+          <p className="text-[11px] text-danger">
+            Utilisez un code couleur hexadécimal valide, par exemple #2563eb.
+          </p>
+        )}
       </div>
     </div>
   )
 }
 
-function CategoryRow({
+function CategoryColumn({
   category,
+  articles,
+  categories,
+  movingArticleId,
   onEdit,
   onDelete,
+  onOpenArticle,
+  onChangeArticleCategory,
 }: {
   category: Category
+  articles: Article[]
+  categories: Category[]
+  movingArticleId: string | null
   onEdit: (c: Category) => void
   onDelete: (c: Category) => void
+  onOpenArticle: (article: Article) => void
+  onChangeArticleCategory: (article: Article, categoryId: string) => void
 }) {
   const color = categoryColor(category)
+  const columnBackground = `linear-gradient(180deg, ${color}20 0%, ${color}12 46%, ${color}08 100%)`
+  const headerBackground = `linear-gradient(135deg, ${color}24 0%, ${color}12 100%)`
 
   return (
-    <div className="flex items-center gap-3 rounded-[14px] bg-[#f9f9fb] px-4 py-3">
-      <span
-        className="h-9 w-1.5 shrink-0 rounded-full"
-        style={{ backgroundColor: color }}
-        aria-hidden="true"
-      />
-      <div className="flex-1 min-w-0">
-        <div className="flex min-w-0 items-center gap-2">
-          <span
-            className="h-2.5 w-2.5 shrink-0 rounded-full border border-black/10"
-            style={{ backgroundColor: color }}
-            aria-hidden="true"
-          />
-          <p className="truncate text-[13px] font-medium text-primary">{category.name}</p>
+    <div className="flex min-h-[360px] min-w-[260px] max-w-[260px] flex-col rounded-[18px] p-2" style={{ background: columnBackground }}>
+      <div className="flex items-start gap-3 rounded-[14px] px-3 py-3" style={{ background: headerBackground }}>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <span
+              className="h-2.5 w-2.5 shrink-0 rounded-full border border-black/10"
+              style={{ backgroundColor: color }}
+              aria-hidden="true"
+            />
+            <p className="truncate text-[13px] font-medium text-primary">{category.name}</p>
+            <span className="rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-medium text-tertiary">
+              {articles.length}
+            </span>
+          </div>
+          {category.description && (
+            <p className="text-[12px] text-tertiary truncate mt-0.5">{category.description}</p>
+          )}
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] text-tertiary">
+            <span
+              className="rounded-full px-2 py-0.5 font-medium"
+              style={{
+                backgroundColor: `${color}12`,
+                color,
+              }}
+            >
+              {category.color ? category.color.toUpperCase() : 'Couleur auto'}
+            </span>
+            {category.target_frequency !== null && (
+              <span>{category.target_frequency} art./mois</span>
+            )}
+            <span>Priorité {category.priority}</span>
+          </div>
         </div>
-        {category.description && (
-          <p className="text-[12px] text-tertiary truncate mt-0.5">{category.description}</p>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            onClick={() => onEdit(category)}
+            className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors"
+            title="Modifier"
+          >
+            <Pencil size={13} />
+          </button>
+          <button
+            onClick={() => onDelete(category)}
+            className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-danger/10 hover:text-danger transition-colors"
+            title="Supprimer"
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-2 flex flex-1 flex-col gap-2">
+        {articles.length === 0 ? (
+          <div className="flex min-h-[140px] items-center justify-center rounded-[14px] border border-dashed border-black/5 bg-white/60 px-4 text-center">
+            <p className="text-[12px] text-tertiary">Aucun article dans cette catégorie.</p>
+          </div>
+        ) : (
+          articles.map((article) => (
+            <div key={article.id} className="rounded-[14px] bg-white px-3 py-3">
+              <div className="flex items-start justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => onOpenArticle(article)}
+                  className="min-w-0 flex-1 text-left"
+                >
+                  <span className="block text-[12px] font-medium leading-snug text-primary [overflow-wrap:anywhere]">
+                    {article.title}
+                  </span>
+                  <span className="mt-1 block text-[10px] text-tertiary">
+                    Mis à jour le {formatDate(article.updated_at)}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenArticle(article)}
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] text-tertiary transition-colors hover:bg-[#e5e5e7] hover:text-primary"
+                  title="Ouvrir l'article"
+                >
+                  <ExternalLink size={12} />
+                </button>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <StatusBadge status={article.status} />
+                <select
+                  value={article.category_id ?? ''}
+                  disabled={movingArticleId === article.id}
+                  onChange={(event) => onChangeArticleCategory(article, event.target.value)}
+                    className="h-7 min-w-0 max-w-[150px] rounded-[8px] bg-[#f5f5f7] px-2 text-[11px] text-secondary outline-none focus:ring-1 focus:ring-accent/20 disabled:opacity-50"
+                  aria-label="Changer de catégorie"
+                >
+                  <option value="" disabled>Sans catégorie</option>
+                  {categories.map((item) => (
+                    <option key={item.id} value={item.id}>{item.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ))
         )}
       </div>
-      <div className="flex items-center gap-3 text-[12px] text-tertiary shrink-0">
-        <span
-          className="rounded-full border px-2 py-0.5 font-medium"
-          style={{
-            borderColor: `${color}30`,
-            backgroundColor: `${color}12`,
-            color,
-          }}
-        >
-          {category.color ? category.color.toUpperCase() : 'Couleur auto'}
-        </span>
-        {category.target_frequency !== null && (
-          <span>{category.target_frequency} art./mois</span>
-        )}
-        <span>Priorité {category.priority}</span>
+    </div>
+  )
+}
+
+function UncategorizedColumn({
+  articles,
+  categories,
+  movingArticleId,
+  onOpenArticle,
+  onChangeArticleCategory,
+}: {
+  articles: Article[]
+  categories: Category[]
+  movingArticleId: string | null
+  onOpenArticle: (article: Article) => void
+  onChangeArticleCategory: (article: Article, categoryId: string) => void
+}) {
+  return (
+    <div className="flex min-h-[360px] min-w-[260px] max-w-[260px] flex-col rounded-[18px] bg-gradient-to-b from-[#f0f0f2] to-[#f7f7f9] p-2">
+      <div className="rounded-[14px] bg-white/75 px-3 py-3">
+        <p className="text-[13px] font-medium text-primary">Sans catégorie</p>
+        <p className="mt-0.5 text-[12px] text-tertiary">
+          {articles.length}
+        </p>
       </div>
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => onEdit(category)}
-          className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors"
-          title="Modifier"
-        >
-          <Pencil size={13} />
-        </button>
-        <button
-          onClick={() => onDelete(category)}
-          className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-danger/10 hover:text-danger transition-colors"
-          title="Supprimer"
-        >
-          <Trash2 size={13} />
-        </button>
+      <div className="mt-2 flex flex-1 flex-col gap-2">
+        {articles.length === 0 ? (
+          <div className="flex min-h-[140px] items-center justify-center rounded-[14px] border border-dashed border-black/5 bg-white/60 px-4 text-center">
+            <p className="text-[12px] text-tertiary">Aucun article sans catégorie.</p>
+          </div>
+        ) : (
+          articles.map((article) => (
+            <div key={article.id} className="rounded-[14px] bg-white px-3 py-3">
+              <button
+                type="button"
+                onClick={() => onOpenArticle(article)}
+                className="block w-full text-left text-[12px] font-medium leading-snug text-primary [overflow-wrap:anywhere]"
+              >
+                {article.title}
+              </button>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <StatusBadge status={article.status} />
+                <select
+                  value=""
+                  disabled={movingArticleId === article.id}
+                  onChange={(event) => onChangeArticleCategory(article, event.target.value)}
+                  className="h-7 min-w-0 max-w-[150px] rounded-[8px] bg-[#f5f5f7] px-2 text-[11px] text-secondary outline-none focus:ring-1 focus:ring-accent/20 disabled:opacity-50"
+                  aria-label="Changer de catégorie"
+                >
+                  <option value="" disabled>Classer dans...</option>
+                  {categories.map((item) => (
+                    <option key={item.id} value={item.id}>{item.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   )
@@ -177,8 +332,11 @@ const EMPTY_FORM: FormState = {
 
 export default function CategoriesPage() {
   const { projectId } = useParams<{ projectId: string }>()
+  const navigate = useNavigate()
   const [categories, setCategories] = useState<Category[]>([])
+  const [articles, setArticles] = useState<Article[]>([])
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
+  const [movingArticleId, setMovingArticleId] = useState<string | null>(null)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Category | null>(null)
@@ -191,8 +349,15 @@ export default function CategoriesPage() {
 
   function load() {
     if (!projectId) return
-    listCategories(projectId)
-      .then((data) => { setCategories(data); setStatus('success') })
+    Promise.all([
+      listCategories(projectId),
+      listArticles(projectId, { limit: 500 }),
+    ])
+      .then(([categoryData, articleData]) => {
+        setCategories(categoryData)
+        setArticles(articleData)
+        setStatus('success')
+      })
       .catch(() => setStatus('error'))
   }
 
@@ -223,6 +388,10 @@ export default function CategoriesPage() {
     e.preventDefault()
     if (!projectId || !form.name.trim()) return
     setFormError('')
+    if (!isValidHexColor(form.color)) {
+      setFormError('La couleur doit être un code hexadécimal valide, par exemple #2563eb.')
+      return
+    }
     setSaving(true)
     try {
       const freq = form.target_frequency.trim() ? parseInt(form.target_frequency) : null
@@ -268,9 +437,22 @@ export default function CategoriesPage() {
     }
   }
 
+  async function handleChangeArticleCategory(article: Article, categoryId: string) {
+    if (!projectId || article.category_id === categoryId) return
+    setMovingArticleId(article.id)
+    try {
+      const updated = await patchArticle(projectId, article.id, { category_id: categoryId })
+      setArticles((prev) => prev.map((item) => item.id === updated.id ? updated : item))
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setMovingArticleId(null)
+    }
+  }
+
   return (
     <>
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-6xl">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-[20px] font-semibold text-primary tracking-tight">Catégories</h1>
@@ -298,7 +480,7 @@ export default function CategoriesPage() {
             title="Disponible quand votre site est connecté"
           >
             <RefreshCw size={12} />
-            Synchroniser depuis le site
+            Bientôt disponible
           </button>
         </div>
 
@@ -322,9 +504,31 @@ export default function CategoriesPage() {
         )}
         {status === 'success' && categories.length > 0 && (
           <div className="flex flex-col gap-2">
-            {categories.map((c) => (
-              <CategoryRow key={c.id} category={c} onEdit={openEdit} onDelete={setDeleteTarget} />
-            ))}
+            <p className="text-[12px] text-tertiary">
+              Vue colonnes par catégorie. Le changement via sélecteur est enregistré ; le déplacement drag/drop sera bientôt disponible.
+            </p>
+            <div className="flex gap-4 overflow-x-auto pb-3">
+              {categories.map((c) => (
+                <CategoryColumn
+                  key={c.id}
+                  category={c}
+                  articles={articles.filter((article) => article.category_id === c.id)}
+                  categories={categories}
+                  movingArticleId={movingArticleId}
+                  onEdit={openEdit}
+                  onDelete={setDeleteTarget}
+                  onOpenArticle={(article) => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
+                  onChangeArticleCategory={handleChangeArticleCategory}
+                />
+              ))}
+              <UncategorizedColumn
+                articles={articles.filter((article) => !article.category_id)}
+                categories={categories}
+                movingArticleId={movingArticleId}
+                onOpenArticle={(article) => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
+                onChangeArticleCategory={handleChangeArticleCategory}
+              />
+            </div>
           </div>
         )}
       </div>

@@ -6,6 +6,7 @@ import type { MediaAsset } from '@/api/media'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import Button from '@/components/ui/Button'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 function formatBytes(n: number | null) {
   if (!n) return ''
@@ -16,22 +17,11 @@ function formatBytes(n: number | null) {
 
 function MediaCard({ asset, onDelete }: { asset: MediaAsset; onDelete: () => void }) {
   const [copied, setCopied] = useState(false)
-  const [deleting, setDeleting] = useState(false)
 
   async function handleCopy() {
     await navigator.clipboard.writeText(asset.url)
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
-  }
-
-  async function handleDelete() {
-    setDeleting(true)
-    try {
-      await deleteMedia(asset.id)
-      onDelete()
-    } finally {
-      setDeleting(false)
-    }
   }
 
   return (
@@ -51,12 +41,11 @@ function MediaCard({ asset, onDelete }: { asset: MediaAsset; onDelete: () => voi
             {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
           </button>
           <button
-            onClick={handleDelete}
+            onClick={onDelete}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-danger hover:bg-white transition-colors"
             title="Supprimer"
-            disabled={deleting}
           >
-            {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+            <Trash2 size={14} />
           </button>
         </div>
       </div>
@@ -77,6 +66,8 @@ export default function MediaPage() {
   const [assets, setAssets] = useState<MediaAsset[]>([])
   const [loadStatus, setLoadStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [uploading, setUploading] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<MediaAsset | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [tick, setTick] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -102,6 +93,18 @@ export default function MediaPage() {
     } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await deleteMedia(deleteTarget.id)
+      setAssets((prev) => prev.filter((asset) => asset.id !== deleteTarget.id))
+      setDeleteTarget(null)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -153,11 +156,22 @@ export default function MediaPage() {
             <MediaCard
               key={asset.id}
               asset={asset}
-              onDelete={() => setAssets((prev) => prev.filter((a) => a.id !== asset.id))}
+              onDelete={() => setDeleteTarget(asset)}
             />
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Supprimer ce média ?"
+        description={`Le fichier « ${deleteTarget?.filename ?? 'Image'} » sera supprimé de la médiathèque. Cette action est irréversible.`}
+        confirmLabel="Supprimer"
+        loading={deleting}
+        variant="danger"
+      />
     </div>
   )
 }

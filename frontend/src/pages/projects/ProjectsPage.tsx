@@ -24,7 +24,7 @@ const LANGUAGE_OPTIONS = [
 ]
 
 const COUNTRY_OPTIONS = [
-  { value: '', label: 'Aucun' },
+  { value: '', label: 'Pas défini' },
   { value: 'FR', label: 'France' },
   { value: 'US', label: 'États-Unis' },
   { value: 'GB', label: 'Royaume-Uni' },
@@ -83,7 +83,7 @@ function ProjectCard({
           </h3>
           <p className="mt-0.5 text-[11px] text-tertiary truncate flex items-center gap-1">
             <Globe size={10} className="shrink-0" />
-            {project.domain ?? '—'}
+            {project.domain ?? 'Pas défini'}
           </p>
         </div>
         <button

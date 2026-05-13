@@ -243,10 +243,11 @@ function KanbanColumn({
 }) {
   const articleIds = articles.map((a) => a.id)
   const { setNodeRef, isOver } = useDroppable({ id: column.status })
+  const columnBackground = `linear-gradient(180deg, ${column.color}1c 0%, ${column.color}0d 42%, rgba(255,255,255,0) 100%)`
 
   return (
-    <div className="flex flex-col min-w-[220px] max-w-[220px] h-full">
-      <div className="flex items-center gap-2 mb-3 px-1">
+    <div className="flex min-w-[220px] max-w-[220px] flex-col rounded-t-[16px] px-2 pb-2 pt-2" style={{ background: columnBackground }}>
+      <div className="relative mb-3 flex items-center gap-2 rounded-t-[14px] px-1 py-2 shadow-[0_18px_26px_-26px_rgba(15,23,42,0.45)] after:absolute after:bottom-[-10px] after:left-0 after:right-0 after:h-3 after:bg-gradient-to-b after:from-black/[0.035] after:to-transparent after:content-['']">
         <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: column.color }} />
         <span className="text-[12px] font-semibold text-primary">{column.label}</span>
         <span className="ml-auto text-[11px] text-tertiary bg-[#f0f0f2] rounded-full px-1.5 py-0.5">
@@ -256,7 +257,7 @@ function KanbanColumn({
       <SortableContext items={articleIds} strategy={verticalListSortingStrategy}>
         <div
           ref={setNodeRef}
-          className={`flex flex-col gap-2 overflow-y-auto flex-1 pb-2 min-h-[80px] rounded-[12px] transition-colors ${isOver ? 'bg-accent/5' : ''}`}
+          className={`flex min-h-[90px] flex-col gap-2 rounded-b-[14px] transition-colors ${isOver ? 'bg-accent/5' : ''}`}
         >
           {articles.length === 0 ? (
             <div className="flex items-center justify-center rounded-[12px] border border-dashed border-border h-20">
@@ -461,7 +462,7 @@ export default function KanbanPage() {
 
   return (
     <>
-      <div className="flex flex-col h-full min-h-0 p-8">
+      <div className="flex min-h-full flex-col p-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-4 shrink-0">
           <div>
@@ -496,7 +497,7 @@ export default function KanbanPage() {
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-4 overflow-x-auto flex-1 min-h-0 pb-4">
+          <div className="flex gap-4 overflow-x-auto pb-4">
             {allColumns.map((col) => (
               <KanbanColumn
                 key={col.status}

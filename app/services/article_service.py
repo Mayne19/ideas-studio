@@ -1,7 +1,12 @@
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from app.models.article import Article
+from app.models.article_log import ArticleLog
+from app.models.article_version import ArticleVersion
 from app.models.category import Category
+from app.models.media_asset import MediaAsset
+from app.models.optimization_recommendation import OptimizationRecommendation
+from app.models.seo_analysis import SeoAnalysis
 from app.schemas.article import ArticleCreate, ArticleUpdate, ArticlePublicApiResponse, CategoryBrief
 from app.core.utils import slugify, generate_unique_slug, calculate_word_count
 
@@ -104,6 +109,25 @@ def unpublish_article(db: Session, article: Article) -> Article:
     db.commit()
     db.refresh(article)
     return article
+
+
+def delete_article(db: Session, article: Article) -> None:
+    db.query(SeoAnalysis).filter(SeoAnalysis.article_id == article.id).delete(synchronize_session=False)
+    db.query(ArticleVersion).filter(ArticleVersion.article_id == article.id).delete(synchronize_session=False)
+    db.query(ArticleLog).filter(ArticleLog.article_id == article.id).update(
+        {ArticleLog.article_id: None},
+        synchronize_session=False,
+    )
+    db.query(MediaAsset).filter(MediaAsset.article_id == article.id).update(
+        {MediaAsset.article_id: None},
+        synchronize_session=False,
+    )
+    db.query(OptimizationRecommendation).filter(OptimizationRecommendation.article_id == article.id).update(
+        {OptimizationRecommendation.article_id: None},
+        synchronize_session=False,
+    )
+    db.delete(article)
+    db.commit()
 
 
 def get_public_articles(

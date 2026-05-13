@@ -1,6 +1,21 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
+import re
+from pydantic import BaseModel, ConfigDict, field_validator
+
+
+HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def validate_hex_color(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if normalized == "":
+        return None
+    if not HEX_COLOR_RE.match(normalized):
+        raise ValueError("La couleur doit être un code hexadécimal valide, par exemple #2563eb.")
+    return normalized.lower()
 
 
 class CategoryCreate(BaseModel):
@@ -11,6 +26,11 @@ class CategoryCreate(BaseModel):
     priority: int = 0
     target_frequency: Optional[int] = None
 
+    @field_validator("color")
+    @classmethod
+    def validate_color(cls, value: Optional[str]) -> Optional[str]:
+        return validate_hex_color(value)
+
 
 class CategoryUpdate(BaseModel):
     name: Optional[str] = None
@@ -19,6 +39,11 @@ class CategoryUpdate(BaseModel):
     color: Optional[str] = None
     priority: Optional[int] = None
     target_frequency: Optional[int] = None
+
+    @field_validator("color")
+    @classmethod
+    def validate_color(cls, value: Optional[str]) -> Optional[str]:
+        return validate_hex_color(value)
 
 
 class CategoryPublic(BaseModel):
