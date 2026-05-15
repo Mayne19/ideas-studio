@@ -2,6 +2,10 @@ from datetime import datetime
 from pydantic import BaseModel, EmailStr, ConfigDict
 
 
+class UserUpdate(BaseModel):
+    name: str
+
+
 class UserPublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

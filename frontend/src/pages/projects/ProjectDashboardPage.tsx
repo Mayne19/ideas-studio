@@ -73,14 +73,6 @@ function KpiCard({
   )
 }
 
-const DEMO_KPI_TRENDS = {
-  seo: '+8%',
-  views: '+12%',
-  readingTime: '-3%',
-  published: '+5%',
-  inProgress: '-2%',
-} as const
-
 const RECENT_ARTICLES_LIMIT = 7
 
 const TODO_ACCENT = {
@@ -434,7 +426,6 @@ export default function ProjectDashboardPage() {
           value={seoValue}
           suffix="/10"
           label="Score SEO moyen"
-          trend={DEMO_KPI_TRENDS.seo}
           tone="accent"
           onClick={() => navigate(`/projects/${projectId}/performance`)}
         />
@@ -442,7 +433,6 @@ export default function ProjectDashboardPage() {
           icon={<Globe size={17} />}
           value={hasTrackingData && data?.totalViews != null ? data.totalViews.toLocaleString('fr-FR') : '—'}
           label="Vues du mois"
-          trend={DEMO_KPI_TRENDS.views}
           tone="sky"
           onClick={() => navigate(`/projects/${projectId}/traffic`)}
         />
@@ -451,14 +441,12 @@ export default function ProjectDashboardPage() {
           value={data?.avgReadingTime != null ? data.avgReadingTime : '—'}
           suffix={data?.avgReadingTime != null ? ' min' : undefined}
           label="Temps moyen"
-          trend={DEMO_KPI_TRENDS.readingTime}
           tone="indigo"
         />
         <KpiCard
           icon={<FileText size={17} />}
           value={data?.publishedCount ?? '—'}
           label="Publiés"
-          trend={DEMO_KPI_TRENDS.published}
           tone="violet"
           onClick={() => navigate(`/projects/${projectId}/articles`)}
         />
@@ -466,7 +454,6 @@ export default function ProjectDashboardPage() {
           icon={<PenLine size={17} />}
           value={data?.inProgressCount ?? '—'}
           label="En cours"
-          trend={DEMO_KPI_TRENDS.inProgress}
           tone="orange"
           onClick={() => navigate(`/projects/${projectId}/articles`)}
         />

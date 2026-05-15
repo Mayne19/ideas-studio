@@ -111,8 +111,13 @@ export default function ProjectIntegrationPage() {
                 <p className="text-[12px] text-secondary">
                   {isConnected
                     ? 'Le snippet est actif et les données sont collectées.'
-                    : 'Installez le snippet ci-dessous pour connecter votre site.'}
+                    : "Installez le snippet ci-dessous pour connecter votre site."}
                 </p>
+                {!isConnected && (
+                  <p className="mt-2 text-[12px] text-accent">
+                    Après avoir installé le snippet, ouvrez votre site dans un nouvel onglet puis cliquez sur Rafraîchir le statut.
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">

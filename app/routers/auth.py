@@ -5,8 +5,8 @@ from app.core.database import get_db
 from app.core.config import settings
 from app.core.security import create_access_token
 from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse
-from app.schemas.user import UserPublic
-from app.services.auth_service import create_user, authenticate_user, get_user_by_email
+from app.schemas.user import UserPublic, UserUpdate
+from app.services.auth_service import create_user, authenticate_user, get_user_by_email, update_user
 from app.dependencies.auth import get_current_user
 from app.models.user import User
 
@@ -35,6 +35,15 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserPublic)
 def me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.patch("/me", response_model=UserPublic)
+def patch_me(
+    data: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return update_user(db, current_user, data)
 
 
 @router.post("/logout")

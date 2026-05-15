@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.user import User
 from app.schemas.auth import RegisterRequest
+from app.schemas.user import UserUpdate
 from app.core.security import hash_password, verify_password
 
 
@@ -15,6 +16,13 @@ def create_user(db: Session, data: RegisterRequest) -> User:
         password_hash=hash_password(data.password),
     )
     db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def update_user(db: Session, user: User, data: UserUpdate) -> User:
+    user.name = data.name
     db.commit()
     db.refresh(user)
     return user
