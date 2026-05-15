@@ -366,6 +366,7 @@ export default function ProjectDashboardPage() {
   const visibleActivityEvents = activityEvents.slice(0, 5)
 
   const seoValue = scoreOnTen(data?.avgSeoScore)
+  const hasTrackingData = Boolean(data?.totalViews && data.totalViews > 0)
 
   const summaryText = (() => {
     if (!data) return 'Chargement de vos données…'
@@ -439,7 +440,7 @@ export default function ProjectDashboardPage() {
         />
         <KpiCard
           icon={<Globe size={17} />}
-          value={data?.totalViews != null ? data.totalViews.toLocaleString('fr-FR') : '—'}
+          value={hasTrackingData && data?.totalViews != null ? data.totalViews.toLocaleString('fr-FR') : '—'}
           label="Vues du mois"
           trend={DEMO_KPI_TRENDS.views}
           tone="sky"
@@ -470,6 +471,22 @@ export default function ProjectDashboardPage() {
           onClick={() => navigate(`/projects/${projectId}/articles`)}
         />
       </div>
+
+      {!hasTrackingData && (
+        <Card className="mb-6">
+          <div className="flex items-start gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-accent/10 text-accent">
+              <Globe size={16} />
+            </span>
+            <div>
+              <p className="text-[14px] font-medium text-primary">Aucune donnée disponible pour le moment</p>
+              <p className="mt-0.5 text-[13px] text-secondary">
+                Connectez votre site pour commencer à collecter les statistiques.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Main 2-col layout: left=articles (65%), right=todo+activity (35%) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

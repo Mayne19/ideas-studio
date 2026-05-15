@@ -43,8 +43,6 @@ type ChannelTrendPoint = {
   referral: number
 }
 
-type TrendPoint = { date: string; views: number }
-
 type SourceRow = {
   key: string
   label: string
@@ -64,127 +62,6 @@ const PERIODS: { value: Period; label: string }[] = [
   { value: '180d', label: '6 mois' },
   { value: '365d', label: '1 an' },
 ]
-
-const DEMO_MODE = true
-
-function periodDayCount(period: Period) {
-  if (period === '1d') return 1
-  if (period === '7d') return 7
-  if (period === '30d') return 30
-  if (period === '90d') return 90
-  if (period === '180d') return 180
-  return 365
-}
-
-function periodPointCount(period: Period) {
-  if (period === '1d') return 24
-  if (period === '7d') return 7
-  if (period === '30d') return 30
-  if (period === '90d') return 13
-  if (period === '180d') return 26
-  return 12
-}
-
-function buildWeights(count: number) {
-  return Array.from({ length: count }, (_, i) => {
-    const x = count === 1 ? 0 : i / (count - 1)
-    const growth = 0.88 + x * 0.28
-    const searchLift = 0.18 * Math.exp(-Math.pow((x - 0.42) / 0.2, 2))
-    const socialSpike = 0.14 * Math.exp(-Math.pow((x - 0.74) / 0.14, 2))
-    const rhythm = 0.1 * Math.sin(i * 1.4 + 0.4) + 0.05 * Math.cos(i * 0.9)
-    return Math.max(0.5, growth + searchLift + socialSpike + rhythm)
-  })
-}
-
-function distributeTotal(total: number, count: number) {
-  const weights = buildWeights(count)
-  const weightTotal = weights.reduce((sum, value) => sum + value, 0)
-  let used = 0
-  return weights.map((weight, index) => {
-    if (index === weights.length - 1) return Math.max(0, total - used)
-    const value = Math.round((total * weight) / weightTotal)
-    used += value
-    return value
-  })
-}
-
-function formatPeriodDate(period: Period, index: number, count: number) {
-  if (period === '1d') return `${index.toString().padStart(2, '0')}h`
-  if (period === '90d' || period === '180d') return `S${index + 1}`
-  if (period === '365d') {
-    const months = ['Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.', 'Jan.', 'Fév.', 'Mar.', 'Avr.', 'Mai']
-    return months[index] ?? `M${index + 1}`
-  }
-  const base = new Date('2026-05-11')
-  const d = new Date(base)
-  d.setDate(base.getDate() - (count - 1 - index))
-  return d.toISOString().slice(0, 10)
-}
-
-function buildHourlyProfile(total = 800) {
-  const weights = Array.from({ length: 24 }, (_, i) => {
-    const x = i / 23
-    const organicPeak = 1.15 * Math.exp(-Math.pow((x - 0.36) / 0.18, 2))
-    const directWave = 0.55 * Math.exp(-Math.pow((x - 0.18) / 0.16, 2))
-    const socialSpike = 0.82 * Math.exp(-Math.pow((x - 0.74) / 0.11, 2))
-    const referralLift = 0.44 * Math.exp(-Math.pow((x - 0.88) / 0.16, 2))
-    const wave = 0.12 * Math.sin(x * Math.PI * 7 + 0.8)
-    return Math.max(0.08, 0.2 + organicPeak + directWave + socialSpike + referralLift + wave)
-  })
-  const weightTotal = weights.reduce((sum, value) => sum + value, 0)
-  let used = 0
-  return weights.map((weight, index) => {
-    if (index === weights.length - 1) return Math.max(0, total - used)
-    const value = Math.round((weight / weightTotal) * total)
-    used += value
-    return value
-  })
-}
-
-function buildTrafficTrend(period: Period, dailyVisits = 800) {
-  const trend_by_day = period === '1d'
-    ? buildHourlyProfile(dailyVisits).map((views, index) => ({ date: formatPeriodDate(period, index, 24), views }))
-    : distributeTotal(dailyVisits * periodDayCount(period), periodPointCount(period)).map((views, index, items) => ({ date: formatPeriodDate(period, index, items.length), views }))
-  return trend_by_day
-}
-
-function buildDemoData(period: Period): PerformanceSummary {
-  const trend_by_day = buildTrafficTrend(period, 800)
-  const totalVisits = trend_by_day.reduce((sum, item) => sum + item.views, 0)
-  const total_views = Math.round(totalVisits * 1.5)
-  return {
-    period,
-    total_views,
-    unique_pages: Math.floor(totalVisits * 0.78),
-    trend_by_day,
-    top_pages: [
-      { path: '/blog/roi-contenu-organique', views: Math.floor(total_views * 0.22) },
-      { path: '/blog/audit-seo-technique', views: Math.floor(total_views * 0.16) },
-      { path: '/blog/dashboard-editorial-kpi', views: Math.floor(total_views * 0.13) },
-      { path: '/blog/checklist-relecture-ia', views: Math.floor(total_views * 0.09) },
-      { path: '/blog/maillage-interne', views: Math.floor(total_views * 0.08) },
-    ],
-    referrers: [
-      { referrer: 'google.com', views: Math.floor(totalVisits * 0.525) },
-      { referrer: '', views: Math.floor(totalVisits * 0.225) },
-      { referrer: 'linkedin.com', views: Math.floor(totalVisits * 0.10) },
-      { referrer: 'twitter.com', views: Math.floor(totalVisits * 0.05) },
-      { referrer: 'partner.example.com', views: Math.floor(totalVisits * 0.10) },
-    ],
-    countries: [
-      { country: 'France', views: Math.floor(totalVisits * 0.52) },
-      { country: 'Belgique', views: Math.floor(totalVisits * 0.14) },
-      { country: 'Suisse', views: Math.floor(totalVisits * 0.10) },
-      { country: 'Canada', views: Math.floor(totalVisits * 0.08) },
-      { country: 'Maroc', views: Math.floor(totalVisits * 0.05) },
-    ],
-    devices: [
-      { device: 'mobile', views: Math.floor(totalVisits * 0.64) },
-      { device: 'desktop', views: Math.floor(totalVisits * 0.30) },
-      { device: 'tablet', views: Math.floor(totalVisits * 0.06) },
-    ],
-  }
-}
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <p className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-secondary">{children}</p>
@@ -248,10 +125,10 @@ function SourceMark({ referrer }: { referrer: string }) {
   return <Globe size={15} />
 }
 
-function buildSourceRows(data: PerformanceSummary, demoMode: boolean): SourceRow[] {
+function buildSourceRows(data: PerformanceSummary): SourceRow[] {
   const rows = data.referrers.length ? data.referrers : [{ referrer: '', views: data.total_views }]
   const totalVisits = Math.max(1, rows.reduce((sum, item) => sum + item.views, 0))
-  return rows.map((item, index) => {
+  return rows.map((item) => {
     const source = getSourceDisplay(item.referrer)
     return {
       key: item.referrer || 'direct',
@@ -259,27 +136,15 @@ function buildSourceRows(data: PerformanceSummary, demoMode: boolean): SourceRow
       raw: item.referrer,
       channel: getSourceChannel(item.referrer),
       visits: item.views,
-      visitors: demoMode ? Math.max(1, Math.round(item.views * 0.66)) : null,
-      variation: demoMode ? [18, 12, -6, 9, -11, 4][index % 6] : null,
+      visitors: null,
+      variation: null,
       share: percentOf(item.views, totalVisits),
     }
   }).sort((a, b) => b.visits - a.visits)
 }
 
-function normalizeTrafficTrend(period: Period, data: PerformanceSummary, demoMode: boolean): TrendPoint[] {
-  if (demoMode) return data.trend_by_day
-  if (period !== '1d') return data.trend_by_day
-  if (data.trend_by_day.length <= 1) {
-    const hourly = buildDemoData('1d').trend_by_day
-    const sourceTotal = hourly.reduce((sum, point) => sum + point.views, 0)
-    const targetTotal = data.trend_by_day.reduce((sum, point) => sum + point.views, 0) || sourceTotal
-    return hourly.map((point) => ({ ...point, views: Math.max(0, Math.round((point.views / sourceTotal) * targetTotal)) }))
-  }
-  return data.trend_by_day
-}
-
-function buildChannelTrend(data: PerformanceSummary, sources: SourceRow[], period: Period, demoMode: boolean): ChannelTrendPoint[] {
-  const trend = normalizeTrafficTrend(period, data, demoMode)
+function buildChannelTrend(data: PerformanceSummary, sources: SourceRow[]): ChannelTrendPoint[] {
+  const trend = data.trend_by_day
   const totals = sources.reduce<Record<string, number>>((acc, source) => {
     const key = source.channel === 'Organic Search' ? 'organic' : source.channel.toLowerCase()
     acc[key] = (acc[key] ?? 0) + source.visits
@@ -287,23 +152,13 @@ function buildChannelTrend(data: PerformanceSummary, sources: SourceRow[], perio
   }, {})
   const total = Math.max(1, Object.values(totals).reduce((sum, value) => sum + value, 0))
   return trend.map((point) => {
-    if (!demoMode) {
-      return {
-        date: point.date,
-        direct: Math.round(point.views * ((totals.direct ?? 0) / total)),
-        organic: Math.round(point.views * ((totals.organic ?? 0) / total)),
-        social: Math.round(point.views * ((totals.social ?? 0) / total)),
-        referral: Math.round(point.views * ((totals.referral ?? 0) / total)),
-      }
+    return {
+      date: point.date,
+      direct: Math.round(point.views * ((totals.direct ?? 0) / total)),
+      organic: Math.round(point.views * ((totals.organic ?? 0) / total)),
+      social: Math.round(point.views * ((totals.social ?? 0) / total)),
+      referral: Math.round(point.views * ((totals.referral ?? 0) / total)),
     }
-    const directShare = (totals.direct ?? 0) / total
-    const organicShare = (totals.organic ?? 0) / total
-    const socialShare = (totals.social ?? 0) / total
-    const organic = Math.max(0, Math.round(point.views * organicShare))
-    const direct = Math.max(0, Math.round(point.views * directShare))
-    const social = Math.max(0, Math.round(point.views * socialShare))
-    const referral = Math.max(0, point.views - organic - direct - social)
-    return { date: point.date, direct, organic, social, referral }
   })
 }
 
@@ -394,21 +249,19 @@ export default function TrafficPage() {
     return () => { cancelled = true }
   }, [projectId, period, tick])
 
-  const hasRealData = data && (data.total_views > 0 || data.trend_by_day.length > 0)
-  const isDemoMode = DEMO_MODE || import.meta.env.DEV || !hasRealData
-  const displayData = isDemoMode ? buildDemoData(period) : data
-  const hasData = isDemoMode || hasRealData
-  const sources = useMemo(() => displayData ? buildSourceRows(displayData, isDemoMode) : [], [displayData, isDemoMode])
+  const hasRealData = Boolean(data && data.total_views > 0)
+  const displayData = data
+  const hasData = Boolean(hasRealData)
+  const sources = useMemo(() => displayData ? buildSourceRows(displayData) : [], [displayData])
   const totalVisits = sources.reduce((sum, source) => sum + source.visits, 0)
-  const channelTrend = useMemo(() => displayData ? buildChannelTrend(displayData, sources, period, isDemoMode) : [], [displayData, sources, period, isDemoMode])
+  const channelTrend = useMemo(() => displayData ? buildChannelTrend(displayData, sources) : [], [displayData, sources])
   const topSource = sources[0]
   const topCountry = displayData ? [...displayData.countries].sort((a, b) => b.views - a.views)[0] : undefined
   const mobileViews = displayData?.devices.find((device) => device.device === 'mobile')?.views ?? 0
   const mobileShare = totalVisits ? percentOf(mobileViews, totalVisits) : 0
-  const uniqueVisitors = isDemoMode ? Math.round(totalVisits * 0.775) : displayData?.unique_pages ?? null
+  const uniqueVisitors = displayData?.unique_pages ?? null
   const visits = totalVisits || null
-  const pagesPerSession = visits && displayData ? (displayData.total_views / visits).toFixed(1).replace('.', ',') : '1,0'
-  const returningRate = isDemoMode ? '28%' : '28%'
+  const pagesPerSession = visits && displayData ? (displayData.total_views / visits).toFixed(1).replace('.', ',') : null
   const channels = ['Organic Search', 'Direct', 'Social', 'Referral'].map((channel) => ({
     channel,
     visits: sources.filter((source) => source.channel === channel).reduce((sum, source) => sum + source.visits, 0),
@@ -450,9 +303,9 @@ export default function TrafficPage() {
             <TrendingUp size={22} />
           </div>
           <div>
-            <p className="text-[15px] font-medium text-primary">Aucune donnée de trafic</p>
+            <p className="text-[15px] font-medium text-primary">Aucune donnée disponible pour le moment</p>
             <p className="mt-1 max-w-xs text-[13px] text-secondary">
-              Installez le snippet de tracking pour commencer à collecter des données visiteurs.
+              Connectez votre site pour commencer à collecter les statistiques.
             </p>
           </div>
           <button onClick={() => navigate(`/projects/${projectId}/settings/integration`)} className="flex items-center gap-1.5 rounded-[10px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent/90">
@@ -465,11 +318,11 @@ export default function TrafficPage() {
       {loadStatus === 'success' && hasData && displayData && (
         <div className="flex flex-col gap-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <StatCard icon={<Users size={18} />} value={uniqueVisitors !== null ? formatMetric(uniqueVisitors) : formatMetric(Math.round(totalVisits * 0.78))} label="Visiteurs uniques" variation={isDemoMode ? 14 : null} tone="accent" />
-            <StatCard icon={<TrendingUp size={18} />} value={visits !== null ? formatMetric(visits) : formatMetric(displayData.total_views)} label="Visites" variation={isDemoMode ? 18 : null} tone="success" />
-            <StatCard icon={<EyeIcon />} value={formatMetric(displayData.total_views)} label="Pages vues" variation={isDemoMode ? 21 : null} tone="violet" />
-            <StatCard icon={<Users size={18} />} value={formatMetric(Math.round((uniqueVisitors ?? totalVisits) * 0.72))} label="Nouveaux visiteurs" variation={isDemoMode ? 11 : null} tone="warning" />
-            <StatCard icon={<RefreshCw size={18} />} value={<SplitMetric value={returningRate.replace('%', '')} suffix="%" />} label="Taux de retour" variation={isDemoMode ? -3 : null} tone="danger" />
+            <StatCard icon={<Users size={18} />} value={uniqueVisitors !== null ? formatMetric(uniqueVisitors) : '—'} label="Visiteurs uniques" variation={null} tone="accent" />
+            <StatCard icon={<TrendingUp size={18} />} value={visits !== null ? formatMetric(visits) : '—'} label="Visites" variation={null} tone="success" />
+            <StatCard icon={<EyeIcon />} value={formatMetric(displayData.total_views)} label="Pages vues" variation={null} tone="violet" />
+            <StatCard icon={<Users size={18} />} value="—" label="Nouveaux visiteurs" variation={null} tone="warning" />
+            <StatCard icon={<RefreshCw size={18} />} value="—" label="Taux de retour" variation={null} tone="danger" />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] lg:items-stretch">
@@ -503,11 +356,11 @@ export default function TrafficPage() {
                 icon={<span className="text-[15px] leading-none">{topCountry ? getCountryDisplay(topCountry.country).flag : '•'}</span>}
                 value={topCountry ? getCountryDisplay(topCountry.country).label : '—'}
                 label="Pays principal"
-                variation={isDemoMode ? 9 : null}
+                variation={null}
                 tone="accent"
               />
-              <StatCard icon={<Smartphone size={18} />} value={<SplitMetric value={mobileShare} suffix="%" />} label="Part mobile" variation={isDemoMode ? 5 : null} tone="violet" />
-              <StatCard icon={<BarSmallIcon />} value={<SplitMetric value={pagesPerSession} suffix="pages/session" />} label="Pages/session" variation={isDemoMode ? 7 : null} tone="warning" />
+              <StatCard icon={<Smartphone size={18} />} value={<SplitMetric value={mobileShare} suffix="%" />} label="Part mobile" variation={null} tone="violet" />
+              <StatCard icon={<BarSmallIcon />} value={pagesPerSession ? <SplitMetric value={pagesPerSession} suffix="pages/session" /> : '—'} label="Pages/session" variation={null} tone="warning" />
             </div>
           </div>
 
@@ -578,7 +431,7 @@ export default function TrafficPage() {
                   total={displayData.total_views}
                   leading={<ExternalLink size={15} />}
                   href={entryPageHref(page.path)}
-                  meta={<span>{topSource?.label ?? '—'} · <VariationBadge value={isDemoMode ? [16, -4, 11, 7, -8][index % 5] : null} /></span>}
+                  meta={<span>{topSource?.label ?? '—'}</span>}
                 />
               ))}
             </Card>
@@ -614,9 +467,9 @@ export default function TrafficPage() {
                     <span className="text-secondary">{source.channel}</span>
                     <span>{source.visitors !== null ? formatMetric(source.visitors) : '—'}</span>
                     <span>{formatMetric(source.visits)}</span>
-                    <span>{isDemoMode ? formatDurationText((1 + index) * 60 + 20 + index * 4) : '—'}</span>
-                    <span>{isDemoMode ? (1.4 + index * 0.2).toFixed(1).replace('.', ',') : '—'}</span>
-                    <span>{isDemoMode ? `${18 + index * 3}%` : '—'}</span>
+                    <span>—</span>
+                    <span>—</span>
+                    <span>—</span>
                     <span className="truncate text-secondary">{displayData.top_pages[index % Math.max(1, displayData.top_pages.length)] ? entryPageLabel(displayData.top_pages[index % displayData.top_pages.length].path) : '—'}</span>
                     <VariationBadge value={source.variation} />
                   </div>
@@ -645,10 +498,4 @@ function SplitMetric({ value, suffix }: { value: React.ReactNode; suffix: string
       <span className="text-[13px] font-medium text-tertiary">{suffix}</span>
     </span>
   )
-}
-
-function formatDurationText(seconds: number) {
-  const minutes = Math.floor(seconds / 60)
-  const rest = seconds % 60
-  return minutes ? `${minutes} min ${rest.toString().padStart(2, '0')} s` : `${rest} s`
 }

@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import { User, Mail, Camera, Check, Loader2 } from 'lucide-react'
+import { User, Mail, Camera, Check, Loader2, KeyRound, Moon } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { useTheme } from '@/context/ThemeContext'
 import { api } from '@/api/client'
 import Button from '@/components/ui/Button'
+import CopyButton from '@/components/ui/CopyButton'
 
 export default function AccountPage() {
   const { user, refreshUser } = useAuth()
+  const { isDark, toggleTheme } = useTheme()
   const [name, setName] = useState(user?.name ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -84,6 +87,43 @@ export default function AccountPage() {
             <span className="text-[13px] text-tertiary">{user?.email}</span>
           </div>
           <p className="text-[11px] text-tertiary">L'email ne peut pas être modifié.</p>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-[12px] font-medium text-secondary">ID utilisateur</label>
+          <div className="flex flex-wrap items-center gap-2 rounded-[10px] border border-border bg-[#f5f5f7] px-3 py-2">
+            <KeyRound size={14} className="text-tertiary shrink-0" />
+            <span className="min-w-0 flex-1 break-all text-[12px] text-secondary">{user?.id}</span>
+            <CopyButton value={user?.id ?? ''} label="Copier l'ID" />
+          </div>
+          <p className="text-[11px] text-tertiary">
+            Cet ID permet à un autre administrateur de vous ajouter à son projet.
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 rounded-[14px] border border-border bg-surface px-4 py-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-accent/10 text-accent">
+              <Moon size={15} />
+            </span>
+            <div>
+              <p className="text-[13px] font-medium text-primary">Mode sombre</p>
+              <p className="text-[11px] text-tertiary">Choix sauvegardé sur cet appareil.</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className={`relative h-7 w-12 rounded-full transition-colors ${isDark ? 'bg-accent' : 'bg-[#d8d8dc]'}`}
+            aria-pressed={isDark}
+            aria-label="Mode sombre"
+          >
+            <span
+              className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${
+                isDark ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
         </div>
 
         {error && (

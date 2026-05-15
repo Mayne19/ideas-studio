@@ -38,8 +38,6 @@ type ArticleMetric = {
   recommendation: string
 }
 
-type TrendPoint = { date: string; views: number }
-
 const PERIODS: { value: Period; label: string }[] = [
   { value: '1d', label: '1 jour' },
   { value: '7d', label: '7 jours' },
@@ -62,184 +60,17 @@ const STATUS_LABELS: Record<string, string> = {
   archived: 'Archivé',
 }
 
-const DEMO_MODE = true
-
-const DEMO_CATEGORIES: Category[] = [
-  { id: 'demo-cat-performance', project_id: 'demo', name: 'Performance', slug: 'performance', description: null, color: '#007aff', priority: 1, target_frequency: null, created_at: '2026-05-11T00:00:00Z', updated_at: '2026-05-11T00:00:00Z' },
-  { id: 'demo-cat-optimisation', project_id: 'demo', name: 'Optimisation', slug: 'optimisation', description: null, color: '#ff9500', priority: 2, target_frequency: null, created_at: '2026-05-11T00:00:00Z', updated_at: '2026-05-11T00:00:00Z' },
-  { id: 'demo-cat-ai', project_id: 'demo', name: 'IA & Rédaction', slug: 'ia-redaction', description: null, color: '#5856d6', priority: 3, target_frequency: null, created_at: '2026-05-11T00:00:00Z', updated_at: '2026-05-11T00:00:00Z' },
-  { id: 'demo-cat-seo', project_id: 'demo', name: 'SEO Technique', slug: 'seo-technique', description: null, color: '#34c759', priority: 4, target_frequency: null, created_at: '2026-05-11T00:00:00Z', updated_at: '2026-05-11T00:00:00Z' },
-]
-
 const TOP_ARTICLE_BAR_COLOR = '#8f63d8'
-
-function makeDemoArticle(index: number, title: string, categoryId: string, score: number, variationOffset = 0): Article {
-  return {
-    id: `demo-article-${index}`,
-    project_id: 'demo',
-    category_id: categoryId,
-    title,
-    slug: title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
-    status: index % 4 === 0 ? 'review_needed' : index % 3 === 0 ? 'writing_in_progress' : 'published',
-    keyword: index === 0 ? 'ROI contenu organique' : title.split(' ').slice(0, 3).join(' '),
-    content: null,
-    excerpt: null,
-    meta_title: null,
-    meta_description: null,
-    cover_image_url: null,
-    word_count: 720 + index * 95,
-    priority: index + 1,
-    seo_score: Math.max(48, score - variationOffset),
-    readability_score: Math.min(96, score + 6),
-    quality_score: Math.min(94, score + 2),
-    eeat_score: Math.min(92, score + 4),
-    readiness_status: null,
-    scheduled_at: null,
-    published_at: '2026-05-10T10:00:00Z',
-    angle: null,
-    search_intent: null,
-    opportunity_score: null,
-    audience: null,
-    rejection_reason: null,
-    rejection_note: null,
-    created_at: '2026-05-01T10:00:00Z',
-    updated_at: '2026-05-10T10:00:00Z',
-  }
-}
-
-const DEMO_ARTICLES: Article[] = [
-  makeDemoArticle(0, "Mesurer le ROI d'une stratégie de contenu organique", 'demo-cat-performance', 82),
-  makeDemoArticle(1, 'Audit SEO technique : la checklist 2026', 'demo-cat-seo', 91),
-  makeDemoArticle(2, 'Construire un dashboard éditorial orienté KPI SEO', 'demo-cat-performance', 74),
-  makeDemoArticle(3, 'Checklist de relecture pour contenu assisté par IA', 'demo-cat-ai', 79),
-  makeDemoArticle(4, '10 idées de contenu SaaS B2B à prioriser', 'demo-cat-optimisation', 62, 12),
-  makeDemoArticle(5, 'Maillage interne : bâtir un hub éditorial efficace', 'demo-cat-seo', 88),
-  makeDemoArticle(6, 'Optimiser un article SEO qui stagne', 'demo-cat-optimisation', 58, 10),
-]
 
 function categoryColor(category: Category | null | undefined, fallbackIndex = 0) {
   const palette = ['#007aff', '#34c759', '#ff9500', '#ff3b30', '#5856d6', '#00a7a7']
   return category?.color || palette[fallbackIndex % palette.length]
 }
 
-function periodDayCount(period: Period) {
-  if (period === '1d') return 1
-  if (period === '7d') return 7
-  if (period === '30d') return 30
-  if (period === '90d') return 90
-  if (period === '180d') return 180
-  return 365
-}
-
-function periodPointCount(period: Period) {
-  if (period === '1d') return 24
-  if (period === '7d') return 7
-  if (period === '30d') return 30
-  if (period === '90d') return 13
-  if (period === '180d') return 26
-  return 12
-}
-
-function buildWeights(count: number) {
-  return Array.from({ length: count }, (_, i) => {
-    const x = count === 1 ? 0 : i / (count - 1)
-    const growth = 0.86 + x * 0.32
-    const campaign = 0.2 * Math.exp(-Math.pow((x - 0.68) / 0.18, 2))
-    const rhythm = 0.12 * Math.sin(i * 1.7 + 0.6) + 0.06 * Math.cos(i * 0.73)
-    return Math.max(0.45, growth + campaign + rhythm)
-  })
-}
-
-function distributeTotal(total: number, count: number) {
-  const weights = buildWeights(count)
-  const weightTotal = weights.reduce((sum, value) => sum + value, 0)
-  let used = 0
-  return weights.map((weight, index) => {
-    if (index === weights.length - 1) return Math.max(0, total - used)
-    const value = Math.round((total * weight) / weightTotal)
-    used += value
-    return value
-  })
-}
-
-function formatPeriodDate(period: Period, index: number, count: number) {
-  if (period === '1d') return `${index.toString().padStart(2, '0')}h`
-  if (period === '90d' || period === '180d') return `S${index + 1}`
-  if (period === '365d') {
-    const months = ['Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.', 'Jan.', 'Fév.', 'Mar.', 'Avr.', 'Mai']
-    return months[index] ?? `M${index + 1}`
-  }
-  const base = new Date('2026-05-11')
-  const d = new Date(base)
-  d.setDate(base.getDate() - (count - 1 - index))
-  return d.toISOString().slice(0, 10)
-}
-
-function buildHourlyProfile(total = 1000) {
-  const weights = Array.from({ length: 24 }, (_, i) => {
-    const x = i / 23
-    const morning = 0.9 * Math.exp(-Math.pow((x - 0.34) / 0.15, 2))
-    const afternoon = 1.3 * Math.exp(-Math.pow((x - 0.58) / 0.17, 2))
-    const evening = 0.8 * Math.exp(-Math.pow((x - 0.82) / 0.12, 2))
-    const rhythm = 0.16 * Math.sin(x * Math.PI * 6 + 0.6)
-    return Math.max(0.08, 0.18 + morning + afternoon + evening + rhythm)
-  })
-  const weightTotal = weights.reduce((sum, value) => sum + value, 0)
-  let used = 0
-  return weights.map((weight, index) => {
-    if (index === weights.length - 1) return Math.max(0, total - used)
-    const value = Math.round((weight / weightTotal) * total)
-    used += value
-    return value
-  })
-}
-
-function buildPeriodTrend(period: Period, dailyBase: number): TrendPoint[] {
-  if (period === '1d') {
-    return buildHourlyProfile(dailyBase).map((views, i) => ({ date: formatPeriodDate(period, i, 24), views }))
-  }
-  const count = periodPointCount(period)
-  const total = dailyBase * periodDayCount(period)
-  const values = distributeTotal(total, count)
-  return values.map((views, index) => ({ date: formatPeriodDate(period, index, count), views }))
-}
-
-function normalizeTrend(period: Period, data: PerformanceSummary, demoMode: boolean): TrendPoint[] {
-  if (!demoMode || period !== '1d') return data.trend_by_day
-  if (data.trend_by_day.length <= 1) {
-    const hourly = buildPeriodTrend('1d', 1000)
-    const total = data.total_views || hourly.reduce((sum, point) => sum + point.views, 0)
-    const demoTotal = hourly.reduce((sum, point) => sum + point.views, 0)
-    return hourly.map((point) => ({ ...point, views: Math.max(0, Math.round((point.views / demoTotal) * total)) }))
-  }
-  return data.trend_by_day
-}
-
 function trendTick(period: Period, value: unknown) {
   const label = String(value)
   if (period === '1d' || period === '90d' || period === '180d' || period === '365d') return label
   return label.includes('-') ? label.slice(5) : label
-}
-
-function buildDemoData(period: Period): PerformanceSummary {
-  const trend_by_day = buildPeriodTrend(period, 1000)
-  const total_views = trend_by_day.reduce((sum, point) => sum + point.views, 0)
-  return {
-    period,
-    total_views,
-    unique_pages: Math.max(1, Math.floor(total_views * 0.58)),
-    trend_by_day,
-    top_pages: [
-      { path: '/blog/roi-contenu-organique', views: Math.floor(total_views * 0.24) },
-      { path: '/blog/audit-seo-technique', views: Math.floor(total_views * 0.18) },
-      { path: '/blog/dashboard-editorial-kpi', views: Math.floor(total_views * 0.14) },
-      { path: '/blog/checklist-relecture-ia', views: Math.floor(total_views * 0.10) },
-      { path: '/blog/maillage-interne', views: Math.floor(total_views * 0.08) },
-    ],
-    referrers: [],
-    countries: [],
-    devices: [],
-  }
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -329,10 +160,6 @@ function statusLabel(status: string) {
   return STATUS_LABELS[status] ?? status.replaceAll('_', ' ')
 }
 
-function wordCountToReadMinutes(wordCount: number) {
-  return Math.max(1, Math.round((wordCount || 0) / 220))
-}
-
 function compactArticleTitle(article: Article) {
   const text = `${article.keyword ?? ''} ${article.title}`.toLowerCase()
   if (text.includes('roi')) return 'ROI'
@@ -353,19 +180,14 @@ function buildArticleMetrics(
   articles: Article[],
   categories: Category[],
   perf: ArticlePerformanceBrief[],
-  demoMode: boolean,
-  period: Period,
 ): ArticleMetric[] {
   const perfById = new Map(perf.map((item) => [item.article_id, item]))
-  const periodScale = periodDayCount(period)
-  return articles.map((article, index) => {
+  return articles.map((article) => {
     const performance = perfById.get(article.id)
-    const views = demoMode
-      ? Math.max(8, Math.round(((articles.length - index) * 36 + Math.abs(Math.sin(index + 1)) * 42) * periodScale))
-      : performance?.views ?? 0
-    const variation = demoMode ? [24, 18, -12, 9, -18, 6, -7, 14][index % 8] : null
-    const engagement = demoMode ? Math.max(35, Math.min(92, Math.round((article.quality_score ?? 70) * 0.58 + (article.readability_score ?? 70) * 0.34))) : null
-    const averageTime = demoMode ? wordCountToReadMinutes(article.word_count) * 50 + index * 8 : null
+    const views = performance?.views ?? 0
+    const variation = null
+    const engagement = null
+    const averageTime = null
     const category = categories.find((cat) => cat.id === article.category_id) ?? null
     const base = { article, category, views, variation, engagement, averageTime, recommendation: 'Surveiller' }
     return { ...base, recommendation: getRecommendation(base) }
@@ -425,27 +247,13 @@ function TrendList({ title, items, type }: { title: string; items: ArticleMetric
   )
 }
 
-function KeywordOpportunities({ metrics, demoMode }: { metrics: ArticleMetric[]; demoMode: boolean }) {
-  const rows = metrics.filter((item) => item.article.keyword).slice(0, 5)
+function KeywordOpportunities() {
   return (
     <Card className="h-full">
       <SectionTitle>Mots-clés suivis</SectionTitle>
-      {rows.length && demoMode ? (
-        <div className="grid gap-2">
-          {rows.map((item, index) => (
-            <div key={item.article.id} className="grid gap-2 rounded-[12px] bg-[#f9f9fb] px-3 py-2 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-center">
-              <span className="text-[13px] font-medium text-primary">{item.article.keyword}</span>
-              <span className="truncate text-[12px] text-secondary">{item.article.title}</span>
-              <span className="text-[12px] text-tertiary">Position estimée {index + 4}</span>
-              <span className="text-[12px] font-semibold text-success">+{8 + index * 3}%</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="rounded-[12px] bg-[#f9f9fb] px-3 py-3 text-[13px] text-secondary">
-          Données mots-clés bientôt disponibles avec Search Console. Les mots-clés principaux des articles sont déjà prêts à être exploités.
-        </p>
-      )}
+      <p className="rounded-[12px] bg-[#f9f9fb] px-3 py-3 text-[13px] text-secondary">
+        Données mots-clés bientôt disponibles avec Search Console.
+      </p>
     </Card>
   )
 }
@@ -482,23 +290,22 @@ export default function PerformanceDashboardPage() {
     return () => { cancelled = true }
   }, [projectId, period])
 
-  const hasRealTraffic = data && (data.total_views > 0 || data.trend_by_day.length > 0)
-  const isDemoMode = DEMO_MODE || import.meta.env.DEV || !hasRealTraffic
-  const displayData = isDemoMode ? buildDemoData(period) : data
-  const displayCategories = isDemoMode ? DEMO_CATEGORIES : categories
-  const displayArticles = isDemoMode ? DEMO_ARTICLES : articles
+  const hasRealTraffic = Boolean(data && data.total_views > 0)
+  const displayData = data
+  const displayCategories = categories
+  const displayArticles = articles
   const articleMetrics = useMemo(
-    () => buildArticleMetrics(displayArticles, displayCategories, articlePerf, isDemoMode, period).sort((a, b) => b.views - a.views),
-    [displayArticles, displayCategories, articlePerf, isDemoMode, period],
+    () => buildArticleMetrics(displayArticles, displayCategories, articlePerf).sort((a, b) => b.views - a.views),
+    [displayArticles, displayCategories, articlePerf],
   )
-  const hasData = !!displayData && (isDemoMode || hasRealTraffic || articleMetrics.length > 0)
+  const hasData = !!displayData && hasRealTraffic
 
   if (loadStatus === 'loading') return <LoadingState />
   if (loadStatus === 'error') {
     return <ErrorState message="Impossible de charger les données de performance." onRetry={() => setLoadStatus('loading')} />
   }
 
-  const publishedCount = isDemoMode ? Math.max(1, Math.round(periodDayCount(period) * 0.42)) : articles.filter((article) => article.status === 'published').length
+  const publishedCount = articles.filter((article) => article.status === 'published').length
   const topArticle = articleMetrics[0]
   const optimizeItems = articleMetrics
     .filter((item) => item.recommendation !== 'Surveiller' || ((item.article.seo_score ?? 100) < 70 && item.views > 0))
@@ -520,7 +327,7 @@ export default function PerformanceDashboardPage() {
     .filter((row) => row.count > 0)
     .sort((a, b) => b.views - a.views)
   const totalArticleViews = articleMetrics.reduce((sum, item) => sum + item.views, 0)
-  const trendData = displayData ? normalizeTrend(period, displayData, isDemoMode) : []
+  const trendData = displayData?.trend_by_day ?? []
   const bestRiser = risingItems[0]
   const leaderCategory = categoryRows[0]
   const averageScore = scoreAverage(articleMetrics)
@@ -555,20 +362,20 @@ export default function PerformanceDashboardPage() {
             <Eye size={22} />
           </div>
           <div>
-            <p className="text-[15px] font-medium text-primary">Aucune performance exploitable</p>
+            <p className="text-[15px] font-medium text-primary">Aucune donnée disponible pour le moment</p>
             <p className="mt-1 max-w-xs text-[13px] text-secondary">
-              Les vues par article apparaîtront dès que le tracking aura collecté des visites.
+              Connectez votre site pour commencer à collecter les statistiques.
             </p>
           </div>
         </div>
       ) : (
         <div className="flex flex-col gap-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <StatCard icon={<Eye size={18} />} value={formatMetric(displayData.total_views)} label="Vues totales" variation={isDemoMode ? 12 : null} tone="accent" />
-            <StatCard icon={<Clock3 size={18} />} value={<DurationMetric seconds={averageReadSeconds} />} label="Temps moyen" variation={isDemoMode ? 4 : null} tone="violet" />
-            <StatCard icon={<FileText size={18} />} value={publishedCount} label="Articles publiés" variation={isDemoMode ? 8 : null} tone="success" />
-            <StatCard icon={<BarChart3 size={18} />} value={averageScore !== null ? <SplitMetric value={averageScore} suffix="/100" /> : '—'} label="Score éditorial moyen" variation={isDemoMode ? 6 : null} tone="warning" />
-            <StatCard icon={<AlertTriangle size={18} />} value={optimizeItems.length} label="Articles à optimiser" variation={isDemoMode ? -11 : null} tone="danger" />
+            <StatCard icon={<Eye size={18} />} value={formatMetric(displayData.total_views)} label="Vues totales" variation={null} tone="accent" />
+            <StatCard icon={<Clock3 size={18} />} value={<DurationMetric seconds={averageReadSeconds} />} label="Temps moyen" variation={null} tone="violet" />
+            <StatCard icon={<FileText size={18} />} value={publishedCount} label="Articles publiés" variation={null} tone="success" />
+            <StatCard icon={<BarChart3 size={18} />} value={averageScore !== null ? <SplitMetric value={averageScore} suffix="/100" /> : '—'} label="Score éditorial moyen" variation={null} tone="warning" />
+            <StatCard icon={<AlertTriangle size={18} />} value={optimizeItems.length} label="Articles à optimiser" variation={null} tone="danger" />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] lg:items-stretch">
@@ -595,8 +402,8 @@ export default function PerformanceDashboardPage() {
                 variation={bestRiser?.variation ?? null}
                 tone="success"
               />
-              <StatCard icon={<Sparkles size={18} />} value={averageEngagement !== null ? <SplitMetric value={averageEngagement} suffix="%" /> : '—'} label="Engagement" variation={isDemoMode ? 6 : null} tone="violet" />
-              <StatCard icon={<Tags size={18} />} value={leaderCategory ? formatMetric(leaderCategory.views) : '—'} label={leaderCategory ? `Catégorie : ${leaderCategory.category.name}` : 'Catégorie leader'} variation={isDemoMode ? 15 : null} tone="warning" />
+              <StatCard icon={<Sparkles size={18} />} value={averageEngagement !== null ? <SplitMetric value={averageEngagement} suffix="%" /> : '—'} label="Engagement" variation={null} tone="violet" />
+              <StatCard icon={<Tags size={18} />} value={leaderCategory ? formatMetric(leaderCategory.views) : '—'} label={leaderCategory ? `Catégorie : ${leaderCategory.category.name}` : 'Catégorie leader'} variation={null} tone="warning" />
             </div>
           </div>
 
@@ -665,7 +472,7 @@ export default function PerformanceDashboardPage() {
               </div>
             </Card>
             <div className="h-full">
-              <KeywordOpportunities metrics={articleMetrics} demoMode={isDemoMode} />
+              <KeywordOpportunities />
             </div>
           </div>
 
