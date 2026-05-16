@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from alembic.config import Config
+from alembic import command
 from app.core.config import settings
 from app.routers import auth, projects, health, categories, articles, public_api, tracking, ideas, seo, performance, recommendations, notifications, members, editor, versions, media, invitations, editorial_setup
 
@@ -8,6 +10,12 @@ app = FastAPI(
     description="Headless AI-assisted SEO CMS for coded blogs.",
     version="0.2.0",
 )
+
+
+@app.on_event("startup")
+def run_migrations():
+    alembic_cfg = Config("alembic.ini")
+    command.upgrade(alembic_cfg, "head")
 
 app.add_middleware(
     CORSMiddleware,
