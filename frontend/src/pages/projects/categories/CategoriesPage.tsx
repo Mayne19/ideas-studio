@@ -354,14 +354,14 @@ export default function CategoriesPage() {
     setSyncing(true)
     setSyncMessage('')
     try {
-      const result = await syncCategories(projectId)
-      setCategories(result)
-      setSyncMessage(`${result.length} catégorie${result.length > 1 ? 's' : ''} synchronisée${result.length > 1 ? 's' : ''}.`)
-    } catch {
-      setSyncMessage('Impossible de synchroniser les catégories.')
+      const { categories, message } = await syncCategories(projectId)
+      setCategories(categories)
+      setSyncMessage(message)
+    } catch (err) {
+      setSyncMessage(err instanceof Error ? err.message : 'Impossible de synchroniser les catégories.')
     } finally {
       setSyncing(false)
-      setTimeout(() => setSyncMessage(''), 3000)
+      setTimeout(() => setSyncMessage(''), 5000)
     }
   }
 

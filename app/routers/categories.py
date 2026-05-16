@@ -79,32 +79,48 @@ def sync_categories(
     member: ProjectMember = Depends(require_project_role(*_MANAGE_ROLES)),
     db: Session = Depends(get_db),
 ):
+    from fastapi.responses import JSONResponse
+
     project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Projet introuvable.")
+    if not project.domain:
+        raise HTTPException(status_code=400, detail="Aucun domaine configuré pour ce projet. Renseignez d'abord le domaine dans les paramètres.")
     synced: list[str] = []
 
     existing_slugs = {c.slug for c in get_categories_for_project(db, project_id)}
     existing_names = {c.name.lower() for c in get_categories_for_project(db, project_id)}
 
     # Step 1: fetch categories from the blog via its public API
+    blog_fetch_error = None
     if project and project.domain:
         url = f"https://{project.domain}/api/categories"
         try:
             resp = httpx.get(url, timeout=10)
             resp.raise_for_status()
             blog_categories = resp.json()
-            for cat in blog_categories:
-                name = cat.get("name", "").strip()
-                slug = cat.get("slug", "").strip()
-                if not name or not slug:
-                    continue
-                if name.lower() in existing_names or slug in existing_slugs:
-                    continue
-                create_category(db, CategoryCreate(name=name, slug=slug), project_id)
-                existing_names.add(name.lower())
-                existing_slugs.add(slug)
-                synced.append(name)
+            if not isinstance(blog_categories, list):
+                blog_fetch_error = f"L'API du site a répondu un format inattendu (attendu: liste, reçu: {type(blog_categories).__name__})"
+            else:
+                for cat in blog_categories:
+                    name = cat.get("name", "").strip()
+                    slug = cat.get("slug", "").strip()
+                    if not name or not slug:
+                        continue
+                    if name.lower() in existing_names or slug in existing_slugs:
+                        continue
+                    create_category(db, CategoryCreate(name=name, slug=slug), project_id)
+                    existing_names.add(name.lower())
+                    existing_slugs.add(slug)
+                    synced.append(name)
+                if not blog_categories:
+                    blog_fetch_error = "Aucune catégorie détectée sur le site connecté."
+        except httpx.TimeoutException:
+            blog_fetch_error = f"Impossible de joindre le site {project.domain} (timeout)."
+        except httpx.HTTPStatusError as e:
+            blog_fetch_error = f"L'API du site a retourné une erreur HTTP {e.response.status_code}."
         except Exception:
-            pass  # fallback to article-based sync below
+            blog_fetch_error = f"Erreur de connexion au site {project.domain}."
 
     # Step 2 (fallback): extract categories from existing articles
     articles = db.query(Article).filter(
@@ -127,7 +143,17 @@ def sync_categories(
         existing_slugs.add(new_slug)
         synced.append(name)
 
-    return get_categories_for_project(db, project_id)
+    categories = get_categories_for_project(db, project_id)
+
+    # If blog fetch failed and we have no categories at all, surface the error
+    if blog_fetch_error and not categories:
+        raise HTTPException(status_code=502, detail=blog_fetch_error)
+
+    return JSONResponse(
+        content=[CategoryPublic.model_validate(c).model_dump() for c in categories],
+        headers={"X-Sync-Message": f"{len(synced)} catégorie(s) importée(s)."} if synced else
+                {"X-Sync-Message": blog_fetch_error or "Aucune nouvelle catégorie détectée."},
+    )
 
 
 @router.delete("/categories/{category_id}", status_code=204)

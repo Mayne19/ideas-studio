@@ -9,12 +9,21 @@ def get_user_by_email(db: Session, email: str) -> User | None:
     return db.query(User).filter(User.email == email).first()
 
 
+def get_user_by_username(db: Session, username: str) -> User | None:
+    clean = username.strip().lstrip("@").lower()
+    return db.query(User).filter(User.username == clean).first()
+
+
 def create_user(db: Session, data: RegisterRequest) -> User:
-    user = User(
-        name=data.name,
-        email=data.email,
-        password_hash=hash_password(data.password),
-    )
+    kwargs = {
+        "name": data.name,
+        "email": data.email,
+        "password_hash": hash_password(data.password),
+    }
+    if data.username:
+        clean = data.username.strip().lstrip("@").lower()
+        kwargs["username"] = clean
+    user = User(**kwargs)
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -22,7 +31,16 @@ def create_user(db: Session, data: RegisterRequest) -> User:
 
 
 def update_user(db: Session, user: User, data: UserUpdate) -> User:
-    user.name = data.name
+    if data.name is not None:
+        user.name = data.name
+    if data.username is not None:
+        clean = data.username.strip().lstrip("@").lower()
+        # Check uniqueness
+        existing = db.query(User).filter(User.username == clean, User.id != user.id).first()
+        if existing:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=409, detail="Ce nom d'utilisateur est déjà pris.")
+        user.username = clean
     db.commit()
     db.refresh(user)
     return user

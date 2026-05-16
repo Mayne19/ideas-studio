@@ -1,5 +1,6 @@
 export type User = {
   id: string
+  username: string | null
   name: string
   email: string
   created_at: string
@@ -29,6 +30,7 @@ export type ProjectMember = {
   user_id: string
   user_name: string | null
   user_email: string | null
+  user_username: string | null
   role: ProjectRole
   status: string
   created_at: string
@@ -342,6 +344,21 @@ export type OptimizationRecommendation = {
   created_at: string
   updated_at: string
 }
+
+export type Invitation = {
+  id: string
+  project_id: string
+  email: string
+  role: string
+  token: string
+  invited_by_user_id: string
+  target_user_id: string | null
+  accepted_at: string | null
+  expires_at: string
+  created_at: string
+}
+
+export type InvitationCreateResult = Invitation
 
 export type Notification = {
   id: string

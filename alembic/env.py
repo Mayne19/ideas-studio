@@ -15,6 +15,7 @@ from app.models import category, article, traffic_event  # noqa: F401
 from app.models import article_log  # noqa: F401
 from app.models import seo_analysis  # noqa: F401
 from app.models import optimization_recommendation, notification  # noqa: F401
+from app.models import invitation  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)

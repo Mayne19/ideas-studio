@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   Activity,
+  AtSign,
   Crown,
   Edit2,
   Eye,
   FilePenLine,
-  Info,
+  Mail,
   Palette,
   PenLine,
   Shield,
@@ -14,7 +15,7 @@ import {
   UserPlus,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { listMembers, addMember, updateMemberRole, removeMember } from '@/api/members'
+import { listMembers, addMemberByUsername, inviteByEmail, updateMemberRole, removeMember } from '@/api/members'
 import type { ProjectMember, ProjectRole } from '@/types'
 import { useAuth } from '@/context/AuthContext'
 import { useProject } from '@/context/ProjectContext'
@@ -148,9 +149,9 @@ function MemberRow({
             {isSelf && <span className="ml-1 text-tertiary text-[11px]">(vous)</span>}
           </p>
         </div>
-        {member.user_email && member.user_name && (
-          <p className="text-[12px] text-tertiary truncate">{member.user_email}</p>
-        )}
+        <p className="text-[12px] text-tertiary truncate">
+          {member.user_username ? `@${member.user_username}` : member.user_email}
+        </p>
       </div>
       <RoleBadge role={member.role} />
       {canManage && !isOwnerMember && !isSelf && (
@@ -183,9 +184,11 @@ export default function ProjectMembersPage() {
   const [members, setMembers] = useState<ProjectMember[]>([])
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
 
-  // Add member modal
+  // Add member by username
   const [addOpen, setAddOpen] = useState(false)
-  const [addUserId, setAddUserId] = useState('')
+  const [addType, setAddType] = useState<'username' | 'email'>('username')
+  const [addUsername, setAddUsername] = useState('')
+  const [addEmail, setAddEmail] = useState('')
   const [addRole, setAddRole] = useState('writer')
   const [addError, setAddError] = useState('')
   const [adding, setAdding] = useState(false)
@@ -220,17 +223,26 @@ export default function ProjectMembersPage() {
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
-    if (!projectId || !addUserId.trim()) return
+    if (!projectId) return
     setAddError('')
     setAdding(true)
     try {
-      await addMember(projectId, addUserId.trim(), addRole)
+      if (addType === 'username' && addUsername.trim()) {
+        await addMemberByUsername(projectId, addUsername.trim(), addRole)
+      } else if (addType === 'email' && addEmail.trim()) {
+        await inviteByEmail(projectId, addEmail.trim(), addRole)
+      } else {
+        setAddError('Veuillez remplir le champ.')
+        setAdding(false)
+        return
+      }
       setAddOpen(false)
-      setAddUserId('')
+      setAddUsername('')
+      setAddEmail('')
       setAddRole('writer')
       loadMembers()
     } catch (err) {
-      setAddError(err instanceof Error ? err.message : 'Erreur lors de l\'ajout')
+      setAddError(err instanceof Error ? err.message : "Erreur lors de l'ajout")
     } finally {
       setAdding(false)
     }
@@ -379,7 +391,7 @@ export default function ProjectMembersPage() {
       {/* Add member modal */}
       <Modal
         open={addOpen}
-        onClose={() => { setAddOpen(false); setAddError(''); setAddUserId('') }}
+        onClose={() => { setAddOpen(false); setAddError(''); setAddUsername(''); setAddEmail('') }}
         title="Ajouter un membre"
         size="sm"
       >
@@ -390,49 +402,60 @@ export default function ProjectMembersPage() {
             </div>
           )}
 
-          {/* Email invitation — coming soon */}
-          <div className="rounded-[16px] bg-[#f9f9fb] px-4 py-3 flex flex-col gap-2">
-            <p className="text-[13px] font-medium text-primary">Invitation par email</p>
-            <p className="text-[12px] text-secondary leading-snug">
-              L'invitation par email sera disponible prochainement.
-            </p>
-            <input
-              type="email"
-              placeholder="collaborateur@example.com"
-              disabled
-              className="w-full rounded-[10px] border border-border bg-[#f0f0f2] px-3 py-2 text-[13px] text-tertiary opacity-50 cursor-not-allowed outline-none"
-            />
+          {/* Toggle between username and email */}
+          <div className="flex rounded-[10px] border border-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setAddType('username')}
+              className={`flex-1 px-3 py-2 text-[12px] font-medium transition-colors ${
+                addType === 'username'
+                  ? 'bg-accent text-white'
+                  : 'bg-[#f5f5f7] text-tertiary hover:text-secondary'
+              }`}
+            >
+              <AtSign size={13} className="inline mr-1" />
+              @username
+            </button>
+            <button
+              type="button"
+              onClick={() => setAddType('email')}
+              className={`flex-1 px-3 py-2 text-[12px] font-medium transition-colors ${
+                addType === 'email'
+                  ? 'bg-accent text-white'
+                  : 'bg-[#f5f5f7] text-tertiary hover:text-secondary'
+              }`}
+            >
+              <Mail size={13} className="inline mr-1" />
+              Email
+            </button>
           </div>
+
+          {addType === 'username' ? (
+            <Input
+              label="Nom d'utilisateur"
+              value={addUsername}
+              onChange={(e) => setAddUsername(e.target.value)}
+              placeholder="@pseudo"
+              hint="L'utilisateur doit déjà avoir un compte Ideas Studio."
+            />
+          ) : (
+            <Input
+              label="Adresse e-mail"
+              type="email"
+              value={addEmail}
+              onChange={(e) => setAddEmail(e.target.value)}
+              placeholder="collaborateur@example.com"
+              hint="Une invitation lui sera envoyée par email."
+            />
+          )}
 
           <Select
             label="Rôle"
             options={ASSIGNABLE_ROLES}
             value={addRole}
             onChange={(e) => setAddRole(e.target.value)}
-            hint="Le rôle Designer est préparé dans l'UI, mais pas encore assignable côté backend."
+            hint="Le rôle Designer n'est pas encore assignable."
           />
-
-          {/* Developer section — collapsible */}
-          <details className="rounded-[10px] border border-border">
-            <summary className="cursor-pointer px-3 py-2 text-[12px] font-medium text-tertiary hover:text-secondary transition-colors select-none">
-              Section développeur — ajouter par ID utilisateur
-            </summary>
-            <div className="px-3 pb-3 pt-2 flex flex-col gap-3">
-              <div className="flex items-start gap-2">
-                <Info size={12} className="mt-0.5 shrink-0 text-tertiary" />
-                <p className="text-[11px] text-tertiary leading-snug">
-                  L'utilisateur doit déjà avoir un compte Ideas Studio. L'ID se trouve dans son profil.
-                </p>
-              </div>
-              <Input
-                label="ID utilisateur"
-                value={addUserId}
-                onChange={(e) => setAddUserId(e.target.value)}
-                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                required={false}
-              />
-            </div>
-          </details>
 
           <div className="flex gap-2 pt-1">
             <Button
@@ -448,10 +471,12 @@ export default function ProjectMembersPage() {
               type="submit"
               size="sm"
               loading={adding}
-              disabled={!addUserId.trim()}
+              disabled={
+                addType === 'username' ? !addUsername.trim() : !addEmail.trim()
+              }
               className="flex-1 justify-center"
             >
-              Ajouter
+              {addType === 'username' ? 'Ajouter' : 'Inviter'}
             </Button>
           </div>
         </form>

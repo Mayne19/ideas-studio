@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { User, Mail, Camera, Check, Loader2, KeyRound, Moon } from 'lucide-react'
+import { User, Mail, Camera, Check, Loader2, AtSign, Moon } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useTheme } from '@/context/ThemeContext'
 import { api } from '@/api/client'
+import { checkUsername } from '@/api/auth'
 import Button from '@/components/ui/Button'
 import CopyButton from '@/components/ui/CopyButton'
 
@@ -10,6 +11,7 @@ export default function AccountPage() {
   const { user, refreshUser } = useAuth()
   const { isDark, toggleTheme } = useTheme()
   const [name, setName] = useState(user?.name ?? '')
+  const [username, setUsername] = useState(user?.username ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -25,12 +27,25 @@ export default function AccountPage() {
     setError('')
     setSaved(false)
     try {
-      await api.patch('/auth/me', { name: name.trim() })
+      const payload: Record<string, string> = { name: name.trim() }
+      if (username.trim()) {
+        const clean = username.trim().replace(/^@/, '')
+        const result = await checkUsername(clean)
+        if (!result.available && clean !== user?.username) {
+          setError('Ce nom d\'utilisateur est déjà pris.')
+          setSaving(false)
+          return
+        }
+        payload.username = clean
+      } else {
+        payload.username = ''
+      }
+      await api.patch('/auth/me', payload)
       await refreshUser()
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
-    } catch {
-      setError('Impossible de sauvegarder les modifications.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Impossible de sauvegarder les modifications.')
     } finally {
       setSaving(false)
     }
@@ -90,14 +105,22 @@ export default function AccountPage() {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-[12px] font-medium text-secondary">ID utilisateur</label>
-          <div className="flex flex-wrap items-center gap-2 rounded-[10px] border border-border bg-[#f5f5f7] px-3 py-2">
-            <KeyRound size={14} className="text-tertiary shrink-0" />
-            <span className="min-w-0 flex-1 break-all text-[12px] text-secondary">{user?.id}</span>
-            <CopyButton value={user?.id ?? ''} label="Copier l'ID" />
+          <label className="text-[12px] font-medium text-secondary">Nom d'utilisateur</label>
+          <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+            <AtSign size={14} className="text-tertiary shrink-0" />
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="votre-pseudo"
+              className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+            />
+            {user?.username && (
+              <CopyButton value={`@${user.username}`} label="Copier mon @username" />
+            )}
           </div>
           <p className="text-[11px] text-tertiary">
-            Cet ID permet à un autre administrateur de vous ajouter à son projet.
+            Les autres membres peuvent vous ajouter avec @{username || 'votre-pseudo'}.
           </p>
         </div>
 

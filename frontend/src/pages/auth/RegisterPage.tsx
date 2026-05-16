@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
+import { checkUsername } from '@/api/auth'
 import AuthLayout from '@/components/layout/AuthLayout'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
@@ -9,6 +10,7 @@ export default function RegisterPage() {
   const { register, user } = useAuth()
   const navigate = useNavigate()
   const [name, setName] = useState('')
+  const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -26,9 +28,17 @@ export default function RegisterPage() {
       setError('Le mot de passe doit contenir au moins 8 caractères.')
       return
     }
+    if (username.trim()) {
+      const clean = username.trim().replace(/^@/, '')
+      const result = await checkUsername(clean)
+      if (!result.available) {
+        setError('Ce nom d\'utilisateur est déjà pris.')
+        return
+      }
+    }
     setLoading(true)
     try {
-      await register(name, email, password)
+      await register(name, email, password, username.trim().replace(/^@/, '') || undefined)
       navigate('/projects', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la création du compte')
@@ -62,6 +72,15 @@ export default function RegisterPage() {
           required
           autoComplete="name"
           autoFocus
+        />
+        <Input
+          label="Nom d'utilisateur"
+          type="text"
+          placeholder="@votre-pseudo"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          autoComplete="username"
+          hint="Lettres, chiffres et tirets bas. Optionnel."
         />
         <Input
           label="Adresse e-mail"

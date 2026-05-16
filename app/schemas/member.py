@@ -33,6 +33,7 @@ class MemberPublic(BaseModel):
     user_id: str
     user_name: Optional[str] = None
     user_email: Optional[str] = None
+    user_username: Optional[str] = None
     role: str
     status: str
     created_at: datetime
