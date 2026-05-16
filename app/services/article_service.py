@@ -9,6 +9,7 @@ from app.models.optimization_recommendation import OptimizationRecommendation
 from app.models.seo_analysis import SeoAnalysis
 from app.schemas.article import ArticleCreate, ArticleUpdate, ArticlePublicApiResponse, CategoryBrief
 from app.core.utils import slugify, generate_unique_slug, calculate_word_count
+from app.services.callout_template_service import extract_callouts_from_content
 
 
 def _unique_slug(db: Session, project_id: str, title: str, exclude_id: str | None = None) -> str:
@@ -84,6 +85,7 @@ def update_article(db: Session, article: Article, data: ArticleUpdate) -> Articl
         setattr(article, field, value)
     if "content" in update_dict:
         article.word_count = calculate_word_count(article.content)
+        article.callouts_json = extract_callouts_from_content(article.content)
     db.commit()
     db.refresh(article)
     return article
@@ -188,6 +190,7 @@ def _to_public_response(article: Article, category: Category | None) -> ArticleP
         author_name=article.author_name,
         reading_time_minutes=article.reading_time_minutes,
         faq_json=article.faq_json,
+        callouts_json=article.callouts_json,
         published_at=article.published_at,
         updated_at=article.updated_at,
     )

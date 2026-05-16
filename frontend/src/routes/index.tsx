@@ -29,6 +29,7 @@ const TrafficPage = lazy(() => import('@/pages/projects/traffic/TrafficPage'))
 const NotificationsPage = lazy(() => import('@/pages/projects/notifications/NotificationsPage'))
 const ProjectStrategyPage = lazy(() => import('@/pages/projects/settings/ProjectStrategyPage'))
 const ProjectProvidersPage = lazy(() => import('@/pages/projects/settings/ProjectProvidersPage'))
+const ProjectCalloutsPage = lazy(() => import('@/pages/projects/settings/ProjectCalloutsPage'))
 const MediaPage = lazy(() => import('@/pages/projects/media/MediaPage'))
 const AccountPage = lazy(() => import('@/pages/account/AccountPage'))
 
@@ -144,6 +145,14 @@ export const router = createBrowserRouter([
           {
             path: 'integration',
             element: <ProjectIntegrationPage />,
+          },
+          {
+            path: 'callouts',
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <ProjectCalloutsPage />
+              </Suspense>
+            ),
           },
         ],
       },

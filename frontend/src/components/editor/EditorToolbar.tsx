@@ -23,7 +23,8 @@ import {
   StickyNote,
 } from 'lucide-react'
 import { uploadMedia } from '@/api/media'
-import type { CalloutType } from '@/lib/tiptap/CalloutExtension'
+import type { CalloutAttrs } from '@/lib/tiptap/CalloutExtension'
+import type { CalloutTemplate } from '@/types'
 
 type PopoverKind = 'callout' | 'link' | 'table' | 'image'
 type SavedRange = { from: number; to: number }
@@ -68,11 +69,13 @@ export default function EditorToolbar({
   editor,
   projectId,
   articleId,
+  calloutTemplates = [],
   disabled = false,
 }: {
   editor: Editor | null
   projectId?: string
   articleId?: string
+  calloutTemplates?: CalloutTemplate[]
   disabled?: boolean
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
@@ -87,7 +90,8 @@ export default function EditorToolbar({
   const [tableHeader, setTableHeader] = useState(true)
   const [imageUrl, setImageUrl] = useState('')
   const [imageAlt, setImageAlt] = useState('')
-  const [calloutType, setCalloutType] = useState<CalloutType>('info')
+  const [selectedCalloutId, setSelectedCalloutId] = useState('')
+  const [calloutTitle, setCalloutTitle] = useState('')
   const [selVersion, setSelVersion] = useState(0)
 
   useEffect(() => {
@@ -119,6 +123,42 @@ export default function EditorToolbar({
 
   function escapeAttr(value: string): string {
     return escapeHtml(value).replace(/'/g, '&#39;')
+  }
+
+  function selectedCalloutTemplate() {
+    return calloutTemplates.find((template) => template.id === selectedCalloutId) ?? calloutTemplates[0] ?? null
+  }
+
+  function attrsFromTemplate(template: CalloutTemplate | null, title: string): CalloutAttrs {
+    const style = template?.style ?? template?.slug ?? 'info'
+    return {
+      'data-block-type': 'callout',
+      'data-callout-style': style,
+      'data-callout-type': style,
+      'data-template-id': template?.id ?? '',
+      'data-template-key': template?.slug ?? '',
+      'data-callout-label': template?.label ?? '',
+      'data-callout-title': title.trim(),
+      'data-callout-icon': template?.icon ?? '',
+      'data-callout-class-name': template?.class_name ?? '',
+      'data-color-background': template?.color_background ?? '',
+      'data-color-border': template?.color_border ?? '',
+      'data-color-text': template?.color_text ?? '',
+    }
+  }
+
+  function buildCalloutHtml(template: CalloutTemplate, title: string, bodyHtml: string) {
+    const attrs = attrsFromTemplate(template, title)
+    const serializedAttrs = Object.entries(attrs)
+      .filter(([, value]) => value !== undefined && value !== null && value !== '')
+      .map(([key, value]) => ` ${key}="${escapeAttr(String(value))}"`)
+      .join('')
+    return [
+      `<div${serializedAttrs}>`,
+      title.trim() ? `<div class="callout-title" contenteditable="false">${escapeHtml(title.trim())}</div>` : '',
+      `<div class="callout-body">${bodyHtml}</div>`,
+      '</div>',
+    ].join('')
   }
 
   function normalizeUrl(value: string): string {
@@ -199,12 +239,29 @@ export default function EditorToolbar({
   }
 
   function openCalloutPopover(event: React.MouseEvent<HTMLButtonElement>) {
-    setCalloutType('info')
+    const attrs = editor!.getAttributes('callout') as Record<string, string | undefined>
+    const activeTemplateId = attrs['data-template-id']
+    const fallbackTemplate = calloutTemplates[0]?.id ?? ''
+    setSelectedCalloutId(activeTemplateId || fallbackTemplate)
+    const matchingTemplate = calloutTemplates.find((template) => template.id === activeTemplateId) ?? calloutTemplates[0]
+    setCalloutTitle(attrs['data-callout-title'] || matchingTemplate?.default_title || matchingTemplate?.label || '')
     placePopover(event, 'callout')
   }
 
   function insertCallout() {
-    editor!.chain().focus().toggleCallout(calloutType).run()
+    const template = selectedCalloutTemplate()
+    if (!template) return
+    const attrs = attrsFromTemplate(template, calloutTitle || template.default_title || template.label)
+    if (editor!.isActive('callout')) {
+      editor!.chain().focus().updateAttributes('callout', attrs).run()
+      setActivePopover(null)
+      return
+    }
+
+    const { from, to, empty } = editor!.state.selection
+    const selectedText = empty ? '' : editor!.state.doc.textBetween(from, to, ' ').trim()
+    const bodyHtml = selectedText ? `<p>${escapeHtml(selectedText)}</p>` : '<p>Texte du callout</p>'
+    editor!.chain().focus().insertContent(buildCalloutHtml(template, calloutTitle || template.default_title || template.label || '', bodyHtml)).run()
     setActivePopover(null)
   }
 
@@ -265,7 +322,7 @@ export default function EditorToolbar({
       <ToolBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Citation">
         <Quote size={15} />
       </ToolBtn>
-      <ToolBtn onClick={openCalloutPopover} active={editor.isActive('callout')} title="Callout">
+      <ToolBtn onClick={openCalloutPopover} active={editor.isActive('callout')} disabled={calloutTemplates.length === 0} title={calloutTemplates.length === 0 ? 'Aucun callout configure' : 'Callout'}>
         <StickyNote size={15} />
       </ToolBtn>
       <ToolBtn onClick={() => editor.chain().focus().toggleCodeBlock().run()} active={editor.isActive('codeBlock')} title="Code block">
@@ -399,36 +456,60 @@ export default function EditorToolbar({
           {activePopover === 'callout' && (
             <div className="relative flex flex-col gap-2">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary">Callout</p>
-              <div className="flex flex-col gap-1">
-                {([
-                  { value: 'info', label: 'Info', color: '#3b82f6' },
-                  { value: 'conseil', label: 'Conseil', color: '#10b981' },
-                  { value: 'attention', label: 'Attention', color: '#f59e0b' },
-                  { value: 'erreur', label: 'Erreur', color: '#ef4444' },
-                  { value: 'succes', label: 'Succès', color: '#8b5cf6' },
-                ] as const).map(({ value, label, color }) => (
+              {calloutTemplates.length === 0 ? (
+                <p className="text-[12px] leading-snug text-secondary">
+                  Aucun template disponible. Creez ou importez des callouts dans les parametres du projet.
+                </p>
+              ) : (
+                <>
+                  <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                    Titre
+                    <input
+                      value={calloutTitle}
+                      onChange={(event) => setCalloutTitle(event.target.value)}
+                      placeholder="Titre du callout"
+                      className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
+                    />
+                  </label>
+                  <div className="flex flex-col gap-1">
+                    {calloutTemplates.map((template) => (
                   <button
-                    key={value}
+                    key={template.id}
                     type="button"
-                    onClick={() => setCalloutType(value)}
+                    onClick={() => {
+                      setSelectedCalloutId(template.id)
+                      setCalloutTitle((current) => current || template.default_title || template.label)
+                    }}
                     className={`flex items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-[12px] transition-colors ${
-                      calloutType === value
+                      selectedCalloutId === template.id
                         ? 'bg-accent/8 text-accent font-medium'
                         : 'text-secondary hover:bg-[#f5f5f7]'
                     }`}
                   >
                     <span
                       className="h-2.5 w-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: color }}
+                      style={{ backgroundColor: template.color_border ?? '#3b82f6' }}
                     />
-                    {label}
+                    <span className="flex-1 text-left">{template.label}</span>
+                    <span className="text-[10px] uppercase tracking-wide opacity-70">{template.style ?? template.slug}</span>
                   </button>
-                ))}
-              </div>
+                    ))}
+                  </div>
+                </>
+              )}
               <div className="flex items-center justify-end gap-2 pt-1">
+                {editor.isActive('callout') && (
+                  <button
+                    type="button"
+                    onClick={() => { editor.chain().focus().unsetCallout().run(); setActivePopover(null) }}
+                    className="rounded-[8px] px-2 py-1 text-[12px] font-medium text-danger hover:bg-danger/5"
+                  >
+                    Retirer
+                  </button>
+                )}
                 <button type="button" onClick={() => setActivePopover(null)} className="text-[12px] text-tertiary hover:text-secondary">Annuler</button>
-                <button type="button" onClick={insertCallout} className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-medium text-white">
-                  Insérer
+                <button type="button" onClick={insertCallout} disabled={calloutTemplates.length === 0} className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-medium text-white disabled:opacity-40">
+                  {editor.isActive('callout') ? 'Mettre a jour' : 'Inserer'}
                 </button>
               </div>
             </div>

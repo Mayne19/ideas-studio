@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from alembic.config import Config
 from alembic import command
 from app.core.config import settings
-from app.routers import auth, projects, health, categories, articles, public_api, tracking, ideas, seo, performance, recommendations, notifications, members, editor, versions, media, invitations, editorial_setup
+from app.routers import auth, projects, health, categories, articles, public_api, tracking, ideas, seo, performance, recommendations, notifications, members, editor, versions, media, invitations, editorial_setup, callouts
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -29,6 +29,7 @@ app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(projects.router)
 app.include_router(categories.router)
+app.include_router(callouts.router)
 app.include_router(articles.router)
 app.include_router(public_api.router)
 app.include_router(tracking.router)

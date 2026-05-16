@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
-import { Code2, Eye, EyeOff, Globe, Key, Power, RefreshCw, Wifi, WifiOff } from 'lucide-react'
+import { Code2, Globe, Key, Power, RefreshCw, Wifi, WifiOff } from 'lucide-react'
 import { getConnectInfo, disconnectProject } from '@/api/projects'
 import type { ConnectInfo } from '@/types'
 import FormCard from '@/components/ui/FormCard'
@@ -48,7 +48,6 @@ export default function ProjectIntegrationPage() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [refreshState, setRefreshState] = useState<'idle' | 'success' | 'error'>('idle')
-  const [isApiKeyVisible, setIsApiKeyVisible] = useState(false)
   const [showInstructions, setShowInstructions] = useState(false)
   const [disconnectOpen, setDisconnectOpen] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
@@ -103,9 +102,6 @@ export default function ProjectIntegrationPage() {
   if (status === 'error') return <ErrorState onRetry={loadInfo} />
 
   const isConnected = info?.status === 'connected'
-  const apiKey = info?.secret_api_key ?? ''
-  const apiKeyDisplay = isApiKeyVisible && apiKey ? apiKey : API_KEY_MASK
-  const hasApiKey = Boolean(apiKey)
   const hasInstructionsVisible = !isConnected || showInstructions
 
   return (
@@ -193,19 +189,7 @@ export default function ProjectIntegrationPage() {
           />
           <InfoRow
             label="Clé API (masquée)"
-            value={apiKeyDisplay}
-            copyValue={apiKey}
-            canCopy={hasApiKey}
-            action={(
-              <button
-                onClick={() => setIsApiKeyVisible((visible) => !visible)}
-                disabled={!hasApiKey}
-                className="inline-flex items-center gap-1.5 rounded-[8px] bg-[#f0f0f2] px-3 py-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-[#e5e5e7] hover:text-primary disabled:cursor-not-allowed disabled:text-tertiary disabled:opacity-60"
-              >
-                {isApiKeyVisible ? <EyeOff size={12} /> : <Eye size={12} />}
-                {isApiKeyVisible ? 'Masquer' : 'Révéler'}
-              </button>
-            )}
+            value={info?.secret_api_key_masked ?? API_KEY_MASK}
           />
         </div>
       </FormCard>
@@ -297,7 +281,7 @@ export default function ProjectIntegrationPage() {
       <div className="flex items-start gap-2.5 rounded-[16px] bg-[#f9f9fb] px-4 py-3">
         <Key size={14} className="mt-0.5 shrink-0 text-tertiary" />
         <p className="text-[12px] text-secondary leading-relaxed">
-          La clé API secrète est masquée par défaut et ne s'affiche en clair que lorsque vous cliquez sur Révéler. Contactez un administrateur si vous avez besoin de la réinitialiser.
+          La clé API secrète n'est jamais renvoyée en clair au frontend. Utilisez uniquement les valeurs publiques pour le tracking et contactez un administrateur si une rotation de clé est nécessaire.
         </p>
       </div>
 

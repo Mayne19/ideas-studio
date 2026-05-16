@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { getEditorArticle, autosaveArticle } from '@/api/editor'
 import { listCategories } from '@/api/categories'
+import { listCalloutTemplates } from '@/api/callouts'
 import { listMembers } from '@/api/members'
 import {
   createComment,
@@ -33,7 +34,7 @@ import {
   publishArticle, unpublishArticle, markReadyArticle, archiveArticle, scheduleArticle,
 } from '@/api/articles'
 import { ApiError } from '@/api/client'
-import type { EditorArticle, Category, ProjectMember, SeoAnalysis, ReadyCheck } from '@/types'
+import type { EditorArticle, Category, ProjectMember, SeoAnalysis, ReadyCheck, CalloutTemplate } from '@/types'
 import EditorToolbar from '@/components/editor/EditorToolbar'
 import AutosaveIndicator from '@/components/editor/AutosaveIndicator'
 import SeoPanel from '@/components/editor/SeoPanel'
@@ -232,6 +233,7 @@ export default function ArticleEditorPage() {
   const [metaFields, setMetaFields] = useState<MetaFields>(EMPTY_META)
   const [coverImageUrl, setCoverImageUrl] = useState('')
   const [categories, setCategories] = useState<Category[]>([])
+  const [calloutTemplates, setCalloutTemplates] = useState<CalloutTemplate[]>([])
   const [members, setMembers] = useState<ProjectMember[]>([])
   const [selectedAuthorId, setSelectedAuthorId] = useState('')
   const [manualAuthorName, setManualAuthorName] = useState('')
@@ -473,10 +475,12 @@ export default function ArticleEditorPage() {
     Promise.all([
       getEditorArticle(projectId, articleId),
       listCategories(projectId),
+      listCalloutTemplates(projectId).catch(() => [] as CalloutTemplate[]),
       listMembers(projectId).catch(() => [] as ProjectMember[]),
     ])
-      .then(([art, cats, mems]) => {
+      .then(([art, cats, callouts, mems]) => {
         setCategories(cats)
+        setCalloutTemplates(callouts)
         setMembers(mems)
         setLatestSeoAnalysis(null)
         setLatestReadyCheck(null)
@@ -946,7 +950,13 @@ export default function ArticleEditorPage() {
 
           {/* ── LEFT: Toolbar card ── */}
           <div className="sticky top-0 flex max-h-[calc(100vh-112px)] min-w-0 flex-col overflow-y-auto rounded-[14px] border border-border bg-surface">
-            <EditorToolbar editor={editor} projectId={projectId} articleId={articleId} disabled={viewMode !== 'edit'} />
+            <EditorToolbar
+              editor={editor}
+              projectId={projectId}
+              articleId={articleId}
+              calloutTemplates={calloutTemplates}
+              disabled={viewMode !== 'edit'}
+            />
           </div>
 
           {/* ── CENTER: Article card ── */}

@@ -16,6 +16,7 @@ export default function SettingsLayout() {
     { label: 'Stratégie', description: 'Audience et ton éditorial', to: `/projects/${projectId}/settings/strategy` },
     { label: 'Équipe', description: 'Membres, rôles et accès', to: `/projects/${projectId}/settings/team` },
     { label: 'Intégration', description: 'Site connecté et API', to: `/projects/${projectId}/settings/integration` },
+    { label: 'Callouts', description: 'Templates importés et manuels', to: `/projects/${projectId}/settings/callouts` },
     { label: 'Providers', description: 'Services IA et connecteurs', to: `/projects/${projectId}/settings/providers` },
     { label: 'Profil', description: 'Compte utilisateur', to: `/account` },
   ]

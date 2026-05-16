@@ -45,7 +45,6 @@ class ProjectConnectInfo(BaseModel):
     domain: Optional[str]
     status: str
     public_tracking_key: str
-    secret_api_key: Optional[str] = None
     secret_api_key_masked: str
     connected_at: Optional[datetime] = None
     last_seen_at: Optional[datetime] = None

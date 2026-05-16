@@ -41,7 +41,6 @@ export type ConnectInfo = {
   domain: string | null
   status: string
   public_tracking_key: string
-  secret_api_key: string | null
   secret_api_key_masked: string
   connected_at: string | null
   last_seen_at: string | null
@@ -160,6 +159,25 @@ export type Category = {
   color: string | null
   priority: number
   target_frequency: number | null
+  created_at: string
+  updated_at: string
+}
+
+export type CalloutTemplate = {
+  id: string
+  project_id: string
+  slug: string
+  label: string
+  style: string | null
+  default_title: string | null
+  color_background: string | null
+  color_border: string | null
+  color_text: string | null
+  icon: string | null
+  source: 'imported' | 'manual' | string
+  external_id: string | null
+  class_name: string | null
+  settings_json: string | null
   created_at: string
   updated_at: string
 }

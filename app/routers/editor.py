@@ -9,6 +9,7 @@ from app.models.article import Article, WRITER_EDITABLE_STATUSES
 from app.models.seo_analysis import SeoAnalysis
 from app.models.user import User
 from app.schemas.editor import AutosaveRequest, AutosaveResponse, EditorData, AnalysisBrief, PreviewResponse
+from app.services.callout_template_service import extract_callouts_from_content
 from app.services.version_service import create_version, is_duplicate_autosave
 
 router = APIRouter(tags=["editor"])
@@ -119,6 +120,7 @@ def autosave_article(
 
     if "content" in data:
         article.word_count = calculate_word_count(article.content)
+        article.callouts_json = extract_callouts_from_content(article.content)
 
     article.updated_at = datetime.now(timezone.utc)
     db.commit()

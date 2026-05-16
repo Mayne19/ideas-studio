@@ -105,5 +105,6 @@ class ArticlePublicApiResponse(BaseModel):
     author_name: Optional[str] = None
     reading_time_minutes: Optional[int] = None
     faq_json: Optional[str] = None
+    callouts_json: Optional[str] = None
     published_at: Optional[datetime]
     updated_at: datetime
