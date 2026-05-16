@@ -184,6 +184,7 @@ def _to_public_response(article: Article, category: Category | None) -> ArticleP
         cover_image_url=article.cover_image_url,
         author_name=article.author_name,
         reading_time_minutes=article.reading_time_minutes,
+        faq_json=article.faq_json,
         published_at=article.published_at,
         updated_at=article.updated_at,
     )

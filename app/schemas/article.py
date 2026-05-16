@@ -104,5 +104,6 @@ class ArticlePublicApiResponse(BaseModel):
     cover_image_url: Optional[str]
     author_name: Optional[str] = None
     reading_time_minutes: Optional[int] = None
+    faq_json: Optional[str] = None
     published_at: Optional[datetime]
     updated_at: datetime
