@@ -37,16 +37,10 @@ def _is_valid_hex(v: str | None) -> bool:
 
 def _build_api_url(raw_domain: str, path: str = "/api/categories") -> str:
     domain = raw_domain.strip()
-    # Remove protocol prefix if present
     if "://" in domain:
         domain = domain.split("://", 1)[1]
-    # Remove trailing slash
     domain = domain.rstrip("/")
-    # Remove leading slash (shouldn't happen, but be safe)
     domain = domain.lstrip("/")
-    # Remove www. prefix
-    domain = domain.removeprefix("www.")
-    # Ensure path starts with /
     clean_path = path if path.startswith("/") else f"/{path}"
     return f"https://{domain}{clean_path}"
 
@@ -111,14 +105,9 @@ def sync_categories(
     if not project:
         raise HTTPException(status_code=404, detail="Projet introuvable.")
     if not project.domain:
-        raise HTTPException(status_code=400, detail="Aucun domaine configuré pour ce projet. Renseignez d'abord le domaine dans les paramètres.")
+        raise HTTPException(status_code=400, detail="Aucun domaine configure pour ce projet. Renseignez d'abord le domaine dans les parametres.")
 
     url = _build_api_url(project.domain)
-    domain_clean = project.domain.strip().rstrip("/")
-    if "://" in domain_clean:
-        domain_clean = domain_clean.split("://", 1)[1]
-    domain_clean = domain_clean.removeprefix("www.")
-    logger.info("Sync categories — project_id=%s domain=%s url=%s", project_id, domain_clean, url)
 
     synced: list[str] = []
     blog_fetch_error: str | None = None
@@ -127,33 +116,43 @@ def sync_categories(
     existing = get_categories_for_project(db, project_id)
     existing_slugs = {c.slug for c in existing}
     existing_names = {c.name.lower() for c in existing}
-    # Map slug -> existing category to preserve manually set colors
     existing_by_slug: dict[str, Category] = {c.slug: c for c in existing}
 
     # Step 1: fetch categories from the blog via its public API
     try:
-        resp = httpx.get(url, timeout=10)
-        logger.info("Sync categories — HTTP %s for %s", resp.status_code, url)
+        resp = httpx.get(url, timeout=10, follow_redirects=True)
+        body_preview = (resp.text[:500] if resp.text else "(empty)")
+        logger.info(
+            "Sync categories — project_id=%s domain=%s url=%s status=%s body_preview=%s",
+            project_id, project.domain, url, resp.status_code, body_preview,
+        )
         resp.raise_for_status()
         blog_categories_raw = resp.json()
+        logger.info(
+            "Sync categories — parsed project_id=%s type=%s count=%s",
+            project_id, type(blog_categories_raw).__name__,
+            len(blog_categories_raw) if isinstance(blog_categories_raw, list) else "N/A",
+        )
     except httpx.TimeoutException:
-        blog_fetch_error = "Impossible de contacter le site connecté. (timeout)"
+        blog_fetch_error = "Impossible de contacter le site connecte. (timeout)"
         logger.warning("Sync categories — timeout project_id=%s url=%s", project_id, url)
     except httpx.HTTPStatusError as e:
-        blog_fetch_error = f"Impossible de contacter le site connecté. (HTTP {e.response.status_code})"
+        blog_fetch_error = f"Impossible de contacter le site connecte. (HTTP {e.response.status_code})"
         logger.warning("Sync categories — HTTP error project_id=%s url=%s status=%s", project_id, url, e.response.status_code)
     except Exception as e:
-        blog_fetch_error = "Impossible de contacter le site connecté."
+        blog_fetch_error = "Impossible de contacter le site connecte."
         logger.warning("Sync categories — connection error project_id=%s url=%s error=%s", project_id, url, e)
 
     if not isinstance(blog_categories_raw, list):
         if blog_categories_raw:
             logger.warning("Sync categories — invalid format project_id=%s type=%s raw=%s", project_id, type(blog_categories_raw).__name__, blog_categories_raw)
-            blog_fetch_error = f"L'API du site a répondu un format inattendu (attendu: liste, reçu: {type(blog_categories_raw).__name__})"
+            blog_fetch_error = f"L'API du site a repondu un format inattendu (attendu: liste, recu: {type(blog_categories_raw).__name__})"
         blog_categories_raw = []
     elif not blog_categories_raw:
-        blog_fetch_error = "Aucune catégorie détectée sur le site connecté."
-        logger.info("Sync categories — empty list project_id=%s", project_id)
+        blog_fetch_error = "Aucune categorie detectee sur le site connecte."
+        logger.info("Sync categories — empty list project_id=%s url=%s", project_id, url)
+
+    logger.info("Sync categories — after parse project_id=%s blog_categories_raw_len=%s blog_fetch_error=%s", project_id, len(blog_categories_raw), blog_fetch_error)
 
     for cat in blog_categories_raw:
         name = (cat.get("name") or "").strip()
@@ -205,6 +204,8 @@ def sync_categories(
             synced.append(name)
             logger.info("Sync categories — fallback imported slug=%s name=%s color=%s", new_slug, name, color or _DEFAULT_COLOR)
 
+    logger.info("Sync categories — imported project_id=%s count=%d", project_id, len(synced))
+
     if synced:
         db.commit()
 
@@ -217,14 +218,14 @@ def sync_categories(
     message = ""
     if synced:
         count = len(synced)
-        message = f"{count} catégorie{'s' if count > 1 else ''} synchronisée{'s' if count > 1 else ''}."
+        message = f"{count} categorie(s) synchronisee(s)."
     elif blog_fetch_error:
         message = blog_fetch_error
     else:
-        message = "Aucune nouvelle catégorie détectée."
+        message = "Aucune nouvelle categorie detectee."
 
     return JSONResponse(
-        content=[CategoryPublic.model_validate(c).model_dump() for c in categories],
+        content=[CategoryPublic.model_validate(c).model_dump(mode="json") for c in categories],
         headers={"X-Sync-Message": message},
     )
 

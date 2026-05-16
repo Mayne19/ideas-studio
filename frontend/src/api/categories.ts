@@ -53,6 +53,6 @@ export async function syncCategories(projectId: string): Promise<SyncResult> {
   }
 
   const categories: Category[] = await res.json()
-  const message = res.headers.get('X-Sync-Message') || `${categories.length} catégorie(s) synchronisée(s).`
+  const message = res.headers.get('X-Sync-Message') || `${categories.length} categorie(s) synchronisee(s).`
   return { categories, message }
 }

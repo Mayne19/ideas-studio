@@ -1,3 +1,4 @@
+from unittest.mock import patch, MagicMock
 from tests.conftest import register_and_login
 
 
@@ -81,3 +82,112 @@ def test_delete_empty_category(client):
     ).json()
     resp = client.delete(f"/categories/{cat['id']}", headers=headers)
     assert resp.status_code == 204
+
+
+def _mock_httpx_get(data: list[dict], status_code: int = 200):
+    mock = MagicMock()
+    mock.status_code = status_code
+    mock.text = str(data)
+    mock.json.return_value = data
+    return mock
+
+
+def test_sync_categories_imports_colors(client):
+    """Blog returns a direct array with slug/name/color → all imported."""
+    headers = register_and_login(client)
+    project = _create_project(client, headers)
+    pid = project["id"]
+    # Set a domain so sync can build an API URL
+    client.patch(f"/projects/{pid}", json={"domain": "www.theslash.fr"}, headers=headers)
+
+    blog_data = [
+        {"slug": "seo", "name": "SEO", "color": "#2563eb"},
+        {"slug": "web-design", "name": "Web Design", "color": "#9333ea"},
+    ]
+    with patch("app.routers.categories.httpx.get", return_value=_mock_httpx_get(blog_data)):
+        resp = client.post(f"/projects/{pid}/categories/sync", headers=headers)
+
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    slugs = {c["slug"]: c for c in data}
+    assert slugs["seo"]["color"] == "#2563eb"
+    assert slugs["web-design"]["color"] == "#9333ea"
+    assert resp.headers.get("X-Sync-Message") == "2 categorie(s) synchronisee(s)."
+
+
+def test_sync_categories_empty_blog(client):
+    """Blog returns an empty array but existing categories exist → 200 with message."""
+    headers = register_and_login(client)
+    project = _create_project(client, headers)
+    pid = project["id"]
+    client.patch(f"/projects/{pid}", json={"domain": "www.theslash.fr"}, headers=headers)
+    # Have at least one existing category so we don't hit 502
+    client.post(f"/projects/{pid}/categories", json={"name": "SEO", "slug": "seo"}, headers=headers)
+
+    with patch("app.routers.categories.httpx.get", return_value=_mock_httpx_get([])):
+        resp = client.post(f"/projects/{pid}/categories/sync", headers=headers)
+
+    assert resp.status_code == 200
+    assert resp.headers.get("X-Sync-Message") == "Aucune categorie detectee sur le site connecte."
+
+
+def test_sync_categories_preserves_manual_color(client):
+    """Existing category with a valid manual color is NOT overwritten by blog sync."""
+    headers = register_and_login(client)
+    project = _create_project(client, headers)
+    pid = project["id"]
+    client.patch(f"/projects/{pid}", json={"domain": "www.theslash.fr"}, headers=headers)
+
+    # Create a category manually with a specific color
+    client.post(
+        f"/projects/{pid}/categories",
+        json={"name": "SEO", "slug": "seo", "color": "#ff0000"},
+        headers=headers,
+    )
+
+    blog_data = [{"slug": "seo", "name": "SEO", "color": "#2563eb"}]
+    with patch("app.routers.categories.httpx.get", return_value=_mock_httpx_get(blog_data)):
+        resp = client.post(f"/projects/{pid}/categories/sync", headers=headers)
+
+    assert resp.status_code == 200
+    data = resp.json()
+    cat = next(c for c in data if c["slug"] == "seo")
+    assert cat["color"] == "#ff0000", "Manual color should be preserved"
+
+
+def test_sync_categories_all_exist(client):
+    """All blog categories already present → no new categories message."""
+    headers = register_and_login(client)
+    project = _create_project(client, headers)
+    pid = project["id"]
+    client.patch(f"/projects/{pid}", json={"domain": "www.theslash.fr"}, headers=headers)
+
+    blog_data = [{"slug": "seo", "name": "SEO", "color": "#2563eb"}]
+    with patch("app.routers.categories.httpx.get", return_value=_mock_httpx_get(blog_data)):
+        resp1 = client.post(f"/projects/{pid}/categories/sync", headers=headers)
+    assert resp1.headers.get("X-Sync-Message") == "1 categorie(s) synchronisee(s)."
+
+    # Second sync with same data
+    with patch("app.routers.categories.httpx.get", return_value=_mock_httpx_get(blog_data)):
+        resp2 = client.post(f"/projects/{pid}/categories/sync", headers=headers)
+
+    assert resp2.status_code == 200
+    assert resp2.headers.get("X-Sync-Message") == "Aucune nouvelle categorie detectee."
+
+
+def test_sync_categories_follows_redirects(client):
+    """Domain without www produces a 307 redirect → httpx with follow_redirects=True handles it."""
+    headers = register_and_login(client)
+    project = _create_project(client, headers)
+    pid = project["id"]
+    # Store domain WITHOUT www, exactly like theslash.fr
+    client.patch(f"/projects/{pid}", json={"domain": "theslash.fr"}, headers=headers)
+
+    blog_data = [{"slug": "seo", "name": "SEO", "color": "#2563eb"}]
+    with patch("app.routers.categories.httpx.get", return_value=_mock_httpx_get(blog_data)):
+        resp = client.post(f"/projects/{pid}/categories/sync", headers=headers)
+
+    assert resp.status_code == 200
+    assert resp.headers.get("X-Sync-Message") == "1 categorie(s) synchronisee(s)."
+    data = resp.json()
+    assert data[0]["slug"] == "seo"
