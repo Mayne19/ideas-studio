@@ -683,7 +683,7 @@ export default function ArticleEditorPage() {
     ? editor.getText().split(/\s+/).filter(Boolean).length
     : (article?.word_count ?? 0)
 
-  const calculatedReadingTime = Math.max(1, Math.round(wordCount / 200))
+  const calculatedReadingTime = Math.max(1, Math.ceil(wordCount / 200))
   const readingTime = manualReadingTime ?? calculatedReadingTime
 
   const isEditable = viewMode === 'edit'

@@ -18,7 +18,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { CalendarClock, ExternalLink, FileText, Loader2, Plus, RefreshCw } from 'lucide-react'
 import {
-  listArticles, publishArticle, unpublishArticle, markReadyArticle, archiveArticle,
+  listArticles, createArticle, publishArticle, unpublishArticle, markReadyArticle, archiveArticle,
   scheduleArticle, patchArticle,
 } from '@/api/articles'
 import { listCategories } from '@/api/categories'
@@ -234,12 +234,14 @@ function KanbanColumn({
   categories,
   onEdit,
   onAction,
+  onAddArticle,
 }: {
   column: ColumnDef
   articles: Article[]
   categories: Category[]
   onEdit: (a: Article) => void
   onAction: (key: string, a: Article) => void
+  onAddArticle: (status: string) => void
 }) {
   const articleIds = articles.map((a) => a.id)
   const { setNodeRef, isOver } = useDroppable({ id: column.status })
@@ -274,6 +276,12 @@ function KanbanColumn({
               />
             ))
           )}
+          <button
+            onClick={() => onAddArticle(column.status)}
+            className="flex items-center justify-center gap-1 rounded-[12px] border border-dashed border-border py-2 text-[11px] text-tertiary hover:border-accent/40 hover:text-accent transition-colors"
+          >
+            <Plus size={12} /> Ajouter un article
+          </button>
         </div>
       </SortableContext>
     </div>
@@ -294,6 +302,13 @@ export default function KanbanPage() {
   const [customColumns, setCustomColumns] = useState<ColumnDef[]>([])
   const [columnModalOpen, setColumnModalOpen] = useState(false)
   const [newColumnName, setNewColumnName] = useState('')
+
+  // Create article modal state
+  const [createStatus, setCreateStatus] = useState('')
+  const [createTitle, setCreateTitle] = useState('')
+  const [createKeyword, setCreateKeyword] = useState('')
+  const [createCategoryId, setCreateCategoryId] = useState('')
+  const [creating, setCreating] = useState(false)
 
   // Schedule modal state
   const [scheduleTarget, setScheduleTarget] = useState<Article | null>(null)
@@ -397,6 +412,33 @@ export default function KanbanPage() {
     window.localStorage.setItem(customColumnsStorageKey(projectId), JSON.stringify(next))
     setNewColumnName('')
     setColumnModalOpen(false)
+  }
+
+  function handleAddArticle(status: string) {
+    setCreateStatus(status)
+    setCreateTitle('')
+    setCreateKeyword('')
+    setCreateCategoryId('')
+  }
+
+  async function handleCreateArticle(event: React.FormEvent) {
+    event.preventDefault()
+    if (!projectId || !createTitle.trim()) return
+    setCreating(true)
+    try {
+      const created = await createArticle(projectId, {
+        title: createTitle.trim(),
+        keyword: createKeyword.trim() || undefined,
+        category_id: createCategoryId || undefined,
+        status: createStatus,
+      })
+      setArticles((prev) => [...prev, created])
+      setCreateStatus('')
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Erreur lors de la création.")
+    } finally {
+      setCreating(false)
+    }
   }
 
   const activeArticle = activeId ? articles.find((a) => a.id === activeId) : null
@@ -506,6 +548,7 @@ export default function KanbanPage() {
                 categories={categories}
                 onEdit={(a) => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
                 onAction={handleAction}
+                onAddArticle={handleAddArticle}
               />
             ))}
           </div>
@@ -558,6 +601,57 @@ export default function KanbanPage() {
             </Button>
             <Button type="submit" size="sm" className="flex-1 justify-center" disabled={!newColumnName.trim()}>
               Ajouter
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Create article modal */}
+      <Modal
+        open={!!createStatus}
+        onClose={() => setCreateStatus('')}
+        title="Ajouter un article"
+        size="sm"
+      >
+        <form onSubmit={handleCreateArticle} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[12px] font-medium text-secondary">Titre *</label>
+            <input
+              value={createTitle}
+              onChange={(e) => setCreateTitle(e.target.value)}
+              placeholder="Titre de l'article"
+              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+              autoFocus
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[12px] font-medium text-secondary">Mot-clé</label>
+            <input
+              value={createKeyword}
+              onChange={(e) => setCreateKeyword(e.target.value)}
+              placeholder="Mot-clé principal (optionnel)"
+              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[12px] font-medium text-secondary">Catégorie</label>
+            <select
+              value={createCategoryId}
+              onChange={(e) => setCreateCategoryId(e.target.value)}
+              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+            >
+              <option value="">Sans catégorie</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button type="button" variant="secondary" size="sm" className="flex-1 justify-center" onClick={() => setCreateStatus('')}>
+              Annuler
+            </Button>
+            <Button type="submit" size="sm" loading={creating} className="flex-1 justify-center" disabled={!createTitle.trim()}>
+              Créer
             </Button>
           </div>
         </form>

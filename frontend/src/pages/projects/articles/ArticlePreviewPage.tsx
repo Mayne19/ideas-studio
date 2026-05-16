@@ -128,7 +128,7 @@ export default function ArticlePreviewPage() {
   const renderedContent = article.content ? withHeadingIds(renderContent(article.content)) : ''
   const outline = buildOutline(renderedContent)
   const wordCount = article.word_count > 0 ? article.word_count : countWordsFromHtml(renderedContent)
-  const readingTime = wordCount > 0 ? Math.max(1, Math.round(wordCount / 200)) : null
+  const readingTime = wordCount > 0 ? Math.max(1, Math.ceil(wordCount / 200)) : null
   const authorName = user?.name ?? '—'
 
   return (

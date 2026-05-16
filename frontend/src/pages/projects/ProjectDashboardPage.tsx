@@ -265,7 +265,7 @@ export default function ProjectDashboardPage() {
         : null
       const worded = contentArticles.filter((a) => a.word_count > 0)
       const avgReadingTime = worded.length > 0
-        ? Math.round(worded.reduce((s, a) => s + a.word_count, 0) / worded.length / 200)
+        ? Math.ceil(worded.reduce((s, a) => s + a.word_count, 0) / worded.length / 200)
         : null
       setData({
         recentArticles,

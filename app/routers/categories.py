@@ -1,3 +1,4 @@
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -5,6 +6,7 @@ from app.dependencies.auth import get_current_user, get_project_member, require_
 from app.models.user import User
 from app.models.article import Article
 from app.models.category import Category
+from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryPublic
 from app.services.category_service import (
@@ -77,22 +79,40 @@ def sync_categories(
     member: ProjectMember = Depends(require_project_role(*_MANAGE_ROLES)),
     db: Session = Depends(get_db),
 ):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    synced: list[str] = []
+
+    existing_slugs = {c.slug for c in get_categories_for_project(db, project_id)}
+    existing_names = {c.name.lower() for c in get_categories_for_project(db, project_id)}
+
+    # Step 1: fetch categories from the blog via its public API
+    if project and project.domain:
+        url = f"https://{project.domain}/api/categories"
+        try:
+            resp = httpx.get(url, timeout=10)
+            resp.raise_for_status()
+            blog_categories = resp.json()
+            for cat in blog_categories:
+                name = cat.get("name", "").strip()
+                slug = cat.get("slug", "").strip()
+                if not name or not slug:
+                    continue
+                if name.lower() in existing_names or slug in existing_slugs:
+                    continue
+                create_category(db, CategoryCreate(name=name, slug=slug), project_id)
+                existing_names.add(name.lower())
+                existing_slugs.add(slug)
+                synced.append(name)
+        except Exception:
+            pass  # fallback to article-based sync below
+
+    # Step 2 (fallback): extract categories from existing articles
     articles = db.query(Article).filter(
         Article.project_id == project_id,
         Article.category_id.isnot(None),
     ).all()
 
-    synced: list[str] = []
-    existing_slugs = {c.slug for c in get_categories_for_project(db, project_id)}
-
     for article in articles:
-        cat = db.query(Article.category_id).filter(Article.id == article.category_id).first() if article.category_id else None
-        name = getattr(cat, 'name', None) if cat else None
-
-    existing_names = {c.name.lower() for c in get_categories_for_project(db, project_id)}
-    for article in articles:
-        if not article.category_id:
-            continue
         category_obj = db.query(Category).filter(Category.id == article.category_id).first()
         if not category_obj:
             continue

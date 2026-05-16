@@ -98,15 +98,38 @@ def _issue(type_: str, category: str, severity: str, message: str, suggestion: s
     }
 
 
-def _keyword_in_text(keyword: str, text: str) -> bool:
-    keyword = keyword.lower().strip()
+_NORMALIZE_ACCENTS = str.maketrans({
+    "à": "a", "â": "a", "ä": "a",
+    "é": "e", "è": "e", "ê": "e", "ë": "e",
+    "î": "i", "ï": "i",
+    "ô": "o", "ö": "o",
+    "ù": "u", "û": "u", "ü": "u",
+    "ç": "c",
+})
+
+_STOP_WORDS = {"un", "une", "le", "la", "les", "de", "du", "des", "d", "pour", "à", "au", "aux", "sur", "dans", "en", "par", "avec", "est", "sont", "ce", "cet", "cette", "ces", "et", "ou", "mais", "donc"}
+
+
+def _normalize(text: str) -> str:
     text = text.lower()
+    text = text.translate(_NORMALIZE_ACCENTS)
+    text = text.replace("'", " ").replace("`", " ").replace("’", " ").replace("-", " ")
+    return text
+
+
+def _keyword_in_text(keyword: str, text: str) -> bool:
     if not keyword:
         return True
-    if keyword in text:
+    kw = _normalize(keyword)
+    txt = _normalize(text)
+    if kw in txt:
         return True
-    tokens = [token for token in re.split(r"[^a-z0-9àâäéèêëîïôöùûüç]+", keyword) if len(token) > 2]
-    return bool(tokens) and all(token in text for token in tokens)
+    kw_tokens = [t for t in kw.split() if len(t) > 2 and t not in _STOP_WORDS]
+    txt_tokens = set(t for t in txt.split() if len(t) > 2 and t not in _STOP_WORDS)
+    if not kw_tokens:
+        return True
+    matches = sum(1 for t in kw_tokens if t in txt_tokens)
+    return matches >= max(1, len(kw_tokens) - 1)
 
 
 def _run_seo_checks(article: Article, parsed: dict) -> list[dict]:
