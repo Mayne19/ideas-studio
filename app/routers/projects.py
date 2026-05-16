@@ -12,6 +12,7 @@ from app.services.project_service import (
     get_user_projects,
     get_project_by_id,
     update_project,
+    disconnect_project,
 )
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -87,3 +88,13 @@ def connect_info(
             "article_by_slug": f"{settings.APP_URL}/api/public/projects/{project.id}/articles/{{slug}}",
         },
     )
+
+
+@router.post("/{project_id}/disconnect", response_model=ProjectPublic)
+def disconnect_route(
+    project_id: str,
+    member: ProjectMember = Depends(require_project_role("owner", "admin")),
+    db: Session = Depends(get_db),
+):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    return disconnect_project(db, project)

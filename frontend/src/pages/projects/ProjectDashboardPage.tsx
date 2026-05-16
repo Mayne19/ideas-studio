@@ -150,7 +150,7 @@ function scoreTone(score: number | null | undefined): string {
 
 function ArticleScoreBadge({ label, value }: { label: string; value: number | null }) {
   return (
-    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${scoreTone(value)}`}>
+    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${scoreTone(value)}`}>
       {label} {isFilledScore(value) ? Math.round(value) : '—'}
     </span>
   )

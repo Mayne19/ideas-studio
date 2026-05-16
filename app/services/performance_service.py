@@ -28,6 +28,9 @@ def get_project_traffic_summary(db: Session, project_id: str, period: str = "30d
         .all()
     )
 
+    _LOCALHOST_PATTERNS = ("localhost", "127.0.0.1", "0.0.0.0", "::1")
+    events = [e for e in events if not any(p in (e.url or "").lower() for p in _LOCALHOST_PATTERNS)]
+
     total_views = len(events)
     unique_pages = len({e.path or e.url for e in events})
 

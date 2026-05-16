@@ -342,3 +342,15 @@ export type OptimizationRecommendation = {
   created_at: string
   updated_at: string
 }
+
+export type Notification = {
+  id: string
+  project_id: string
+  user_id: string | null
+  type: string
+  title: string
+  message: string
+  level: string
+  read_at: string | null
+  created_at: string
+}

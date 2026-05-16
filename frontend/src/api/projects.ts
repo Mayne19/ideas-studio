@@ -42,3 +42,7 @@ export function updateProject(id: string, payload: UpdateProjectPayload): Promis
 export function deleteProject(id: string): Promise<void> {
   return api.delete<void>(`/projects/${id}`)
 }
+
+export function disconnectProject(id: string): Promise<Project> {
+  return api.post<Project>(`/projects/${id}/disconnect`)
+}

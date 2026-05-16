@@ -32,3 +32,7 @@ export function updateCategory(_projectId: string, categoryId: string, payload: 
 export function deleteCategory(_projectId: string, categoryId: string): Promise<void> {
   return api.delete<void>(`/categories/${categoryId}`)
 }
+
+export function syncCategories(projectId: string): Promise<Category[]> {
+  return api.post<Category[]>(`/projects/${projectId}/categories/sync`)
+}

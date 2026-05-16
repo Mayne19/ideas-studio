@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { Code2, Eye, EyeOff, Globe, Key, Power, RefreshCw, Wifi, WifiOff } from 'lucide-react'
-import { getConnectInfo } from '@/api/projects'
+import { getConnectInfo, disconnectProject } from '@/api/projects'
 import type { ConnectInfo } from '@/types'
 import FormCard from '@/components/ui/FormCard'
 import CopyButton from '@/components/ui/CopyButton'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 import { formatDateTime } from '@/utils/format'
 
 const API_KEY_MASK = '********'
@@ -49,6 +50,23 @@ export default function ProjectIntegrationPage() {
   const [refreshState, setRefreshState] = useState<'idle' | 'success' | 'error'>('idle')
   const [isApiKeyVisible, setIsApiKeyVisible] = useState(false)
   const [showInstructions, setShowInstructions] = useState(false)
+  const [disconnectOpen, setDisconnectOpen] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
+
+  async function handleDisconnect() {
+    if (!projectId) return
+    setDisconnecting(true)
+    try {
+      await disconnectProject(projectId)
+      setDisconnectOpen(false)
+      const data = await getConnectInfo(projectId)
+      setInfo(data)
+      setStatus('success')
+    } catch {
+      setStatus('error')
+    }
+    finally { setDisconnecting(false) }
+  }
 
   function loadInfo({ quiet = false }: { quiet?: boolean } = {}) {
     if (!projectId) return
@@ -136,12 +154,11 @@ export default function ProjectIntegrationPage() {
               </button>
               {isConnected && (
                 <button
-                  disabled
-                  className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-[8px] bg-[#f0f0f2] px-3 py-1.5 text-[12px] font-medium text-tertiary opacity-60"
-                  title="Déconnexion bientôt disponible côté backend"
+                  onClick={() => setDisconnectOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-[8px] bg-danger/8 px-3 py-1.5 text-[12px] font-medium text-danger hover:bg-danger/12 transition-colors"
                 >
                   <Power size={12} />
-                  Déconnecter bientôt disponible
+                  Déconnecter
                 </button>
               )}
             </div>
@@ -283,6 +300,17 @@ export default function ProjectIntegrationPage() {
           La clé API secrète est masquée par défaut et ne s'affiche en clair que lorsque vous cliquez sur Révéler. Contactez un administrateur si vous avez besoin de la réinitialiser.
         </p>
       </div>
+
+      <ConfirmModal
+        open={disconnectOpen}
+        onClose={() => !disconnecting && setDisconnectOpen(false)}
+        onConfirm={handleDisconnect}
+        title="Déconnecter le site ?"
+        description="Le statut repassera à Non connecté. Les clés de tracking existantes seront conservées. Vous pourrez reconnecter le site à tout moment."
+        confirmLabel="Déconnecter"
+        loading={disconnecting}
+        variant="danger"
+      />
     </div>
   )
 }

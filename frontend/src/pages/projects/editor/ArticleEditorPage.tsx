@@ -64,7 +64,7 @@ type PublishMode = 'now' | 'schedule'
 type CommentAnchor = { text: string; top: number; left: number; from: number; to: number }
 
 const GENERATING_STATUSES: string[] = ['writing_requested', 'writing_in_progress']
-const PUBLISHABLE_STATUSES = ['ready_to_publish', 'draft_ready', 'scheduled', 'review_needed', 'correction_needed']
+const PUBLISHABLE_STATUSES = ['draft', 'outline_ready', 'writing_requested', 'writing_in_progress', 'draft_ready', 'review_needed', 'correction_needed', 'ready_to_publish', 'scheduled', 'update_recommended']
 
 const RIGHT_TABS: { key: RightTab; label: string; icon: React.ReactNode }[] = [
   { key: 'publish',  label: 'Publication', icon: <Settings size={13} /> },
@@ -978,14 +978,8 @@ export default function ArticleEditorPage() {
               {activeRightTab === 'publish' && (
                 <div className="flex flex-col divide-y divide-border">
 
-                  {/* 1. Statut */}
-                  <div className="p-3 flex items-center justify-between">
-                    <span className="text-[11px] font-medium text-secondary">Statut humain</span>
-                    <StatusBadge status={article.status} />
-                  </div>
-
-                  {/* 2. Catégorie + Slug */}
-                  <div className="p-3 flex flex-col gap-3">
+                  {/* 1. Catégorie */}
+                  <div className="p-3 flex flex-col gap-2">
                     {categories.length > 0 && (
                       <Field label="Catégorie">
                         <select
@@ -1000,6 +994,19 @@ export default function ArticleEditorPage() {
                         </select>
                       </Field>
                     )}
+                    <Field label="Mot-clé principal" hint="Pour l'analyse SEO">
+                      <input
+                        type="text"
+                        value={metaFields.keyword}
+                        onChange={(e) => handleMetaChange('keyword', e.target.value)}
+                        className={INPUT}
+                        placeholder="ex: marketing digital"
+                      />
+                    </Field>
+                  </div>
+
+                  {/* 2. Slug */}
+                  <div className="p-3">
                     <Field label="Slug" hint="URL de l'article">
                       <input
                         type="text"
@@ -1009,6 +1016,12 @@ export default function ArticleEditorPage() {
                         placeholder="/mon-article"
                       />
                     </Field>
+                  </div>
+
+                  {/* 3. Statut */}
+                  <div className="p-3 flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-secondary">Statut</span>
+                    <StatusBadge status={article.status} />
                   </div>
 
                   {/* 3. Couverture */}

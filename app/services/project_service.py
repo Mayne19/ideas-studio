@@ -56,3 +56,12 @@ def update_project(db: Session, project: Project, data: ProjectUpdate) -> Projec
     db.commit()
     db.refresh(project)
     return project
+
+
+def disconnect_project(db: Session, project: Project) -> Project:
+    project.status = "not_connected"
+    project.connected_at = None
+    project.last_seen_at = None
+    db.commit()
+    db.refresh(project)
+    return project

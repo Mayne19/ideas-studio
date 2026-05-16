@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user, get_project_member, require_project_role, get_member_for_project
 from app.models.user import User
+from app.models.article import Article
+from app.models.category import Category
 from app.models.project_member import ProjectMember
 from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryPublic
 from app.services.category_service import (
@@ -12,6 +14,7 @@ from app.services.category_service import (
     update_category,
     delete_category,
 )
+from app.core.utils import slugify
 
 router = APIRouter(tags=["categories"])
 
@@ -66,6 +69,45 @@ def patch_category_route(
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     return update_category(db, category, data)
+
+
+@router.post("/projects/{project_id}/categories/sync", response_model=list[CategoryPublic])
+def sync_categories(
+    project_id: str,
+    member: ProjectMember = Depends(require_project_role(*_MANAGE_ROLES)),
+    db: Session = Depends(get_db),
+):
+    articles = db.query(Article).filter(
+        Article.project_id == project_id,
+        Article.category_id.isnot(None),
+    ).all()
+
+    synced: list[str] = []
+    existing_slugs = {c.slug for c in get_categories_for_project(db, project_id)}
+
+    for article in articles:
+        cat = db.query(Article.category_id).filter(Article.id == article.category_id).first() if article.category_id else None
+        name = getattr(cat, 'name', None) if cat else None
+
+    existing_names = {c.name.lower() for c in get_categories_for_project(db, project_id)}
+    for article in articles:
+        if not article.category_id:
+            continue
+        category_obj = db.query(Category).filter(Category.id == article.category_id).first()
+        if not category_obj:
+            continue
+        name = category_obj.name
+        if name.lower() in existing_names:
+            continue
+        new_slug = slugify(name)
+        if new_slug in existing_slugs:
+            continue
+        create_category(db, CategoryCreate(name=name, slug=new_slug, color=category_obj.color), project_id)
+        existing_names.add(name.lower())
+        existing_slugs.add(new_slug)
+        synced.append(name)
+
+    return get_categories_for_project(db, project_id)
 
 
 @router.delete("/categories/{category_id}", status_code=204)

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { amber, blue, crimson, cyan, grass, indigo, orange, plum, slate, teal, tomato, violet } from '@radix-ui/colors'
 import { Plus, Pencil, Trash2, FolderOpen, RefreshCw, Info, Palette, ExternalLink } from 'lucide-react'
-import { listCategories, createCategory, updateCategory, deleteCategory } from '@/api/categories'
+import { listCategories, createCategory, updateCategory, deleteCategory, syncCategories } from '@/api/categories'
 import type { CreateCategoryPayload, UpdateCategoryPayload } from '@/api/categories'
 import { listArticles, patchArticle } from '@/api/articles'
 import type { Article, Category } from '@/types'
@@ -346,6 +346,24 @@ export default function CategoriesPage() {
 
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState('')
+
+  async function handleSync() {
+    if (!projectId) return
+    setSyncing(true)
+    setSyncMessage('')
+    try {
+      const result = await syncCategories(projectId)
+      setCategories(result)
+      setSyncMessage(`${result.length} catégorie${result.length > 1 ? 's' : ''} synchronisée${result.length > 1 ? 's' : ''}.`)
+    } catch {
+      setSyncMessage('Impossible de synchroniser les catégories.')
+    } finally {
+      setSyncing(false)
+      setTimeout(() => setSyncMessage(''), 3000)
+    }
+  }
 
   function load() {
     if (!projectId) return
@@ -465,22 +483,25 @@ export default function CategoriesPage() {
           </Button>
         </div>
 
-        {/* Sync from site — coming soon block */}
+        {/* Sync from site */}
         <div className="mb-5 flex items-start gap-3 rounded-[14px] border border-border bg-[#f9f9fb] px-4 py-3">
           <Info size={15} className="mt-0.5 shrink-0 text-tertiary" />
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-medium text-primary">Synchronisation depuis votre site</p>
             <p className="mt-0.5 text-[12px] text-secondary">
-              Synchronisation depuis le site bientôt disponible. Elle importera les catégories et leurs couleurs si le backend connecté les fournit.
+              Importe les catégories existantes depuis les articles publiés. Les doublons sont évités.
             </p>
+            {syncMessage && (
+              <p className="mt-1 text-[12px] text-accent">{syncMessage}</p>
+            )}
           </div>
           <button
-            disabled
-            className="shrink-0 flex items-center gap-1.5 rounded-[8px] border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-tertiary opacity-50 cursor-not-allowed"
-            title="Disponible quand votre site est connecté"
+            onClick={handleSync}
+            disabled={syncing}
+            className="shrink-0 flex items-center gap-1.5 rounded-[8px] border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2] hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-wait"
           >
-            <RefreshCw size={12} />
-            Bientôt disponible
+            <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} />
+            {syncing ? 'Synchronisation…' : 'Synchroniser depuis votre site'}
           </button>
         </div>
 

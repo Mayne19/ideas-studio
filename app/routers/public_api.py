@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.schemas.article import ArticlePublicApiResponse
 from app.services.article_service import get_public_articles, get_public_article_by_slug
+from app.services.category_service import get_categories_for_project
+from app.schemas.category import CategoryPublic
 
 router = APIRouter(prefix="/api/public", tags=["public"])
 
@@ -27,3 +29,11 @@ def get_public_article(
     if not article:
         raise HTTPException(status_code=404, detail="Article not found or not published")
     return article
+
+
+@router.get("/projects/{project_id}/categories", response_model=list[CategoryPublic])
+def list_public_categories(
+    project_id: str,
+    db: Session = Depends(get_db),
+):
+    return get_categories_for_project(db, project_id)

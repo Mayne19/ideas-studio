@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronRight, LogOut, User, Bell, Search } from 'lucide-react'
+import { ChevronRight, LogOut, User, Bell, Search, Sun, Moon } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { useTheme } from '@/context/ThemeContext'
 import { useProject } from '@/context/ProjectContext'
 import { cn } from '@/utils/cn'
 import ConfirmModal from '@/components/ui/ConfirmModal'
@@ -10,6 +11,7 @@ export default function Topbar() {
   const { user, logout } = useAuth()
   const { project } = useProject()
   const { projectId } = useParams<{ projectId?: string }>()
+  const { isDark, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
@@ -140,6 +142,16 @@ export default function Topbar() {
             )}
           </div>
         )}
+
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          className="flex h-8 w-8 items-center justify-center rounded-full text-tertiary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
+          title={isDark ? 'Mode clair' : 'Mode sombre'}
+          aria-label="Changer le thème"
+        >
+          {isDark ? <Sun size={15} /> : <Moon size={15} />}
+        </button>
 
         {/* User menu */}
         <div className="relative" ref={menuRef}>
