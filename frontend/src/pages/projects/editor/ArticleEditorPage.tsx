@@ -63,6 +63,20 @@ type ViewMode = 'read' | 'edit' | 'comment'
 type RightTab = 'publish' | 'analyse' | 'versions'
 type PublishMode = 'now' | 'schedule'
 type CommentAnchor = { text: string; top: number; left: number; from: number; to: number }
+type PersistedSnapshot = {
+  title: string
+  slug: string
+  excerpt: string
+  keyword: string
+  meta_title: string
+  meta_description: string
+  category_id: string
+  cover_image_url: string
+  content: string
+  faq_json: string | null
+  author_name: string | null
+  reading_time_minutes: number | null
+}
 
 const GENERATING_STATUSES: string[] = ['writing_requested', 'writing_in_progress']
 const PUBLISHABLE_STATUSES = ['draft', 'outline_ready', 'writing_requested', 'writing_in_progress', 'draft_ready', 'review_needed', 'correction_needed', 'ready_to_publish', 'scheduled', 'update_recommended']
@@ -147,6 +161,53 @@ function serializeFaqItems(items: FaqItem[]) {
   return filled.length > 0 ? JSON.stringify(filled) : null
 }
 
+function normalizeOptionalText(value: string | null | undefined): string | null {
+  const trimmed = value?.trim() ?? ''
+  return trimmed ? trimmed : null
+}
+
+function normalizeReadingTime(value: number | null | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 1
+    ? Math.round(value)
+    : null
+}
+
+function buildPersistedSnapshot({
+  content,
+  meta,
+  coverImageUrl,
+  faqItems,
+  authorName,
+  readingTimeMinutes,
+}: {
+  content: string
+  meta: MetaFields
+  coverImageUrl: string
+  faqItems: FaqItem[]
+  authorName: string
+  readingTimeMinutes: number | null
+}): PersistedSnapshot {
+  return {
+    title: meta.title,
+    slug: meta.slug,
+    excerpt: meta.excerpt,
+    keyword: meta.keyword,
+    meta_title: meta.meta_title,
+    meta_description: meta.meta_description,
+    category_id: meta.category_id,
+    cover_image_url: coverImageUrl,
+    content,
+    faq_json: serializeFaqItems(faqItems),
+    author_name: normalizeOptionalText(authorName),
+    reading_time_minutes: normalizeReadingTime(readingTimeMinutes),
+  }
+}
+
+function snapshotsEqual(a: PersistedSnapshot | null, b: PersistedSnapshot): boolean {
+  if (!a) return false
+  return JSON.stringify(a) === JSON.stringify(b)
+}
+
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export default function ArticleEditorPage() {
@@ -175,6 +236,7 @@ export default function ArticleEditorPage() {
   const [selectedAuthorId, setSelectedAuthorId] = useState('')
   const [manualAuthorName, setManualAuthorName] = useState('')
   const [manualReadingTime, setManualReadingTime] = useState<number | null>(null)
+  const [persistedSnapshot, setPersistedSnapshot] = useState<PersistedSnapshot | null>(null)
   const [faqItems, setFaqItems] = useState<FaqItem[]>([])
   const [faqOpen, setFaqOpen] = useState(false)
 
@@ -200,6 +262,8 @@ export default function ArticleEditorPage() {
   const metaRef = useRef<MetaFields>(EMPTY_META)
   const coverRef = useRef('')
   const faqRef = useRef<FaqItem[]>([])
+  const authorNameRef = useRef('')
+  const readingTimeRef = useRef<number | null>(null)
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingSaveRef = useRef(false)
   const titleRef = useRef<HTMLTextAreaElement>(null)
@@ -280,14 +344,42 @@ export default function ArticleEditorPage() {
         title: metaRef.current.title || undefined,
         slug: metaRef.current.slug || undefined,
         excerpt: metaRef.current.excerpt || undefined,
+        keyword: normalizeOptionalText(metaRef.current.keyword),
         meta_title: metaRef.current.meta_title || undefined,
         meta_description: metaRef.current.meta_description || undefined,
-        cover_image_url: coverRef.current || undefined,
-        category_id: metaRef.current.category_id || undefined,
+        cover_image_url: normalizeOptionalText(coverRef.current),
+        category_id: normalizeOptionalText(metaRef.current.category_id),
         faq_json: serializeFaqItems(faqRef.current),
+        author_name: normalizeOptionalText(authorNameRef.current),
+        reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
       })
-        .then(() => {
+        .then((response) => {
           pendingSaveRef.current = false
+          setPersistedSnapshot(buildPersistedSnapshot({
+            content: html,
+            meta: metaRef.current,
+            coverImageUrl: coverRef.current,
+            faqItems: faqRef.current,
+            authorName: authorNameRef.current,
+            readingTimeMinutes: readingTimeRef.current,
+          }))
+          setArticle((prev) => prev ? {
+            ...prev,
+            title: metaRef.current.title,
+            slug: metaRef.current.slug,
+            excerpt: metaRef.current.excerpt,
+            keyword: normalizeOptionalText(metaRef.current.keyword),
+            meta_title: normalizeOptionalText(metaRef.current.meta_title),
+            meta_description: normalizeOptionalText(metaRef.current.meta_description),
+            category_id: normalizeOptionalText(metaRef.current.category_id),
+            cover_image_url: normalizeOptionalText(coverRef.current),
+            content: html,
+            faq_json: serializeFaqItems(faqRef.current),
+            author_name: normalizeOptionalText(authorNameRef.current),
+            reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
+            word_count: response.word_count,
+            updated_at: response.updated_at,
+          } : prev)
           setAutosaveStatus('saved')
           setTimeout(() => setAutosaveStatus('idle'), 3000)
         })
@@ -305,27 +397,54 @@ export default function ArticleEditorPage() {
     if (!pid || !aid) return
     setAutosaveStatus('saving')
     try {
-      await autosaveArticle(pid, aid, {
-        content: editor?.getHTML() ?? '',
+      const content = editor?.getHTML() ?? ''
+      const response = await autosaveArticle(pid, aid, {
+        content,
         title: metaRef.current.title || undefined,
         slug: metaRef.current.slug || undefined,
         excerpt: metaRef.current.excerpt || undefined,
+        keyword: normalizeOptionalText(metaRef.current.keyword),
         meta_title: metaRef.current.meta_title || undefined,
         meta_description: metaRef.current.meta_description || undefined,
-        cover_image_url: coverRef.current || undefined,
-        category_id: metaRef.current.category_id || undefined,
+        cover_image_url: normalizeOptionalText(coverRef.current),
+        category_id: normalizeOptionalText(metaRef.current.category_id),
         faq_json: serializeFaqItems(faqRef.current),
-        author_name: manualAuthorName || undefined,
-        reading_time_minutes: manualReadingTime ?? undefined,
+        author_name: normalizeOptionalText(authorNameRef.current),
+        reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
       })
       pendingSaveRef.current = false
+      setPersistedSnapshot(buildPersistedSnapshot({
+        content,
+        meta: metaRef.current,
+        coverImageUrl: coverRef.current,
+        faqItems: faqRef.current,
+        authorName: authorNameRef.current,
+        readingTimeMinutes: readingTimeRef.current,
+      }))
+      setArticle((prev) => prev ? {
+        ...prev,
+        title: metaRef.current.title,
+        slug: metaRef.current.slug,
+        excerpt: metaRef.current.excerpt,
+        keyword: normalizeOptionalText(metaRef.current.keyword),
+        meta_title: normalizeOptionalText(metaRef.current.meta_title),
+        meta_description: normalizeOptionalText(metaRef.current.meta_description),
+        category_id: normalizeOptionalText(metaRef.current.category_id),
+        cover_image_url: normalizeOptionalText(coverRef.current),
+        content,
+        faq_json: serializeFaqItems(faqRef.current),
+        author_name: normalizeOptionalText(authorNameRef.current),
+        reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
+        word_count: response.word_count,
+        updated_at: response.updated_at,
+      } : prev)
       setAutosaveStatus('saved')
       setTimeout(() => setAutosaveStatus('idle'), 3000)
     } catch {
       pendingSaveRef.current = false
       setAutosaveStatus('error')
     }
-  }, [articleId, editor, projectId, manualAuthorName, manualReadingTime])
+  }, [articleId, editor, projectId])
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -380,6 +499,18 @@ export default function ArticleEditorPage() {
         const faq = parseFaqItems(art.faq_json)
         setFaqItems(faq)
         faqRef.current = faq
+        setManualAuthorName(art.author_name ?? '')
+        authorNameRef.current = art.author_name ?? ''
+        setManualReadingTime(normalizeReadingTime(art.reading_time_minutes))
+        readingTimeRef.current = normalizeReadingTime(art.reading_time_minutes)
+        setPersistedSnapshot(buildPersistedSnapshot({
+          content: art.content ?? '',
+          meta,
+          coverImageUrl: cover,
+          faqItems: faq,
+          authorName: art.author_name ?? '',
+          readingTimeMinutes: art.reading_time_minutes,
+        }))
         setIsGenerating(GENERATING_STATUSES.includes(art.status))
         setLoadStatus('success')
       })
@@ -450,11 +581,21 @@ export default function ArticleEditorPage() {
           const cov = art.cover_image_url ?? ''
           setCoverImageUrl(cov)
           coverRef.current = cov
-        const faq = parseFaqItems(art.faq_json)
-        setFaqItems(faq)
-        faqRef.current = faq
-        setManualAuthorName(art.author_name ?? '')
-        setManualReadingTime(art.reading_time_minutes)
+          const faq = parseFaqItems(art.faq_json)
+          setFaqItems(faq)
+          faqRef.current = faq
+          setManualAuthorName(art.author_name ?? '')
+          authorNameRef.current = art.author_name ?? ''
+          setManualReadingTime(normalizeReadingTime(art.reading_time_minutes))
+          readingTimeRef.current = normalizeReadingTime(art.reading_time_minutes)
+          setPersistedSnapshot(buildPersistedSnapshot({
+            content: art.content ?? '',
+            meta: m,
+            coverImageUrl: cov,
+            faqItems: faq,
+            authorName: art.author_name ?? '',
+            readingTimeMinutes: art.reading_time_minutes,
+          }))
           if (editor && art.content) editor.commands.setContent(art.content)
         }
       } catch { /* ignore poll errors */ }
@@ -485,6 +626,18 @@ export default function ArticleEditorPage() {
         const faq = parseFaqItems(art.faq_json)
         setFaqItems(faq)
         faqRef.current = faq
+        setManualAuthorName(art.author_name ?? '')
+        authorNameRef.current = art.author_name ?? ''
+        setManualReadingTime(normalizeReadingTime(art.reading_time_minutes))
+        readingTimeRef.current = normalizeReadingTime(art.reading_time_minutes)
+        setPersistedSnapshot(buildPersistedSnapshot({
+          content: art.content ?? '',
+          meta: m,
+          coverImageUrl: cov,
+          faqItems: faq,
+          authorName: art.author_name ?? '',
+          readingTimeMinutes: art.reading_time_minutes,
+        }))
         if (editor && art.content) editor.commands.setContent(art.content)
       }
     } catch { /* ignore */ }
@@ -548,6 +701,22 @@ export default function ArticleEditorPage() {
   function handleCoverChange(url: string) {
     coverRef.current = url
     setCoverImageUrl(url)
+    scheduleAutosave(editor?.getHTML() ?? '')
+  }
+
+  function handleAuthorNameChange(value: string) {
+    authorNameRef.current = value
+    setManualAuthorName(value)
+    setArticle((prev) => prev ? { ...prev, author_name: normalizeOptionalText(value) } : prev)
+    scheduleAutosave(editor?.getHTML() ?? '')
+  }
+
+  function handleReadingTimeChange(value: string) {
+    const trimmed = value.trim()
+    const nextValue = trimmed ? normalizeReadingTime(Number(trimmed)) : null
+    readingTimeRef.current = nextValue
+    setManualReadingTime(nextValue)
+    setArticle((prev) => prev ? { ...prev, reading_time_minutes: nextValue } : prev)
     scheduleAutosave(editor?.getHTML() ?? '')
   }
 
@@ -693,7 +862,17 @@ export default function ArticleEditorPage() {
     : (article?.word_count ?? 0)
 
   const calculatedReadingTime = Math.max(1, Math.ceil(wordCount / 200))
-  const readingTime = manualReadingTime ?? calculatedReadingTime
+  const readingTime = normalizeReadingTime(manualReadingTime) ?? calculatedReadingTime
+  const currentSnapshot = buildPersistedSnapshot({
+    content: editor?.getHTML() ?? article?.content ?? '',
+    meta: metaFields,
+    coverImageUrl: coverImageUrl,
+    faqItems,
+    authorName: manualAuthorName,
+    readingTimeMinutes: manualReadingTime,
+  })
+  const hasUnsavedChanges = !snapshotsEqual(persistedSnapshot, currentSnapshot)
+  const showUpdateButton = article?.status === 'published' && hasUnsavedChanges
 
   const isEditable = viewMode === 'edit'
   const busy = actionLoading !== null
@@ -1059,7 +1238,7 @@ export default function ArticleEditorPage() {
                       <input
                         type="text"
                         value={manualAuthorName}
-                        onChange={(e) => setManualAuthorName(e.target.value)}
+                        onChange={(e) => handleAuthorNameChange(e.target.value)}
                         placeholder="Nom d'auteur"
                         className="max-w-[190px] bg-transparent text-right text-primary text-[12px] border-none outline-none placeholder:text-tertiary"
                       />
@@ -1087,8 +1266,9 @@ export default function ArticleEditorPage() {
                       <input
                         type="number"
                         min={1}
-                        value={readingTime}
-                        onChange={(e) => setManualReadingTime(Math.max(1, Number(e.target.value) || calculatedReadingTime))}
+                        value={manualReadingTime ?? ''}
+                        placeholder={String(calculatedReadingTime)}
+                        onChange={(e) => handleReadingTimeChange(e.target.value)}
                         className="w-16 rounded-[7px] border border-border bg-surface px-2 py-1 text-right text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/40"
                       />
                     </div>
@@ -1120,7 +1300,21 @@ export default function ArticleEditorPage() {
 
                   {/* 7. Publier maintenant / Programmer */}
                   {article.status === 'published' ? (
-                    <div className="p-3">
+                    <div className="p-3 flex flex-col gap-2">
+                      {showUpdateButton ? (
+                        <button
+                          onClick={() => void handleSaveNow()}
+                          disabled={busy || autosaveStatus === 'saving'}
+                          className="w-full rounded-[8px] bg-accent py-2 text-[12px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
+                        >
+                          {autosaveStatus === 'saving' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
+                          Mettre à jour
+                        </button>
+                      ) : (
+                        <div className="w-full rounded-[8px] border border-success/20 bg-success/8 py-2 text-center text-[12px] font-medium text-success">
+                          Publié
+                        </div>
+                      )}
                       <button
                         onClick={() => doAction('unpublish')}
                         disabled={busy}
@@ -1128,6 +1322,11 @@ export default function ArticleEditorPage() {
                       >
                         Dépublier
                       </button>
+                      {showUpdateButton && (
+                        <p className="text-[10px] text-tertiary text-center">
+                          Les modifications locales seront sauvegardees sans depublier l'article.
+                        </p>
+                      )}
                     </div>
                   ) : article.status !== 'archived' ? (
                     <div className="p-3 flex flex-col gap-3">
@@ -1310,6 +1509,24 @@ export default function ArticleEditorPage() {
                       }
                       setMetaFields(meta)
                       metaRef.current = meta
+                      const cover = restored.cover_image_url ?? ''
+                      setCoverImageUrl(cover)
+                      coverRef.current = cover
+                      const faq = parseFaqItems(restored.faq_json)
+                      setFaqItems(faq)
+                      faqRef.current = faq
+                      setManualAuthorName(restored.author_name ?? '')
+                      authorNameRef.current = restored.author_name ?? ''
+                      setManualReadingTime(normalizeReadingTime(restored.reading_time_minutes))
+                      readingTimeRef.current = normalizeReadingTime(restored.reading_time_minutes)
+                      setPersistedSnapshot(buildPersistedSnapshot({
+                        content: restored.content ?? '',
+                        meta,
+                        coverImageUrl: cover,
+                        faqItems: faq,
+                        authorName: restored.author_name ?? '',
+                        readingTimeMinutes: restored.reading_time_minutes,
+                      }))
                       if (editor && restored.content) editor.commands.setContent(restored.content)
                       setRightTab('publish')
                     }}

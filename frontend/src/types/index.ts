@@ -234,6 +234,7 @@ export type AutosaveRequest = {
   slug?: string | null
   content?: string | null
   excerpt?: string | null
+  keyword?: string | null
   meta_title?: string | null
   meta_description?: string | null
   cover_image_url?: string | null

@@ -48,6 +48,7 @@ class AutosaveRequest(BaseModel):
     slug: Optional[str] = None
     content: Optional[str] = None
     excerpt: Optional[str] = None
+    keyword: Optional[str] = None
     meta_title: Optional[str] = None
     meta_description: Optional[str] = None
     cover_image_url: Optional[str] = None

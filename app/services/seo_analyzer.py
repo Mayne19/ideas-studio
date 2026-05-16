@@ -145,6 +145,52 @@ def _keyword_in_text(keyword: str, text: str) -> bool:
     return matches >= max(1, len(kw_tokens) - 1)
 
 
+def _important_keyword_tokens(keyword: str) -> list[str]:
+    normalized = _normalize(keyword)
+    return [t for t in re.split(r"[^a-z0-9]+", normalized) if len(t) > 2 and t not in _STOP_WORDS]
+
+
+def _slug_tokens(slug: str) -> list[str]:
+    normalized = _normalize(slug)
+    return [t for t in re.split(r"[^a-z0-9]+", normalized) if t]
+
+
+def _tokens_match(keyword_token: str, slug_token: str) -> bool:
+    if keyword_token == slug_token:
+        return True
+    if len(keyword_token) >= 4 and keyword_token in slug_token:
+        return True
+    if len(slug_token) >= 4 and slug_token in keyword_token:
+        return True
+    return False
+
+
+def _keyword_in_slug(keyword: str, slug: str) -> bool:
+    if not keyword:
+        return True
+
+    normalized_slug = _normalize(slug)
+    flat_slug = re.sub(r"[^a-z0-9]+", "", normalized_slug)
+    normalized_keyword = _normalize(keyword)
+    flat_keyword = re.sub(r"[^a-z0-9]+", "", normalized_keyword)
+    if flat_keyword and flat_keyword in flat_slug:
+        return True
+
+    keyword_tokens = _important_keyword_tokens(keyword)
+    slug_tokens = _slug_tokens(slug)
+    if not keyword_tokens:
+        return True
+    if not slug_tokens:
+        return False
+
+    matched = sum(
+        1 for kw_token in keyword_tokens
+        if any(_tokens_match(kw_token, slug_token) for slug_token in slug_tokens)
+    )
+    required = len(keyword_tokens) if len(keyword_tokens) <= 2 else max(2, (len(keyword_tokens) * 3 + 4) // 5)
+    return matched >= required
+
+
 def _run_seo_checks(article: Article, parsed: dict) -> list[dict]:
     issues = []
     keyword = (article.keyword or "").lower().strip()
@@ -286,9 +332,7 @@ def _run_seo_checks(article: Article, parsed: dict) -> list[dict]:
         ))
     elif keyword:
         kw_slug = re.sub(r"[^a-z0-9]+", "-", _normalize(keyword)).strip("-")
-        slug_normalized = _normalize(slug).replace("-", "").replace("_", "")
-        kw_slug_flat = kw_slug.replace("-", "").replace("_", "")
-        if kw_slug not in slug and kw_slug_flat not in slug_normalized and kw_slug_flat not in slug_normalized.replace("-", ""):
+        if not _keyword_in_slug(keyword, slug):
             issues.append(_issue(
                 "keyword_in_slug", "seo", "info",
                 "Le mot-clé n'est pas dans le slug.",

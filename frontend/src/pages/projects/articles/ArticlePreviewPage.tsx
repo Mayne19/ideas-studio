@@ -98,6 +98,10 @@ function countWordsFromHtml(html: string): number {
   return stripHtml(html).split(/\s+/).filter(Boolean).length
 }
 
+function isValidReadingTime(value: number | null | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 1
+}
+
 export default function ArticlePreviewPage() {
   const { projectId, articleId } = useParams<{ projectId: string; articleId: string }>()
   const navigate = useNavigate()
@@ -128,8 +132,10 @@ export default function ArticlePreviewPage() {
   const renderedContent = article.content ? withHeadingIds(renderContent(article.content)) : ''
   const outline = buildOutline(renderedContent)
   const wordCount = article.word_count > 0 ? article.word_count : countWordsFromHtml(renderedContent)
-  const readingTime = wordCount > 0 ? Math.max(1, Math.ceil(wordCount / 200)) : null
-  const authorName = user?.name ?? '—'
+  const readingTime = isValidReadingTime(article.reading_time_minutes)
+    ? article.reading_time_minutes
+    : (wordCount > 0 ? Math.max(1, Math.ceil(wordCount / 200)) : null)
+  const authorName = article.author_name?.trim() || user?.name || '—'
 
   return (
     <div className="mx-auto max-w-[1034px]">

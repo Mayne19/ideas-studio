@@ -241,3 +241,21 @@ def test_readiness_ready():
 def test_readiness_all_clear():
     from app.services.seo_analyzer import _compute_readiness
     assert _compute_readiness([]) == "ready"
+
+
+def test_keyword_in_slug_accepts_long_tail_match():
+    from app.services.seo_analyzer import _keyword_in_slug
+
+    assert _keyword_in_slug(
+        "landing page application mobile",
+        "10-etapes-pour-creer-une-landing-page-dapplication-mobile",
+    ) is True
+
+
+def test_keyword_in_slug_rejects_weak_partial_match():
+    from app.services.seo_analyzer import _keyword_in_slug
+
+    assert _keyword_in_slug(
+        "landing page application mobile",
+        "10-etapes-pour-creer-un-site-web-performant",
+    ) is False

@@ -91,7 +91,10 @@ def update_article(db: Session, article: Article, data: ArticleUpdate) -> Articl
 
 def publish_article(db: Session, article: Article) -> Article:
     article.status = "published"
-    article.published_at = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc)
+    if article.published_at is None:
+        article.published_at = now
+    article.updated_at = now
     db.commit()
     db.refresh(article)
     return article

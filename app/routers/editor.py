@@ -156,5 +156,7 @@ def preview_article(
         internal_links_json=article.internal_links_json,
         external_links_json=article.external_links_json,
         content_blocks_json=article.content_blocks_json,
+        author_name=article.author_name,
+        reading_time_minutes=article.reading_time_minutes,
         status=article.status,
     )

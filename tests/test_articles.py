@@ -106,6 +106,46 @@ def test_public_api_get_by_slug(client):
     assert resp.json()["slug"] == "slug-post"
 
 
+def test_publish_preserves_published_at_on_republish(client):
+    headers, project = _setup(client)
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Stable Publish Date"},
+        headers=headers,
+    ).json()
+
+    first = client.post(f"/articles/{article['id']}/publish", headers=headers)
+    assert first.status_code == 200
+    first_published_at = first.json()["published_at"]
+
+    second = client.post(f"/articles/{article['id']}/publish", headers=headers)
+    assert second.status_code == 200
+    assert second.json()["published_at"] == first_published_at
+
+
+def test_autosave_persists_manual_reading_time_and_keyword(client):
+    headers, project = _setup(client)
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Manual Reading Time", "content": "hello world"},
+        headers=headers,
+    ).json()
+
+    autosave = client.post(
+        f"/articles/{article['id']}/autosave",
+        json={"reading_time_minutes": 9, "author_name": "Marie", "keyword": "landing page"},
+        headers=headers,
+    )
+    assert autosave.status_code == 200
+
+    editor = client.get(f"/articles/{article['id']}/editor", headers=headers)
+    assert editor.status_code == 200
+    data = editor.json()
+    assert data["reading_time_minutes"] == 9
+    assert data["author_name"] == "Marie"
+    assert data["keyword"] == "landing page"
+
+
 def test_public_api_draft_not_found_by_slug(client):
     headers, project = _setup(client)
     client.post(f"/projects/{project['id']}/articles", json={"title": "Draft Article"}, headers=headers)
