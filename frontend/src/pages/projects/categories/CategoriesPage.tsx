@@ -4,7 +4,8 @@ import { amber, blue, crimson, cyan, grass, indigo, orange, plum, slate, teal, t
 import { Plus, Pencil, Trash2, FolderOpen, RefreshCw, Info, Palette, ExternalLink } from 'lucide-react'
 import { listCategories, createCategory, updateCategory, deleteCategory, syncCategories } from '@/api/categories'
 import type { CreateCategoryPayload, UpdateCategoryPayload } from '@/api/categories'
-import { listArticles, patchArticle } from '@/api/articles'
+import { listArticles, createArticle } from '@/api/articles'
+import type { CreateArticlePayload } from '@/api/articles'
 import type { Article, Category } from '@/types'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
@@ -130,21 +131,17 @@ function CategoryColorField({
 function CategoryColumn({
   category,
   articles,
-  categories,
-  movingArticleId,
   onEdit,
   onDelete,
   onOpenArticle,
-  onChangeArticleCategory,
+  onCreateArticle,
 }: {
   category: Category
   articles: Article[]
-  categories: Category[]
-  movingArticleId: string | null
   onEdit: (c: Category) => void
   onDelete: (c: Category) => void
   onOpenArticle: (article: Article) => void
-  onChangeArticleCategory: (article: Article, categoryId: string) => void
+  onCreateArticle: (categoryId: string) => void
 }) {
   const color = categoryColor(category)
   const columnBackground = `linear-gradient(180deg, ${color}20 0%, ${color}12 46%, ${color}08 100%)`
@@ -232,24 +229,20 @@ function CategoryColumn({
                   <ExternalLink size={12} />
                 </button>
               </div>
-              <div className="mt-2 flex items-center justify-between gap-2">
+              <div className="mt-2 flex items-center gap-2">
                 <StatusBadge status={article.status} />
-                <select
-                  value={article.category_id ?? ''}
-                  disabled={movingArticleId === article.id}
-                  onChange={(event) => onChangeArticleCategory(article, event.target.value)}
-                    className="h-7 min-w-0 max-w-[150px] rounded-[8px] bg-[#f5f5f7] px-2 text-[11px] text-secondary outline-none focus:ring-1 focus:ring-accent/20 disabled:opacity-50"
-                  aria-label="Changer de catégorie"
-                >
-                  <option value="" disabled>Sans catégorie</option>
-                  {categories.map((item) => (
-                    <option key={item.id} value={item.id}>{item.name}</option>
-                  ))}
-                </select>
               </div>
             </div>
           ))
         )}
+        <button
+          type="button"
+          onClick={() => onCreateArticle(category.id)}
+          className="flex items-center justify-center gap-1.5 rounded-[12px] border border-dashed border-black/10 bg-white/50 px-3 py-2 text-[12px] font-medium text-tertiary transition-colors hover:border-accent/30 hover:text-accent hover:bg-accent/5"
+        >
+          <Plus size={12} />
+          Créer un article
+        </button>
       </div>
     </div>
   )
@@ -257,16 +250,12 @@ function CategoryColumn({
 
 function UncategorizedColumn({
   articles,
-  categories,
-  movingArticleId,
   onOpenArticle,
-  onChangeArticleCategory,
+  onCreateArticle,
 }: {
   articles: Article[]
-  categories: Category[]
-  movingArticleId: string | null
   onOpenArticle: (article: Article) => void
-  onChangeArticleCategory: (article: Article, categoryId: string) => void
+  onCreateArticle: () => void
 }) {
   return (
     <div className="flex min-h-[360px] min-w-[260px] max-w-[260px] flex-col rounded-[18px] bg-gradient-to-b from-[#f0f0f2] to-[#f7f7f9] p-2">
@@ -291,24 +280,20 @@ function UncategorizedColumn({
               >
                 {article.title}
               </button>
-              <div className="mt-2 flex items-center justify-between gap-2">
+              <div className="mt-2 flex items-center gap-2">
                 <StatusBadge status={article.status} />
-                <select
-                  value=""
-                  disabled={movingArticleId === article.id}
-                  onChange={(event) => onChangeArticleCategory(article, event.target.value)}
-                  className="h-7 min-w-0 max-w-[150px] rounded-[8px] bg-[#f5f5f7] px-2 text-[11px] text-secondary outline-none focus:ring-1 focus:ring-accent/20 disabled:opacity-50"
-                  aria-label="Changer de catégorie"
-                >
-                  <option value="" disabled>Classer dans...</option>
-                  {categories.map((item) => (
-                    <option key={item.id} value={item.id}>{item.name}</option>
-                  ))}
-                </select>
               </div>
             </div>
           ))
         )}
+        <button
+          type="button"
+          onClick={() => onCreateArticle()}
+          className="flex items-center justify-center gap-1.5 rounded-[12px] border border-dashed border-black/10 bg-white/50 px-3 py-2 text-[12px] font-medium text-tertiary transition-colors hover:border-accent/30 hover:text-accent hover:bg-accent/5"
+        >
+          <Plus size={12} />
+          Créer un article
+        </button>
       </div>
     </div>
   )
@@ -336,7 +321,6 @@ export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [articles, setArticles] = useState<Article[]>([])
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
-  const [movingArticleId, setMovingArticleId] = useState<string | null>(null)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Category | null>(null)
@@ -348,6 +332,11 @@ export default function CategoriesPage() {
   const [deleting, setDeleting] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState('')
+
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createForm, setCreateForm] = useState({ title: '', keyword: '', category_id: '' })
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState('')
 
   async function handleSync() {
     if (!projectId) return
@@ -455,16 +444,36 @@ export default function CategoriesPage() {
     }
   }
 
-  async function handleChangeArticleCategory(article: Article, categoryId: string) {
-    if (!projectId || article.category_id === categoryId) return
-    setMovingArticleId(article.id)
+  function handleCreateArticleInCategory(categoryId: string) {
+    setCreateForm({ title: '', keyword: '', category_id: categoryId })
+    setCreateError('')
+    setCreateOpen(true)
+  }
+
+  function handleCreateArticleInUncategorized() {
+    setCreateForm({ title: '', keyword: '', category_id: '' })
+    setCreateError('')
+    setCreateOpen(true)
+  }
+
+  async function handleCreateArticleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!projectId || !createForm.title.trim()) return
+    setCreateError('')
+    setCreating(true)
     try {
-      const updated = await patchArticle(projectId, article.id, { category_id: categoryId })
-      setArticles((prev) => prev.map((item) => item.id === updated.id ? updated : item))
+      const payload: CreateArticlePayload = {
+        title: createForm.title.trim(),
+        keyword: createForm.keyword.trim() || undefined,
+        category_id: createForm.category_id || undefined,
+      }
+      const article = await createArticle(projectId, payload)
+      setCreateOpen(false)
+      navigate(`/projects/${projectId}/articles/${article.id}/edit`)
     } catch (err) {
-      console.error(err)
+      setCreateError(err instanceof Error ? err.message : 'Erreur lors de la création')
     } finally {
-      setMovingArticleId(null)
+      setCreating(false)
     }
   }
 
@@ -526,7 +535,7 @@ export default function CategoriesPage() {
         {status === 'success' && categories.length > 0 && (
           <div className="flex flex-col gap-2">
             <p className="text-[12px] text-tertiary">
-              Vue colonnes par catégorie. Le changement via sélecteur est enregistré ; le déplacement drag/drop sera bientôt disponible.
+              Vue colonnes par catégorie.
             </p>
             <div className="flex gap-4 overflow-x-auto pb-3">
               {categories.map((c) => (
@@ -534,25 +543,65 @@ export default function CategoriesPage() {
                   key={c.id}
                   category={c}
                   articles={articles.filter((article) => article.category_id === c.id)}
-                  categories={categories}
-                  movingArticleId={movingArticleId}
                   onEdit={openEdit}
                   onDelete={setDeleteTarget}
                   onOpenArticle={(article) => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
-                  onChangeArticleCategory={handleChangeArticleCategory}
+                  onCreateArticle={handleCreateArticleInCategory}
                 />
               ))}
               <UncategorizedColumn
                 articles={articles.filter((article) => !article.category_id)}
-                categories={categories}
-                movingArticleId={movingArticleId}
                 onOpenArticle={(article) => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
-                onChangeArticleCategory={handleChangeArticleCategory}
+                onCreateArticle={handleCreateArticleInUncategorized}
               />
             </div>
           </div>
         )}
       </div>
+
+      {/* Create article modal */}
+      <Modal
+        open={createOpen}
+        onClose={() => { setCreateOpen(false); setCreateError('') }}
+        title="Créer un article"
+        size="sm"
+      >
+        <form onSubmit={handleCreateArticleSubmit} className="flex flex-col gap-4">
+          {createError && (
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+              {createError}
+            </div>
+          )}
+          <Input
+            label="Titre"
+            value={createForm.title}
+            onChange={(e) => setCreateForm((f) => ({ ...f, title: e.target.value }))}
+            placeholder="Comment optimiser son SEO en 2025"
+            required
+            autoFocus
+          />
+          <Input
+            label="Mot-clé principal"
+            value={createForm.keyword}
+            onChange={(e) => setCreateForm((f) => ({ ...f, keyword: e.target.value }))}
+            placeholder="optimisation seo"
+          />
+          <div className="flex gap-2 pt-1">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="flex-1 justify-center"
+              onClick={() => setCreateOpen(false)}
+            >
+              Annuler
+            </Button>
+            <Button type="submit" size="sm" loading={creating} className="flex-1 justify-center">
+              Créer
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       <Modal
         open={modalOpen}

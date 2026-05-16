@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlertCircle, AlertTriangle, Info, RefreshCw, CheckCircle, XCircle, MinusCircle } from 'lucide-react'
+import { AlertCircle, AlertTriangle, Info, RefreshCw, CheckCircle, XCircle, MinusCircle, HelpCircle } from 'lucide-react'
 import { analyzeArticle, readyCheck } from '@/api/seo'
 import { ApiError } from '@/api/client'
 import type { SeoAnalysis, SeoIssue, ReadyCheck, EditorArticle } from '@/types'
@@ -230,6 +230,56 @@ export default function SeoPanel({
           ))}
         </div>
       )}
+
+      {/* Meta title info */}
+      <div className="rounded-[10px] border border-border bg-[#f9f9fb] px-3 py-2.5">
+        <p className="text-[11px] font-medium text-primary">
+          Meta title utilise : {article.meta_title?.trim() ? `"${article.meta_title.trim()}"` : 'titre de l\'article'}
+        </p>
+        <p className="mt-0.5 text-[10px] text-tertiary">
+          {article.meta_title?.trim()
+            ? 'Un meta title personnalise est defini.'
+            : 'Aucun meta title personnalise. Le titre de l\'article est utilise comme fallback pour l\'analyse SEO.'}
+        </p>
+      </div>
+
+      {/* How SEO score is calculated */}
+      <details className="group">
+        <summary className="flex cursor-pointer items-center gap-1.5 text-[11px] font-medium text-secondary hover:text-primary">
+          <HelpCircle size={12} />
+          Comment le score SEO est calcule
+        </summary>
+        <div className="mt-2 flex flex-col gap-2 text-[10px] leading-snug text-tertiary">
+          <p className="font-medium text-secondary">Criteres analyses :</p>
+          <ul className="flex flex-col gap-1 pl-3">
+            <li>- Mot-cle principal dans le titre / meta title</li>
+            <li>- Mot-cle dans le H1</li>
+            <li>- Mot-cle dans l'introduction (100 premiers mots)</li>
+            <li>- Densite du mot-cle (0.5% a 3%)</li>
+            <li>- Unicite du H1</li>
+            <li>- Meta title (30-60 car.) et meta description (120-160 car.)</li>
+            <li>- Mot-cle dans le meta title</li>
+            <li>- Slug (present, contient le mot-cle)</li>
+            <li>- Structure H2 (au moins 2 sections)</li>
+            <li>- Longueur du contenu (300+ mots critique, 800+ recommande)</li>
+            <li>- Presence d'une introduction et d'une conclusion</li>
+            <li>- Image de couverture</li>
+            <li>- Extrait (excerpt)</li>
+            <li>- Liens externes vers des sources fiables</li>
+            <li>- Exemples concrets ou donnees</li>
+            <li>- Caractere actionnable (listes, etapes)</li>
+            <li>- Phrases longues (&gt;25 mots) et paragraphes longs (&gt;150 mots)</li>
+            <li>- Densite des sous-titres</li>
+          </ul>
+          <p className="mt-1">
+            Chaque probleme critique retire 20 points, chaque avertissement 10 points,
+            chaque info 3 points. Score maximal : 100.
+          </p>
+          <p className="mt-0.5">
+            La publication est bloquee si au moins un probleme critique est detecte.
+          </p>
+        </div>
+      </details>
 
       {!brief && !loading && !error && (
         <p className="text-center text-[11px] text-tertiary">

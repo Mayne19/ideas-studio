@@ -5,11 +5,6 @@ import {
   Bold,
   Italic,
   Underline,
-  Heading1,
-  Heading2,
-  Heading3,
-  Heading4,
-  Pilcrow,
   List,
   ListOrdered,
   Quote,
@@ -20,10 +15,12 @@ import {
   Minus,
   Table2,
   Unlink2,
+  StickyNote,
 } from 'lucide-react'
 import { uploadMedia } from '@/api/media'
+import type { CalloutType } from '@/lib/tiptap/CalloutExtension'
 
-type PopoverKind = 'link' | 'table' | 'image'
+type PopoverKind = 'callout' | 'link' | 'table' | 'image'
 type SavedRange = { from: number; to: number }
 
 const POPOVER_WIDTH = 296
@@ -85,6 +82,7 @@ export default function EditorToolbar({
   const [tableHeader, setTableHeader] = useState(true)
   const [imageUrl, setImageUrl] = useState('')
   const [imageAlt, setImageAlt] = useState('')
+  const [calloutType, setCalloutType] = useState<CalloutType>('info')
 
   if (!editor) return null
 
@@ -187,6 +185,16 @@ export default function EditorToolbar({
     placePopover(event, 'image')
   }
 
+  function openCalloutPopover(event: React.MouseEvent<HTMLButtonElement>) {
+    setCalloutType('info')
+    placePopover(event, 'callout')
+  }
+
+  function insertCallout() {
+    editor!.chain().focus().toggleCallout(calloutType).run()
+    setActivePopover(null)
+  }
+
   function insertImageUrl() {
     const src = normalizeUrl(imageUrl)
     if (!src) return
@@ -201,21 +209,48 @@ export default function EditorToolbar({
 
   return (
     <div className={`flex h-full flex-col items-center gap-0.5 overflow-y-auto px-1 py-2 ${disabled ? 'pointer-events-none opacity-45' : ''}`}>
-      <ToolBtn onClick={() => editor.chain().focus().setParagraph().run()} active={editor.isActive('paragraph') && !editor.isActive('heading')} title="Paragraphe">
-        <Pilcrow size={15} />
-      </ToolBtn>
-      <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} title="H1">
-        <Heading1 size={15} />
-      </ToolBtn>
-      <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} title="H2">
-        <Heading2 size={15} />
-      </ToolBtn>
-      <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} title="H3">
-        <Heading3 size={15} />
-      </ToolBtn>
-      <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()} active={editor.isActive('heading', { level: 4 })} title="H4">
-        <Heading4 size={15} />
-      </ToolBtn>
+      <select
+        value={
+          editor.isActive('paragraph') && !editor.isActive('heading')
+            ? 'paragraph'
+            : editor.isActive('heading', { level: 1 })
+              ? '1'
+              : editor.isActive('heading', { level: 2 })
+                ? '2'
+                : editor.isActive('heading', { level: 3 })
+                  ? '3'
+                  : editor.isActive('heading', { level: 4 })
+                    ? '4'
+                    : editor.isActive('heading', { level: 5 })
+                      ? '5'
+                      : editor.isActive('heading', { level: 6 })
+                        ? '6'
+                        : 'paragraph'
+        }
+        onChange={(e) => {
+          const v = e.target.value
+          if (v === 'paragraph') {
+            editor.chain().focus().setParagraph().run()
+          } else {
+            editor.chain().focus().toggleHeading({ level: Number(v) as 1 | 2 | 3 | 4 | 5 | 6 }).run()
+          }
+        }}
+        className="flex h-7 w-[68px] shrink-0 cursor-pointer appearance-none items-center justify-center rounded-[6px] border border-border/60 bg-transparent px-2 pr-5 text-[11px] font-medium text-secondary outline-none transition-colors hover:border-secondary/40 hover:text-primary"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3e%3cpath d='M1 1l4 4 4-4' stroke='%23999' stroke-width='1.5' fill='none'/%3e%3c/svg%3e")`,
+          backgroundPosition: 'right 6px center',
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: '10px 6px',
+        }}
+      >
+        <option value="paragraph">Paragraphe</option>
+        <option value="1">H1</option>
+        <option value="2">H2</option>
+        <option value="3">H3</option>
+        <option value="4">H4</option>
+        <option value="5">H5</option>
+        <option value="6">H6</option>
+      </select>
 
       <Sep />
 
@@ -242,6 +277,9 @@ export default function EditorToolbar({
       </ToolBtn>
       <ToolBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Citation">
         <Quote size={15} />
+      </ToolBtn>
+      <ToolBtn onClick={openCalloutPopover} active={editor.isActive('callout')} title="Callout">
+        <StickyNote size={15} />
       </ToolBtn>
       <ToolBtn onClick={() => editor.chain().focus().toggleCodeBlock().run()} active={editor.isActive('codeBlock')} title="Code block">
         <Terminal size={15} />
@@ -369,6 +407,44 @@ export default function EditorToolbar({
                   </button>
                 </>
               )}
+            </div>
+          )}
+
+          {activePopover === 'callout' && (
+            <div className="relative flex flex-col gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary">Callout</p>
+              <div className="flex flex-col gap-1">
+                {([
+                  { value: 'info', label: 'Info', color: '#3b82f6' },
+                  { value: 'conseil', label: 'Conseil', color: '#10b981' },
+                  { value: 'attention', label: 'Attention', color: '#f59e0b' },
+                  { value: 'erreur', label: 'Erreur', color: '#ef4444' },
+                  { value: 'succes', label: 'Succès', color: '#8b5cf6' },
+                ] as const).map(({ value, label, color }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setCalloutType(value)}
+                    className={`flex items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-[12px] transition-colors ${
+                      calloutType === value
+                        ? 'bg-accent/8 text-accent font-medium'
+                        : 'text-secondary hover:bg-[#f5f5f7]'
+                    }`}
+                  >
+                    <span
+                      className="h-2.5 w-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: color }}
+                    />
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button type="button" onClick={() => setActivePopover(null)} className="text-[12px] text-tertiary hover:text-secondary">Annuler</button>
+                <button type="button" onClick={insertCallout} className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-medium text-white">
+                  Insérer
+                </button>
+              </div>
             </div>
           )}
 

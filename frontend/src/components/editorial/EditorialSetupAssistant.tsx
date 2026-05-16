@@ -129,6 +129,36 @@ export default function EditorialSetupAssistant({ projectId, open, onClose, onAp
               </div>
             )}
 
+            {/* Sources */}
+            <details className="rounded-[12px] border border-border bg-[#f9f9fb] px-3 py-2.5">
+              <summary className="cursor-pointer text-[12px] font-medium text-secondary hover:text-primary">
+                Sources utilisées
+              </summary>
+              <ul className="mt-2 flex flex-col gap-1.5 pl-1 text-[11px] text-tertiary">
+                <li className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                  Domaine du projet
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                  Catégories synchronisées
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+                  Articles publiés — disponibles
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+                  Données publiques accessibles — partiellement disponibles
+                </li>
+              </ul>
+              {source === 'default' && (
+                <p className="mt-2 text-[11px] text-warning">
+                  Proposition basée sur des données limitées.
+                </p>
+              )}
+            </details>
+
             <Textarea
               label="Description du site"
               value={form.description}

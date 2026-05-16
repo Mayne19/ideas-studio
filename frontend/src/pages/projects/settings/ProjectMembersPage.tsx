@@ -7,6 +7,7 @@ import {
   Edit2,
   Eye,
   FilePenLine,
+  Link,
   Mail,
   Palette,
   PenLine,
@@ -15,8 +16,8 @@ import {
   UserPlus,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { listMembers, addMemberByUsername, inviteByEmail, updateMemberRole, removeMember } from '@/api/members'
-import type { ProjectMember, ProjectRole } from '@/types'
+import { listMembers, addMemberByUsername, inviteByEmail, updateMemberRole, removeMember, listInvitations } from '@/api/members'
+import type { Invitation, ProjectMember, ProjectRole } from '@/types'
 import { useAuth } from '@/context/AuthContext'
 import { useProject } from '@/context/ProjectContext'
 import FormCard from '@/components/ui/FormCard'
@@ -183,6 +184,7 @@ export default function ProjectMembersPage() {
   const { project } = useProject()
   const [members, setMembers] = useState<ProjectMember[]>([])
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
+  const [invitations, setInvitations] = useState<Invitation[]>([])
 
   // Add member by username
   const [addOpen, setAddOpen] = useState(false)
@@ -214,11 +216,17 @@ export default function ProjectMembersPage() {
       .catch(() => setStatus('error'))
   }
 
+  function loadInvitations() {
+    if (!projectId) return
+    listInvitations(projectId).then(setInvitations).catch(() => {})
+  }
+
   useEffect(() => {
     if (!projectId) return
     listMembers(projectId)
       .then((data) => { setMembers(data); setStatus('success') })
       .catch(() => setStatus('error'))
+    listInvitations(projectId).then(setInvitations).catch(() => {})
   }, [projectId])
 
   async function handleAdd(e: React.FormEvent) {
@@ -241,6 +249,7 @@ export default function ProjectMembersPage() {
       setAddEmail('')
       setAddRole('writer')
       loadMembers()
+      loadInvitations()
     } catch (err) {
       setAddError(err instanceof Error ? err.message : "Erreur lors de l'ajout")
     } finally {
@@ -326,6 +335,70 @@ export default function ProjectMembersPage() {
           </div>
         )}
       </FormCard>
+
+      {invitations.filter((inv) => !inv.accepted_at).length > 0 && (
+        <FormCard
+          title="Invitations en attente"
+          description="Les invitations envoyées aux nouveaux collaborateurs qui n'ont pas encore rejoint le projet."
+        >
+          <div className="flex flex-col gap-2">
+            {invitations.map((invitation) => {
+              const expired = new Date(invitation.expires_at) < new Date()
+              const accepted = !!invitation.accepted_at
+
+              return (
+                <div
+                  key={invitation.id}
+                  className="flex items-center gap-3 rounded-[14px] bg-[#f9f9fb] px-4 py-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-medium text-primary truncate">
+                      {invitation.email}
+                    </p>
+                    <p className="text-[12px] text-tertiary">
+                      Envoyée le{' '}
+                      {new Date(invitation.created_at).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </p>
+                  </div>
+                  <RoleBadge role={invitation.role} />
+                  <span
+                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                      accepted
+                        ? 'bg-success/10 text-[#1a7a3a]'
+                        : expired
+                          ? 'bg-danger/10 text-danger'
+                          : 'bg-warning/10 text-[#c07000]'
+                    }`}
+                  >
+                    {accepted
+                      ? 'Acceptée'
+                      : expired
+                        ? 'Expirée'
+                        : 'En attente'}
+                  </span>
+                  {!accepted && (
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          `${window.location.origin}/invitations/${invitation.token}`,
+                        )
+                      }}
+                      className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors"
+                      title="Copier le lien d'invitation"
+                    >
+                      <Link size={13} />
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </FormCard>
+      )}
 
       <FormCard
         title="Rôles et permissions"

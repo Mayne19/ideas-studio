@@ -200,8 +200,8 @@ def _run_seo_checks(article: Article, parsed: dict) -> list[dict]:
             "structure",
         ))
 
-    # Meta title
-    meta_title = article.meta_title or ""
+    # Meta title (fallback to article title)
+    meta_title = article.meta_title or article.title or ""
     if not meta_title:
         issues.append(_issue(
             "missing_meta_title", "seo", "critical",

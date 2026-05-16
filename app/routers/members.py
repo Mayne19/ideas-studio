@@ -131,6 +131,21 @@ def add_member_by_username(
     return _to_public(new_member, target_user)
 
 
+@router.get("/{project_id}/invitations", response_model=list[InvitationPublic])
+def list_invitations(
+    project_id: str,
+    _actor: ProjectMember = Depends(require_project_role("owner", "admin")),
+    db: Session = Depends(get_db),
+):
+    invitations = (
+        db.query(Invitation)
+        .filter(Invitation.project_id == project_id)
+        .order_by(Invitation.created_at.desc())
+        .all()
+    )
+    return invitations
+
+
 @router.post("/{project_id}/invitations", response_model=InvitationPublic, status_code=201)
 def invite_by_email(
     project_id: str,

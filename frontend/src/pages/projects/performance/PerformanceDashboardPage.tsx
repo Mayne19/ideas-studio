@@ -14,6 +14,7 @@ import {
   Eye,
   FileText,
   Lightbulb,
+  Info,
   Sparkles,
   Tags,
 } from 'lucide-react'
@@ -328,8 +329,9 @@ export default function PerformanceDashboardPage() {
     .slice(0, 6)
   const risingItems = articleMetrics.filter((item) => (item.variation ?? 0) > 0).slice(0, 5)
   const fallingItems = articleMetrics.filter((item) => (item.variation ?? 0) < 0).slice(0, 5)
-  const averageReadSeconds = articleMetrics.length
-    ? Math.round(articleMetrics.reduce((sum, item) => sum + (item.averageTime ?? 0), 0) / articleMetrics.length)
+  const articlesWithTime = articleMetrics.filter((item) => item.averageTime !== null)
+  const averageReadSeconds = articlesWithTime.length
+    ? Math.round(articlesWithTime.reduce((sum, item) => sum + item.averageTime!, 0) / articlesWithTime.length)
     : null
   const averageEngagement = articleMetrics.some((item) => item.engagement !== null)
     ? Math.round(articleMetrics.reduce((sum, item) => sum + (item.engagement ?? 0), 0) / articleMetrics.filter((item) => item.engagement !== null).length)
@@ -388,10 +390,15 @@ export default function PerformanceDashboardPage() {
         <div className="flex flex-col gap-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <StatCard icon={<Eye size={18} />} value={formatMetric(displayData.total_views)} label="Vues totales" variation={null} tone="accent" />
-            <StatCard icon={<Clock3 size={18} />} value={<DurationMetric seconds={averageReadSeconds} />} label="Temps moyen" variation={null} tone="violet" />
+            <StatCard icon={<Clock3 size={18} />} value={<DurationMetric seconds={averageReadSeconds} />} label="Temps de lecture" variation={null} tone="violet" />
             <StatCard icon={<FileText size={18} />} value={publishedCount} label="Articles publiés" variation={null} tone="success" />
             <StatCard icon={<BarChart3 size={18} />} value={averageScore !== null ? <SplitMetric value={averageScore} suffix="/100" /> : '—'} label="Score éditorial moyen" variation={null} tone="warning" />
             <StatCard icon={<AlertTriangle size={18} />} value={optimizeItems.length} label="Articles à optimiser" variation={null} tone="danger" />
+          </div>
+
+          <div className="flex items-start gap-2 text-[12px] text-tertiary">
+            <Info size={14} className="mt-0.5 shrink-0" />
+            <span>Les vues proviennent des evenements recus par le snippet installe sur votre site. Le temps de lecture est estime depuis le nombre de mots.</span>
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] lg:items-stretch">

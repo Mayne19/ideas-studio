@@ -13,6 +13,10 @@ export function addMemberByUsername(projectId: string, username: string, role: s
   return api.post<ProjectMember>(`/projects/${projectId}/members/by-username`, { user_id: username, role })
 }
 
+export function listInvitations(projectId: string): Promise<Invitation[]> {
+  return api.get<Invitation[]>(`/projects/${projectId}/invitations`)
+}
+
 export function inviteByEmail(projectId: string, email: string, role: string): Promise<Invitation> {
   return api.post<Invitation>(`/projects/${projectId}/invitations`, { email, role })
 }

@@ -28,17 +28,23 @@ export default function RegisterPage() {
       setError('Le mot de passe doit contenir au moins 8 caractères.')
       return
     }
-    if (username.trim()) {
-      const clean = username.trim().replace(/^@/, '')
-      const result = await checkUsername(clean)
-      if (!result.available) {
-        setError('Ce nom d\'utilisateur est déjà pris.')
-        return
-      }
+    const clean = username.trim().replace(/^@/, '')
+    if (!clean) {
+      setError('Le nom d\'utilisateur est requis.')
+      return
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(clean)) {
+      setError('Le nom d\'utilisateur ne doit contenir que des lettres, chiffres, tirets et underscores.')
+      return
+    }
+    const result = await checkUsername(clean)
+    if (!result.available) {
+      setError('Ce nom d\'utilisateur est déjà pris.')
+      return
     }
     setLoading(true)
     try {
-      await register(name, email, password, username.trim().replace(/^@/, '') || undefined)
+      await register(name, email, password, clean)
       navigate('/projects', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la création du compte')
@@ -80,7 +86,7 @@ export default function RegisterPage() {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           autoComplete="username"
-          hint="Lettres, chiffres et tirets bas. Optionnel."
+          hint="Lettres, chiffres, tirets et underscores. Requis."
         />
         <Input
           label="Adresse e-mail"

@@ -24,7 +24,7 @@ const ALL_STATUSES: ArticleStatus[] = [
   'ready_to_publish', 'scheduled', 'published', 'unpublished', 'archived', 'failed',
 ]
 
-const ARTICLE_TABLE_GRID = 'lg:grid-cols-[minmax(300px,1fr)_72px_98px_86px_74px_106px_168px]'
+const ARTICLE_TABLE_GRID = 'lg:grid-cols-[minmax(380px,1fr)_72px_98px_86px_74px_106px_168px]'
 
 function scoreTone(value: number | null) {
   if (value === null) return 'bg-[#f0f0f2] text-tertiary'
@@ -75,8 +75,9 @@ function ArticleRow({
       <div className="min-w-0">
         <button
           type="button"
-          className="block max-w-full text-left text-[13px] font-medium leading-snug text-primary transition-colors hover:text-accent [overflow-wrap:anywhere]"
+          className="block w-full truncate text-left text-[13px] font-medium leading-snug text-primary transition-colors hover:text-accent"
           onClick={() => onEdit(article)}
+          title={article.title}
         >
           {article.title}
         </button>

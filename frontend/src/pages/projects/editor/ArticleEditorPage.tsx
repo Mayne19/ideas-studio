@@ -13,6 +13,7 @@ import { Table } from '@tiptap/extension-table'
 import { TableRow } from '@tiptap/extension-table-row'
 import { TableHeader } from '@tiptap/extension-table-header'
 import { TableCell } from '@tiptap/extension-table-cell'
+import { CalloutExtension } from '@/lib/tiptap/CalloutExtension'
 import {
   Eye, BarChart2, Settings, History, Loader2, RefreshCw,
   AlertCircle, MessageCircle, ChevronDown, ChevronUp, Plus, Trash2,
@@ -227,6 +228,9 @@ export default function ArticleEditorPage() {
       TableRow,
       TableHeader,
       TableCell,
+      CalloutExtension.configure({
+        HTMLAttributes: { 'data-block-type': 'callout' },
+      }),
       CommentMark,
     ],
     content: '',

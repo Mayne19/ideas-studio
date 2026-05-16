@@ -106,10 +106,9 @@ export default function NotificationsPage() {
             return (
               <div
                 key={n.id}
-                onClick={() => isUnread ? handleRead(n.id) : undefined}
                 className={`flex items-start gap-3 rounded-[14px] border px-4 py-3 transition-colors ${
                   isUnread
-                    ? 'border-accent/20 bg-accent/5 cursor-pointer hover:bg-accent/8'
+                    ? 'border-border bg-surface'
                     : 'border-border bg-surface opacity-60'
                 }`}
               >
@@ -124,7 +123,15 @@ export default function NotificationsPage() {
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
                   <span className="text-[11px] text-tertiary whitespace-nowrap">{timeAgo(n.created_at)}</span>
-                  {isUnread && <span className="h-2 w-2 rounded-full bg-accent" />}
+                  {isUnread && (
+                    <button
+                      type="button"
+                      onClick={() => handleRead(n.id)}
+                      className="rounded-[6px] bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent hover:bg-accent/20 transition-colors"
+                    >
+                      Marquer comme lu
+                    </button>
+                  )}
                 </div>
               </div>
             )
