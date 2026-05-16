@@ -714,11 +714,11 @@ export default function ArticleEditorPage() {
       {/* Navigation blocker */}
       {blocker.state === 'blocked' && (
         <div className="flex items-center justify-between gap-3 bg-warning/8 border-b border-warning/20 px-4 py-2 shrink-0">
-          <span className="text-[12px] text-[#a06000]">
+          <span className="text-[12px] text-warning">
             Sauvegarde en cours — quitter maintenant pourrait entraîner une perte de données.
           </span>
           <div className="flex items-center gap-2">
-            <button onClick={() => blocker.reset?.()} className="rounded-[6px] px-2.5 py-1 text-[11px] font-medium text-[#a06000] hover:bg-warning/10">Rester</button>
+            <button onClick={() => blocker.reset?.()} className="rounded-[6px] px-2.5 py-1 text-[11px] font-medium text-warning hover:bg-warning/10">Rester</button>
             <button onClick={() => blocker.proceed?.()} className="rounded-[6px] px-2.5 py-1 text-[11px] font-medium text-danger hover:bg-danger/8">Quitter</button>
           </div>
         </div>
@@ -771,7 +771,7 @@ export default function ArticleEditorPage() {
           </div>
 
           {/* ── CENTER: Article card ── */}
-          <div className={`flex min-w-0 flex-col overflow-hidden rounded-[14px] border border-border bg-surface ${!isEditable ? 'bg-[#fafafa]' : ''}`}>
+          <div className={`flex min-w-0 flex-col overflow-hidden rounded-[14px] border border-border ${!isEditable ? 'bg-app' : 'bg-surface'}`}>
 
             {/* Internal bar */}
             <div className="flex items-center justify-between gap-2 px-4 py-2 border-b border-border shrink-0 bg-surface">
@@ -1235,7 +1235,7 @@ export default function ArticleEditorPage() {
                       disabled={busy}
                       className="w-full flex items-center justify-center gap-1.5 rounded-[8px] border border-border py-2 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2] transition-colors disabled:opacity-40"
                     >
-                      {autosaveStatus === 'saved' ? <Check size={13} className="text-[#1a7a3a]" /> : null}
+                      {autosaveStatus === 'saved' ? <Check size={13} className="text-success" /> : null}
                       Sauvegarder
                     </button>
                     {!['ready_to_publish', 'published', 'archived'].includes(article.status) && (
@@ -1380,7 +1380,7 @@ export default function ArticleEditorPage() {
           <div className="mt-3 flex gap-1.5">
             <button
               onClick={() => void handleResolveInlineComment(selectedComment.id, true)}
-              className="flex flex-1 items-center justify-center gap-1 rounded-[8px] bg-success/10 py-1.5 text-[11px] font-medium text-[#1a7a3a] transition-colors hover:bg-success/15"
+              className="flex flex-1 items-center justify-center gap-1 rounded-[8px] bg-success/10 py-1.5 text-[11px] font-medium text-success transition-colors hover:bg-success/15"
             >
               <Check size={11} />
               Valider

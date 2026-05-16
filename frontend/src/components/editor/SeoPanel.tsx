@@ -39,7 +39,7 @@ function ScoreRing({ label, score }: { label: string; score: number | null }) {
   return (
     <div className="flex flex-col items-center gap-1.5 rounded-[12px] border border-border bg-[#f9f9fb] px-2 py-3">
       <svg width="112" height="112" viewBox="0 0 112 112" aria-label={`${label} ${Math.round(val)}`}>
-        <circle cx="56" cy="56" r={r} fill="none" stroke="#ececf0" strokeWidth="9" />
+        <circle cx="56" cy="56" r={r} fill="none" className="stroke-[#ececf0] dark:stroke-[#333]" strokeWidth="9" />
         <circle
           cx="56"
           cy="56"
@@ -58,7 +58,7 @@ function ScoreRing({ label, score }: { label: string; score: number | null }) {
           textAnchor="middle"
           fontSize="20"
           fontWeight="700"
-          fill="#1d1d1f"
+          className="fill-[#1d1d1f] dark:fill-[#e0e0e4]"
           style={{ fontFamily: 'inherit', letterSpacing: 0 }}
         >
           {val > 0 ? Math.round(val) : '-'}
@@ -92,8 +92,8 @@ function ReadinessBlock({ check, hasTitleH1 }: { check: ReadyCheck; hasTitleH1: 
     : check.blocking_issues
   const hasBlocking = blockingIssues.length > 0
   const config = check.can_publish || !hasBlocking
-    ? { icon: <CheckCircle size={13} />, label: 'Publication readiness: pret ou a verifier', cls: 'bg-success/10 text-[#218044]' }
-    : { icon: <XCircle size={13} />, label: 'Publication readiness: bloque', cls: 'bg-danger/8 text-[#d93b33]' }
+    ? { icon: <CheckCircle size={13} />, label: 'Publication readiness: pret ou a verifier', cls: 'bg-success/10 text-success' }
+    : { icon: <XCircle size={13} />, label: 'Publication readiness: bloque', cls: 'bg-danger/8 text-danger' }
 
   return (
     <div className={`rounded-[10px] px-3 py-2.5 ${config.cls}`}>

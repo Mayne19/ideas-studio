@@ -71,7 +71,7 @@ export default function VersionsPanel({
   return (
     <>
       <div className="flex flex-col gap-1.5">
-        {message && <p className="rounded-[8px] bg-success/8 px-2 py-1.5 text-[11px] text-[#1a7a3a]">{message}</p>}
+        {message && <p className="rounded-[8px] bg-success/8 px-2 py-1.5 text-[11px] text-success">{message}</p>}
         {error && <p className="rounded-[8px] bg-danger/8 px-2 py-1.5 text-[11px] text-danger">{error}</p>}
         {versions.map((v) => (
           <div

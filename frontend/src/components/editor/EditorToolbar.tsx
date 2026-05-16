@@ -5,6 +5,13 @@ import {
   Bold,
   Italic,
   Underline,
+  Heading1,
+  Heading2,
+  Heading3,
+  Heading4,
+  Heading5,
+  Heading6,
+  Pilcrow,
   List,
   ListOrdered,
   Quote,
@@ -209,48 +216,27 @@ export default function EditorToolbar({
 
   return (
     <div className={`flex h-full flex-col items-center gap-0.5 overflow-y-auto px-1 py-2 ${disabled ? 'pointer-events-none opacity-45' : ''}`}>
-      <select
-        value={
-          editor.isActive('paragraph') && !editor.isActive('heading')
-            ? 'paragraph'
-            : editor.isActive('heading', { level: 1 })
-              ? '1'
-              : editor.isActive('heading', { level: 2 })
-                ? '2'
-                : editor.isActive('heading', { level: 3 })
-                  ? '3'
-                  : editor.isActive('heading', { level: 4 })
-                    ? '4'
-                    : editor.isActive('heading', { level: 5 })
-                      ? '5'
-                      : editor.isActive('heading', { level: 6 })
-                        ? '6'
-                        : 'paragraph'
-        }
-        onChange={(e) => {
-          const v = e.target.value
-          if (v === 'paragraph') {
-            editor.chain().focus().setParagraph().run()
-          } else {
-            editor.chain().focus().toggleHeading({ level: Number(v) as 1 | 2 | 3 | 4 | 5 | 6 }).run()
-          }
-        }}
-        className="flex h-7 w-[68px] shrink-0 cursor-pointer appearance-none items-center justify-center rounded-[6px] border border-border/60 bg-transparent px-2 pr-5 text-[11px] font-medium text-secondary outline-none transition-colors hover:border-secondary/40 hover:text-primary"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3e%3cpath d='M1 1l4 4 4-4' stroke='%23999' stroke-width='1.5' fill='none'/%3e%3c/svg%3e")`,
-          backgroundPosition: 'right 6px center',
-          backgroundRepeat: 'no-repeat',
-          backgroundSize: '10px 6px',
-        }}
-      >
-        <option value="paragraph">Paragraphe</option>
-        <option value="1">H1</option>
-        <option value="2">H2</option>
-        <option value="3">H3</option>
-        <option value="4">H4</option>
-        <option value="5">H5</option>
-        <option value="6">H6</option>
-      </select>
+      <ToolBtn onClick={() => editor.chain().focus().setParagraph().run()} active={editor.isActive('paragraph') && !editor.isActive('heading')} title="Paragraphe">
+        <Pilcrow size={15} />
+      </ToolBtn>
+      <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} title="Titre 1">
+        <Heading1 size={15} />
+      </ToolBtn>
+      <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} title="Titre 2">
+        <Heading2 size={15} />
+      </ToolBtn>
+      <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} title="Titre 3">
+        <Heading3 size={15} />
+      </ToolBtn>
+      <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()} active={editor.isActive('heading', { level: 4 })} title="Titre 4">
+        <Heading4 size={15} />
+      </ToolBtn>
+      <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 5 }).run()} active={editor.isActive('heading', { level: 5 })} title="Titre 5">
+        <Heading5 size={15} />
+      </ToolBtn>
+      <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 6 }).run()} active={editor.isActive('heading', { level: 6 })} title="Titre 6">
+        <Heading6 size={15} />
+      </ToolBtn>
 
       <Sep />
 
@@ -308,11 +294,10 @@ export default function EditorToolbar({
             top: popoverPosition.top,
             left: popoverPosition.left,
             zIndex: 2147483647,
-            backgroundColor: '#fff',
           }}
-          className="fixed w-[296px] rounded-[16px] border border-border-strong p-3 text-left shadow-[0_24px_80px_rgba(0,0,0,0.34)] ring-1 ring-black/10"
+          className="fixed w-[296px] rounded-[16px] border border-border-strong bg-surface p-3 text-left shadow-[0_24px_80px_rgba(0,0,0,0.34)] ring-1 ring-black/10 dark:shadow-[0_24px_80px_rgba(0,0,0,0.6)] dark:ring-white/10"
         >
-          <span className="absolute left-[-7px] top-6 h-3.5 w-3.5 rotate-45 border-b border-l border-border-strong bg-white" />
+          <span className="absolute left-[-7px] top-6 h-3.5 w-3.5 rotate-45 border-b border-l border-border-strong bg-surface" />
           {activePopover === 'link' && (
             <div className="relative flex flex-col gap-2">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary">Lien</p>

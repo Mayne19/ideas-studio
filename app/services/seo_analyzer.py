@@ -67,10 +67,23 @@ def _parse_markdown(content: str, title: str = "") -> dict:
     words = text_content.split()
     word_count = len(words)
 
+    conclusion_patterns = r"(conclusion|en résumé|résumé|summary|wrap.?up|final|récapitulatif|synthèse|à retenir|pour conclure|en bref)"
     has_conclusion = any(
-        re.match(r"^#{1,3}\s*(conclusion|en résumé|résumé|summary|wrap.?up|final)", l, re.IGNORECASE)
+        re.match(r"^#{1,3}\s*" + conclusion_patterns, l, re.IGNORECASE)
         for l in lines
     )
+    if not has_conclusion and has_html:
+        has_conclusion = bool(
+            re.search(rf"<h[23][^>]*>[^<]*{conclusion_patterns}[^<]*</h[23]>", content, re.IGNORECASE)
+        )
+    if not has_conclusion:
+        h2_texts = _html_heading_texts(content, 2) if has_html else []
+        h3_texts = _html_heading_texts(content, 3) if has_html else []
+        all_headings = h2_texts + h3_texts
+        if len(all_headings) >= 2:
+            last = _normalize(all_headings[-1])
+            if any(word in last for word in ("conclu", "récap", "résumé", "synthèse", "retenir", "bilan", "final")):
+                has_conclusion = True
 
     return {
         "h1_count": h1_count,
@@ -167,7 +180,10 @@ def _run_seo_checks(article: Article, parsed: dict) -> list[dict]:
 
     # Keyword density (0.5% – 3%)
     if keyword and parsed["word_count"] > 0:
+        kw_tokens = [t for t in _normalize(keyword).split() if len(t) > 2 and t not in _STOP_WORDS]
         count = content_lower.count(keyword)
+        if count == 0 and len(kw_tokens) > 1:
+            count = sum(content_lower.count(t) for t in kw_tokens)
         density = count / parsed["word_count"] * 100
         if density < 0.5:
             issues.append(_issue(
@@ -268,9 +284,11 @@ def _run_seo_checks(article: Article, parsed: dict) -> list[dict]:
             "Ajoutez un slug URL-friendly.",
             "meta",
         ))
-    elif keyword and keyword.replace(" ", "-") not in slug and keyword.replace(" ", "_") not in slug:
-        kw_slug = re.sub(r"[^a-z0-9]+", "-", keyword).strip("-")
-        if kw_slug not in slug:
+    elif keyword:
+        kw_slug = re.sub(r"[^a-z0-9]+", "-", _normalize(keyword)).strip("-")
+        slug_normalized = _normalize(slug).replace("-", "").replace("_", "")
+        kw_slug_flat = kw_slug.replace("-", "").replace("_", "")
+        if kw_slug not in slug and kw_slug_flat not in slug_normalized and kw_slug_flat not in slug_normalized.replace("-", ""):
             issues.append(_issue(
                 "keyword_in_slug", "seo", "info",
                 "Le mot-clé n'est pas dans le slug.",
@@ -311,12 +329,20 @@ def _run_readability_checks(parsed: dict) -> list[dict]:
         ))
 
     # Long paragraphs (> 150 words)
-    long_paragraphs = [p for p in parsed["paragraphs"] if len(p.split()) > 150 and not p.startswith("#")]
+    long_paragraphs = [(i, p) for i, p in enumerate(parsed["paragraphs"])
+                       if len(p.split()) > 150 and not p.startswith("#")]
     if long_paragraphs:
+        previews = []
+        for idx, para in long_paragraphs[:3]:
+            preview = para[:80] + "..." if len(para) > 80 else para
+            previews.append(f"§{idx + 1}: « {preview} »")
+        detail = " ; ".join(previews)
+        if len(long_paragraphs) > 3:
+            detail += f" et {len(long_paragraphs) - 3} autre(s)"
         issues.append(_issue(
             "long_paragraphs", "readability", "warning",
             f"{len(long_paragraphs)} paragraphe(s) dépassent 150 mots.",
-            "Subdivisez les longs paragraphes pour aérer le texte.",
+            f"Subdivisez les longs paragraphes : {detail}",
             "content",
         ))
 
@@ -397,8 +423,9 @@ def _run_quality_checks(article: Article, parsed: dict) -> list[dict]:
             "media",
         ))
 
-    # Excerpt
-    if not article.excerpt:
+    # Excerpt (fallback to meta_description or first content paragraph)
+    effective_excerpt = article.excerpt or article.meta_description or (parsed["intro"] if parsed.get("intro") else "")
+    if not effective_excerpt:
         issues.append(_issue(
             "missing_excerpt", "quality", "info",
             "L'extrait (excerpt) est absent.",
@@ -410,12 +437,23 @@ def _run_quality_checks(article: Article, parsed: dict) -> list[dict]:
     return issues
 
 
+def _find_external_links(content: str) -> list[str]:
+    links = []
+    # Markdown links [text](url)
+    for match in re.findall(r"\[([^\]]*)\]\((https?://[^\)]+)\)", content):
+        links.append(match[1])
+    # HTML links <a href="url">
+    for match in re.findall(r'''<a\s[^>]*href=["'](https?://[^"']+)["']''', content, re.IGNORECASE):
+        links.append(match)
+    return links
+
+
 def _run_eeat_checks(article: Article, parsed: dict) -> list[dict]:
     issues = []
     content = article.content or ""
 
     # External links
-    external_links = re.findall(r"\[([^\]]+)\]\((https?://[^\)]+)\)", content)
+    external_links = _find_external_links(content)
     if len(external_links) == 0:
         issues.append(_issue(
             "no_external_links", "eeat", "warning",
