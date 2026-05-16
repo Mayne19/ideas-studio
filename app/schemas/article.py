@@ -81,6 +81,7 @@ class CategoryBrief(BaseModel):
     id: str
     name: str
     slug: str
+    color: Optional[str] = None
 
 
 class ArticlePublicApiResponse(BaseModel):
@@ -90,6 +91,9 @@ class ArticlePublicApiResponse(BaseModel):
     excerpt: Optional[str]
     content: Optional[str]
     category: Optional[CategoryBrief]
+    category_slug: Optional[str] = None
+    category_color: Optional[str] = None
+    main_keyword: Optional[str] = None
     meta_title: Optional[str]
     meta_description: Optional[str]
     cover_image_url: Optional[str]

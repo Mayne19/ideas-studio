@@ -488,9 +488,9 @@ export default function CategoriesPage() {
           <Info size={15} className="mt-0.5 shrink-0 text-tertiary" />
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-medium text-primary">Synchronisation depuis votre site</p>
-            <p className="mt-0.5 text-[12px] text-secondary">
-              Importe les catégories existantes depuis les articles publiés. Les doublons sont évités.
-            </p>
+             <p className="mt-0.5 text-[12px] text-secondary">
+               Importe les catégories depuis l'API publique de votre site connecté (name, slug, couleur). Les doublons sont évités.
+             </p>
             {syncMessage && (
               <p className="mt-1 text-[12px] text-accent">{syncMessage}</p>
             )}
