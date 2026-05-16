@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { Editor } from '@tiptap/react'
 import {
@@ -9,8 +9,6 @@ import {
   Heading2,
   Heading3,
   Heading4,
-  Heading5,
-  Heading6,
   Pilcrow,
   List,
   ListOrdered,
@@ -90,6 +88,14 @@ export default function EditorToolbar({
   const [imageUrl, setImageUrl] = useState('')
   const [imageAlt, setImageAlt] = useState('')
   const [calloutType, setCalloutType] = useState<CalloutType>('info')
+  const [selVersion, setSelVersion] = useState(0)
+
+  useEffect(() => {
+    if (!editor) return
+    const handler = () => setSelVersion((v) => v + 1)
+    editor.on('selectionUpdate', handler)
+    return () => { editor.off('selectionUpdate', handler) }
+  }, [editor])
 
   if (!editor) return null
 
@@ -231,12 +237,7 @@ export default function EditorToolbar({
       <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()} active={editor.isActive('heading', { level: 4 })} title="Titre 4">
         <Heading4 size={15} />
       </ToolBtn>
-      <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 5 }).run()} active={editor.isActive('heading', { level: 5 })} title="Titre 5">
-        <Heading5 size={15} />
-      </ToolBtn>
-      <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 6 }).run()} active={editor.isActive('heading', { level: 6 })} title="Titre 6">
-        <Heading6 size={15} />
-      </ToolBtn>
+      {selVersion >= 0 && null}
 
       <Sep />
 

@@ -37,9 +37,9 @@ function ScoreRing({ label, score }: { label: string; score: number | null }) {
   const dash = (val / 100) * circ
 
   return (
-    <div className="flex flex-col items-center gap-1.5 rounded-[12px] border border-border bg-[#f9f9fb] px-2 py-3">
-      <svg width="112" height="112" viewBox="0 0 112 112" aria-label={`${label} ${Math.round(val)}`}>
-        <circle cx="56" cy="56" r={r} fill="none" className="stroke-[#ececf0] dark:stroke-[#333]" strokeWidth="9" />
+    <div className="flex flex-col items-center gap-1.5 rounded-[12px] border border-border bg-surface px-2 py-3">
+      <svg width="112" height="112" viewBox="0 0 112 112" aria-label={`${label} ${Math.round(val)}`} className="text-primary">
+        <circle cx="56" cy="56" r={r} fill="none" className="stroke-border" strokeWidth="9" />
         <circle
           cx="56"
           cy="56"
@@ -58,7 +58,7 @@ function ScoreRing({ label, score }: { label: string; score: number | null }) {
           textAnchor="middle"
           fontSize="20"
           fontWeight="700"
-          className="fill-[#1d1d1f] dark:fill-[#e0e0e4]"
+          className="fill-current"
           style={{ fontFamily: 'inherit', letterSpacing: 0 }}
         >
           {val > 0 ? Math.round(val) : '-'}
@@ -232,7 +232,7 @@ export default function SeoPanel({
       )}
 
       {/* Meta title info */}
-      <div className="rounded-[10px] border border-border bg-[#f9f9fb] px-3 py-2.5">
+      <div className="rounded-[10px] border border-border bg-surface px-3 py-2.5">
         <p className="text-[11px] font-medium text-primary">
           Meta title utilise : {article.meta_title?.trim() ? `"${article.meta_title.trim()}"` : 'titre de l\'article'}
         </p>
