@@ -46,3 +46,23 @@ export function deleteProject(id: string): Promise<void> {
 export function disconnectProject(id: string): Promise<Project> {
   return api.post<Project>(`/projects/${id}/disconnect`)
 }
+
+export type EditorialSuggestion = {
+  description: string
+  audience: string
+  tone: string
+  positioning: string
+  main_keywords: string[]
+  recommended_categories: string[]
+  seo_writing_guidelines: string
+}
+
+export type EditorialSetupResponse = {
+  suggestion: EditorialSuggestion
+  source: 'llm' | 'default'
+  project_has_data: boolean
+}
+
+export function suggestEditorialSetup(projectId: string): Promise<EditorialSetupResponse> {
+  return api.post<EditorialSetupResponse>(`/projects/${projectId}/editorial-setup/suggest`)
+}
