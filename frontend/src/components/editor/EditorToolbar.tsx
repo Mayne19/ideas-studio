@@ -1,6 +1,7 @@
-import { useRef, useState, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Editor } from '@tiptap/react'
+import { NodeSelection } from '@tiptap/pm/state'
 import {
   Bold,
   Italic,
@@ -21,15 +22,31 @@ import {
   Table2,
   Unlink2,
   StickyNote,
+  Plus,
 } from 'lucide-react'
+import { createCalloutTemplate } from '@/api/callouts'
 import { uploadMedia } from '@/api/media'
 import type { CalloutAttrs } from '@/lib/tiptap/CalloutExtension'
 import type { CalloutTemplate } from '@/types'
+import ColorPickerField from '@/components/ui/ColorPickerField'
+import { DEFAULT_ACCENT_COLOR, normalizeHexColor } from '@/lib/colors'
+import { deriveCalloutColors, slugifyCalloutLabel } from '@/lib/callouts'
 
 type PopoverKind = 'callout' | 'link' | 'table' | 'image'
-type SavedRange = { from: number; to: number }
+type SavedSelection = { from: number; to: number; isNodeSelection: boolean }
+type CalloutCreateForm = {
+  label: string
+  defaultTitle: string
+  primaryColor: string
+}
 
 const POPOVER_WIDTH = 296
+const IMAGE_WIDTH_PRESETS = [40, 60, 80, 100]
+const DEFAULT_CALLOUT_FORM: CalloutCreateForm = {
+  label: '',
+  defaultTitle: '',
+  primaryColor: DEFAULT_ACCENT_COLOR,
+}
 
 function ToolBtn({
   onClick,
@@ -65,24 +82,32 @@ function Sep() {
   return <div className="my-1 h-px w-6 shrink-0 bg-border" />
 }
 
+function parseImageWidth(value: string | number | null | undefined) {
+  const numeric = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10)
+  if (!Number.isFinite(numeric)) return 100
+  return Math.max(20, Math.min(100, Math.round(numeric)))
+}
+
 export default function EditorToolbar({
   editor,
   projectId,
   articleId,
   calloutTemplates = [],
+  onCalloutTemplateCreated,
   disabled = false,
 }: {
   editor: Editor | null
   projectId?: string
   articleId?: string
   calloutTemplates?: CalloutTemplate[]
+  onCalloutTemplateCreated?: (template: CalloutTemplate) => void
   disabled?: boolean
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [activePopover, setActivePopover] = useState<PopoverKind | null>(null)
   const [popoverPosition, setPopoverPosition] = useState({ top: 120, left: 120 })
-  const [savedRange, setSavedRange] = useState<SavedRange | null>(null)
+  const [savedSelection, setSavedSelection] = useState<SavedSelection | null>(null)
   const [linkText, setLinkText] = useState('')
   const [linkUrl, setLinkUrl] = useState('')
   const [tableRows, setTableRows] = useState(3)
@@ -90,18 +115,43 @@ export default function EditorToolbar({
   const [tableHeader, setTableHeader] = useState(true)
   const [imageUrl, setImageUrl] = useState('')
   const [imageAlt, setImageAlt] = useState('')
+  const [imageWidth, setImageWidth] = useState('100')
+  const [imageError, setImageError] = useState('')
   const [selectedCalloutId, setSelectedCalloutId] = useState('')
   const [calloutTitle, setCalloutTitle] = useState('')
-  const [selVersion, setSelVersion] = useState(0)
+  const [calloutSaving, setCalloutSaving] = useState(false)
+  const [calloutError, setCalloutError] = useState('')
+  const [createCalloutOpen, setCreateCalloutOpen] = useState(false)
+  const [calloutForm, setCalloutForm] = useState<CalloutCreateForm>(DEFAULT_CALLOUT_FORM)
+  const forceSelectionRender = useState(0)[1]
 
   useEffect(() => {
     if (!editor) return
-    const handler = () => setSelVersion((v) => v + 1)
+    const handler = () => {
+      forceSelectionRender((v) => v + 1)
+      if (activePopover === 'image') {
+        if (!editor.isActive('image')) {
+          setImageUrl('')
+          setImageAlt('')
+          setImageWidth('100')
+          setImageError('')
+          return
+        }
+        const attrs = editor.getAttributes('image') as Record<string, string | number | undefined>
+        setImageUrl(typeof attrs.src === 'string' ? attrs.src : '')
+        setImageAlt(typeof attrs.alt === 'string' ? attrs.alt : '')
+        setImageWidth(String(parseImageWidth(attrs.width)))
+        setImageError('')
+      }
+    }
     editor.on('selectionUpdate', handler)
-    return () => { editor.off('selectionUpdate', handler) }
-  }, [editor])
+    return () => {
+      editor.off('selectionUpdate', handler)
+    }
+  }, [editor, activePopover, forceSelectionRender])
 
   if (!editor) return null
+  const currentEditor = editor
 
   function placePopover(event: React.MouseEvent<HTMLButtonElement>, kind: PopoverKind) {
     const rect = event.currentTarget.getBoundingClientRect()
@@ -111,6 +161,31 @@ export default function EditorToolbar({
       left: Math.max(16, left),
     })
     setActivePopover((current) => (current === kind ? null : kind))
+  }
+
+  function rememberSelection() {
+    const selection = currentEditor.state.selection
+    setSavedSelection({
+      from: selection.from,
+      to: selection.to,
+      isNodeSelection: selection instanceof NodeSelection,
+    })
+  }
+
+  function chainWithSavedSelection() {
+    const chain = currentEditor.chain().focus()
+    if (!savedSelection) return chain
+    if (savedSelection.isNodeSelection) {
+      return chain.setNodeSelection(savedSelection.from)
+    }
+    return chain.setTextSelection({ from: savedSelection.from, to: savedSelection.to })
+  }
+
+  function closePopover(kind?: PopoverKind) {
+    setActivePopover((current) => {
+      if (!kind || current === kind) return null
+      return current
+    })
   }
 
   function escapeHtml(value: string): string {
@@ -164,18 +239,68 @@ export default function EditorToolbar({
   function normalizeUrl(value: string): string {
     const trimmed = value.trim()
     if (!trimmed) return ''
-    if (/^(https?:|mailto:|tel:|\/|#)/i.test(trimmed)) return trimmed
+    if (/^(https?:|mailto:|tel:|\/|#|blob:|data:)/i.test(trimmed)) return trimmed
     return `https://${trimmed}`
   }
 
-  async function handleImageFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file || !projectId) return
+  function resetImageForm() {
+    setImageUrl('')
+    setImageAlt('')
+    setImageWidth('100')
+    setImageError('')
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  function syncSelectedImageFields() {
+    if (!currentEditor.isActive('image')) {
+      resetImageForm()
+      return
+    }
+    const attrs = currentEditor.getAttributes('image') as Record<string, string | number | undefined>
+    setImageUrl(typeof attrs.src === 'string' ? attrs.src : '')
+    setImageAlt(typeof attrs.alt === 'string' ? attrs.alt : '')
+    setImageWidth(String(parseImageWidth(attrs.width)))
+    setImageError('')
+  }
+
+  function imagePayload(src: string, alt: string) {
+    return {
+      src,
+      alt: alt.trim() || null,
+      width: parseImageWidth(imageWidth),
+    }
+  }
+
+  function applyImage(attrs: { src: string; alt: string | null; width: number; 'data-media-id'?: string | null }) {
+    const chain = chainWithSavedSelection()
+    if (currentEditor.isActive('image') || savedSelection?.isNodeSelection) {
+      return chain.updateAttributes('image', attrs).run()
+    }
+    return chain.insertContent({ type: 'image', attrs }).run()
+  }
+
+  async function handleImageFile(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (!projectId) {
+      setImageError("Le projet n'est pas prêt pour l'upload.")
+      return
+    }
 
     setUploading(true)
+    setImageError('')
     try {
       const media = await uploadMedia(projectId, file, articleId)
-      editor!.chain().focus().setImage({ src: media.url, alt: media.alt_text ?? media.filename ?? '' }).run()
+      const alt = imageAlt.trim() || media.alt_text || media.filename || file.name
+      const inserted = applyImage({
+        ...imagePayload(media.url, alt),
+        'data-media-id': media.id,
+      })
+      if (!inserted) throw new Error("Impossible d'insérer cette image.")
+      resetImageForm()
+      closePopover('image')
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : "Impossible d'insérer cette image.")
     } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ''
@@ -183,10 +308,10 @@ export default function EditorToolbar({
   }
 
   function openLinkPopover(event: React.MouseEvent<HTMLButtonElement>) {
-    const { from, to, empty } = editor!.state.selection
-    const previousUrl = editor!.getAttributes('link').href as string | undefined
-    setSavedRange({ from, to })
-    setLinkText(empty ? '' : editor!.state.doc.textBetween(from, to, ' '))
+    const { from, to, empty } = currentEditor.state.selection
+    const previousUrl = currentEditor.getAttributes('link').href as string | undefined
+    setSavedSelection({ from, to, isNodeSelection: false })
+    setLinkText(empty ? '' : currentEditor.state.doc.textBetween(from, to, ' '))
     setLinkUrl(previousUrl ?? '')
     placePopover(event, 'link')
   }
@@ -194,144 +319,209 @@ export default function EditorToolbar({
   function applyLink() {
     const url = normalizeUrl(linkUrl)
     const text = linkText.trim()
-    if (!url || !savedRange) return
+    if (!url || !savedSelection) return
 
-    if (savedRange.from === savedRange.to) {
+    if (savedSelection.from === savedSelection.to) {
       if (!text) return
-      editor!.chain().focus().setTextSelection(savedRange.from).insertContent(
-        `<a href="${escapeAttr(url)}">${escapeHtml(text)}</a>`
+      currentEditor.chain().focus().setTextSelection(savedSelection.from).insertContent(
+        `<a href="${escapeAttr(url)}">${escapeHtml(text)}</a>`,
       ).run()
     } else {
-      const selectedText = editor!.state.doc.textBetween(savedRange.from, savedRange.to, ' ')
-      editor!.chain().focus().setTextSelection(savedRange).insertContent(
-        `<a href="${escapeAttr(url)}">${escapeHtml(text || selectedText || url)}</a>`
+      const selectedText = currentEditor.state.doc.textBetween(savedSelection.from, savedSelection.to, ' ')
+      currentEditor.chain().focus().setTextSelection({ from: savedSelection.from, to: savedSelection.to }).insertContent(
+        `<a href="${escapeAttr(url)}">${escapeHtml(text || selectedText || url)}</a>`,
       ).run()
     }
 
-    setActivePopover(null)
+    closePopover('link')
     setLinkText('')
     setLinkUrl('')
   }
 
   function removeLink() {
-    const range = savedRange ?? editor!.state.selection
-    editor!.chain().focus().setTextSelection(range).extendMarkRange('link').unsetLink().run()
-    setActivePopover(null)
+    const range = savedSelection ?? { from: currentEditor.state.selection.from, to: currentEditor.state.selection.to }
+    currentEditor.chain().focus().setTextSelection(range).extendMarkRange('link').unsetLink().run()
+    closePopover('link')
   }
 
   function openTablePopover(event: React.MouseEvent<HTMLButtonElement>) {
+    rememberSelection()
     placePopover(event, 'table')
   }
 
   function insertTable() {
-    editor!.chain().focus().insertTable({
+    chainWithSavedSelection().insertTable({
       rows: Math.max(1, Math.min(12, tableRows)),
       cols: Math.max(1, Math.min(8, tableCols)),
       withHeaderRow: tableHeader,
     }).run()
-    setActivePopover(null)
+    closePopover('table')
   }
 
   function openImagePopover(event: React.MouseEvent<HTMLButtonElement>) {
-    setImageUrl('')
-    setImageAlt('')
+    rememberSelection()
+    syncSelectedImageFields()
     placePopover(event, 'image')
   }
 
+  function resetCalloutCreateForm() {
+    setCalloutForm(DEFAULT_CALLOUT_FORM)
+    setCalloutError('')
+  }
+
   function openCalloutPopover(event: React.MouseEvent<HTMLButtonElement>) {
-    const attrs = editor!.getAttributes('callout') as Record<string, string | undefined>
+    rememberSelection()
+    const attrs = currentEditor.getAttributes('callout') as Record<string, string | undefined>
     const activeTemplateId = attrs['data-template-id']
     const fallbackTemplate = calloutTemplates[0]?.id ?? ''
     setSelectedCalloutId(activeTemplateId || fallbackTemplate)
     const matchingTemplate = calloutTemplates.find((template) => template.id === activeTemplateId) ?? calloutTemplates[0]
     setCalloutTitle(attrs['data-callout-title'] || matchingTemplate?.default_title || matchingTemplate?.label || '')
+    setCreateCalloutOpen(calloutTemplates.length === 0)
+    resetCalloutCreateForm()
     placePopover(event, 'callout')
+  }
+
+  async function handleCreateCallout() {
+    if (!projectId) {
+      setCalloutError("Le projet n'est pas disponible.")
+      return
+    }
+    if (!calloutForm.label.trim()) {
+      setCalloutError('Ajoutez un nom pour ce callout.')
+      return
+    }
+
+    setCalloutSaving(true)
+    setCalloutError('')
+    try {
+      const primaryColor = normalizeHexColor(calloutForm.primaryColor, DEFAULT_ACCENT_COLOR)
+      const created = await createCalloutTemplate(projectId, {
+        label: calloutForm.label.trim(),
+        default_title: calloutForm.defaultTitle.trim() || null,
+        style: slugifyCalloutLabel(calloutForm.label),
+        source: 'manual',
+        ...deriveCalloutColors(primaryColor),
+      })
+      onCalloutTemplateCreated?.(created)
+      setSelectedCalloutId(created.id)
+      setCalloutTitle(created.default_title ?? created.label)
+      setCreateCalloutOpen(false)
+      resetCalloutCreateForm()
+    } catch (error) {
+      setCalloutError(error instanceof Error ? error.message : 'Impossible de créer ce callout.')
+    } finally {
+      setCalloutSaving(false)
+    }
   }
 
   function insertCallout() {
     const template = selectedCalloutTemplate()
     if (!template) return
+
     const attrs = attrsFromTemplate(template, calloutTitle || template.default_title || template.label)
-    if (editor!.isActive('callout')) {
-      editor!.chain().focus().updateAttributes('callout', attrs).run()
-      setActivePopover(null)
+    if (currentEditor.isActive('callout')) {
+      currentEditor.chain().focus().updateAttributes('callout', attrs).run()
+      closePopover('callout')
       return
     }
 
-    const { from, to, empty } = editor!.state.selection
-    const selectedText = empty ? '' : editor!.state.doc.textBetween(from, to, ' ').trim()
+    const selection = savedSelection ?? {
+      from: currentEditor.state.selection.from,
+      to: currentEditor.state.selection.to,
+      isNodeSelection: false,
+    }
+    const selectedText = selection.isNodeSelection
+      ? ''
+      : currentEditor.state.doc.textBetween(selection.from, selection.to, ' ').trim()
     const bodyHtml = selectedText ? `<p>${escapeHtml(selectedText)}</p>` : '<p>Texte du callout</p>'
-    editor!.chain().focus().insertContent(buildCalloutHtml(template, calloutTitle || template.default_title || template.label || '', bodyHtml)).run()
-    setActivePopover(null)
+
+    chainWithSavedSelection().insertContent(
+      buildCalloutHtml(template, calloutTitle || template.default_title || template.label || '', bodyHtml),
+    ).run()
+    closePopover('callout')
   }
 
   function insertImageUrl() {
     const src = normalizeUrl(imageUrl)
-    if (!src) return
-    editor!.chain().focus().setImage({ src, alt: imageAlt.trim() }).run()
-    setActivePopover(null)
+    if (!src) {
+      setImageError("Ajoutez une URL d'image valide.")
+      return
+    }
+    const inserted = applyImage({
+      ...imagePayload(src, imageAlt),
+      'data-media-id': null,
+    })
+    if (!inserted) {
+      setImageError("Impossible d'insérer cette image.")
+      return
+    }
+    resetImageForm()
+    closePopover('image')
   }
 
   function deleteSelectedImage() {
-    editor!.chain().focus().deleteSelection().run()
-    setActivePopover(null)
+    const deleted = chainWithSavedSelection().deleteSelection().run()
+    if (deleted) {
+      resetImageForm()
+      closePopover('image')
+    }
   }
 
   return (
     <div className={`flex h-full flex-col items-center gap-0.5 overflow-y-auto px-1 py-2 ${disabled ? 'pointer-events-none opacity-45' : ''}`}>
-      <ToolBtn onClick={() => editor.chain().focus().setParagraph().run()} active={editor.isActive('paragraph') && !editor.isActive('heading')} title="Paragraphe">
+      <ToolBtn onClick={() => currentEditor.chain().focus().setParagraph().run()} active={currentEditor.isActive('paragraph') && !currentEditor.isActive('heading')} title="Paragraphe">
         <Pilcrow size={15} />
       </ToolBtn>
-      <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} title="Titre 1">
+      <ToolBtn onClick={() => currentEditor.chain().focus().toggleHeading({ level: 1 }).run()} active={currentEditor.isActive('heading', { level: 1 })} title="Titre 1">
         <Heading1 size={15} />
       </ToolBtn>
-      <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} title="Titre 2">
+      <ToolBtn onClick={() => currentEditor.chain().focus().toggleHeading({ level: 2 }).run()} active={currentEditor.isActive('heading', { level: 2 })} title="Titre 2">
         <Heading2 size={15} />
       </ToolBtn>
-      <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} title="Titre 3">
+      <ToolBtn onClick={() => currentEditor.chain().focus().toggleHeading({ level: 3 }).run()} active={currentEditor.isActive('heading', { level: 3 })} title="Titre 3">
         <Heading3 size={15} />
       </ToolBtn>
-      <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()} active={editor.isActive('heading', { level: 4 })} title="Titre 4">
+      <ToolBtn onClick={() => currentEditor.chain().focus().toggleHeading({ level: 4 }).run()} active={currentEditor.isActive('heading', { level: 4 })} title="Titre 4">
         <Heading4 size={15} />
       </ToolBtn>
-      {selVersion >= 0 && null}
 
       <Sep />
 
-      <ToolBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Gras">
+      <ToolBtn onClick={() => currentEditor.chain().focus().toggleBold().run()} active={currentEditor.isActive('bold')} title="Gras">
         <Bold size={15} />
       </ToolBtn>
-      <ToolBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Italique">
+      <ToolBtn onClick={() => currentEditor.chain().focus().toggleItalic().run()} active={currentEditor.isActive('italic')} title="Italique">
         <Italic size={15} />
       </ToolBtn>
-      <ToolBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} title="Souligne">
+      <ToolBtn onClick={() => currentEditor.chain().focus().toggleUnderline().run()} active={currentEditor.isActive('underline')} title="Souligne">
         <Underline size={15} />
       </ToolBtn>
-      <ToolBtn onClick={openLinkPopover} active={editor.isActive('link')} title="Lien">
-        {editor.isActive('link') ? <Unlink2 size={15} /> : <Link2 size={15} />}
+      <ToolBtn onClick={openLinkPopover} active={currentEditor.isActive('link')} title="Lien">
+        {currentEditor.isActive('link') ? <Unlink2 size={15} /> : <Link2 size={15} />}
       </ToolBtn>
 
       <Sep />
 
-      <ToolBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title="Liste a puces">
+      <ToolBtn onClick={() => currentEditor.chain().focus().toggleBulletList().run()} active={currentEditor.isActive('bulletList')} title="Liste a puces">
         <List size={15} />
       </ToolBtn>
-      <ToolBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Liste numerotee">
+      <ToolBtn onClick={() => currentEditor.chain().focus().toggleOrderedList().run()} active={currentEditor.isActive('orderedList')} title="Liste numerotee">
         <ListOrdered size={15} />
       </ToolBtn>
-      <ToolBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Citation">
+      <ToolBtn onClick={() => currentEditor.chain().focus().toggleBlockquote().run()} active={currentEditor.isActive('blockquote')} title="Citation">
         <Quote size={15} />
       </ToolBtn>
-      <ToolBtn onClick={openCalloutPopover} active={editor.isActive('callout')} disabled={calloutTemplates.length === 0} title={calloutTemplates.length === 0 ? 'Aucun callout configure' : 'Callout'}>
+      <ToolBtn onClick={openCalloutPopover} active={currentEditor.isActive('callout')} title="Callout">
         <StickyNote size={15} />
       </ToolBtn>
-      <ToolBtn onClick={() => editor.chain().focus().toggleCodeBlock().run()} active={editor.isActive('codeBlock')} title="Code block">
+      <ToolBtn onClick={() => currentEditor.chain().focus().toggleCodeBlock().run()} active={currentEditor.isActive('codeBlock')} title="Code block">
         <Terminal size={15} />
       </ToolBtn>
-      <ToolBtn onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Separateur">
+      <ToolBtn onClick={() => currentEditor.chain().focus().setHorizontalRule().run()} title="Separateur">
         <Minus size={15} />
       </ToolBtn>
-      <ToolBtn onClick={openTablePopover} active={editor.isActive('table')} title="Tableau">
+      <ToolBtn onClick={openTablePopover} active={currentEditor.isActive('table')} title="Tableau">
         <Table2 size={15} />
       </ToolBtn>
 
@@ -378,9 +568,9 @@ export default function EditorToolbar({
                 />
               </label>
               <div className="flex items-center justify-between gap-2 pt-1">
-                <button type="button" onClick={() => setActivePopover(null)} className="text-[12px] text-tertiary hover:text-secondary">Annuler</button>
+                <button type="button" onClick={() => closePopover('link')} className="text-[12px] text-tertiary hover:text-secondary">Annuler</button>
                 <div className="flex items-center gap-2">
-                  {editor.isActive('link') && (
+                  {currentEditor.isActive('link') && (
                     <button type="button" onClick={removeLink} className="rounded-[8px] px-2 py-1 text-[12px] font-medium text-danger hover:bg-danger/5">
                       Retirer
                     </button>
@@ -396,56 +586,50 @@ export default function EditorToolbar({
           {activePopover === 'table' && (
             <div className="relative flex flex-col gap-2">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary">Tableau</p>
-              {!editor.isActive('table') ? (
+              {!currentEditor.isActive('table') ? (
                 <>
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="flex flex-col gap-1 text-[11px] text-secondary">
-                      Lignes
-                      <input
-                        type="number"
-                        min={1}
-                        max={12}
-                        value={tableRows}
-                        onChange={(event) => setTableRows(Number(event.target.value))}
-                        className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1 text-[11px] text-secondary">
-                      Colonnes
-                      <input
-                        type="number"
-                        min={1}
-                        max={8}
-                        value={tableCols}
-                        onChange={(event) => setTableCols(Number(event.target.value))}
-                        className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
-                      />
-                    </label>
-                  </div>
-                  <label className="flex items-center gap-2 text-[12px] text-secondary">
+                  <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                    Lignes
                     <input
-                      type="checkbox"
-                      checked={tableHeader}
-                      onChange={(event) => setTableHeader(event.target.checked)}
+                      type="number"
+                      min={1}
+                      max={12}
+                      value={tableRows}
+                      onChange={(event) => setTableRows(Number(event.target.value))}
+                      className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
                     />
-                    Ligne d'en-tête
+                  </label>
+                  <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                    Colonnes
+                    <input
+                      type="number"
+                      min={1}
+                      max={8}
+                      value={tableCols}
+                      onChange={(event) => setTableCols(Number(event.target.value))}
+                      className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 text-[12px] text-secondary">
+                    <input type="checkbox" checked={tableHeader} onChange={(event) => setTableHeader(event.target.checked)} />
+                    Ligne d'en-tete
                   </label>
                   <div className="flex items-center justify-end gap-2 pt-1">
-                    <button type="button" onClick={() => setActivePopover(null)} className="text-[12px] text-tertiary hover:text-secondary">Annuler</button>
+                    <button type="button" onClick={() => closePopover('table')} className="text-[12px] text-tertiary hover:text-secondary">Annuler</button>
                     <button type="button" onClick={insertTable} className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-medium text-white">
-                      Insérer
+                      Inserer
                     </button>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <button type="button" onClick={() => editor.chain().focus().addRowAfter().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-[#f5f5f7]">+ ligne</button>
-                    <button type="button" onClick={() => editor.chain().focus().deleteRow().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-[#f5f5f7]">- ligne</button>
-                    <button type="button" onClick={() => editor.chain().focus().addColumnAfter().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-[#f5f5f7]">+ colonne</button>
-                    <button type="button" onClick={() => editor.chain().focus().deleteColumn().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-[#f5f5f7]">- colonne</button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => currentEditor.chain().focus().addRowAfter().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-[#f5f5f7]">+ ligne</button>
+                    <button type="button" onClick={() => currentEditor.chain().focus().deleteRow().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-[#f5f5f7]">- ligne</button>
+                    <button type="button" onClick={() => currentEditor.chain().focus().addColumnAfter().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-[#f5f5f7]">+ colonne</button>
+                    <button type="button" onClick={() => currentEditor.chain().focus().deleteColumn().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-[#f5f5f7]">- colonne</button>
                   </div>
-                  <button type="button" onClick={() => { editor.chain().focus().deleteTable().run(); setActivePopover(null) }} className="mt-1 rounded-[8px] px-2 py-1.5 text-[12px] font-medium text-danger hover:bg-danger/5">
+                  <button type="button" onClick={() => { currentEditor.chain().focus().deleteTable().run(); closePopover('table') }} className="mt-1 rounded-[8px] px-2 py-1.5 text-[12px] font-medium text-danger hover:bg-danger/5">
                     Supprimer le tableau
                   </button>
                 </>
@@ -455,10 +639,61 @@ export default function EditorToolbar({
 
           {activePopover === 'callout' && (
             <div className="relative flex flex-col gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary">Callout</p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary">Callout</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreateCalloutOpen((open) => !open)
+                    setCalloutError('')
+                  }}
+                  className="inline-flex items-center gap-1 rounded-[8px] border border-border px-2 py-1 text-[11px] font-medium text-secondary hover:bg-[#f5f5f7]"
+                >
+                  <Plus size={12} />
+                  Créer
+                </button>
+              </div>
+
+              {createCalloutOpen && (
+                <div className="rounded-[12px] border border-border bg-[#f9f9fb] p-3">
+                  <div className="flex flex-col gap-3">
+                    <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                      Nom
+                      <input
+                        value={calloutForm.label}
+                        onChange={(event) => setCalloutForm((prev) => ({ ...prev, label: event.target.value }))}
+                        placeholder="Information"
+                        className="h-8 rounded-[8px] border border-border bg-white px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                      Titre par defaut
+                      <input
+                        value={calloutForm.defaultTitle}
+                        onChange={(event) => setCalloutForm((prev) => ({ ...prev, defaultTitle: event.target.value }))}
+                        placeholder="A retenir"
+                        className="h-8 rounded-[8px] border border-border bg-white px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
+                      />
+                    </label>
+                    <ColorPickerField
+                      label="Couleur principale"
+                      value={calloutForm.primaryColor}
+                      onChange={(value) => setCalloutForm((prev) => ({ ...prev, primaryColor: value }))}
+                    />
+                    {calloutError && <p className="text-[11px] text-danger">{calloutError}</p>}
+                    <div className="flex items-center justify-end gap-2">
+                      <button type="button" onClick={() => { setCreateCalloutOpen(false); resetCalloutCreateForm() }} className="text-[12px] text-tertiary hover:text-secondary">Annuler</button>
+                      <button type="button" onClick={handleCreateCallout} disabled={calloutSaving} className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-medium text-white disabled:opacity-40">
+                        {calloutSaving ? 'Création...' : 'Créer le callout'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {calloutTemplates.length === 0 ? (
                 <p className="text-[12px] leading-snug text-secondary">
-                  Aucun template disponible. Creez ou importez des callouts dans les parametres du projet.
+                  Aucun template disponible pour ce projet. Créez-en un ici ou importez-les depuis les paramètres.
                 </p>
               ) : (
                 <>
@@ -473,43 +708,42 @@ export default function EditorToolbar({
                   </label>
                   <div className="flex flex-col gap-1">
                     {calloutTemplates.map((template) => (
-                  <button
-                    key={template.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedCalloutId(template.id)
-                      setCalloutTitle((current) => current || template.default_title || template.label)
-                    }}
-                    className={`flex items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-[12px] transition-colors ${
-                      selectedCalloutId === template.id
-                        ? 'bg-accent/8 text-accent font-medium'
-                        : 'text-secondary hover:bg-[#f5f5f7]'
-                    }`}
-                  >
-                    <span
-                      className="h-2.5 w-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: template.color_border ?? '#3b82f6' }}
-                    />
-                    <span className="flex-1 text-left">{template.label}</span>
-                    <span className="text-[10px] uppercase tracking-wide opacity-70">{template.style ?? template.slug}</span>
-                  </button>
+                      <button
+                        key={template.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCalloutId(template.id)
+                          setCalloutTitle((current) => current || template.default_title || template.label)
+                        }}
+                        className={`flex items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-[12px] transition-colors ${
+                          selectedCalloutId === template.id
+                            ? 'bg-accent/8 text-accent font-medium'
+                            : 'text-secondary hover:bg-[#f5f5f7]'
+                        }`}
+                      >
+                        <span
+                          className="h-2.5 w-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: template.color_border ?? '#3b82f6' }}
+                        />
+                        <span className="flex-1 text-left">{template.label}</span>
+                      </button>
                     ))}
                   </div>
                 </>
               )}
               <div className="flex items-center justify-end gap-2 pt-1">
-                {editor.isActive('callout') && (
+                {currentEditor.isActive('callout') && (
                   <button
                     type="button"
-                    onClick={() => { editor.chain().focus().unsetCallout().run(); setActivePopover(null) }}
+                    onClick={() => { currentEditor.chain().focus().unsetCallout().run(); closePopover('callout') }}
                     className="rounded-[8px] px-2 py-1 text-[12px] font-medium text-danger hover:bg-danger/5"
                   >
                     Retirer
                   </button>
                 )}
-                <button type="button" onClick={() => setActivePopover(null)} className="text-[12px] text-tertiary hover:text-secondary">Annuler</button>
+                <button type="button" onClick={() => closePopover('callout')} className="text-[12px] text-tertiary hover:text-secondary">Annuler</button>
                 <button type="button" onClick={insertCallout} disabled={calloutTemplates.length === 0} className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-medium text-white disabled:opacity-40">
-                  {editor.isActive('callout') ? 'Mettre a jour' : 'Inserer'}
+                  {currentEditor.isActive('callout') ? 'Mettre a jour' : 'Inserer'}
                 </button>
               </div>
             </div>
@@ -518,14 +752,15 @@ export default function EditorToolbar({
           {activePopover === 'image' && (
             <div className="relative flex flex-col gap-2">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary">Image</p>
-              {editor.isActive('image') && (
-                <button
-                  type="button"
-                  onClick={deleteSelectedImage}
-                  className="rounded-[9px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[12px] font-medium text-danger hover:bg-danger/10"
-                >
-                  Supprimer l'image sélectionnée
-                </button>
+              {currentEditor.isActive('image') && (
+                <div className="rounded-[10px] border border-accent/15 bg-accent/5 px-2.5 py-2 text-[11px] text-secondary">
+                  Image sélectionnée. Vous pouvez la remplacer, modifier son alt ou ajuster sa largeur.
+                </div>
+              )}
+              {imageError && (
+                <div className="rounded-[10px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[11px] text-danger">
+                  {imageError}
+                </div>
               )}
               <button
                 type="button"
@@ -533,7 +768,7 @@ export default function EditorToolbar({
                 disabled={uploading}
                 className="rounded-[9px] border border-border px-2.5 py-2 text-[12px] font-medium text-secondary hover:bg-[#f5f5f7] disabled:opacity-50"
               >
-                {uploading ? 'Upload en cours...' : 'Choisir un fichier'}
+                {uploading ? 'Upload en cours...' : currentEditor.isActive('image') ? "Remplacer avec un fichier" : 'Choisir un fichier'}
               </button>
               <label className="flex flex-col gap-1 text-[11px] text-secondary">
                 URL de l'image
@@ -553,11 +788,50 @@ export default function EditorToolbar({
                   className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
                 />
               </label>
-              <div className="flex items-center justify-end gap-2 pt-1">
-                <button type="button" onClick={() => setActivePopover(null)} className="text-[12px] text-tertiary hover:text-secondary">Annuler</button>
-                <button type="button" onClick={insertImageUrl} className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-medium text-white">
-                  Insérer l'URL
-                </button>
+              <div className="flex flex-col gap-1 text-[11px] text-secondary">
+                <span>Largeur</span>
+                <div className="grid grid-cols-4 gap-1">
+                  {IMAGE_WIDTH_PRESETS.map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setImageWidth(String(preset))}
+                      className={`rounded-[8px] px-2 py-1 text-[11px] font-medium ${
+                        Number(imageWidth) === preset ? 'bg-accent text-white' : 'border border-border text-secondary hover:bg-[#f5f5f7]'
+                      }`}
+                    >
+                      {preset}%
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="range"
+                  min={20}
+                  max={100}
+                  step={5}
+                  value={parseImageWidth(imageWidth)}
+                  onChange={(event) => setImageWidth(event.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-2 pt-1">
+                {currentEditor.isActive('image') ? (
+                  <button
+                    type="button"
+                    onClick={deleteSelectedImage}
+                    className="rounded-[8px] px-2 py-1 text-[12px] font-medium text-danger hover:bg-danger/5"
+                  >
+                    Supprimer
+                  </button>
+                ) : (
+                  <span />
+                )}
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => closePopover('image')} className="text-[12px] text-tertiary hover:text-secondary">Annuler</button>
+                  <button type="button" onClick={insertImageUrl} className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-medium text-white">
+                    {currentEditor.isActive('image') ? 'Mettre a jour' : "Insérer l'URL"}
+                  </button>
+                </div>
               </div>
             </div>
           )}

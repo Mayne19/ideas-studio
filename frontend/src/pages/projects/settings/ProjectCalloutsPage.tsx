@@ -17,27 +17,22 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import FormCard from '@/components/ui/FormCard'
 import Input from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
+import ColorPickerField from '@/components/ui/ColorPickerField'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
+import { DEFAULT_ACCENT_COLOR, normalizeHexColor } from '@/lib/colors'
+import { deriveCalloutColors, slugifyCalloutLabel } from '@/lib/callouts'
 
 type FormState = {
   label: string
-  style: string
   default_title: string
-  color_background: string
-  color_border: string
-  color_text: string
-  icon: string
+  primary_color: string
 }
 
 const DEFAULT_FORM: FormState = {
   label: '',
-  style: 'info',
   default_title: '',
-  color_background: '#eff6ff',
-  color_border: '#3b82f6',
-  color_text: '#1e3a8a',
-  icon: '',
+  primary_color: DEFAULT_ACCENT_COLOR,
 }
 
 export default function ProjectCalloutsPage() {
@@ -80,12 +75,8 @@ export default function ProjectCalloutsPage() {
     setEditing(callout)
     setForm({
       label: callout.label,
-      style: callout.style ?? 'info',
       default_title: callout.default_title ?? '',
-      color_background: callout.color_background ?? '#eff6ff',
-      color_border: callout.color_border ?? '#3b82f6',
-      color_text: callout.color_text ?? '#1e3a8a',
-      icon: callout.icon ?? '',
+      primary_color: normalizeHexColor(callout.color_border ?? callout.color_text ?? callout.color_background, DEFAULT_ACCENT_COLOR),
     })
     setFormError('')
     setModalOpen(true)
@@ -119,14 +110,13 @@ export default function ProjectCalloutsPage() {
     setSaving(true)
     setFormError('')
 
+    const primaryColor = normalizeHexColor(form.primary_color, DEFAULT_ACCENT_COLOR)
+
     const basePayload = {
       label: form.label.trim(),
-      style: form.style.trim() || null,
+      style: slugifyCalloutLabel(form.label),
       default_title: form.default_title.trim() || null,
-      color_background: form.color_background.trim() || null,
-      color_border: form.color_border.trim() || null,
-      color_text: form.color_text.trim() || null,
-      icon: form.icon.trim() || null,
+      ...deriveCalloutColors(primaryColor),
       source: (editing?.source === 'imported' ? 'imported' : 'manual') as 'imported' | 'manual',
     }
 
@@ -232,15 +222,26 @@ export default function ProjectCalloutsPage() {
       >
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <p className="text-[13px] text-secondary">
-            Configurez le template qui sera reutilisable dans l'editeur.
+            Creez un template simple pour l'editeur. Les variantes de fond, bordure et texte sont derivees automatiquement.
           </p>
           <Input label="Nom" value={form.label} onChange={setField('label')} required />
-          <Input label="Type / style" value={form.style} onChange={setField('style')} placeholder="info" />
           <Input label="Titre par defaut" value={form.default_title} onChange={setField('default_title')} placeholder="A retenir" />
-          <Input label="Couleur de fond" value={form.color_background} onChange={setField('color_background')} placeholder="#eff6ff" />
-          <Input label="Couleur de bordure" value={form.color_border} onChange={setField('color_border')} placeholder="#3b82f6" />
-          <Input label="Couleur du texte" value={form.color_text} onChange={setField('color_text')} placeholder="#1e3a8a" />
-          <Input label="Icone" value={form.icon} onChange={setField('icon')} placeholder="info" />
+          <ColorPickerField
+            label="Couleur principale"
+            value={form.primary_color}
+            onChange={(value) => setForm((prev) => ({ ...prev, primary_color: value }))}
+          />
+          <div
+            className="rounded-[14px] border px-3 py-2"
+            style={{
+              backgroundColor: deriveCalloutColors(form.primary_color).color_background,
+              borderColor: deriveCalloutColors(form.primary_color).color_border,
+              color: deriveCalloutColors(form.primary_color).color_text,
+            }}
+          >
+            <p className="text-[12px] font-semibold">{form.default_title || form.label || 'Aperçu du callout'}</p>
+            <p className="mt-1 text-[12px] opacity-85">Le rendu est généré automatiquement à partir de votre couleur principale.</p>
+          </div>
           {formError && <p className="text-[12px] text-danger">{formError}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>Annuler</Button>

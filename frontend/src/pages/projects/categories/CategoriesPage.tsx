@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { amber, blue, crimson, cyan, grass, indigo, orange, plum, slate, teal, tomato, violet } from '@radix-ui/colors'
 import { Plus, Pencil, Trash2, FolderOpen, RefreshCw, Info, Palette, ExternalLink } from 'lucide-react'
 import { listCategories, createCategory, updateCategory, deleteCategory, syncCategories } from '@/api/categories'
 import type { CreateCategoryPayload, UpdateCategoryPayload } from '@/api/categories'
@@ -12,37 +11,17 @@ import Modal from '@/components/ui/Modal'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import Input from '@/components/ui/Input'
 import Textarea from '@/components/ui/Textarea'
+import ColorPickerField from '@/components/ui/ColorPickerField'
 import EmptyState from '@/components/ui/EmptyState'
 import ErrorState from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import StatusBadge from '@/components/ui/StatusBadge'
+import { DEFAULT_ACCENT_COLOR, PALETTE_COLORS, isValidHexColor, normalizeHexColor } from '@/lib/colors'
 import { formatDate } from '@/utils/format'
-
-const RADIX_CATEGORY_COLORS = [
-  { name: 'Bleu', value: blue.blue9 },
-  { name: 'Indigo', value: indigo.indigo9 },
-  { name: 'Violet', value: violet.violet9 },
-  { name: 'Prune', value: plum.plum9 },
-  { name: 'Cyan', value: cyan.cyan9 },
-  { name: 'Teal', value: teal.teal9 },
-  { name: 'Vert', value: grass.grass9 },
-  { name: 'Ambre', value: amber.amber9 },
-  { name: 'Orange', value: orange.orange9 },
-  { name: 'Tomate', value: tomato.tomato9 },
-  { name: 'Crimson', value: crimson.crimson9 },
-  { name: 'Slate', value: slate.slate9 },
-]
-
-const CATEGORY_COLORS = RADIX_CATEGORY_COLORS.map((color) => color.value)
-const DEFAULT_CATEGORY_COLOR = blue.blue9
-
-function isValidHexColor(value: string | null | undefined): value is string {
-  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)
-}
 
 function fallbackColorFromName(name: string): string {
   const total = name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0)
-  return CATEGORY_COLORS[total % CATEGORY_COLORS.length] ?? DEFAULT_CATEGORY_COLOR
+  return PALETTE_COLORS[total % PALETTE_COLORS.length] ?? DEFAULT_ACCENT_COLOR
 }
 
 function categoryColor(category: Pick<Category, 'name' | 'color'>): string {
@@ -50,82 +29,7 @@ function categoryColor(category: Pick<Category, 'name' | 'color'>): string {
 }
 
 function normalizeColor(value: string): string {
-  return isValidHexColor(value) ? value.toLowerCase() : DEFAULT_CATEGORY_COLOR
-}
-
-function CategoryColorField({
-  value,
-  onChange,
-}: {
-  value: string
-  onChange: (value: string) => void
-}) {
-  const selected = normalizeColor(value)
-  const isManualValid = isValidHexColor(value)
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3">
-        <label className="text-[13px] font-medium text-primary">Couleur</label>
-        <div className="flex items-center gap-2 rounded-[10px] border border-border bg-[#f9f9fb] px-2 py-1">
-          <span
-            className="h-4 w-4 rounded-full border border-black/10"
-            style={{ backgroundColor: selected }}
-            aria-hidden="true"
-          />
-          <span className="font-mono text-[11px] uppercase text-secondary">{selected}</span>
-          <input
-            type="color"
-            value={selected}
-            onChange={(e) => onChange(e.target.value)}
-            className="h-6 w-7 cursor-pointer rounded border-0 bg-transparent p-0"
-            aria-label="Choisir une couleur personnalisée"
-          />
-        </div>
-      </div>
-      <div>
-        <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.04em] text-tertiary">Palette Radix</p>
-        <div className="grid grid-cols-6 gap-2">
-          {RADIX_CATEGORY_COLORS.map((color) => (
-            <button
-              key={color.value}
-              type="button"
-              onClick={() => onChange(color.value)}
-              className={`flex h-8 items-center justify-center rounded-[10px] border bg-white transition-all ${
-                selected.toLowerCase() === color.value.toLowerCase()
-                  ? 'border-primary ring-2 ring-accent/20'
-                  : 'border-black/5 hover:scale-[1.03]'
-              }`}
-              title={color.name}
-              aria-label={`Choisir ${color.name}`}
-            >
-              <span
-                className="h-4 w-4 rounded-full border border-black/10"
-                style={{ backgroundColor: color.value }}
-                aria-hidden="true"
-              />
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label className="text-[12px] font-medium text-secondary">Code hexadécimal</label>
-        <input
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder="#2563eb"
-          className={`w-full rounded-[10px] bg-white px-3 py-2 font-mono text-[13px] text-primary outline-none transition-colors ${
-            value && !isManualValid ? 'ring-1 ring-danger/40' : 'ring-1 ring-border focus:ring-accent/30'
-          }`}
-        />
-        {value && !isManualValid && (
-          <p className="text-[11px] text-danger">
-            Utilisez un code couleur hexadécimal valide, par exemple #2563eb.
-          </p>
-        )}
-      </div>
-    </div>
-  )
+  return normalizeHexColor(value, DEFAULT_ACCENT_COLOR)
 }
 
 function CategoryColumn({
@@ -310,7 +214,7 @@ type FormState = {
 const EMPTY_FORM: FormState = {
   name: '',
   description: '',
-  color: DEFAULT_CATEGORY_COLOR,
+  color: DEFAULT_ACCENT_COLOR,
   priority: '0',
   target_frequency: '',
 }
@@ -635,7 +539,7 @@ export default function CategoriesPage() {
               <Palette size={13} />
               Apparence
             </div>
-            <CategoryColorField
+            <ColorPickerField
               value={form.color}
               onChange={(color) => setForm((f) => ({ ...f, color }))}
             />

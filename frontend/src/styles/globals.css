@@ -269,6 +269,12 @@ html[data-theme="dark"] .shadow-float {
   max-width: 100%;
   border-radius: 8px;
   margin: 1em 0;
+  cursor: pointer;
+}
+
+.tiptap-content img.ProseMirror-selectednode {
+  outline: 2px solid rgba(0, 122, 255, 0.7);
+  outline-offset: 3px;
 }
 
 .tiptap-content table {

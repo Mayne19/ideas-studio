@@ -5,7 +5,6 @@ import { Mark, mergeAttributes } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import UnderlineExtension from '@tiptap/extension-underline'
 import LinkExtension from '@tiptap/extension-link'
-import ImageExtension from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
@@ -14,6 +13,7 @@ import { TableRow } from '@tiptap/extension-table-row'
 import { TableHeader } from '@tiptap/extension-table-header'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { CalloutExtension } from '@/lib/tiptap/CalloutExtension'
+import { EditorImageExtension } from '@/lib/tiptap/EditorImageExtension'
 import {
   Eye, BarChart2, Settings, History, Loader2, RefreshCw,
   AlertCircle, MessageCircle, ChevronDown, ChevronUp, Plus, Trash2,
@@ -284,7 +284,7 @@ export default function ArticleEditorPage() {
       StarterKit,
       UnderlineExtension,
       LinkExtension.configure({ openOnClick: false }),
-      ImageExtension,
+      EditorImageExtension,
       Placeholder.configure({ placeholder: 'Commencez à rédiger votre article…' }),
       TaskList,
       TaskItem.configure({ nested: true }),
@@ -543,6 +543,13 @@ export default function ArticleEditorPage() {
       })
     return () => { active = false }
   }, [articleId, commentRefreshKey])
+
+  function handleCalloutTemplateCreated(template: CalloutTemplate) {
+    setCalloutTemplates((current) => {
+      if (current.some((item) => item.id === template.id)) return current
+      return [...current, template]
+    })
+  }
 
   useEffect(() => {
     if (!selectedCommentId) return
@@ -955,6 +962,7 @@ export default function ArticleEditorPage() {
               projectId={projectId}
               articleId={articleId}
               calloutTemplates={calloutTemplates}
+              onCalloutTemplateCreated={handleCalloutTemplateCreated}
               disabled={viewMode !== 'edit'}
             />
           </div>

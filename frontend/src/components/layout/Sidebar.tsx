@@ -273,6 +273,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                         { to: `/projects/${projectId}/settings/strategy`, label: 'Stratégie', end: false },
                         { to: `/projects/${projectId}/settings/team`, label: 'Équipe', end: false },
                         { to: `/projects/${projectId}/settings/integration`, label: 'Intégration', end: false },
+                        { to: `/projects/${projectId}/settings/callouts`, label: 'Callouts', end: false },
                         { to: `/projects/${projectId}/settings/providers`, label: 'Providers', end: false },
                         { to: `/account`, label: 'Profil', end: false },
                       ].map((item) => (
