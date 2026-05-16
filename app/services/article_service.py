@@ -43,6 +43,7 @@ def create_article(db: Session, data: ArticleCreate, project_id: str) -> Article
         cover_image_url=data.cover_image_url,
         word_count=calculate_word_count(data.content),
         priority=data.priority,
+        author_name=data.author_name,
     )
     db.add(article)
     db.commit()
@@ -181,6 +182,8 @@ def _to_public_response(article: Article, category: Category | None) -> ArticleP
         meta_title=article.meta_title,
         meta_description=article.meta_description,
         cover_image_url=article.cover_image_url,
+        author_name=article.author_name,
+        reading_time_minutes=article.reading_time_minutes,
         published_at=article.published_at,
         updated_at=article.updated_at,
     )

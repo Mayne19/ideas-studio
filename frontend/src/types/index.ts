@@ -93,6 +93,8 @@ export type Article = {
   quality_score: number | null
   eeat_score: number | null
   readiness_status: string | null
+  author_name: string | null
+  reading_time_minutes: number | null
   scheduled_at: string | null
   published_at: string | null
   // Idea-specific fields
@@ -241,6 +243,8 @@ export type AutosaveRequest = {
   external_links_json?: unknown | null
   content_blocks_json?: unknown | null
   category_id?: string | null
+  author_name?: string | null
+  reading_time_minutes?: number | null
 }
 
 export type AutosaveResponse = {

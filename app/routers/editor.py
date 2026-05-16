@@ -80,6 +80,8 @@ def get_editor_data(
         quality_score=article.quality_score,
         eeat_score=article.eeat_score,
         readiness_status=article.readiness_status,
+        author_name=article.author_name,
+        reading_time_minutes=article.reading_time_minutes,
         latest_analysis=analysis_brief,
         created_at=article.created_at,
         updated_at=article.updated_at,

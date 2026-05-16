@@ -173,6 +173,7 @@ export default function ArticleEditorPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [members, setMembers] = useState<ProjectMember[]>([])
   const [selectedAuthorId, setSelectedAuthorId] = useState('')
+  const [manualAuthorName, setManualAuthorName] = useState('')
   const [manualReadingTime, setManualReadingTime] = useState<number | null>(null)
   const [faqItems, setFaqItems] = useState<FaqItem[]>([])
   const [faqOpen, setFaqOpen] = useState(false)
@@ -314,6 +315,8 @@ export default function ArticleEditorPage() {
         cover_image_url: coverRef.current || undefined,
         category_id: metaRef.current.category_id || undefined,
         faq_json: serializeFaqItems(faqRef.current),
+        author_name: manualAuthorName || undefined,
+        reading_time_minutes: manualReadingTime ?? undefined,
       })
       pendingSaveRef.current = false
       setAutosaveStatus('saved')
@@ -322,7 +325,7 @@ export default function ArticleEditorPage() {
       pendingSaveRef.current = false
       setAutosaveStatus('error')
     }
-  }, [articleId, editor, projectId])
+  }, [articleId, editor, projectId, manualAuthorName, manualReadingTime])
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -447,9 +450,11 @@ export default function ArticleEditorPage() {
           const cov = art.cover_image_url ?? ''
           setCoverImageUrl(cov)
           coverRef.current = cov
-          const faq = parseFaqItems(art.faq_json)
-          setFaqItems(faq)
-          faqRef.current = faq
+        const faq = parseFaqItems(art.faq_json)
+        setFaqItems(faq)
+        faqRef.current = faq
+        setManualAuthorName(art.author_name ?? '')
+        setManualReadingTime(art.reading_time_minutes)
           if (editor && art.content) editor.commands.setContent(art.content)
         }
       } catch { /* ignore poll errors */ }
@@ -1047,10 +1052,20 @@ export default function ArticleEditorPage() {
                     </Field>
                   </div>
 
-                  {/* 5. Auteur + Temps de lecture */}
+                  {/* 5. Auteur (public) + Temps de lecture */}
                   <div className="p-3 flex flex-col gap-2">
                     <div className="flex items-center justify-between text-[12px]">
-                      <span className="text-secondary">Auteur</span>
+                      <span className="text-secondary">Auteur (publication)</span>
+                      <input
+                        type="text"
+                        value={manualAuthorName}
+                        onChange={(e) => setManualAuthorName(e.target.value)}
+                        placeholder="Nom d'auteur"
+                        className="max-w-[190px] bg-transparent text-right text-primary text-[12px] border-none outline-none placeholder:text-tertiary"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-[12px]">
+                      <span className="text-secondary">Responsable</span>
                       {members.length > 0 ? (
                         <select
                           value={selectedAuthorId}
@@ -1068,7 +1083,7 @@ export default function ArticleEditorPage() {
                       )}
                     </div>
                     <div className="flex items-center justify-between text-[12px]">
-                      <span className="text-secondary">Temps de lecture</span>
+                      <span className="text-secondary">Temps de lecture (min)</span>
                       <input
                         type="number"
                         min={1}

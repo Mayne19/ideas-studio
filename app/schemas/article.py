@@ -18,6 +18,7 @@ class ArticleCreate(BaseModel):
     meta_description: Optional[str] = None
     cover_image_url: Optional[str] = None
     priority: int = 0
+    author_name: Optional[str] = None
 
 
 class ArticleUpdate(BaseModel):
@@ -42,6 +43,8 @@ class ArticleUpdate(BaseModel):
     rejection_reason: Optional[str] = None
     rejection_note: Optional[str] = None
     priority: Optional[int] = None
+    author_name: Optional[str] = None
+    reading_time_minutes: Optional[int] = None
 
 
 class ArticleScheduleRequest(BaseModel):
@@ -73,6 +76,8 @@ class ArticlePublic(BaseModel):
     published_at: Optional[datetime]
     scheduled_at: Optional[datetime]
     created_at: datetime
+    author_name: Optional[str] = None
+    reading_time_minutes: Optional[int] = None
     updated_at: datetime
 
 
@@ -97,5 +102,7 @@ class ArticlePublicApiResponse(BaseModel):
     meta_title: Optional[str]
     meta_description: Optional[str]
     cover_image_url: Optional[str]
+    author_name: Optional[str] = None
+    reading_time_minutes: Optional[int] = None
     published_at: Optional[datetime]
     updated_at: datetime

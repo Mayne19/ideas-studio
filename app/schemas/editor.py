@@ -36,6 +36,8 @@ class EditorData(BaseModel):
     quality_score: Optional[float]
     eeat_score: Optional[float]
     readiness_status: Optional[str]
+    author_name: Optional[str] = None
+    reading_time_minutes: Optional[int] = None
     latest_analysis: Optional[AnalysisBrief]
     created_at: datetime
     updated_at: datetime
@@ -55,6 +57,8 @@ class AutosaveRequest(BaseModel):
     external_links_json: Optional[str] = None
     content_blocks_json: Optional[str] = None
     category_id: Optional[str] = None
+    author_name: Optional[str] = None
+    reading_time_minutes: Optional[int] = None
 
 
 class AutosaveResponse(BaseModel):
@@ -79,6 +83,8 @@ class PreviewResponse(BaseModel):
     internal_links_json: Optional[str]
     external_links_json: Optional[str]
     content_blocks_json: Optional[str]
+    author_name: Optional[str] = None
+    reading_time_minutes: Optional[int] = None
     status: str
 
 
