@@ -612,3 +612,108 @@ def test_editor_has_draft_changes_fields(client: TestClient):
     assert "published_faq_json" in editor
     assert "published_callouts_json" in editor
     assert editor["published_content"] == "<p>Original</p>"
+
+
+# ── 38–42. Media library + promote verification ────────────────────────────
+
+def test_upload_adds_to_media_library(client: TestClient):
+    headers, project = _setup(client, "mlib_up@test.com")
+    import io
+    file_content = b"media-lib-image"
+    upload_resp = client.post(
+        f"/projects/{project['id']}/media/upload",
+        files={"file": ("lib.png", io.BytesIO(file_content), "image/png")},
+        headers=headers,
+    )
+    assert upload_resp.status_code == 201
+
+    list_resp = client.get(f"/projects/{project['id']}/media", headers=headers)
+    assert list_resp.status_code == 200
+    assets = list_resp.json()
+    assert len(assets) == 1
+    assert assets[0]["filename"] == "lib.png"
+
+
+def test_promote_updates_published_content_public_api(client: TestClient):
+    headers, project = _setup(client, "mpro_pub@test.com")
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Promote Public", "content": "<p>Original public</p>"},
+        headers=headers,
+    ).json()
+
+    client.post(f"/articles/{article['id']}/publish", headers=headers)
+
+    public_before = client.get(f"/api/public/projects/{project['id']}/articles/promote-public").json()
+    assert public_before["content"] == "<p>Original public</p>"
+
+    autosave_resp = client.post(
+        f"/articles/{article['id']}/autosave",
+        json={"content": "<p>Updated via promote</p>"},
+        headers=headers,
+    )
+    assert autosave_resp.status_code == 200
+
+    promote_resp = client.post(f"/articles/{article['id']}/promote", headers=headers)
+    assert promote_resp.status_code == 200
+
+    public_after = client.get(f"/api/public/projects/{project['id']}/articles/promote-public").json()
+    assert public_after["content"] == "<p>Updated via promote</p>", \
+        "Public API must reflect promoted content"
+
+
+def test_promote_updates_published_fields_directly(client: TestClient):
+    headers, project = _setup(client, "mpro_dir@test.com")
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Promote Direct", "content": "<p>Before promote</p>"},
+        headers=headers,
+    ).json()
+
+    client.post(f"/articles/{article['id']}/publish", headers=headers)
+
+    client.post(
+        f"/articles/{article['id']}/autosave",
+        json={"content": "<p>After promote</p>"},
+        headers=headers,
+    )
+    promote_resp = client.post(f"/articles/{article['id']}/promote", headers=headers)
+    assert promote_resp.status_code == 200
+
+    editor = client.get(f"/articles/{article['id']}/editor", headers=headers).json()
+    assert editor["published_content"] == "<p>After promote</p>"
+    assert editor["has_draft_changes"] is False
+
+
+def test_autosave_alone_does_not_change_public_callouts(client: TestClient):
+    headers, project = _setup(client, "mpro_cl@test.com")
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Callout Promote", "content": "<p>Initial</p>"},
+        headers=headers,
+    ).json()
+
+    content_with_callout = (
+        '<div data-block-type="callout" data-callout-style="info" data-callout-source="manual" '
+        'data-callout-color-background="#f0fdf4">'
+        '<div class="callout-body"><p>Test</p></div></div>'
+    )
+
+    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    client.post(
+        f"/articles/{article['id']}/autosave",
+        json={"content": content_with_callout},
+        headers=headers,
+    )
+
+    public_before = client.get(f"/api/public/projects/{project['id']}/articles/callout-promote").json()
+    assert public_before["content"] == "<p>Initial</p>", "Content must remain published version after autosave"
+
+    promote_resp = client.post(f"/articles/{article['id']}/promote", headers=headers)
+    assert promote_resp.status_code == 200
+
+    public_after = client.get(f"/api/public/projects/{project['id']}/articles/callout-promote").json()
+    assert "callout" in public_after["content"], "Content must update after promote"
+    import json as _json
+    callouts_after = _json.loads(public_after["callouts_json"]) if public_after["callouts_json"] else []
+    assert len(callouts_after) > 0, "callouts_json must be present after promote"

@@ -866,6 +866,22 @@ export default function ArticleEditorPage() {
     setActionLoading('promote')
     setActionError('')
     try {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
+      const content = editor?.getHTML() ?? article.content ?? ''
+      await autosaveArticle(projectId, article.id, {
+        content,
+        title: metaRef.current.title || undefined,
+        slug: metaRef.current.slug || undefined,
+        excerpt: metaRef.current.excerpt || undefined,
+        keyword: normalizeOptionalText(metaRef.current.keyword),
+        meta_title: metaRef.current.meta_title || undefined,
+        meta_description: normalizeOptionalText(metaRef.current.meta_description),
+        cover_image_url: normalizeOptionalText(coverRef.current),
+        category_id: normalizeOptionalText(metaRef.current.category_id),
+        faq_json: serializeFaqItems(faqRef.current),
+        author_name: normalizeOptionalText(authorNameRef.current),
+        reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
+      })
       const updated = await promoteArticle(projectId, article.id)
       setArticle((prev) => prev ? {
         ...prev,
@@ -879,7 +895,7 @@ export default function ArticleEditorPage() {
         callouts_json: prev.callouts_json,
       } : prev)
       const promotedSnapshot = buildPersistedSnapshot({
-        content: editor?.getHTML() ?? article.content ?? '',
+        content,
         meta: metaFields,
         coverImageUrl: coverImageUrl,
         faqItems,

@@ -24,9 +24,11 @@ import {
   StickyNote,
   Plus,
   Trash2,
+  Library,
 } from 'lucide-react'
 import { createCalloutTemplate } from '@/api/callouts'
-import { uploadMedia } from '@/api/media'
+import { uploadMedia, listMedia } from '@/api/media'
+import type { MediaAsset } from '@/api/media'
 import type { CalloutAttrs } from '@/lib/tiptap/CalloutExtension'
 import type { CalloutTemplate } from '@/types'
 import ColorPickerField from '@/components/ui/ColorPickerField'
@@ -34,6 +36,7 @@ import { DEFAULT_ACCENT_COLOR, normalizeHexColor } from '@/lib/colors'
 import { deriveCalloutColors, slugifyCalloutLabel } from '@/lib/callouts'
 
 type PopoverKind = 'callout' | 'link' | 'table' | 'image'
+type ImageTab = 'upload' | 'url' | 'library'
 type SavedSelection = { from: number; to: number; isNodeSelection: boolean }
 type CalloutCreateForm = {
   label: string
@@ -118,6 +121,9 @@ export default function EditorToolbar({
   const [imageAlt, setImageAlt] = useState('')
   const [imageWidth, setImageWidth] = useState('100')
   const [imageError, setImageError] = useState('')
+  const [imageTab, setImageTab] = useState<ImageTab>('upload')
+  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([])
+  const [mediaLoading, setMediaLoading] = useState(false)
   const [selectedCalloutId, setSelectedCalloutId] = useState('')
   const [calloutTitle, setCalloutTitle] = useState('')
   const [calloutSaving, setCalloutSaving] = useState(false)
@@ -148,6 +154,31 @@ export default function EditorToolbar({
     fileRef.current?.click()
   }, [])
 
+  function updateImageToolbarPos() {
+    const e = editorRef.current
+    if (!e) return
+    if (!e.isActive('image')) {
+      setImageToolbarPos(null)
+      return
+    }
+    const { selection } = e.state
+    if (!(selection instanceof NodeSelection)) return
+    const dom = e.view.nodeDOM(selection.from) as HTMLElement | null
+    if (!dom) return
+    const rect = dom.getBoundingClientRect()
+    const toolbarWidth = 290
+    const toolbarHeight = 42
+    let top = rect.top - toolbarHeight - 6
+    if (top < 8) top = rect.bottom + 6
+    const maxLeft = window.innerWidth - toolbarWidth - 8
+    let left = rect.left + rect.width / 2 - toolbarWidth / 2
+    left = Math.max(8, Math.min(left, maxLeft))
+    setImageToolbarPos((prev) => {
+      if (prev && prev.top === top && prev.left === left) return prev
+      return { top, left }
+    })
+  }
+
   useEffect(() => {
     if (!editor) return
     const handler = () => {
@@ -169,35 +200,26 @@ export default function EditorToolbar({
 
       if (editor.isActive('image')) {
         if (imageToolbarTimer.current) clearTimeout(imageToolbarTimer.current)
-        const { selection } = editor.state
-        if (selection instanceof NodeSelection) {
-          const node = selection.node
-          if (node && node.type.name === 'image') {
-            const dom = editor.view.nodeDOM(selection.from) as HTMLElement | null
-            if (dom) {
-              const rect = dom.getBoundingClientRect()
-              setImageToolbarPos({
-                top: rect.top - 46,
-                left: Math.max(16, Math.min(rect.left + rect.width / 2 - 120, window.innerWidth - 270)),
-              })
-            }
-          }
-        }
+        updateImageToolbarPos()
       } else {
         imageToolbarTimer.current = setTimeout(() => setImageToolbarPos(null), 200)
       }
     }
     editor.on('selectionUpdate', handler)
+
+    function onScrollOrResize() {
+      const e = editorRef.current
+      if (e && e.isActive('image')) updateImageToolbarPos()
+    }
+    window.addEventListener('scroll', onScrollOrResize, true)
+    window.addEventListener('resize', onScrollOrResize)
     return () => {
       editor.off('selectionUpdate', handler)
-    }
-  }, [editor, activePopover, forceSelectionRender])
-
-  useEffect(() => {
-    return () => {
+      window.removeEventListener('scroll', onScrollOrResize, true)
+      window.removeEventListener('resize', onScrollOrResize)
       if (imageToolbarTimer.current) clearTimeout(imageToolbarTimer.current)
     }
-  }, [])
+  }, [editor, activePopover, forceSelectionRender])
 
   if (!editor) return null
   const currentEditor = editor
@@ -427,6 +449,11 @@ export default function EditorToolbar({
   function openImagePopover(event: React.MouseEvent<HTMLButtonElement>) {
     rememberSelection()
     syncSelectedImageFields()
+    setImageTab('upload')
+    if (projectId) {
+      setMediaLoading(true)
+      listMedia(projectId, articleId).then(setMediaAssets).catch(() => setMediaAssets([])).finally(() => setMediaLoading(false))
+    }
     placePopover(event, 'image')
   }
 
@@ -506,6 +533,17 @@ export default function EditorToolbar({
       buildCalloutHtml(template, calloutTitle || template.default_title || template.label || '', bodyHtml),
     ).run()
     closePopover('callout')
+  }
+
+  function insertImageFromMedia(item: MediaAsset) {
+    const inserted = applyImage({
+      ...imagePayload(item.url, item.alt_text ?? ''),
+      'data-media-id': item.id,
+    })
+    if (inserted) {
+      resetImageForm()
+      closePopover('image')
+    }
   }
 
   function insertImageUrl() {
@@ -828,32 +866,97 @@ export default function EditorToolbar({
                   {imageError}
                 </div>
               )}
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
-                className="rounded-[9px] border border-border px-2.5 py-2 text-[12px] font-medium text-secondary hover:bg-[#f5f5f7] disabled:opacity-50"
-              >
-                {uploading ? 'Upload en cours...' : currentEditor.isActive('image') ? "Remplacer avec un fichier" : 'Choisir un fichier'}
-              </button>
-              <label className="flex flex-col gap-1 text-[11px] text-secondary">
-                URL de l'image
-                <input
-                  value={imageUrl}
-                  onChange={(event) => setImageUrl(event.target.value)}
-                  placeholder="https://exemple.com/image.jpg"
-                  className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-[11px] text-secondary">
-                Texte alternatif
-                <input
-                  value={imageAlt}
-                  onChange={(event) => setImageAlt(event.target.value)}
-                  placeholder="Description courte"
-                  className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
-                />
-              </label>
+
+              <div className="flex rounded-[8px] border border-border overflow-hidden">
+                {([['upload', 'Fichier'], ['url', 'URL'], ['library', 'Médiathèque']] as [ImageTab, string][]).map(([tab, label]) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setImageTab(tab)}
+                    className={`flex-1 py-1.5 text-[11px] font-medium transition-colors ${imageTab === tab ? 'bg-accent text-white' : 'text-secondary hover:bg-[#f0f0f2]'}`}
+                  >
+                    {tab === 'library' && <Library size={11} className="inline mr-1 -mt-0.5" />}
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {imageTab === 'upload' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploading}
+                    className="rounded-[9px] border border-border px-2.5 py-2 text-[12px] font-medium text-secondary hover:bg-[#f5f5f7] disabled:opacity-50"
+                  >
+                    {uploading ? 'Upload en cours...' : currentEditor.isActive('image') ? "Remplacer avec un fichier" : 'Choisir un fichier'}
+                  </button>
+                  <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                    Texte alternatif
+                    <input
+                      value={imageAlt}
+                      onChange={(event) => setImageAlt(event.target.value)}
+                      placeholder="Description courte"
+                      className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
+                    />
+                  </label>
+                </>
+              )}
+
+              {imageTab === 'url' && (
+                <>
+                  <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                    URL de l'image
+                    <input
+                      value={imageUrl}
+                      onChange={(event) => setImageUrl(event.target.value)}
+                      placeholder="https://exemple.com/image.jpg"
+                      className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                    Texte alternatif
+                    <input
+                      value={imageAlt}
+                      onChange={(event) => setImageAlt(event.target.value)}
+                      placeholder="Description courte"
+                      className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
+                    />
+                  </label>
+                </>
+              )}
+
+              {imageTab === 'library' && (
+                <div className="flex flex-col gap-1 max-h-[300px] overflow-y-auto">
+                  {mediaLoading ? (
+                    <div className="flex items-center justify-center py-6 text-tertiary">
+                      <Loader2 size={16} className="animate-spin" />
+                    </div>
+                  ) : mediaAssets.length === 0 ? (
+                    <p className="text-[12px] text-tertiary text-center py-4">Aucune image dans la médiathèque.</p>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {mediaAssets.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => insertImageFromMedia(item)}
+                          className="group relative aspect-square overflow-hidden rounded-[8px] border border-border bg-[#f5f5f7] hover:border-accent/60 transition-colors"
+                        >
+                          <img
+                            src={item.url}
+                            alt={item.alt_text ?? ''}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex flex-col gap-1 text-[11px] text-secondary">
                 <span>Largeur</span>
                 <div className="grid grid-cols-4 gap-1">
@@ -894,9 +997,11 @@ export default function EditorToolbar({
                 )}
                 <div className="flex items-center gap-2">
                   <button type="button" onClick={() => closePopover('image')} className="text-[12px] text-tertiary hover:text-secondary">Annuler</button>
-                  <button type="button" onClick={insertImageUrl} className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-medium text-white">
-                    {currentEditor.isActive('image') ? 'Mettre a jour' : "Insérer l'URL"}
-                  </button>
+                  {imageTab !== 'library' && (
+                    <button type="button" onClick={imageTab === 'url' ? insertImageUrl : undefined} className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-medium text-white">
+                      {currentEditor.isActive('image') ? 'Mettre a jour' : "Insérer l'URL"}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -907,78 +1012,66 @@ export default function EditorToolbar({
       {imageToolbarPos && !activePopover && createPortal((
         <div
           style={{ top: imageToolbarPos.top, left: imageToolbarPos.left, zIndex: 2147483647 }}
-          className="fixed flex items-center gap-1 rounded-[12px] border border-border-strong bg-surface px-2 py-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.2)]"
+          className="fixed flex flex-col gap-1 rounded-[12px] border border-border-strong bg-surface p-2 shadow-[0_12px_40px_rgba(0,0,0,0.2)] min-w-[260px]"
           onMouseDown={(e) => e.preventDefault()}
         >
-          {IMAGE_WIDTH_PRESETS.map((preset) => (
-            <button
-              key={preset}
-              type="button"
-              onClick={() => applyImageWidth(preset)}
-              className={`rounded-[6px] px-2 py-1 text-[11px] font-medium transition-colors ${
-                parseImageWidth(imageWidth) === preset
-                  ? 'bg-accent text-white'
-                  : 'text-secondary hover:bg-[#e5e5e7]'
-              }`}
-            >
-              {preset}%
-            </button>
-          ))}
-          <div className="mx-1 h-5 w-px bg-border" />
-          <button
-            type="button"
-            onClick={replaceSelectedImage}
-            className="rounded-[6px] px-2 py-1 text-[11px] font-medium text-secondary hover:bg-[#e5e5e7] transition-colors"
-            title="Remplacer"
-          >
-            <Image size={12} />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const e = editorRef.current
-              if (!e) return
-              e.chain().focus().deleteSelection().run()
-              setImageToolbarPos(null)
-            }}
-            className="rounded-[6px] px-2 py-1 text-[11px] font-medium text-danger hover:bg-danger/5 transition-colors"
-            title="Supprimer"
-          >
-            <Trash2 size={12} />
-          </button>
-        </div>
-      ), document.body)}
-
-      {imageToolbarPos && !activePopover && createPortal((
-        <div
-          style={{
-            top: imageToolbarPos.top + 40,
-            left: imageToolbarPos.left,
-            zIndex: 2147483646,
-          }}
-          className="fixed w-[220px] rounded-[10px] border border-border bg-surface p-2 shadow-lg"
-          onMouseDown={(e) => e.preventDefault()}
-        >
-          <label className="flex flex-col gap-0.5 text-[10px] text-secondary">
-            Texte alternatif
-            <div className="flex gap-1">
-              <input
-                value={imageAlt}
-                onChange={(e) => setImageAlt(e.target.value)}
-                placeholder="Description"
-                className="flex-1 h-7 rounded-[6px] border border-border px-2 text-[11px] text-primary outline-none focus:border-accent/60"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') { e.preventDefault(); applyImageAltCb() }
-                }}
-              />
+          <div className="flex items-center gap-1">
+            {IMAGE_WIDTH_PRESETS.map((preset) => (
               <button
+                key={preset}
                 type="button"
-                onClick={applyImageAltCb}
-                className="rounded-[6px] bg-accent px-2 text-[10px] font-medium text-white"
+                onClick={() => applyImageWidth(preset)}
+                title={`${preset}%`}
+                className={`rounded-[6px] px-2 py-1 text-[11px] font-medium transition-colors ${
+                  parseImageWidth(imageWidth) === preset
+                    ? 'bg-accent text-white'
+                    : 'text-secondary hover:bg-[#e5e5e7]'
+                }`}
               >
-                OK
+                {preset}%
               </button>
-            </div>
+            ))}
+            <div className="mx-1 h-5 w-px bg-border" />
+            <button
+              type="button"
+              onClick={replaceSelectedImage}
+              className="rounded-[6px] p-1.5 text-secondary hover:bg-[#e5e5e7] transition-colors"
+              title="Remplacer l'image"
+            >
+              <Image size={13} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const e = editorRef.current
+                if (!e) return
+                e.chain().focus().deleteSelection().run()
+                setImageToolbarPos(null)
+              }}
+              className="rounded-[6px] p-1.5 text-danger hover:bg-danger/5 transition-colors"
+              title="Supprimer l'image"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+          <label className="flex items-center gap-1 text-[10px] text-secondary">
+            <span className="shrink-0">Alt</span>
+            <input
+              value={imageAlt}
+              onChange={(e) => setImageAlt(e.target.value)}
+              placeholder="Texte alternatif"
+              className="flex-1 h-6 rounded-[5px] border border-border px-1.5 text-[11px] text-primary outline-none focus:border-accent/60"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); applyImageAltCb() }
+              }}
+            />
+            <button
+              type="button"
+              onClick={applyImageAltCb}
+              className="rounded-[5px] bg-accent px-1.5 py-0.5 text-[10px] font-medium text-white"
+            >
+              OK
+            </button>
           </label>
         </div>
       ), document.body)}
