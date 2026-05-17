@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from alembic.config import Config
 from alembic import command
 from app.core.config import settings
-from app.routers import auth, projects, health, categories, articles, public_api, tracking, ideas, seo, performance, recommendations, notifications, members, editor, versions, media, invitations, editorial_setup, callouts
+from app.routers import auth, projects, health, categories, articles, public_api, tracking, ideas, seo, performance, recommendations, notifications, members, editor, versions, media, invitations, editorial_setup, callouts, pipeline
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -49,3 +49,4 @@ app.include_router(versions.router)
 app.include_router(media.router)
 app.include_router(invitations.router)
 app.include_router(editorial_setup.router)
+app.include_router(pipeline.router)

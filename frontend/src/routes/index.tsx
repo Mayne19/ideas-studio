@@ -30,6 +30,7 @@ const NotificationsPage = lazy(() => import('@/pages/projects/notifications/Noti
 const ProjectStrategyPage = lazy(() => import('@/pages/projects/settings/ProjectStrategyPage'))
 const ProjectProvidersPage = lazy(() => import('@/pages/projects/settings/ProjectProvidersPage'))
 const ProjectCalloutsPage = lazy(() => import('@/pages/projects/settings/ProjectCalloutsPage'))
+const ProjectPipelinePage = lazy(() => import('@/pages/projects/settings/ProjectPipelinePage'))
 const MediaPage = lazy(() => import('@/pages/projects/media/MediaPage'))
 const AccountPage = lazy(() => import('@/pages/account/AccountPage'))
 
@@ -151,6 +152,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<LoadingState />}>
                 <ProjectCalloutsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'pipeline',
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <ProjectPipelinePage />
               </Suspense>
             ),
           },

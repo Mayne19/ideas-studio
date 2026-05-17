@@ -18,6 +18,7 @@ export default function SettingsLayout() {
     { label: 'Intégration', description: 'Site connecté et API', to: `/projects/${projectId}/settings/integration` },
     { label: 'Callouts', description: 'Templates importés et manuels', to: `/projects/${projectId}/settings/callouts` },
     { label: 'Providers', description: 'Services IA et connecteurs', to: `/projects/${projectId}/settings/providers` },
+    { label: 'Pipeline', description: 'Génération automatique d\'articles', to: `/projects/${projectId}/settings/pipeline` },
     { label: 'Profil', description: 'Compte utilisateur', to: `/account` },
   ]
 

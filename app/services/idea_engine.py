@@ -79,6 +79,7 @@ def generate_idea(
     llm: LLMProvider,
     search: SearchProvider,
     context_hint: str | None = None,
+    preferred_title: str | None = None,
 ) -> Article | None:
     if llm.is_mock:
         idea_data = _next_mock_idea(project_audience)
@@ -110,10 +111,13 @@ def generate_idea(
         log_step(db, project_id, f"Idée ignorée (keyword déjà actif) : {keyword}", level="info", step="generate_idea")
         return None
 
+    generated_title = idea_data.get("title", keyword)
+    final_title = preferred_title or generated_title
+
     article = Article(
         id=str(uuid.uuid4()),
         project_id=project_id,
-        title=idea_data.get("title", keyword),
+        title=final_title,
         slug=f"idea-{uuid.uuid4().hex[:8]}",
         keyword=keyword,
         angle=idea_data.get("angle"),

@@ -11,17 +11,46 @@ import sys
 from app.core.database import SessionLocal
 
 
+def _should_run_pipeline_today(pipeline) -> bool:
+    """Check if pipeline is enabled and today is an active day."""
+    if not pipeline or not pipeline.enabled:
+        return False
+    if not pipeline.active_days or pipeline.active_days == "[]":
+        return True
+    try:
+        import json
+        days = json.loads(pipeline.active_days) if isinstance(pipeline.active_days, str) else pipeline.active_days
+        if not days:
+            return True
+        from datetime import datetime
+        today_name = datetime.now().strftime("%A").lower()
+        return today_name in [d.lower() for d in days]
+    except (json.JSONDecodeError, TypeError):
+        return True
+
+
 def cmd_daily(_args) -> None:
-    from app.services.scheduler_service import run_all_projects_daily_tasks
+    from app.models.pipeline import ProjectPipeline
+    from app.models.project import Project
+    from app.services.scheduler_service import run_daily_project_tasks
     db = SessionLocal()
     try:
-        result = run_all_projects_daily_tasks(db)
-        print(f"Processed {result['projects_processed']} project(s).")
-        for r in result["results"]:
-            pid = r["project_id"]
-            ideas = r["ideas"]["generated"]
-            recs = r["review"]["recommendations_created"]
-            print(f"  [{pid[:8]}] ideas={ideas}  recommendations={recs}")
+        projects = db.query(Project).filter(Project.status != "archived").all()
+        processed = 0
+        skipped = 0
+        for project in projects:
+            pipeline = db.query(ProjectPipeline).filter(
+                ProjectPipeline.project_id == project.id
+            ).first()
+            if _should_run_pipeline_today(pipeline):
+                result = run_daily_project_tasks(db, project.id)
+                processed += 1
+                ideas = result["ideas"]["generated"]
+                recs = result["review"]["recommendations_created"]
+                print(f"  [{project.id[:8]}] ideas={ideas}  recommendations={recs}")
+            else:
+                skipped += 1
+        print(f"Processed {processed} project(s), {skipped} skipped (pipeline disabled or not active today).")
     finally:
         db.close()
 

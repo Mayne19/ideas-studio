@@ -6,32 +6,42 @@ from app.models.article import Article
 from app.services.providers.llm_provider import LLMProvider
 from app.services.log_service import log_step
 from app.core.utils import calculate_word_count
+from app.core.markdown import markdown_to_html
 
 
 _MOCK_OUTLINE = [
     {"heading": "Introduction", "notes": "Présenter le sujet et son importance"},
-    {"heading": "Partie 1 : Les bases", "notes": "Expliquer les fondamentaux"},
-    {"heading": "Partie 2 : Mise en pratique", "notes": "Exemples concrets et étapes"},
-    {"heading": "Conclusion", "notes": "Résumé et appel à l'action"},
+    {"heading": "Développement", "notes": "Expliquer les concepts clés en détail avec des exemples concrets"},
+    {"heading": "Bonnes pratiques", "notes": "Conseils pratiques et recommandations actionnables"},
+    {"heading": "Conclusion", "notes": "Résumé des points clés et perspectives"},
 ]
 
 
 def _mock_content_from_outline(title: str, keyword: str, outline: list[dict]) -> str:
-    parts = [f"# {title}\n"]
+    parts = [f"<h1>{title}</h1>"]
     for section in outline:
         heading = section.get("heading", "Section")
         notes = section.get("notes", "")
-        parts.append(f"\n## {heading}\n\n[Mock] Contenu généré pour la section \"{heading}\". {notes}\n")
-    parts.append(f"\n*Article optimisé pour le mot-clé : {keyword}*\n")
+        parts.append(f"<h2>{heading}</h2>")
+        parts.append(f"<p>{notes}. Ce contenu est un exemple généré à titre indicatif. Remplacez-le par votre propre texte développé et original.</p>")
+        parts.append("<p>Pour rédiger cette section, développez les points suivants :</p><ul><li>Expliquez le concept principal en 2-3 paragraphes</li><li>Donnez un exemple concret et chiffré</li><li>Montrez comment l'appliquer dans votre contexte</li></ul>")
+    parts.append(f"<p><em>Article optimisé pour le mot-clé : {keyword}</em></p>")
     return "".join(parts)
 
 
 def _extract_excerpt(content: str, max_length: int = 300) -> str:
-    for line in content.split("\n"):
-        line = line.strip()
-        if line and not line.startswith("#") and not line.startswith("[") and not line.startswith("*"):
-            return line[:max_length]
-    return content[:max_length]
+    text = content
+    if text.startswith("<"):
+        import re
+        text = re.sub(r"<[^>]+>", " ", text)
+        text = re.sub(r"\s+", " ", text).strip()
+    else:
+        for line in content.split("\n"):
+            line = line.strip()
+            if line and not line.startswith("#") and not line.startswith("[") and not line.startswith("*"):
+                text = line
+                break
+    return text[:max_length]
 
 
 def start_writing_from_idea(
@@ -68,7 +78,7 @@ def start_writing_from_idea(
         log_step(db, article.project_id, f"Plan généré ({len(outline)} sections)", level="info", step="generate_outline", article_id=article.id)
 
         content_prompt = (
-            f"Rédige un article de blog SEO complet en Markdown.\n"
+            f"Rédige un article de blog SEO complet et détaillé.\n"
             f"Titre : {article.title}\n"
             f"Mot-clé principal : {article.keyword}\n"
             f"Angle éditorial : {article.angle or 'informatif'}\n"
@@ -77,11 +87,18 @@ def start_writing_from_idea(
         )
         for section in outline:
             content_prompt += f"- {section.get('heading', '')}: {section.get('notes', '')}\n"
-        content_prompt += "\nRédige l'article complet en Markdown, optimisé pour le SEO."
+        content_prompt += (
+            "\nRédige l'article en Markdown, avec une introduction développée, "
+            "plusieurs sections détaillées (H2/H3), des paragraphes riches, "
+            "des exemples concrets, des listes si pertinent, et une FAQ en fin d'article. "
+            "Minimum 800 mots. Sois précis, utile et original."
+        )
 
         content = llm.generate_text(content_prompt, temperature=0.7)
         if not content:
             content = _mock_content_from_outline(article.title, article.keyword or "", outline)
+        else:
+            content = markdown_to_html(content)
 
     article.content = content
     article.word_count = calculate_word_count(content)

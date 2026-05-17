@@ -17,6 +17,8 @@ from app.models import seo_analysis  # noqa: F401
 from app.models import optimization_recommendation, notification  # noqa: F401
 from app.models import invitation  # noqa: F401
 from app.models import project_callout_template  # noqa: F401
+from app.models import pipeline  # noqa: F401
+from app.models import pipeline_log  # noqa: F401
 
 config = context.config
 database_url = settings.DATABASE_URL.replace("%", "%%")

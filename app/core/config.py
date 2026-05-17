@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     IDEAS_PER_DAY: int = 1
-    DEFAULT_LLM_PROVIDER: str = "mock"
+    DEFAULT_LLM_PROVIDER: str = "ollama"
     DEFAULT_SEARCH_PROVIDER: str = "mock"
     OLLAMA_URL: str = ""
     OLLAMA_MODEL: str = "llama3.2"

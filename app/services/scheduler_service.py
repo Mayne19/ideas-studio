@@ -11,12 +11,15 @@ def run_daily_project_tasks(db: Session, project_id: str) -> dict:
     ideas_result = _run_ideas(db, project_id)
     review_result = review_published_articles(db, project_id)
 
-    if ideas_result.get("generated", 0) > 0:
+    generated_count = ideas_result.get("generated", 0)
+
+    articles_created = 0
+    if generated_count > 0:
         create_notification(
             db,
             project_id=project_id,
             title="Nouvelles idées générées",
-            message=f"{ideas_result['generated']} idée(s) générée(s) aujourd'hui.",
+            message=f"{generated_count} idée(s) générée(s) aujourd'hui.",
             level="success",
             type="daily_ideas",
         )
@@ -26,6 +29,8 @@ def run_daily_project_tasks(db: Session, project_id: str) -> dict:
         "project_id": project_id,
         "ideas": ideas_result,
         "review": review_result,
+        "ideas_generated": generated_count,
+        "articles_created": articles_created,
     }
 
 

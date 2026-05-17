@@ -111,6 +111,7 @@ export type IdeaStatus = 'idea_proposed' | 'idea_priority' | 'idea_rejected'
 
 export type IdeaGenerateRequest = {
   context_hint?: string | null
+  preferred_title?: string | null
 }
 
 export type IdeaGenerateResponse = {

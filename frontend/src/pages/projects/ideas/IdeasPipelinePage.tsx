@@ -296,6 +296,7 @@ export default function IdeasPipelinePage() {
 
   const [generateOpen, setGenerateOpen] = useState(false)
   const [contextHint, setContextHint] = useState('')
+  const [preferredTitle, setPreferredTitle] = useState('')
   const [generating, setGenerating] = useState(false)
   const [generateError, setGenerateError] = useState('')
 
@@ -410,9 +411,13 @@ export default function IdeasPipelinePage() {
     setGenerateError('')
     setGenerating(true)
     try {
-      await generateIdea(projectId, { context_hint: contextHint.trim() || null })
+      await generateIdea(projectId, {
+        context_hint: contextHint.trim() || null,
+        preferred_title: preferredTitle.trim() || null,
+      })
       setGenerateOpen(false)
       setContextHint('')
+      setPreferredTitle('')
       setTick((t) => t + 1)
     } catch (err) {
       setGenerateError(translateIdeaError(err, 'generate'))
@@ -570,7 +575,7 @@ export default function IdeasPipelinePage() {
       {/* Generate idea modal */}
       <Modal
         open={generateOpen}
-        onClose={() => { setGenerateOpen(false); setContextHint(''); setGenerateError('') }}
+        onClose={() => { setGenerateOpen(false); setContextHint(''); setPreferredTitle(''); setGenerateError('') }}
         title="Générer une idée"
         size="sm"
       >
@@ -581,12 +586,18 @@ export default function IdeasPipelinePage() {
             </div>
           )}
           <Input
+            label="Titre souhaité (optionnel)"
+            value={preferredTitle}
+            onChange={(e) => setPreferredTitle(e.target.value)}
+            placeholder="ex : Comment optimiser les images pour le SEO"
+            hint="Si vous laissez vide, l'IA proposera un titre."
+          />
+          <Input
             label="Contexte (optionnel)"
             value={contextHint}
             onChange={(e) => setContextHint(e.target.value)}
             placeholder="ex : tutoriel SEO technique, optimisation images..."
-            hint="L'IA va générer une idée d'article adaptée à votre projet."
-            autoFocus
+            hint="Précisions supplémentaires pour l'IA."
           />
           <div className="flex gap-2 pt-1">
             <Button

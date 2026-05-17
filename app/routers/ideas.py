@@ -91,6 +91,7 @@ def generate_idea_route(
         llm=llm,
         search=search,
         context_hint=body.context_hint,
+        preferred_title=body.preferred_title,
     )
     if article is None:
         raise HTTPException(status_code=409, detail="Idea could not be generated (duplicate keyword or LLM failure)")
