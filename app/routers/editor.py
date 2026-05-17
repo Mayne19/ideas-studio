@@ -148,18 +148,18 @@ def autosave_article(
     ):
         raise HTTPException(status_code=409, detail=_EMPTY_CONTENT_MESSAGE)
 
-    version_created = False
-    incoming_content = data.get("content", article.content)
-    if not is_duplicate_autosave(db, article_id, incoming_content):
-        create_version(db, article, "autosave", current_user.id)
-        version_created = True
-
     for field, value in data.items():
         setattr(article, field, value)
 
     if "content" in data:
         article.word_count = calculate_word_count(article.content)
         article.callouts_json = extract_callouts_from_content(article.content)
+
+    version_created = False
+    incoming_content = data.get("content", article.content)
+    if not is_duplicate_autosave(db, article_id, incoming_content):
+        create_version(db, article, "autosave", current_user.id)
+        version_created = True
 
     article.updated_at = datetime.now(timezone.utc)
     db.commit()

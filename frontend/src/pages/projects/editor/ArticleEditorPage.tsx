@@ -322,6 +322,7 @@ export default function ArticleEditorPage() {
   const isHydratingEditorRef = useRef(false)
   const lastHydratedArticleIdRef = useRef<string | null>(null)
   const lastHydratedContentRef = useRef<string | null>(null)
+  const slugManuallyEditedRef = useRef(false)
 
   // Navigation blocker
   const blocker = useBlocker(
@@ -551,6 +552,7 @@ export default function ArticleEditorPage() {
         }
         setMetaFields(meta)
         metaRef.current = meta
+        slugManuallyEditedRef.current = false
         const cover = art.cover_image_url ?? ''
         setCoverImageUrl(cover)
         coverRef.current = cover
@@ -777,11 +779,25 @@ export default function ArticleEditorPage() {
 
   // ─── Field change handlers ───────────────────────────────────────────────────
 
+  function slugify(text: string): string {
+    return text.toLowerCase().trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '') || 'item'
+  }
+
   function handleMetaChange(name: keyof MetaFields, value: string) {
     const next = { ...metaRef.current, [name]: value }
+    if (name === 'title' && !slugManuallyEditedRef.current && article && article.status !== 'published') {
+      next.slug = slugify(value || 'item')
+    }
+    if (name === 'slug') {
+      slugManuallyEditedRef.current = true
+    }
     metaRef.current = next
     setMetaFields(next)
-    if (name === 'title') setArticle((prev) => prev ? { ...prev, title: value } : prev)
+    if (name === 'title') setArticle((prev) => prev ? { ...prev, title: value, slug: next.slug } : prev)
     scheduleAutosave(editor?.getHTML() ?? '')
   }
 
@@ -849,12 +865,41 @@ export default function ArticleEditorPage() {
     setActionLoading(key)
     setActionError('')
     try {
+      if (key === 'publish' || key === 'promote') {
+        if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
+        const content = editor?.getHTML() ?? article.content ?? ''
+        await autosaveArticle(projectId, article.id, {
+          content,
+          title: metaRef.current.title || undefined,
+          slug: metaRef.current.slug || undefined,
+          excerpt: metaRef.current.excerpt || undefined,
+          keyword: normalizeOptionalText(metaRef.current.keyword),
+          meta_title: metaRef.current.meta_title || undefined,
+          meta_description: normalizeOptionalText(metaRef.current.meta_description),
+          cover_image_url: normalizeOptionalText(coverRef.current),
+          category_id: normalizeOptionalText(metaRef.current.category_id),
+          faq_json: serializeFaqItems(faqRef.current),
+          author_name: normalizeOptionalText(authorNameRef.current),
+          reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
+        })
+      }
       let updated: EditorArticle | undefined
-      if (key === 'publish')      updated = await publishArticle(projectId, article.id)    as unknown as EditorArticle
-      else if (key === 'unpublish')   updated = await unpublishArticle(projectId, article.id) as unknown as EditorArticle
-      else if (key === 'mark-ready')  updated = await markReadyArticle(projectId, article.id) as unknown as EditorArticle
-      else if (key === 'archive')     updated = await archiveArticle(projectId, article.id)   as unknown as EditorArticle
+      let revalidated: boolean | undefined
+      if (key === 'publish') {
+        const resp = await publishArticle(projectId, article.id)
+        updated = resp as unknown as EditorArticle
+        revalidated = (resp as { revalidated?: boolean }).revalidated
+      } else if (key === 'unpublish') {
+        updated = await unpublishArticle(projectId, article.id) as unknown as EditorArticle
+      } else if (key === 'mark-ready') {
+        updated = await markReadyArticle(projectId, article.id) as unknown as EditorArticle
+      } else if (key === 'archive') {
+        updated = await archiveArticle(projectId, article.id) as unknown as EditorArticle
+      }
       if (updated) setArticle((prev) => ({ ...prev!, ...updated }))
+      if (revalidated === false) {
+        setActionError('Article publié, mais cache du site non revalidé.')
+      }
     } catch (err) {
       setActionError(translateError(err))
     } finally {
@@ -1346,13 +1391,27 @@ export default function ArticleEditorPage() {
                   {/* 2. Slug */}
                   <div className="p-3">
                     <Field label="Slug" hint="URL de l'article">
-                      <input
-                        type="text"
-                        value={metaFields.slug}
-                        onChange={(e) => handleMetaChange('slug', e.target.value)}
-                        className={INPUT}
-                        placeholder="/mon-article"
-                      />
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          value={metaFields.slug}
+                          onChange={(e) => handleMetaChange('slug', e.target.value)}
+                          className={INPUT}
+                          placeholder="/mon-article"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const s = slugify(metaFields.title || 'item')
+                            handleMetaChange('slug', s)
+                            slugManuallyEditedRef.current = false
+                          }}
+                          className="shrink-0 rounded-[8px] border border-border bg-surface px-2 text-[11px] text-secondary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
+                          title="Régénérer depuis le titre"
+                        >
+                          ↻
+                        </button>
+                      </div>
                     </Field>
                   </div>
 

@@ -405,6 +405,8 @@ def test_publish_snapshots_content_to_published_fields(client: TestClient):
 
     resp = client.post(f"/articles/{article['id']}/publish", headers=headers)
     assert resp.status_code == 200
+    pub_data = resp.json()
+    assert "revalidated" in pub_data, "publish response should include revalidated"
 
     editor = client.get(f"/articles/{article['id']}/editor", headers=headers).json()
     public = client.get(f"/api/public/projects/{project['id']}/articles/snapshot-test").json()
@@ -778,3 +780,66 @@ def test_promote_revalidated_false_on_bad_url(client: TestClient):
     finally:
         settings.BLOG_REVALIDATE_URL = old_url
         settings.BLOG_REVALIDATE_SECRET = old_secret
+
+
+def test_publish_returns_revalidated_false_when_no_webhook(client: TestClient):
+    """Publish route returns revalidated:false when BLOG_REVALIDATE_URL is empty."""
+    from app.core.config import settings
+
+    old_url = settings.BLOG_REVALIDATE_URL
+    old_secret = settings.BLOG_REVALIDATE_SECRET
+    settings.BLOG_REVALIDATE_URL = ""
+    settings.BLOG_REVALIDATE_SECRET = ""
+    headers = register_and_login(client, email="pub_rev@test.com")
+    try:
+        _, article = _create_project_and_article(client, headers, "Pub Reval Test", "pub-reval")
+        resp = client.post(f"/articles/{article['id']}/publish", headers=headers)
+        assert resp.status_code == 200
+        assert resp.json()["revalidated"] is False
+    finally:
+        settings.BLOG_REVALIDATE_URL = old_url
+        settings.BLOG_REVALIDATE_SECRET = old_secret
+
+
+def test_autosave_version_has_updated_title(client: TestClient):
+    """After autosave changes the title, the created version should have the new title."""
+    headers, project = _setup(client, "ver_title@test.com")
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Old Title", "content": "<p>Content</p>"},
+        headers=headers,
+    ).json()
+
+    autosave = client.post(
+        f"/articles/{article['id']}/autosave",
+        json={"title": "New Title"},
+        headers=headers,
+    )
+    assert autosave.status_code == 200
+    assert autosave.json()["version_created"] is True
+
+    versions_resp = client.get(f"/articles/{article['id']}/versions", headers=headers)
+    assert versions_resp.status_code == 200
+    versions = versions_resp.json()
+    latest = versions[0]
+    assert latest["title"] == "New Title", "Version should capture the updated title"
+
+
+def test_slug_not_auto_regenerated_by_backend_on_title_change(client: TestClient):
+    """The backend should NOT auto-regenerate slug when title changes (frontend handles it)."""
+    headers, project = _setup(client, "slug_bk@test.com")
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "First Title", "content": "<p>Content</p>"},
+        headers=headers,
+    ).json()
+    original_slug = article["slug"]
+    assert "first-title" in original_slug
+
+    resp = client.patch(
+        f"/articles/{article['id']}",
+        json={"title": "Second Title"},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["slug"] == original_slug, "Backend should not auto-regenerate slug"

@@ -155,7 +155,7 @@ def promote_article_route(
     )
 
 
-@router.post("/articles/{article_id}/publish", response_model=ArticlePublic)
+@router.post("/articles/{article_id}/publish", response_model=PromoteResponse)
 def publish_article_route(
     article_id: str,
     current_user: User = Depends(get_current_user),
@@ -167,7 +167,54 @@ def publish_article_route(
     member = get_member_for_project(db, current_user.id, article.project_id)
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions to publish")
-    return publish_article(db, article)
+    article = publish_article(db, article)
+
+    revalidated = False
+    if settings.BLOG_REVALIDATE_URL and settings.BLOG_REVALIDATE_SECRET:
+        try:
+            with httpx.Client(timeout=10) as client:
+                resp = client.post(
+                    settings.BLOG_REVALIDATE_URL,
+                    json={
+                        "secret": settings.BLOG_REVALIDATE_SECRET,
+                        "slug": article.slug,
+                        "projectId": article.project_id,
+                        "type": "article.created",
+                    },
+                )
+                resp.raise_for_status()
+                revalidated = True
+        except Exception as exc:
+            logger.error("Blog revalidation failed on publish for article %s: %s", article.id, exc)
+
+    return PromoteResponse(
+        id=article.id,
+        project_id=article.project_id,
+        category_id=article.category_id,
+        title=article.title,
+        slug=article.slug,
+        content=article.content,
+        excerpt=article.excerpt,
+        status=article.status,
+        keyword=article.keyword,
+        meta_title=article.meta_title,
+        meta_description=article.meta_description,
+        cover_image_url=article.cover_image_url,
+        word_count=article.word_count,
+        priority=article.priority,
+        seo_score=article.seo_score,
+        readability_score=article.readability_score,
+        quality_score=article.quality_score,
+        eeat_score=article.eeat_score,
+        readiness_status=article.readiness_status,
+        published_at=article.published_at,
+        scheduled_at=article.scheduled_at,
+        created_at=article.created_at,
+        author_name=article.author_name,
+        reading_time_minutes=article.reading_time_minutes,
+        updated_at=article.updated_at,
+        revalidated=revalidated,
+    )
 
 
 @router.post("/articles/{article_id}/schedule-update", response_model=ArticlePublic)

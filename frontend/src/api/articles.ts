@@ -35,11 +35,12 @@ export function createArticle(projectId: string, payload: CreateArticlePayload):
   return api.post<Article>(`/projects/${projectId}/articles`, payload)
 }
 
-export function publishArticle(_projectId: string, articleId: string): Promise<Article> {
-  return api.post<Article>(`/articles/${articleId}/publish`)
-}
-
+export type PublishResponse = Article & { revalidated: boolean }
 export type PromoteResponse = Article & { revalidated: boolean }
+
+export function publishArticle(_projectId: string, articleId: string): Promise<PublishResponse> {
+  return api.post<PublishResponse>(`/articles/${articleId}/publish`)
+}
 
 export function promoteArticle(_projectId: string, articleId: string): Promise<PromoteResponse> {
   return api.post<PromoteResponse>(`/articles/${articleId}/promote`)
