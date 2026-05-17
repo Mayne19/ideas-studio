@@ -1,12 +1,17 @@
+import logging
 from typing import Optional
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from app.core.config import settings
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user, get_project_member, require_project_role, get_member_for_project
 from app.models.user import User
 from app.models.project_member import ProjectMember
 from app.models.article import WRITER_EDITABLE_STATUSES
-from app.schemas.article import ArticleCreate, ArticleUpdate, ArticlePublic, ArticleScheduleRequest
+from app.schemas.article import ArticleCreate, ArticleUpdate, ArticlePublic, ArticleScheduleRequest, PromoteResponse
+
+logger = logging.getLogger(__name__)
 from app.services.article_service import (
     create_article,
     delete_article,
@@ -86,7 +91,7 @@ def patch_article_route(
     return update_article(db, article, data)
 
 
-@router.post("/articles/{article_id}/promote", response_model=ArticlePublic)
+@router.post("/articles/{article_id}/promote", response_model=PromoteResponse)
 def promote_article_route(
     article_id: str,
     current_user: User = Depends(get_current_user),
@@ -100,7 +105,54 @@ def promote_article_route(
         raise HTTPException(status_code=403, detail="Insufficient permissions to promote")
     if article.status != "published":
         raise HTTPException(status_code=400, detail="Only published articles can be promoted")
-    return promote_article(db, article)
+    article = promote_article(db, article)
+
+    revalidated = False
+    if settings.BLOG_REVALIDATE_URL and settings.BLOG_REVALIDATE_SECRET:
+        try:
+            with httpx.Client(timeout=10) as client:
+                resp = client.post(
+                    settings.BLOG_REVALIDATE_URL,
+                    json={
+                        "secret": settings.BLOG_REVALIDATE_SECRET,
+                        "slug": article.slug,
+                        "projectId": article.project_id,
+                        "type": "article.updated",
+                    },
+                )
+                resp.raise_for_status()
+                revalidated = True
+        except Exception as exc:
+            logger.error("Blog revalidation failed for article %s: %s", article.id, exc)
+
+    return PromoteResponse(
+        id=article.id,
+        project_id=article.project_id,
+        category_id=article.category_id,
+        title=article.title,
+        slug=article.slug,
+        content=article.content,
+        excerpt=article.excerpt,
+        status=article.status,
+        keyword=article.keyword,
+        meta_title=article.meta_title,
+        meta_description=article.meta_description,
+        cover_image_url=article.cover_image_url,
+        word_count=article.word_count,
+        priority=article.priority,
+        seo_score=article.seo_score,
+        readability_score=article.readability_score,
+        quality_score=article.quality_score,
+        eeat_score=article.eeat_score,
+        readiness_status=article.readiness_status,
+        published_at=article.published_at,
+        scheduled_at=article.scheduled_at,
+        created_at=article.created_at,
+        author_name=article.author_name,
+        reading_time_minutes=article.reading_time_minutes,
+        updated_at=article.updated_at,
+        revalidated=revalidated,
+    )
 
 
 @router.post("/articles/{article_id}/publish", response_model=ArticlePublic)

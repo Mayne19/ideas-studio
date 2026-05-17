@@ -32,6 +32,7 @@ import {
 } from '@/api/comments'
 import {
   publishArticle, promoteArticle, unpublishArticle, markReadyArticle, archiveArticle, scheduleArticle,
+  type PromoteResponse,
 } from '@/api/articles'
 import { ApiError } from '@/api/client'
 import type { EditorArticle, Category, ProjectMember, SeoAnalysis, ReadyCheck, CalloutTemplate } from '@/types'
@@ -882,7 +883,7 @@ export default function ArticleEditorPage() {
         author_name: normalizeOptionalText(authorNameRef.current),
         reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
       })
-      const updated = await promoteArticle(projectId, article.id)
+      const updated: PromoteResponse = await promoteArticle(projectId, article.id)
       setArticle((prev) => prev ? {
         ...prev,
         ...updated,
@@ -904,6 +905,9 @@ export default function ArticleEditorPage() {
       })
       setPersistedSnapshot(promotedSnapshot)
       setLastPromotedSnapshot(promotedSnapshot)
+      if (!updated.revalidated) {
+        setActionError('Article mis à jour, mais cache du site non revalidé.')
+      }
     } catch (err) {
       setActionError(translateError(err))
     } finally {

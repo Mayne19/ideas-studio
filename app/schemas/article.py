@@ -51,6 +51,37 @@ class ArticleScheduleRequest(BaseModel):
     scheduled_at: datetime
 
 
+class PromoteResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    project_id: str
+    category_id: Optional[str]
+    title: str
+    slug: str
+    content: Optional[str]
+    excerpt: Optional[str]
+    status: str
+    keyword: Optional[str]
+    meta_title: Optional[str]
+    meta_description: Optional[str]
+    cover_image_url: Optional[str]
+    word_count: int
+    priority: int
+    seo_score: Optional[float]
+    readability_score: Optional[float]
+    quality_score: Optional[float]
+    eeat_score: Optional[float]
+    readiness_status: Optional[str]
+    published_at: Optional[datetime]
+    scheduled_at: Optional[datetime]
+    created_at: datetime
+    author_name: Optional[str] = None
+    reading_time_minutes: Optional[int] = None
+    updated_at: datetime
+    revalidated: bool = False
+
+
 class ArticlePublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

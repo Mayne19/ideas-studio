@@ -717,3 +717,60 @@ def test_autosave_alone_does_not_change_public_callouts(client: TestClient):
     import json as _json
     callouts_after = _json.loads(public_after["callouts_json"]) if public_after["callouts_json"] else []
     assert len(callouts_after) > 0, "callouts_json must be present after promote"
+
+
+def _create_project_and_article(client, headers, title, slug):
+    project_resp = client.post("/projects", json={
+        "name": "Test Project",
+        "domain": "blog.com",
+        "language": "fr",
+    }, headers=headers)
+    assert project_resp.status_code == 201, f"Project creation failed: {project_resp.text}"
+    project = project_resp.json()
+    art_resp = client.post(f"/projects/{project['id']}/articles", json={
+        "title": title, "slug": slug, "content": "<p>Test</p>", "keyword": "test",
+    }, headers=headers)
+    assert art_resp.status_code == 201, f"Article creation failed: {art_resp.text}"
+    return project, art_resp.json()
+
+
+def test_promote_revalidated_false_when_no_webhook(client: TestClient):
+    """When BLOG_REVALIDATE_URL is empty, revalidated=false is returned."""
+    from app.core.config import settings
+
+    old_url = settings.BLOG_REVALIDATE_URL
+    old_secret = settings.BLOG_REVALIDATE_SECRET
+    settings.BLOG_REVALIDATE_URL = ""
+    settings.BLOG_REVALIDATE_SECRET = ""
+    headers = register_and_login(client, email="rw_empty@test.com")
+    try:
+        _, article = _create_project_and_article(client, headers, "Revalidate Test", "revalidate-test")
+        client.post(f"/articles/{article['id']}/publish", headers=headers)
+        promote_resp = client.post(f"/articles/{article['id']}/promote", headers=headers)
+        assert promote_resp.status_code == 200
+        data = promote_resp.json()
+        assert data["revalidated"] is False
+    finally:
+        settings.BLOG_REVALIDATE_URL = old_url
+        settings.BLOG_REVALIDATE_SECRET = old_secret
+
+
+def test_promote_revalidated_false_on_bad_url(client: TestClient):
+    """When webhook URL is unreachable, promote succeeds but revalidated=false."""
+    from app.core.config import settings
+
+    old_url = settings.BLOG_REVALIDATE_URL
+    old_secret = settings.BLOG_REVALIDATE_SECRET
+    settings.BLOG_REVALIDATE_URL = "http://localhost:1/nonexistent"
+    settings.BLOG_REVALIDATE_SECRET = "test-secret"
+    headers = register_and_login(client, email="rw_badurl@test.com")
+    try:
+        _, article = _create_project_and_article(client, headers, "Bad Webhook Test", "bad-webhook")
+        client.post(f"/articles/{article['id']}/publish", headers=headers)
+        promote_resp = client.post(f"/articles/{article['id']}/promote", headers=headers)
+        assert promote_resp.status_code == 200
+        data = promote_resp.json()
+        assert data["revalidated"] is False
+    finally:
+        settings.BLOG_REVALIDATE_URL = old_url
+        settings.BLOG_REVALIDATE_SECRET = old_secret

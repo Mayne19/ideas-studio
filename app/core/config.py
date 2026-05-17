@@ -17,6 +17,9 @@ class Settings(BaseSettings):
 
     UPLOAD_DIR: str = "uploads"
 
+    BLOG_REVALIDATE_URL: str = ""
+    BLOG_REVALIDATE_SECRET: str = ""
+
     model_config = {"env_file": ".env"}
 
 
