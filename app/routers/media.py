@@ -1,8 +1,11 @@
+import os
+import uuid
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import Optional
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user, get_project_member, require_project_role, get_member_for_project
 from app.models.article import Article
@@ -31,7 +34,51 @@ def list_media(
 
 
 @router.post("/projects/{project_id}/media/upload", response_model=MediaPublic, status_code=201)
-def upload_media(
+async def upload_media(
+    project_id: str,
+    file: UploadFile = File(...),
+    article_id: Optional[str] = Form(None),
+    _actor: ProjectMember = Depends(require_project_role("owner", "admin", "editor", "writer")),
+    db: Session = Depends(get_db),
+):
+    if article_id:
+        article = db.query(Article).filter(
+            Article.id == article_id,
+            Article.project_id == project_id,
+        ).first()
+        if not article:
+            raise HTTPException(status_code=400, detail="Article not found in this project")
+
+    ext = os.path.splitext(file.filename or "image.png")[1] or ".png"
+    saved_name = f"{uuid.uuid4()}{ext}"
+    upload_dir = os.path.join(settings.UPLOAD_DIR, project_id)
+    os.makedirs(upload_dir, exist_ok=True)
+    filepath = os.path.join(upload_dir, saved_name)
+
+    content = await file.read()
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    url = f"{settings.APP_URL}/uploads/{project_id}/{saved_name}"
+
+    media = MediaAsset(
+        project_id=project_id,
+        article_id=article_id,
+        url=url,
+        filename=file.filename or saved_name,
+        mime_type=file.content_type or "image/png",
+        size=len(content),
+        alt_text=file.filename,
+        source="upload",
+    )
+    db.add(media)
+    db.commit()
+    db.refresh(media)
+    return media
+
+
+@router.post("/projects/{project_id}/media/upload-json", response_model=MediaPublic, status_code=201)
+def upload_media_json(
     project_id: str,
     data: MediaCreate,
     _actor: ProjectMember = Depends(require_project_role("owner", "admin", "editor", "writer")),
@@ -119,6 +166,10 @@ def delete_media(
             article = db.query(Article).filter(Article.id == media.article_id).first()
             if article and article.status == "published":
                 raise HTTPException(status_code=403, detail="Writers cannot delete media from published articles")
+
+    filepath = os.path.join(settings.UPLOAD_DIR, media.project_id, os.path.basename(media.url))
+    if os.path.exists(filepath):
+        os.remove(filepath)
 
     db.delete(media)
     db.commit()

@@ -14,6 +14,7 @@ from app.services.article_service import (
     list_articles,
     update_article,
     publish_article,
+    promote_article,
     schedule_article,
     unpublish_article,
 )
@@ -85,6 +86,23 @@ def patch_article_route(
     return update_article(db, article, data)
 
 
+@router.post("/articles/{article_id}/promote", response_model=ArticlePublic)
+def promote_article_route(
+    article_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    article = get_article_by_id(db, article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    member = get_member_for_project(db, current_user.id, article.project_id)
+    if not member or member.role not in _MANAGE_ROLES:
+        raise HTTPException(status_code=403, detail="Insufficient permissions to promote")
+    if article.status != "published":
+        raise HTTPException(status_code=400, detail="Only published articles can be promoted")
+    return promote_article(db, article)
+
+
 @router.post("/articles/{article_id}/publish", response_model=ArticlePublic)
 def publish_article_route(
     article_id: str,
@@ -98,6 +116,28 @@ def publish_article_route(
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions to publish")
     return publish_article(db, article)
+
+
+@router.post("/articles/{article_id}/schedule-update", response_model=ArticlePublic)
+def schedule_update_route(
+    article_id: str,
+    data: ArticleScheduleRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    article = get_article_by_id(db, article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    member = get_member_for_project(db, current_user.id, article.project_id)
+    if not member or member.role not in _MANAGE_ROLES:
+        raise HTTPException(status_code=403, detail="Insufficient permissions to schedule update")
+    if article.status != "published":
+        raise HTTPException(status_code=400, detail="Only published articles can have scheduled updates")
+    article.scheduled_update_at = data.scheduled_at
+    article.updated_at = __import__("datetime").datetime.now(__import__("datetime").timezone.utc)
+    db.commit()
+    db.refresh(article)
+    return article
 
 
 @router.post("/articles/{article_id}/schedule", response_model=ArticlePublic)

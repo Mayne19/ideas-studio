@@ -69,6 +69,7 @@ class Article(Base):
     rejection_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    scheduled_update_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
@@ -80,3 +81,10 @@ class Article(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+    published_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    published_title: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    published_excerpt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    published_meta_description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    published_cover_image_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    published_faq_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    published_callouts_json: Mapped[str | None] = mapped_column(Text, nullable=True)

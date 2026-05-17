@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Editor } from '@tiptap/react'
 import { NodeSelection } from '@tiptap/pm/state'
@@ -23,6 +23,7 @@ import {
   Unlink2,
   StickyNote,
   Plus,
+  Trash2,
 } from 'lucide-react'
 import { createCalloutTemplate } from '@/api/callouts'
 import { uploadMedia } from '@/api/media'
@@ -124,6 +125,28 @@ export default function EditorToolbar({
   const [createCalloutOpen, setCreateCalloutOpen] = useState(false)
   const [calloutForm, setCalloutForm] = useState<CalloutCreateForm>(DEFAULT_CALLOUT_FORM)
   const forceSelectionRender = useState(0)[1]
+  const [imageToolbarPos, setImageToolbarPos] = useState<{ top: number; left: number } | null>(null)
+
+  const imageToolbarTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const editorRef = useRef(editor)
+  useEffect(() => { editorRef.current = editor }, [editor])
+  const applyImageWidth = useCallback((width: number) => {
+    const e = editorRef.current
+    if (!e || !e.isActive('image')) return
+    e.chain().focus().updateAttributes('image', { width }).run()
+    setImageWidth(String(width))
+  }, [])
+
+  const applyImageAltCb = useCallback(() => {
+    const e = editorRef.current
+    if (!e || !e.isActive('image')) return
+    e.chain().focus().updateAttributes('image', { alt: imageAlt.trim() || null }).run()
+  }, [imageAlt])
+
+  const replaceSelectedImage = useCallback(() => {
+    fileRef.current?.click()
+  }, [])
 
   useEffect(() => {
     if (!editor) return
@@ -143,6 +166,26 @@ export default function EditorToolbar({
         setImageWidth(String(parseImageWidth(attrs.width)))
         setImageError('')
       }
+
+      if (editor.isActive('image')) {
+        if (imageToolbarTimer.current) clearTimeout(imageToolbarTimer.current)
+        const { selection } = editor.state
+        if (selection instanceof NodeSelection) {
+          const node = selection.node
+          if (node && node.type.name === 'image') {
+            const dom = editor.view.nodeDOM(selection.from) as HTMLElement | null
+            if (dom) {
+              const rect = dom.getBoundingClientRect()
+              setImageToolbarPos({
+                top: rect.top - 46,
+                left: Math.max(16, Math.min(rect.left + rect.width / 2 - 120, window.innerWidth - 270)),
+              })
+            }
+          }
+        }
+      } else {
+        imageToolbarTimer.current = setTimeout(() => setImageToolbarPos(null), 200)
+      }
     }
     editor.on('selectionUpdate', handler)
     return () => {
@@ -150,16 +193,32 @@ export default function EditorToolbar({
     }
   }, [editor, activePopover, forceSelectionRender])
 
+  useEffect(() => {
+    return () => {
+      if (imageToolbarTimer.current) clearTimeout(imageToolbarTimer.current)
+    }
+  }, [])
+
   if (!editor) return null
   const currentEditor = editor
 
   function placePopover(event: React.MouseEvent<HTMLButtonElement>, kind: PopoverKind) {
     const rect = event.currentTarget.getBoundingClientRect()
     const left = Math.min(rect.right + 28, window.innerWidth - POPOVER_WIDTH - 16)
-    setPopoverPosition({
-      top: Math.max(16, Math.min(rect.top - 8, window.innerHeight - 300)),
-      left: Math.max(16, left),
-    })
+    const estimatedHeight = kind === 'callout' ? 420 : kind === 'image' ? 480 : kind === 'table' ? 300 : 260
+    const spaceBelow = window.innerHeight - rect.bottom
+    const spaceAbove = rect.top
+    if (spaceBelow < estimatedHeight && spaceAbove > spaceBelow) {
+      setPopoverPosition({
+        top: Math.max(16, rect.top - estimatedHeight),
+        left: Math.max(16, left),
+      })
+    } else {
+      setPopoverPosition({
+        top: Math.min(rect.top - 8, Math.max(16, window.innerHeight - estimatedHeight)),
+        left: Math.max(16, left),
+      })
+    }
     setActivePopover((current) => (current === kind ? null : kind))
   }
 
@@ -216,6 +275,7 @@ export default function EditorToolbar({
       'data-callout-title': title.trim(),
       'data-callout-icon': template?.icon ?? '',
       'data-callout-class-name': template?.class_name ?? '',
+      'data-callout-source': template?.source ?? 'manual',
       'data-color-background': template?.color_background ?? '',
       'data-color-border': template?.color_border ?? '',
       'data-color-text': template?.color_text ?? '',
@@ -543,7 +603,7 @@ export default function EditorToolbar({
             left: popoverPosition.left,
             zIndex: 2147483647,
           }}
-          className="fixed w-[296px] rounded-[16px] border border-border-strong bg-surface p-3 text-left shadow-[0_24px_80px_rgba(0,0,0,0.34)] ring-1 ring-black/10 dark:shadow-[0_24px_80px_rgba(0,0,0,0.6)] dark:ring-white/10"
+          className="fixed w-[296px] max-h-[80vh] overflow-y-auto rounded-[16px] border border-border-strong bg-surface p-3 text-left shadow-[0_24px_80px_rgba(0,0,0,0.34)] ring-1 ring-black/10 dark:shadow-[0_24px_80px_rgba(0,0,0,0.6)] dark:ring-white/10"
         >
           <span className="absolute left-[-7px] top-6 h-3.5 w-3.5 rotate-45 border-b border-l border-border-strong bg-surface" />
           {activePopover === 'link' && (
@@ -835,6 +895,85 @@ export default function EditorToolbar({
               </div>
             </div>
           )}
+        </div>
+      ), document.body)}
+
+      {imageToolbarPos && !activePopover && createPortal((
+        <div
+          style={{ top: imageToolbarPos.top, left: imageToolbarPos.left, zIndex: 2147483647 }}
+          className="fixed flex items-center gap-1 rounded-[12px] border border-border-strong bg-surface px-2 py-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.2)]"
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          {IMAGE_WIDTH_PRESETS.map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => applyImageWidth(preset)}
+              className={`rounded-[6px] px-2 py-1 text-[11px] font-medium transition-colors ${
+                parseImageWidth(imageWidth) === preset
+                  ? 'bg-accent text-white'
+                  : 'text-secondary hover:bg-[#e5e5e7]'
+              }`}
+            >
+              {preset}%
+            </button>
+          ))}
+          <div className="mx-1 h-5 w-px bg-border" />
+          <button
+            type="button"
+            onClick={replaceSelectedImage}
+            className="rounded-[6px] px-2 py-1 text-[11px] font-medium text-secondary hover:bg-[#e5e5e7] transition-colors"
+            title="Remplacer"
+          >
+            <Image size={12} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const e = editorRef.current
+              if (!e) return
+              e.chain().focus().deleteSelection().run()
+              setImageToolbarPos(null)
+            }}
+            className="rounded-[6px] px-2 py-1 text-[11px] font-medium text-danger hover:bg-danger/5 transition-colors"
+            title="Supprimer"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
+      ), document.body)}
+
+      {imageToolbarPos && !activePopover && createPortal((
+        <div
+          style={{
+            top: imageToolbarPos.top + 40,
+            left: imageToolbarPos.left,
+            zIndex: 2147483646,
+          }}
+          className="fixed w-[220px] rounded-[10px] border border-border bg-surface p-2 shadow-lg"
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          <label className="flex flex-col gap-0.5 text-[10px] text-secondary">
+            Texte alternatif
+            <div className="flex gap-1">
+              <input
+                value={imageAlt}
+                onChange={(e) => setImageAlt(e.target.value)}
+                placeholder="Description"
+                className="flex-1 h-7 rounded-[6px] border border-border px-2 text-[11px] text-primary outline-none focus:border-accent/60"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.preventDefault(); applyImageAltCb() }
+                }}
+              />
+              <button
+                type="button"
+                onClick={applyImageAltCb}
+                className="rounded-[6px] bg-accent px-2 text-[10px] font-medium text-white"
+              >
+                OK
+              </button>
+            </div>
+          </label>
         </div>
       ), document.body)}
     </div>

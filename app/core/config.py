@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     OLLAMA_MODEL: str = "llama3.2"
     SEARXNG_URL: str = ""
 
+    UPLOAD_DIR: str = "uploads"
+
     model_config = {"env_file": ".env"}
 
 

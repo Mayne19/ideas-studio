@@ -240,7 +240,7 @@ def test_create_media_url(client: TestClient):
     headers, project = _setup(client, "m_cr@test.com")
 
     resp = client.post(
-        f"/projects/{project['id']}/media/upload",
+        f"/projects/{project['id']}/media/upload-json",
         json={
             "url": "https://example.com/image.jpg",
             "filename": "image.jpg",
@@ -257,12 +257,29 @@ def test_create_media_url(client: TestClient):
     assert data["project_id"] == project["id"]
 
 
+def test_upload_media_file(client: TestClient):
+    headers, project = _setup(client, "m_up@test.com")
+    import io
+    file_content = b"fake-image-content"
+    resp = client.post(
+        f"/projects/{project['id']}/media/upload",
+        files={"file": ("test.png", io.BytesIO(file_content), "image/png")},
+        headers=headers,
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert "uploads" in data["url"]
+    assert data["filename"] == "test.png"
+    assert data["mime_type"] == "image/png"
+    assert data["size"] == len(file_content)
+
+
 def test_list_media(client: TestClient):
     headers, project = _setup(client, "m_list@test.com")
 
-    client.post(f"/projects/{project['id']}/media/upload",
+    client.post(f"/projects/{project['id']}/media/upload-json",
                 json={"url": "https://cdn.com/a.jpg", "filename": "a.jpg"}, headers=headers)
-    client.post(f"/projects/{project['id']}/media/upload",
+    client.post(f"/projects/{project['id']}/media/upload-json",
                 json={"url": "https://cdn.com/b.jpg", "filename": "b.jpg"}, headers=headers)
 
     resp = client.get(f"/projects/{project['id']}/media", headers=headers)
@@ -274,7 +291,7 @@ def test_patch_media_alt_text(client: TestClient):
     headers, project = _setup(client, "m_patch@test.com")
 
     create_resp = client.post(
-        f"/projects/{project['id']}/media/upload",
+        f"/projects/{project['id']}/media/upload-json",
         json={"url": "https://cdn.com/img.jpg", "filename": "img.jpg"},
         headers=headers,
     )
@@ -289,7 +306,7 @@ def test_delete_media(client: TestClient):
     headers, project = _setup(client, "m_del@test.com")
 
     create_resp = client.post(
-        f"/projects/{project['id']}/media/upload",
+        f"/projects/{project['id']}/media/upload-json",
         json={"url": "https://cdn.com/del.jpg", "filename": "del.jpg"},
         headers=headers,
     )
@@ -308,7 +325,7 @@ def test_media_viewer_blocked(client: TestClient):
     viewer_headers = register_and_login(client, email="m_vb_viewer@test.com")
 
     resp = client.post(
-        f"/projects/{project['id']}/media/upload",
+        f"/projects/{project['id']}/media/upload-json",
         json={"url": "https://cdn.com/x.jpg", "filename": "x.jpg"},
         headers=viewer_headers,
     )
@@ -320,7 +337,7 @@ def test_media_nonmember_blocked(client: TestClient):
     other_headers = register_and_login(client, email="m_nm_other@test.com", name="Other")
 
     resp = client.post(
-        f"/projects/{project['id']}/media/upload",
+        f"/projects/{project['id']}/media/upload-json",
         json={"url": "https://cdn.com/y.jpg", "filename": "y.jpg"},
         headers=other_headers,
     )
@@ -370,3 +387,88 @@ def test_unpublished_not_in_public_api(client: TestClient):
 
     invisible = client.get(f"/api/public/projects/{project['id']}/articles").json()
     assert len(invisible) == 0
+
+
+# ── 25–28. Published article draft/publish separation ─────────────────────────
+
+def test_publish_snapshots_content_to_published_fields(client: TestClient):
+    headers, project = _setup(client, "pub_snap@test.com")
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Snapshot Test", "content": "<p>Draft content</p>"},
+        headers=headers,
+    ).json()
+
+    resp = client.post(f"/articles/{article['id']}/publish", headers=headers)
+    assert resp.status_code == 200
+
+    editor = client.get(f"/articles/{article['id']}/editor", headers=headers).json()
+    public = client.get(f"/api/public/projects/{project['id']}/articles/snapshot-test").json()
+    assert public["content"] == "<p>Draft content</p>"
+
+    autosave = client.post(
+        f"/articles/{article['id']}/autosave",
+        json={"content": "<p>Updated draft content</p>"},
+        headers=headers,
+    )
+    assert autosave.status_code == 200
+
+    editor_after = client.get(f"/articles/{article['id']}/editor", headers=headers).json()
+    assert editor_after["content"] == "<p>Updated draft content</p>"
+
+    public_after = client.get(f"/api/public/projects/{project['id']}/articles/snapshot-test").json()
+    assert public_after["content"] == "<p>Draft content</p>", "Public API should still show published snapshot"
+
+    promote = client.post(f"/articles/{article['id']}/promote", headers=headers)
+    assert promote.status_code == 200
+
+    public_promoted = client.get(f"/api/public/projects/{project['id']}/articles/snapshot-test").json()
+    assert public_promoted["content"] == "<p>Updated draft content</p>"
+
+
+def test_promote_requires_published_article(client: TestClient):
+    headers, project = _setup(client, "pub_prq@test.com")
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Draft Only"},
+        headers=headers,
+    ).json()
+
+    resp = client.post(f"/articles/{article['id']}/promote", headers=headers)
+    assert resp.status_code == 400
+
+
+def test_promote_requires_manage_role(client: TestClient):
+    headers, project = _setup(client, "pub_prm@test.com")
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Promote Role Test"},
+        headers=headers,
+    ).json()
+    client.post(f"/articles/{article['id']}/publish", headers=headers)
+
+    _add_member(client, headers, project["id"], "pub_prm_viewer@test.com", "viewer")
+    viewer_headers = register_and_login(client, email="pub_prm_viewer@test.com")
+
+    resp = client.post(f"/articles/{article['id']}/promote", headers=viewer_headers)
+    assert resp.status_code == 403
+
+
+def test_autosave_does_not_modify_published_content(client: TestClient):
+    headers, project = _setup(client, "pub_aut@test.com")
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Autosave Published", "content": "<p>Original public content</p>"},
+        headers=headers,
+    ).json()
+    client.post(f"/articles/{article['id']}/publish", headers=headers)
+
+    for i in range(3):
+        client.post(
+            f"/articles/{article['id']}/autosave",
+            json={"content": f"<p>Draft change {i}</p>"},
+            headers=headers,
+        )
+
+    public = client.get(f"/api/public/projects/{project['id']}/articles/autosave-published").json()
+    assert public["content"] == "<p>Original public content</p>"

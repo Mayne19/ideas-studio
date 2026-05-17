@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import json
 import re
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -35,6 +36,16 @@ def _unique_slug(db: Session, project_id: str, title: str, exclude_id: str | Non
         q = q.filter(Article.id != exclude_id)
     existing = {row[0] for row in q.all()}
     return generate_unique_slug(base, existing)
+
+
+def _snapshot_published_fields(article: Article) -> None:
+    article.published_content = article.content
+    article.published_title = article.title
+    article.published_excerpt = article.excerpt
+    article.published_meta_description = article.meta_description
+    article.published_cover_image_url = article.cover_image_url
+    article.published_faq_json = article.faq_json
+    article.published_callouts_json = article.callouts_json
 
 
 def create_article(db: Session, data: ArticleCreate, project_id: str) -> Article:
@@ -102,6 +113,8 @@ def update_article(db: Session, article: Article, data: ArticleUpdate) -> Articl
     ):
         raise HTTPException(status_code=409, detail=_EMPTY_CONTENT_MESSAGE)
     for field, value in update_dict.items():
+        if field.startswith("published_"):
+            continue
         setattr(article, field, value)
     if "content" in update_dict:
         article.word_count = calculate_word_count(article.content)
@@ -112,11 +125,20 @@ def update_article(db: Session, article: Article, data: ArticleUpdate) -> Articl
 
 
 def publish_article(db: Session, article: Article) -> Article:
+    _snapshot_published_fields(article)
     article.status = "published"
     now = datetime.now(timezone.utc)
     if article.published_at is None:
         article.published_at = now
     article.updated_at = now
+    db.commit()
+    db.refresh(article)
+    return article
+
+
+def promote_article(db: Session, article: Article) -> Article:
+    _snapshot_published_fields(article)
+    article.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(article)
     return article
@@ -188,13 +210,25 @@ def get_public_article_by_slug(db: Session, project_id: str, slug: str) -> Artic
     return _to_public_response(article, category)
 
 
+def _has_draft_changes(article: Article) -> bool:
+    return (
+        article.content != article.published_content
+        or article.title != article.published_title
+        or article.excerpt != article.published_excerpt
+        or article.meta_description != article.published_meta_description
+        or article.cover_image_url != article.published_cover_image_url
+        or article.faq_json != article.published_faq_json
+        or article.callouts_json != article.published_callouts_json
+    )
+
+
 def _to_public_response(article: Article, category: Category | None) -> ArticlePublicApiResponse:
     return ArticlePublicApiResponse(
         id=article.id,
-        title=article.title,
+        title=article.published_title or article.title,
         slug=article.slug,
-        excerpt=article.excerpt,
-        content=article.content,
+        excerpt=article.published_excerpt or article.excerpt,
+        content=article.published_content or article.content,
         category=CategoryBrief(
             id=category.id,
             name=category.name,
@@ -205,12 +239,13 @@ def _to_public_response(article: Article, category: Category | None) -> ArticleP
         category_color=category.color if category else None,
         main_keyword=article.keyword,
         meta_title=article.meta_title,
-        meta_description=article.meta_description,
-        cover_image_url=article.cover_image_url,
+        meta_description=article.published_meta_description or article.meta_description,
+        cover_image_url=article.published_cover_image_url or article.cover_image_url,
         author_name=article.author_name,
         reading_time_minutes=article.reading_time_minutes,
-        faq_json=article.faq_json,
-        callouts_json=article.callouts_json,
+        faq_json=article.published_faq_json or article.faq_json,
+        callouts_json=article.published_callouts_json or article.callouts_json,
         published_at=article.published_at,
         updated_at=article.updated_at,
+        has_draft_changes=_has_draft_changes(article) if article.status == "published" else None,
     )

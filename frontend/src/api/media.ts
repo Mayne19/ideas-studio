@@ -15,40 +15,25 @@ export type MediaAsset = {
   updated_at: string
 }
 
-function localMediaAsset(projectId: string, file: File, objectUrl: string, articleId?: string): MediaAsset {
-  const now = new Date().toISOString()
-  return {
-    id: `local-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    project_id: projectId,
-    article_id: articleId ?? null,
-    url: objectUrl,
-    filename: file.name,
-    mime_type: file.type,
-    size: file.size,
-    alt_text: file.name,
-    caption: null,
-    source: 'local-preview',
-    created_at: now,
-    updated_at: now,
-  }
-}
+const BASE_URL = (import.meta.env['VITE_API_URL'] as string | undefined) ?? 'http://localhost:8000'
 
 export async function uploadMedia(projectId: string, file: File, articleId?: string): Promise<MediaAsset> {
-  // Backend stores URL references — upload file to a base64 data URL for local preview,
-  // or submit as URL if the file is already hosted. Here we create an object URL + register it.
-  const objectUrl = URL.createObjectURL(file)
-  try {
-    return await api.post<MediaAsset>(`/projects/${projectId}/media/upload`, {
-      article_id: articleId,
-      url: objectUrl,
-      filename: file.name,
-      mime_type: file.type,
-      size: file.size,
-      source: 'upload',
-    })
-  } catch {
-    return localMediaAsset(projectId, file, objectUrl, articleId)
+  const formData = new FormData()
+  formData.append('file', file)
+  if (articleId) formData.append('article_id', articleId)
+
+  const token = localStorage.getItem('token')
+  const res = await fetch(`${BASE_URL}/projects/${projectId}/media/upload`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  })
+
+  if (!res.ok) {
+    throw new Error(`Upload failed (${res.status})`)
   }
+
+  return res.json()
 }
 
 export function listMedia(projectId: string, articleId?: string): Promise<MediaAsset[]> {

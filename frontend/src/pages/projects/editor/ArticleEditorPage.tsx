@@ -31,7 +31,7 @@ import {
   type ArticleComment,
 } from '@/api/comments'
 import {
-  publishArticle, unpublishArticle, markReadyArticle, archiveArticle, scheduleArticle,
+  publishArticle, promoteArticle, unpublishArticle, markReadyArticle, archiveArticle, scheduleArticle,
 } from '@/api/articles'
 import { ApiError } from '@/api/client'
 import type { EditorArticle, Category, ProjectMember, SeoAnalysis, ReadyCheck, CalloutTemplate } from '@/types'
@@ -822,6 +822,38 @@ export default function ArticleEditorPage() {
     }
   }
 
+  async function handlePromote() {
+    if (!projectId || !article) return
+    setActionLoading('promote')
+    setActionError('')
+    try {
+      const updated = await promoteArticle(projectId, article.id)
+      setArticle((prev) => prev ? {
+        ...prev,
+        ...updated,
+        content: prev.content,
+        title: prev.title,
+        excerpt: prev.excerpt,
+        meta_description: prev.meta_description,
+        cover_image_url: prev.cover_image_url,
+        faq_json: prev.faq_json,
+        callouts_json: prev.callouts_json,
+      } : prev)
+      setPersistedSnapshot(buildPersistedSnapshot({
+        content: editor?.getHTML() ?? article.content ?? '',
+        meta: metaFields,
+        coverImageUrl: coverImageUrl,
+        faqItems,
+        authorName: manualAuthorName,
+        readingTimeMinutes: manualReadingTime,
+      }))
+    } catch (err) {
+      setActionError(translateError(err))
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   async function handleSchedule() {
     if (!projectId || !article || !scheduleDate || !scheduleTime) return
     setActionLoading('schedule')
@@ -1357,11 +1389,11 @@ export default function ArticleEditorPage() {
                     <div className="p-3 flex flex-col gap-2">
                       {showUpdateButton ? (
                         <button
-                          onClick={() => void handleSaveNow()}
-                          disabled={busy || autosaveStatus === 'saving'}
+                          onClick={() => void handlePromote()}
+                          disabled={busy || actionLoading === 'promote'}
                           className="w-full rounded-[8px] bg-accent py-2 text-[12px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
                         >
-                          {autosaveStatus === 'saving' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
+                          {actionLoading === 'promote' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
                           Mettre à jour
                         </button>
                       ) : (

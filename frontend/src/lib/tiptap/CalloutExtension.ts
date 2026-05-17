@@ -10,6 +10,7 @@ export type CalloutAttrs = {
   'data-callout-title'?: string
   'data-callout-icon'?: string
   'data-callout-class-name'?: string
+  'data-callout-source'?: string
   'data-color-background'?: string
   'data-color-border'?: string
   'data-color-text'?: string
@@ -75,6 +76,7 @@ export const CalloutExtension = Node.create({
       'data-callout-title': { default: null },
       'data-callout-icon': { default: null },
       'data-callout-class-name': { default: null },
+      'data-callout-source': { default: null },
       'data-color-background': { default: null },
       'data-color-border': { default: null },
       'data-color-text': { default: null },
@@ -101,6 +103,7 @@ export const CalloutExtension = Node.create({
             'data-callout-title': element.getAttribute('data-callout-title'),
             'data-callout-icon': element.getAttribute('data-callout-icon'),
             'data-callout-class-name': element.getAttribute('data-callout-class-name'),
+            'data-callout-source': element.getAttribute('data-callout-source'),
             'data-color-background': element.getAttribute('data-color-background'),
             'data-color-border': element.getAttribute('data-color-border'),
             'data-color-text': element.getAttribute('data-color-text'),

@@ -108,3 +108,4 @@ class ArticlePublicApiResponse(BaseModel):
     callouts_json: Optional[str] = None
     published_at: Optional[datetime]
     updated_at: datetime
+    has_draft_changes: Optional[bool] = None

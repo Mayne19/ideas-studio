@@ -39,6 +39,10 @@ export function publishArticle(_projectId: string, articleId: string): Promise<A
   return api.post<Article>(`/articles/${articleId}/publish`)
 }
 
+export function promoteArticle(_projectId: string, articleId: string): Promise<Article> {
+  return api.post<Article>(`/articles/${articleId}/promote`)
+}
+
 export function unpublishArticle(_projectId: string, articleId: string): Promise<Article> {
   return api.post<Article>(`/articles/${articleId}/unpublish`)
 }
