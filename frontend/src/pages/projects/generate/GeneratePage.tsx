@@ -39,6 +39,7 @@ function translateError(err: unknown): string {
       case 409: return 'Une génération est déjà en cours. Attendez quelques instants.'
       case 403: return 'Vous n\'avez pas la permission de lancer cette action.'
       case 422: return 'Données invalides. Vérifiez les informations saisies.'
+      case 503: return err.message || 'Provider IA indisponible, génération réelle impossible.'
       default: return err.message || `Erreur ${err.status}`
     }
   }
@@ -50,6 +51,7 @@ export default function GeneratePage() {
   const navigate = useNavigate()
 
   const [mode, setMode] = useState<Mode>('idea')
+  const [preferredTitle, setPreferredTitle] = useState('')
   const [keyword, setKeyword] = useState('')
   const [secondaryKeywords, setSecondaryKeywords] = useState('')
   const [category, setCategory] = useState('')
@@ -94,6 +96,7 @@ export default function GeneratePage() {
       if (mode === 'idea') {
         const res = await generateIdea(projectId, {
           context_hint: buildContextHint() || undefined,
+          preferred_title: preferredTitle.trim() || undefined,
         })
         setResult(res)
       } else if (mode === 'full_article') {
@@ -164,6 +167,13 @@ export default function GeneratePage() {
             <p className="text-[12px] font-semibold text-secondary uppercase tracking-wide">
               Contexte {mode === 'full_article' ? '(optionnel)' : ''}
             </p>
+            <Input
+              label="Titre souhaité"
+              placeholder="Ex. Comment améliorer le SEO d’un site vitrine"
+              value={preferredTitle}
+              onChange={(e) => setPreferredTitle(e.target.value)}
+              hint="Si renseigné, ce titre est prioritaire pour l'idée générée."
+            />
             <Input
               label="Keyword principal"
               placeholder="optimisation seo pour blogs"

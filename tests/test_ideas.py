@@ -52,6 +52,25 @@ def test_get_llm_provider_returns_mock_by_default():
     assert isinstance(provider, MockLLMProvider)
 
 
+def test_get_llm_provider_raises_in_production_when_ollama_unavailable(monkeypatch):
+    from app.core.config import settings
+    from app.services.providers.llm_provider import get_llm_provider, ProviderUnavailableError
+
+    old_env = settings.APP_ENV
+    old_provider = settings.DEFAULT_LLM_PROVIDER
+    old_url = settings.OLLAMA_URL
+    try:
+        settings.APP_ENV = "production"
+        settings.DEFAULT_LLM_PROVIDER = "ollama"
+        settings.OLLAMA_URL = "http://127.0.0.1:9"
+        with pytest.raises(ProviderUnavailableError):
+            get_llm_provider()
+    finally:
+        settings.APP_ENV = old_env
+        settings.DEFAULT_LLM_PROVIDER = old_provider
+        settings.OLLAMA_URL = old_url
+
+
 def test_get_search_provider_returns_mock_by_default():
     from app.services.providers.search_provider import get_search_provider, MockSearchProvider
     provider = get_search_provider()
@@ -88,6 +107,40 @@ def test_generate_idea_with_context_hint(client: TestClient):
     )
     assert resp.status_code == 200
     assert resp.json()["status"] == "idea_proposed"
+
+
+def test_generate_idea_respects_preferred_title(client: TestClient):
+    headers = register_and_login(client, email="preferred_title@test.com")
+    project = _create_project(client, headers)
+    resp = client.post(
+        f"/projects/{project['id']}/ideas/generate",
+        json={"preferred_title": "Mon titre prioritaire"},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["title"] == "Mon titre prioritaire"
+
+
+def test_generate_idea_returns_503_when_provider_unavailable_in_production(client: TestClient):
+    from app.core.config import settings
+
+    headers = register_and_login(client, email="llm_down@test.com")
+    project = _create_project(client, headers)
+
+    old_env = settings.APP_ENV
+    old_provider = settings.DEFAULT_LLM_PROVIDER
+    old_url = settings.OLLAMA_URL
+    try:
+        settings.APP_ENV = "production"
+        settings.DEFAULT_LLM_PROVIDER = "ollama"
+        settings.OLLAMA_URL = "http://127.0.0.1:9"
+        resp = client.post(f"/projects/{project['id']}/ideas/generate", json={}, headers=headers)
+        assert resp.status_code == 503
+        assert "Provider IA indisponible" in resp.json()["detail"]
+    finally:
+        settings.APP_ENV = old_env
+        settings.DEFAULT_LLM_PROVIDER = old_provider
+        settings.OLLAMA_URL = old_url
 
 
 def test_generate_idea_deduplication(client: TestClient):
@@ -162,6 +215,48 @@ def test_start_writing_produces_draft_ready(client: TestClient):
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "draft_ready"
+
+
+def test_start_writing_converts_markdown_to_html(client: TestClient, monkeypatch):
+    from app.routers import ideas as ideas_router
+
+    class FakeArticleLLM:
+        is_mock = False
+        provider_name = "fake"
+        model_name = "test-model"
+
+        def describe(self) -> str:
+            return "fake model=test-model mock=False"
+
+        def generate_text(self, prompt: str, system: str | None = None, temperature: float = 0.7) -> str:
+            if "meta title" in prompt.lower():
+                return "Meta title de test"
+            if "meta description" in prompt.lower():
+                return "Meta description de test suffisamment longue pour valider le chemin."
+            return "# Intro\n\n## Section test\n\nParagraphe détaillé.\n\n### Sous-section\n\n- Point 1\n- Point 2"
+
+        def generate_json(self, prompt: str, schema_hint: str | None = None):
+            return [
+                {"heading": "Section test", "notes": "Développer un exemple concret"},
+                {"heading": "Sous-section", "notes": "Ajouter des détails utiles"},
+            ]
+
+        def is_available(self) -> bool:
+            return True
+
+    headers = register_and_login(client, email="markdown_html@test.com")
+    project = _create_project(client, headers)
+    idea = _generate_idea(client, headers, project["id"])
+
+    monkeypatch.setattr(ideas_router, "get_llm_provider", lambda: FakeArticleLLM())
+    resp = client.post(f"/articles/{idea['id']}/start-writing", headers=headers)
+    assert resp.status_code == 200
+
+    article_resp = client.get(f"/articles/{idea['id']}", headers=headers)
+    content = article_resp.json()["content"]
+    assert "<h2>Section test</h2>" in content
+    assert "<h3>Sous-section</h3>" in content
+    assert "## Section test" not in content
 
 
 def test_start_writing_invalid_status(client: TestClient):

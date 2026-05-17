@@ -12,6 +12,7 @@ class SearchResult:
 
 class SearchProvider(ABC):
     is_mock: bool = False
+    provider_name: str = "unknown"
 
     @abstractmethod
     def search(self, query: str, limit: int = 10) -> list[SearchResult]:
@@ -21,10 +22,14 @@ class SearchProvider(ABC):
     def is_available(self) -> bool:
         ...
 
+    def describe(self) -> str:
+        return f"{self.provider_name} mock={self.is_mock}"
+
 
 class MockSearchProvider(SearchProvider):
     """Always available; returns template-based results for dev and tests."""
     is_mock: bool = True
+    provider_name: str = "mock"
 
     def search(self, query: str, limit: int = 10) -> list[SearchResult]:
         return [
@@ -47,6 +52,7 @@ class MockSearchProvider(SearchProvider):
 class SearXNGSearchProvider(SearchProvider):
     """Uses a local SearXNG instance for web search."""
     is_mock: bool = False
+    provider_name: str = "searxng"
 
     def __init__(self, base_url: str):
         self.base_url = base_url.rstrip("/")

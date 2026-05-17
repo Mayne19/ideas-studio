@@ -18,7 +18,11 @@ from app.schemas.ideas import (
 from app.services.idea_engine import generate_idea
 from app.services.writing_engine import start_writing_from_idea, _mock_content_from_outline, _MOCK_OUTLINE
 from app.services.log_service import log_step
-from app.services.providers.llm_provider import get_llm_provider
+from app.services.providers.llm_provider import (
+    GenerationFailedError,
+    ProviderUnavailableError,
+    get_llm_provider,
+)
 from app.services.providers.search_provider import get_search_provider
 
 router = APIRouter(tags=["ideas"])
@@ -72,6 +76,14 @@ def _idea_response(article: Article) -> IdeaGenerateResponse:
     )
 
 
+def _generation_http_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, ProviderUnavailableError):
+        return HTTPException(status_code=503, detail=str(exc))
+    if isinstance(exc, GenerationFailedError):
+        return HTTPException(status_code=502, detail=str(exc))
+    raise exc
+
+
 @router.post("/projects/{project_id}/ideas/generate", response_model=IdeaGenerateResponse)
 def generate_idea_route(
     project_id: str,
@@ -81,18 +93,21 @@ def generate_idea_route(
     _member=Depends(require_project_role("owner", "admin", "editor", "writer")),
 ):
     project = _get_project_or_404(project_id, db)
-    llm = get_llm_provider()
-    search = get_search_provider()
-    article = generate_idea(
-        db=db,
-        project_id=project_id,
-        project_audience=project.audience,
-        project_language=project.language,
-        llm=llm,
-        search=search,
-        context_hint=body.context_hint,
-        preferred_title=body.preferred_title,
-    )
+    try:
+        llm = get_llm_provider()
+        search = get_search_provider()
+        article = generate_idea(
+            db=db,
+            project_id=project_id,
+            project_audience=project.audience,
+            project_language=project.language,
+            llm=llm,
+            search=search,
+            context_hint=body.context_hint,
+            preferred_title=body.preferred_title,
+        )
+    except (ProviderUnavailableError, GenerationFailedError) as exc:
+        raise _generation_http_error(exc) from exc
     if article is None:
         raise HTTPException(status_code=409, detail="Idea could not be generated (duplicate keyword or LLM failure)")
     db.commit()
@@ -110,8 +125,11 @@ def start_writing_route(
     _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor", "writer"))
     if article.status not in _WRITABLE_STATUSES:
         raise HTTPException(status_code=400, detail=f"Cannot start writing from status '{article.status}'")
-    llm = get_llm_provider()
-    article = start_writing_from_idea(db=db, article=article, llm=llm)
+    try:
+        llm = get_llm_provider()
+        article = start_writing_from_idea(db=db, article=article, llm=llm)
+    except (ProviderUnavailableError, GenerationFailedError) as exc:
+        raise _generation_http_error(exc) from exc
     db.commit()
     db.refresh(article)
     return _idea_response(article)
@@ -197,8 +215,11 @@ def rerun_writing_route(
     _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor", "writer"))
     if article.status not in _RERUN_STATUSES:
         raise HTTPException(status_code=400, detail=f"Cannot rerun from status '{article.status}'")
-    llm = get_llm_provider()
-    article = start_writing_from_idea(db=db, article=article, llm=llm)
+    try:
+        llm = get_llm_provider()
+        article = start_writing_from_idea(db=db, article=article, llm=llm)
+    except (ProviderUnavailableError, GenerationFailedError) as exc:
+        raise _generation_http_error(exc) from exc
     db.commit()
     db.refresh(article)
     return _idea_response(article)
@@ -213,25 +234,34 @@ def launch_project_route(
     _member=Depends(require_project_role("owner", "admin")),
 ):
     project = _get_project_or_404(project_id, db)
-    llm = get_llm_provider()
-    search = get_search_provider()
+    try:
+        llm = get_llm_provider()
+        search = get_search_provider()
+    except (ProviderUnavailableError, GenerationFailedError) as exc:
+        raise _generation_http_error(exc) from exc
 
     from app.core.config import settings
     generated = []
     for _ in range(settings.IDEAS_PER_DAY):
         if body.dry_run:
             break
-        article = generate_idea(
-            db=db,
-            project_id=project_id,
-            project_audience=project.audience,
-            project_language=project.language,
-            llm=llm,
-            search=search,
-        )
+        try:
+            article = generate_idea(
+                db=db,
+                project_id=project_id,
+                project_audience=project.audience,
+                project_language=project.language,
+                llm=llm,
+                search=search,
+            )
+        except (ProviderUnavailableError, GenerationFailedError) as exc:
+            raise _generation_http_error(exc) from exc
         if article:
             if body.mode == "full_article":
-                article = start_writing_from_idea(db=db, article=article, llm=llm)
+                try:
+                    article = start_writing_from_idea(db=db, article=article, llm=llm)
+                except (ProviderUnavailableError, GenerationFailedError) as exc:
+                    raise _generation_http_error(exc) from exc
             generated.append(article.id)
 
     if not body.dry_run:

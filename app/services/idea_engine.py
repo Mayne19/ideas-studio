@@ -1,11 +1,12 @@
 import json
 import uuid
 from datetime import datetime, timezone
+from time import perf_counter
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
 from app.models.article import Article
-from app.services.providers.llm_provider import LLMProvider
+from app.services.providers.llm_provider import LLMProvider, GenerationFailedError
 from app.services.providers.search_provider import SearchProvider
 from app.services.log_service import log_step
 
@@ -81,7 +82,22 @@ def generate_idea(
     context_hint: str | None = None,
     preferred_title: str | None = None,
 ) -> Article | None:
+    started_at = perf_counter()
+    log_step(
+        db,
+        project_id,
+        f"Génération d'idée lancée avec LLM={llm.describe()} et search={search.describe()}",
+        level="info",
+        step="generate_idea",
+    )
     if llm.is_mock:
+        log_step(
+            db,
+            project_id,
+            "Mode mock actif pour la génération d'idée. Résultat non destiné à la production.",
+            level="warning",
+            step="generate_idea",
+        )
         idea_data = _next_mock_idea(project_audience)
     else:
         query = context_hint or f"idées d'articles SEO pour {project_audience or 'un blog'} en {project_language}"
@@ -96,6 +112,8 @@ def generate_idea(
             f"Réponds uniquement en JSON."
         )
         idea_data = llm.generate_json(prompt, schema_hint=schema_hint)
+        if not isinstance(idea_data, dict) or not idea_data:
+            raise GenerationFailedError("La génération IA n'a pas produit de proposition d'idée exploitable.")
         if not idea_data.get("keyword"):
             log_step(db, project_id, "LLM n'a pas retourné de keyword valide", level="warning", step="generate_idea")
             return None
@@ -133,5 +151,14 @@ def generate_idea(
     )
     db.add(article)
     log_step(db, project_id, f"Idée générée : {article.title}", level="info", step="generate_idea", article_id=article.id)
+    duration_ms = int((perf_counter() - started_at) * 1000)
+    log_step(
+        db,
+        project_id,
+        f"Génération d'idée terminée en {duration_ms} ms via {llm.describe()}",
+        level="info",
+        step="generate_idea",
+        article_id=article.id,
+    )
     db.flush()
     return article

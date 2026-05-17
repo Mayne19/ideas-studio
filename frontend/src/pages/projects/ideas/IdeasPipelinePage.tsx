@@ -28,6 +28,7 @@ function translateIdeaError(err: unknown, context: 'action' | 'generate' | 'reje
         if (context === 'generate') return 'Une idée est déjà en cours de génération. Attendez quelques instants.'
         return 'Cette action n\'est pas possible dans l\'état actuel de l\'idée.'
       case 422: return 'Données invalides. Vérifiez les informations saisies.'
+      case 503: return err.message || 'Provider IA indisponible, génération réelle impossible.'
       default: return err.message || `Erreur ${err.status}`
     }
   }

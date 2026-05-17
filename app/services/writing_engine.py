@@ -1,9 +1,10 @@
 import json
 from datetime import datetime, timezone
+from time import perf_counter
 from sqlalchemy.orm import Session
 
 from app.models.article import Article
-from app.services.providers.llm_provider import LLMProvider
+from app.services.providers.llm_provider import LLMProvider, GenerationFailedError
 from app.services.log_service import log_step
 from app.core.utils import calculate_word_count
 from app.core.markdown import markdown_to_html
@@ -49,14 +50,30 @@ def start_writing_from_idea(
     article: Article,
     llm: LLMProvider,
 ) -> Article:
+    started_at = perf_counter()
     # Mark as in progress before any generation
     article.status = "writing_in_progress"
     article.updated_at = datetime.now(timezone.utc)
     db.flush()
 
-    log_step(db, article.project_id, "Démarrage de la rédaction", level="info", step="start_writing", article_id=article.id)
+    log_step(
+        db,
+        article.project_id,
+        f"Démarrage de la rédaction avec {llm.describe()}",
+        level="info",
+        step="start_writing",
+        article_id=article.id,
+    )
 
     if llm.is_mock:
+        log_step(
+            db,
+            article.project_id,
+            "Mode mock actif pour la rédaction. Brouillon indicatif uniquement.",
+            level="warning",
+            step="start_writing",
+            article_id=article.id,
+        )
         outline = _MOCK_OUTLINE
         article.outline_json = json.dumps(outline)
         content = _mock_content_from_outline(article.title, article.keyword or "", outline)
@@ -95,10 +112,19 @@ def start_writing_from_idea(
         )
 
         content = llm.generate_text(content_prompt, temperature=0.7)
-        if not content:
-            content = _mock_content_from_outline(article.title, article.keyword or "", outline)
-        else:
-            content = markdown_to_html(content)
+        if not content or not content.strip():
+            article.status = "failed"
+            article.updated_at = datetime.now(timezone.utc)
+            log_step(
+                db,
+                article.project_id,
+                "Le provider IA n'a pas retourné de contenu exploitable pour la rédaction.",
+                level="error",
+                step="start_writing",
+                article_id=article.id,
+            )
+            raise GenerationFailedError("Provider IA indisponible, génération réelle impossible.")
+        content = markdown_to_html(content)
 
     article.content = content
     article.word_count = calculate_word_count(content)
@@ -129,7 +155,7 @@ def start_writing_from_idea(
     log_step(
         db,
         article.project_id,
-        f"Rédaction terminée — {article.word_count} mots",
+        f"Rédaction terminée — {article.word_count} mots en {int((perf_counter() - started_at) * 1000)} ms via {llm.describe()}",
         level="info",
         step="start_writing",
         article_id=article.id,
