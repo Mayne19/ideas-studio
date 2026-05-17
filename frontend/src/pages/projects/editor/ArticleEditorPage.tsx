@@ -220,6 +220,43 @@ function snapshotsEqual(a: PersistedSnapshot | null, b: PersistedSnapshot): bool
   return JSON.stringify(a) === JSON.stringify(b)
 }
 
+function buildPublishedSnapshot(article: EditorArticle | null): PersistedSnapshot | null {
+  if (!article || article.status !== 'published') return null
+  const hasPublishedFields = article.published_content !== null || article.published_title !== null || article.published_excerpt !== null
+  if (!hasPublishedFields) {
+    return buildPersistedSnapshot({
+      content: article.content ?? '',
+      meta: {
+        title: article.title ?? '',
+        slug: article.slug ?? '',
+        excerpt: article.excerpt ?? '',
+        keyword: article.keyword ?? '',
+        meta_title: article.meta_title ?? '',
+        meta_description: article.meta_description ?? '',
+        category_id: article.category_id ?? '',
+      },
+      coverImageUrl: article.cover_image_url ?? '',
+      faqItems: parseFaqItems(article.faq_json),
+      authorName: article.author_name ?? '',
+      readingTimeMinutes: article.reading_time_minutes,
+    })
+  }
+  return {
+    title: article.published_title ?? '',
+    slug: article.slug ?? '',
+    excerpt: article.published_excerpt ?? '',
+    keyword: article.keyword ?? '',
+    meta_title: article.meta_title ?? '',
+    meta_description: article.published_meta_description ?? '',
+    category_id: article.category_id ?? '',
+    cover_image_url: article.published_cover_image_url ?? '',
+    content: article.published_content ?? '',
+    faq_json: article.published_faq_json as string | null ?? null,
+    author_name: normalizeOptionalText(article.author_name),
+    reading_time_minutes: normalizeReadingTime(article.reading_time_minutes),
+  }
+}
+
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export default function ArticleEditorPage() {
@@ -250,6 +287,7 @@ export default function ArticleEditorPage() {
   const [manualAuthorName, setManualAuthorName] = useState('')
   const [manualReadingTime, setManualReadingTime] = useState<number | null>(null)
   const [persistedSnapshot, setPersistedSnapshot] = useState<PersistedSnapshot | null>(null)
+  const [lastPromotedSnapshot, setLastPromotedSnapshot] = useState<PersistedSnapshot | null>(null)
   const [faqItems, setFaqItems] = useState<FaqItem[]>([])
   const [faqOpen, setFaqOpen] = useState(false)
 
@@ -530,6 +568,7 @@ export default function ArticleEditorPage() {
           authorName: art.author_name ?? '',
           readingTimeMinutes: art.reading_time_minutes,
         }))
+        setLastPromotedSnapshot(buildPublishedSnapshot(art))
         setIsGenerating(GENERATING_STATUSES.includes(art.status))
         setLoadStatus('success')
       })
@@ -839,14 +878,16 @@ export default function ArticleEditorPage() {
         faq_json: prev.faq_json,
         callouts_json: prev.callouts_json,
       } : prev)
-      setPersistedSnapshot(buildPersistedSnapshot({
+      const promotedSnapshot = buildPersistedSnapshot({
         content: editor?.getHTML() ?? article.content ?? '',
         meta: metaFields,
         coverImageUrl: coverImageUrl,
         faqItems,
         authorName: manualAuthorName,
         readingTimeMinutes: manualReadingTime,
-      }))
+      })
+      setPersistedSnapshot(promotedSnapshot)
+      setLastPromotedSnapshot(promotedSnapshot)
     } catch (err) {
       setActionError(translateError(err))
     } finally {
@@ -951,7 +992,10 @@ export default function ArticleEditorPage() {
     readingTimeMinutes: manualReadingTime,
   })
   const hasUnsavedChanges = !snapshotsEqual(persistedSnapshot, currentSnapshot)
-  const showUpdateButton = article?.status === 'published' && hasUnsavedChanges
+  const showUpdateButton = article?.status === 'published' && (
+    hasUnsavedChanges ||
+    (lastPromotedSnapshot !== null && !snapshotsEqual(lastPromotedSnapshot, currentSnapshot))
+  )
 
   const isEditable = viewMode === 'edit'
   const busy = actionLoading !== null

@@ -156,9 +156,9 @@ class _CalloutHTMLParser(HTMLParser):
                 "class_name": attrs.get("data-callout-class-name"),
                 "source": attrs.get("data-callout-source"),
                 "colors": {
-                    "background": attrs.get("data-color-background"),
-                    "border": attrs.get("data-color-border"),
-                    "text": attrs.get("data-color-text"),
+                    "background": attrs.get("data-callout-color-background") or attrs.get("data-color-background"),
+                    "border": attrs.get("data-callout-color-border") or attrs.get("data-color-border"),
+                    "text": attrs.get("data-callout-color-text") or attrs.get("data-color-text"),
                 },
                 "body_html": body_html or None,
                 "body_text": body_text or None,

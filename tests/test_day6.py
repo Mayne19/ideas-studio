@@ -472,3 +472,143 @@ def test_autosave_does_not_modify_published_content(client: TestClient):
 
     public = client.get(f"/api/public/projects/{project['id']}/articles/autosave-published").json()
     assert public["content"] == "<p>Original public content</p>"
+
+
+# ── 29–33. Callout colors (data-callout-color-*) ─────────────────────────────
+
+def test_callout_manual_colors_in_callouts_json(client: TestClient):
+    headers, project = _setup(client, "ccol@test.com")
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Callout Colors"},
+        headers=headers,
+    ).json()
+
+    content = (
+        '<div data-block-type="callout" data-callout-style="info" data-callout-source="manual" '
+        'data-callout-color-background="#f0fdf4" data-callout-color-border="#10b981" '
+        'data-callout-color-text="#065f46">'
+        '<div class="callout-body"><p>Green callout</p></div></div>'
+    )
+    client.post(
+        f"/articles/{article['id']}/autosave",
+        json={"content": content},
+        headers=headers,
+    )
+
+    editor = client.get(f"/articles/{article['id']}/editor", headers=headers).json()
+    callouts = __import__("json").loads(editor["callouts_json"])
+    assert len(callouts) == 1
+    colors = callouts[0]["colors"]
+    assert colors["background"] == "#f0fdf4"
+    assert colors["border"] == "#10b981"
+    assert colors["text"] == "#065f46"
+    assert callouts[0]["source"] == "manual"
+
+
+def test_callout_legacy_color_attrs_still_parsed(client: TestClient):
+    headers, project = _setup(client, "ccol_leg@test.com")
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Legacy Callout Colors"},
+        headers=headers,
+    ).json()
+
+    content = (
+        '<div data-block-type="callout" data-callout-style="info" data-callout-source="manual" '
+        'data-color-background="#fef2f2" data-color-border="#ef4444" data-color-text="#991b1b">'
+        '<div class="callout-body"><p>Red callout</p></div></div>'
+    )
+    client.post(
+        f"/articles/{article['id']}/autosave",
+        json={"content": content},
+        headers=headers,
+    )
+
+    editor = client.get(f"/articles/{article['id']}/editor", headers=headers).json()
+    callouts = __import__("json").loads(editor["callouts_json"])
+    assert len(callouts) == 1
+    colors = callouts[0]["colors"]
+    assert colors["background"] == "#fef2f2"
+    assert colors["border"] == "#ef4444"
+    assert colors["text"] == "#991b1b"
+    assert callouts[0]["source"] == "manual"
+
+
+# ── 34–37. Editor API has_draft_changes ─────────────────────────────────────
+
+def test_editor_returns_has_draft_changes_for_published(client: TestClient):
+    headers, project = _setup(client, "hdc1@test.com")
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "HDC Test", "content": "<p>Original</p>"},
+        headers=headers,
+    ).json()
+
+    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    editor = client.get(f"/articles/{article['id']}/editor", headers=headers).json()
+    assert "has_draft_changes" in editor
+    assert editor["has_draft_changes"] is False
+
+
+def test_autosave_sets_has_draft_changes_true(client: TestClient):
+    headers, project = _setup(client, "hdc2@test.com")
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "HDC Autosave", "content": "<p>Original</p>"},
+        headers=headers,
+    ).json()
+
+    client.post(f"/articles/{article['id']}/publish", headers=headers)
+
+    client.post(
+        f"/articles/{article['id']}/autosave",
+        json={"content": "<p>Updated draft</p>"},
+        headers=headers,
+    )
+
+    editor = client.get(f"/articles/{article['id']}/editor", headers=headers).json()
+    assert editor["has_draft_changes"] is True
+
+
+def test_promote_resets_has_draft_changes(client: TestClient):
+    headers, project = _setup(client, "hdc3@test.com")
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "HDC Promote", "content": "<p>Original</p>"},
+        headers=headers,
+    ).json()
+
+    client.post(f"/articles/{article['id']}/publish", headers=headers)
+
+    client.post(
+        f"/articles/{article['id']}/autosave",
+        json={"content": "<p>Updated draft</p>"},
+        headers=headers,
+    )
+
+    client.post(f"/articles/{article['id']}/promote", headers=headers)
+
+    editor = client.get(f"/articles/{article['id']}/editor", headers=headers).json()
+    assert editor["has_draft_changes"] is False
+
+
+def test_editor_has_draft_changes_fields(client: TestClient):
+    headers, project = _setup(client, "hdc4@test.com")
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "HDC Fields", "content": "<p>Original</p>"},
+        headers=headers,
+    ).json()
+
+    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    editor = client.get(f"/articles/{article['id']}/editor", headers=headers).json()
+
+    assert "published_content" in editor
+    assert "published_title" in editor
+    assert "published_excerpt" in editor
+    assert "published_meta_description" in editor
+    assert "published_cover_image_url" in editor
+    assert "published_faq_json" in editor
+    assert "published_callouts_json" in editor
+    assert editor["published_content"] == "<p>Original</p>"

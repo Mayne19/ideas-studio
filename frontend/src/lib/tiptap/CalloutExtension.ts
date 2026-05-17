@@ -14,6 +14,9 @@ export type CalloutAttrs = {
   'data-color-background'?: string
   'data-color-border'?: string
   'data-color-text'?: string
+  'data-callout-color-background'?: string
+  'data-callout-color-border'?: string
+  'data-callout-color-text'?: string
 }
 
 declare module '@tiptap/core' {
@@ -46,9 +49,9 @@ function getDefaultColors(style?: string) {
 
 function buildCalloutStyle(attrs: Record<string, unknown>) {
   const colors = getDefaultColors(String(attrs['data-callout-style'] || attrs['data-callout-type'] || 'info'))
-  const background = String(attrs['data-color-background'] || colors.background)
-  const border = String(attrs['data-color-border'] || colors.border)
-  const text = String(attrs['data-color-text'] || colors.text)
+  const background = String(attrs['data-callout-color-background'] || attrs['data-color-background'] || colors.background)
+  const border = String(attrs['data-callout-color-border'] || attrs['data-color-border'] || colors.border)
+  const text = String(attrs['data-callout-color-text'] || attrs['data-color-text'] || colors.text)
   return [
     `background:${background}`,
     `border-left:3px solid ${border}`,
@@ -80,6 +83,9 @@ export const CalloutExtension = Node.create({
       'data-color-background': { default: null },
       'data-color-border': { default: null },
       'data-color-text': { default: null },
+      'data-callout-color-background': { default: null },
+      'data-callout-color-border': { default: null },
+      'data-callout-color-text': { default: null },
     }
   },
 
@@ -107,6 +113,9 @@ export const CalloutExtension = Node.create({
             'data-color-background': element.getAttribute('data-color-background'),
             'data-color-border': element.getAttribute('data-color-border'),
             'data-color-text': element.getAttribute('data-color-text'),
+            'data-callout-color-background': element.getAttribute('data-callout-color-background'),
+            'data-callout-color-border': element.getAttribute('data-callout-color-border'),
+            'data-callout-color-text': element.getAttribute('data-callout-color-text'),
           }
         },
       },

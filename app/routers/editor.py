@@ -68,6 +68,18 @@ def get_editor_data(
             created_at=latest.created_at,
         )
 
+    has_draft_changes = None
+    if article.status == "published":
+        has_draft_changes = (
+            article.content != article.published_content
+            or article.title != article.published_title
+            or article.excerpt != article.published_excerpt
+            or article.meta_description != article.published_meta_description
+            or article.cover_image_url != article.published_cover_image_url
+            or article.faq_json != article.published_faq_json
+            or article.callouts_json != article.published_callouts_json
+        )
+
     return EditorData(
         id=article.id,
         project_id=article.project_id,
@@ -97,6 +109,14 @@ def get_editor_data(
         latest_analysis=analysis_brief,
         created_at=article.created_at,
         updated_at=article.updated_at,
+        published_content=article.published_content,
+        published_title=article.published_title,
+        published_excerpt=article.published_excerpt,
+        published_meta_description=article.published_meta_description,
+        published_cover_image_url=article.published_cover_image_url,
+        published_faq_json=article.published_faq_json,
+        published_callouts_json=article.published_callouts_json,
+        has_draft_changes=has_draft_changes,
     )
 
 

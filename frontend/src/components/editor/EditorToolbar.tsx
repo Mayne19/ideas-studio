@@ -265,6 +265,9 @@ export default function EditorToolbar({
 
   function attrsFromTemplate(template: CalloutTemplate | null, title: string): CalloutAttrs {
     const style = template?.style ?? template?.slug ?? 'info'
+    const background = template?.color_background ?? ''
+    const border = template?.color_border ?? ''
+    const text = template?.color_text ?? ''
     return {
       'data-block-type': 'callout',
       'data-callout-style': style,
@@ -276,9 +279,12 @@ export default function EditorToolbar({
       'data-callout-icon': template?.icon ?? '',
       'data-callout-class-name': template?.class_name ?? '',
       'data-callout-source': template?.source ?? 'manual',
-      'data-color-background': template?.color_background ?? '',
-      'data-color-border': template?.color_border ?? '',
-      'data-color-text': template?.color_text ?? '',
+      'data-color-background': background,
+      'data-color-border': border,
+      'data-color-text': text,
+      'data-callout-color-background': background,
+      'data-callout-color-border': border,
+      'data-callout-color-text': text,
     }
   }
 

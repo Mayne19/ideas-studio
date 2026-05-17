@@ -41,6 +41,14 @@ class EditorData(BaseModel):
     latest_analysis: Optional[AnalysisBrief]
     created_at: datetime
     updated_at: datetime
+    published_content: Optional[str] = None
+    published_title: Optional[str] = None
+    published_excerpt: Optional[str] = None
+    published_meta_description: Optional[str] = None
+    published_cover_image_url: Optional[str] = None
+    published_faq_json: Optional[str] = None
+    published_callouts_json: Optional[str] = None
+    has_draft_changes: Optional[bool] = None
 
 
 class AutosaveRequest(BaseModel):

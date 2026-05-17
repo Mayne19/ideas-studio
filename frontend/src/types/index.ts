@@ -245,6 +245,14 @@ export type EditorArticle = Article & {
   external_links_json: unknown | null
   content_blocks_json: unknown | null
   latest_analysis: AnalysisBrief | null
+  published_content: string | null
+  published_title: string | null
+  published_excerpt: string | null
+  published_meta_description: string | null
+  published_cover_image_url: string | null
+  published_faq_json: unknown | null
+  published_callouts_json: unknown | null
+  has_draft_changes: boolean | null
 }
 
 export type AutosaveRequest = {
