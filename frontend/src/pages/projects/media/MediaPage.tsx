@@ -19,7 +19,7 @@ function MediaCard({ asset, onDelete }: { asset: MediaAsset; onDelete: () => voi
   const [copied, setCopied] = useState(false)
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(asset.url)
+    await navigator.clipboard.writeText(asset.public_url ?? asset.url)
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
   }
@@ -28,7 +28,7 @@ function MediaCard({ asset, onDelete }: { asset: MediaAsset; onDelete: () => voi
     <div className="group flex flex-col rounded-[16px] bg-surface overflow-hidden">
       <div className="relative bg-[#f5f5f7] h-36 flex items-center justify-center">
         {asset.mime_type?.startsWith('image/') ? (
-          <img src={asset.url} alt={asset.alt_text ?? ''} className="w-full h-full object-cover" />
+          <img src={asset.public_url ?? asset.url} alt={asset.alt_text ?? ''} className="w-full h-full object-cover" />
         ) : (
           <Image size={28} className="text-tertiary" />
         )}
@@ -51,7 +51,7 @@ function MediaCard({ asset, onDelete }: { asset: MediaAsset; onDelete: () => voi
       </div>
       <div className="px-3 py-2">
         <p className="text-[12px] font-medium text-primary truncate" title={asset.filename ?? asset.url}>
-          {asset.filename ?? asset.url.split('/').pop() ?? 'Image'}
+          {asset.filename ?? (asset.public_url ?? asset.url).split('/').pop() ?? 'Image'}
         </p>
         {asset.size && (
           <p className="text-[11px] text-tertiary">{formatBytes(asset.size)}</p>

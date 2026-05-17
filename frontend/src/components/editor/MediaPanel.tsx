@@ -22,7 +22,7 @@ export default function MediaPanel({
     setUploadError('')
     try {
       const media = await uploadMedia(projectId, file)
-      onChange(media.url)
+      onChange(media.public_url ?? media.url)
     } catch {
       setUploadError("Echec de l'upload media.")
     } finally {

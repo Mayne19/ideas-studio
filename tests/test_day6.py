@@ -268,7 +268,11 @@ def test_upload_media_file(client: TestClient):
     )
     assert resp.status_code == 201
     data = resp.json()
-    assert "uploads" in data["url"]
+    assert data["url"].startswith("/uploads/"), "url should be a relative path"
+    assert data["url"].endswith(".png"), "url should preserve extension"
+    assert data["public_url"] is not None
+    assert data["public_url"].startswith("http"), "public_url should be absolute"
+    assert data["url"] in data["public_url"], "public_url should contain the relative url"
     assert data["filename"] == "test.png"
     assert data["mime_type"] == "image/png"
     assert data["size"] == len(file_content)

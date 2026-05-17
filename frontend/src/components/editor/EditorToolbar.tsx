@@ -381,7 +381,7 @@ export default function EditorToolbar({
       const media = await uploadMedia(projectId, file, articleId)
       const alt = imageAlt.trim() || media.alt_text || media.filename || file.name
       const inserted = applyImage({
-        ...imagePayload(media.url, alt),
+        ...imagePayload(media.public_url ?? media.url, alt),
         'data-media-id': media.id,
       })
       if (!inserted) throw new Error("Impossible d'insérer cette image.")
@@ -537,7 +537,7 @@ export default function EditorToolbar({
 
   function insertImageFromMedia(item: MediaAsset) {
     const inserted = applyImage({
-      ...imagePayload(item.url, item.alt_text ?? ''),
+      ...imagePayload(item.public_url ?? item.url, item.alt_text ?? ''),
       'data-media-id': item.id,
     })
     if (inserted) {
@@ -944,7 +944,7 @@ export default function EditorToolbar({
                           className="group relative aspect-square overflow-hidden rounded-[8px] border border-border bg-[#f5f5f7] hover:border-accent/60 transition-colors"
                         >
                           <img
-                            src={item.url}
+                            src={item.public_url ?? item.url}
                             alt={item.alt_text ?? ''}
                             className="h-full w-full object-cover"
                             loading="lazy"

@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 frontend/dist/
 frontend/dist-build/
+uploads/

@@ -28,6 +28,7 @@ class MediaPublic(BaseModel):
     project_id: str
     article_id: Optional[str]
     url: str
+    public_url: Optional[str] = None
     filename: str
     mime_type: Optional[str]
     size: Optional[int]

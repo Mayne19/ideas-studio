@@ -5,6 +5,7 @@ export type MediaAsset = {
   project_id: string
   article_id: string | null
   url: string
+  public_url: string | null
   filename: string | null
   mime_type: string | null
   size: number | null

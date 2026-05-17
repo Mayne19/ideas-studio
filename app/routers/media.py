@@ -1,7 +1,8 @@
 import os
 import uuid
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from urllib.parse import urlparse
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -16,6 +17,18 @@ from app.schemas.media import MediaCreate, MediaUpdate, MediaPublic
 
 router = APIRouter(tags=["media"])
 
+def _set_public_url(item: MediaAsset, base: str):
+    """Set public_url on a MediaAsset instance from its stored url."""
+    url = item.url
+    if url.startswith("/"):
+        item.public_url = f"{base}{url}"
+        return
+    parsed = urlparse(url)
+    if parsed.path.startswith("/uploads/"):
+        item.public_url = f"{base}{parsed.path}"
+    else:
+        item.public_url = url
+
 _WRITE_ROLES = frozenset({"owner", "admin", "editor", "writer"})
 _MANAGE_ROLES = frozenset({"owner", "admin", "editor"})
 
@@ -25,12 +38,17 @@ def list_media(
     project_id: str,
     article_id: Optional[str] = None,
     _member: ProjectMember = Depends(get_project_member),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
     q = db.query(MediaAsset).filter(MediaAsset.project_id == project_id)
     if article_id:
         q = q.filter(MediaAsset.article_id == article_id)
-    return q.order_by(MediaAsset.created_at.desc()).all()
+    items = q.order_by(MediaAsset.created_at.desc()).all()
+    base = str(request.base_url).rstrip("/")
+    for item in items:
+        _set_public_url(item, base)
+    return items
 
 
 @router.post("/projects/{project_id}/media/upload", response_model=MediaPublic, status_code=201)
@@ -39,6 +57,7 @@ async def upload_media(
     file: UploadFile = File(...),
     article_id: Optional[str] = Form(None),
     _actor: ProjectMember = Depends(require_project_role("owner", "admin", "editor", "writer")),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
     if article_id:
@@ -59,7 +78,7 @@ async def upload_media(
     with open(filepath, "wb") as f:
         f.write(content)
 
-    url = f"{settings.APP_URL}/uploads/{project_id}/{saved_name}"
+    url = f"/uploads/{project_id}/{saved_name}"
 
     media = MediaAsset(
         project_id=project_id,
@@ -74,6 +93,8 @@ async def upload_media(
     db.add(media)
     db.commit()
     db.refresh(media)
+    base = str(request.base_url).rstrip("/")
+    _set_public_url(media, base)
     return media
 
 
@@ -82,6 +103,7 @@ def upload_media_json(
     project_id: str,
     data: MediaCreate,
     _actor: ProjectMember = Depends(require_project_role("owner", "admin", "editor", "writer")),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
     if data.article_id:
@@ -106,6 +128,8 @@ def upload_media_json(
     db.add(media)
     db.commit()
     db.refresh(media)
+    base = str(request.base_url).rstrip("/")
+    _set_public_url(media, base)
     return media
 
 
@@ -114,6 +138,7 @@ def patch_media(
     media_id: str,
     data: MediaUpdate,
     current_user: User = Depends(get_current_user),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
     media = db.query(MediaAsset).filter(MediaAsset.id == media_id).first()
@@ -142,6 +167,8 @@ def patch_media(
     media.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(media)
+    base = str(request.base_url).rstrip("/")
+    _set_public_url(media, base)
     return media
 
 
