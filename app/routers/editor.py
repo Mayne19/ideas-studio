@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import re
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -15,6 +16,16 @@ from app.services.version_service import create_version, is_duplicate_autosave
 router = APIRouter(tags=["editor"])
 
 _ALL_WRITE_ROLES = frozenset({"owner", "admin", "editor", "writer"})
+_EMPTY_CONTENT_MESSAGE = "Protection : contenu vide non sauvegardé pour éviter d'écraser un article existant."
+
+
+def _is_effectively_empty_content(value: str | None) -> bool:
+    if value is None:
+        return True
+    text = re.sub(r"<[^>]+>", " ", value)
+    text = text.replace("&nbsp;", " ").replace("\xa0", " ")
+    text = re.sub(r"\s+", " ", text).strip()
+    return text == ""
 
 
 def _get_article_or_404(db: Session, article_id: str) -> Article:
@@ -108,6 +119,14 @@ def autosave_article(
 
     # Never allow autosave to set published status
     data.pop("status", None)
+
+    if (
+        article.status == "published"
+        and "content" in data
+        and _is_effectively_empty_content(data.get("content"))
+        and not _is_effectively_empty_content(article.content)
+    ):
+        raise HTTPException(status_code=409, detail=_EMPTY_CONTENT_MESSAGE)
 
     version_created = False
     incoming_content = data.get("content", article.content)

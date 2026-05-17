@@ -173,6 +173,17 @@ function normalizeReadingTime(value: number | null | undefined): number | null {
     : null
 }
 
+function isEffectivelyEmptyHtml(value: string | null | undefined): boolean {
+  const html = value ?? ''
+  const text = html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return text === ''
+}
+
 function buildPersistedSnapshot({
   content,
   meta,
@@ -269,6 +280,9 @@ export default function ArticleEditorPage() {
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingSaveRef = useRef(false)
   const titleRef = useRef<HTMLTextAreaElement>(null)
+  const isHydratingEditorRef = useRef(false)
+  const lastHydratedArticleIdRef = useRef<string | null>(null)
+  const lastHydratedContentRef = useRef<string | null>(null)
 
   // Navigation blocker
   const blocker = useBlocker(
@@ -321,6 +335,7 @@ export default function ArticleEditorPage() {
       },
     },
     onUpdate: ({ editor: e }) => {
+      if (isHydratingEditorRef.current) return
       scheduleAutosave(e.getHTML())
     },
   })
@@ -522,10 +537,31 @@ export default function ArticleEditorPage() {
   }, [projectId, articleId, user?.id])
 
   useEffect(() => {
-    if (editor && article?.content) {
-      editor.commands.setContent(article.content)
+    if (!editor || !article) return
+
+    const incomingContent = article.content ?? ''
+    const currentHtml = editor.getHTML()
+    const currentArticleId = article.id
+    const lastHydratedArticleId = lastHydratedArticleIdRef.current
+    const lastHydratedContent = lastHydratedContentRef.current
+    const articleChanged = lastHydratedArticleId !== currentArticleId
+    const contentChangedSinceHydration = lastHydratedContent !== incomingContent
+    const editorIsSafeToHydrate =
+      articleChanged ||
+      isEffectivelyEmptyHtml(currentHtml) ||
+      currentHtml === (lastHydratedContent ?? '')
+
+    if (!editorIsSafeToHydrate || (!contentChangedSinceHydration && !articleChanged)) return
+
+    isHydratingEditorRef.current = true
+    try {
+      editor.commands.setContent(incomingContent, { emitUpdate: false })
+    } finally {
+      isHydratingEditorRef.current = false
     }
-  }, [editor, loadStatus, article?.content])
+    lastHydratedArticleIdRef.current = currentArticleId
+    lastHydratedContentRef.current = incomingContent
+  }, [editor, article])
 
   useEffect(() => {
     if (!articleId) return

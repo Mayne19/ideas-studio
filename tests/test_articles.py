@@ -146,6 +146,53 @@ def test_autosave_persists_manual_reading_time_and_keyword(client):
     assert data["keyword"] == "landing page"
 
 
+def test_published_article_empty_autosave_is_blocked(client):
+    headers, project = _setup(client)
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Protected Publish", "content": "<p>Contenu public</p>"},
+        headers=headers,
+    ).json()
+    client.post(f"/articles/{article['id']}/publish", headers=headers)
+
+    autosave = client.post(
+        f"/articles/{article['id']}/autosave",
+        json={"content": "<p>   </p>"},
+        headers=headers,
+    )
+    assert autosave.status_code == 409
+    assert "contenu vide" in autosave.json()["detail"].lower()
+
+    editor = client.get(f"/articles/{article['id']}/editor", headers=headers)
+    public = client.get(f"/api/public/projects/{project['id']}/articles/{article['slug']}")
+    assert editor.status_code == 200
+    assert public.status_code == 200
+    assert editor.json()["content"] == "<p>Contenu public</p>"
+    assert public.json()["content"] == "<p>Contenu public</p>"
+
+
+def test_published_article_empty_patch_is_blocked(client):
+    headers, project = _setup(client)
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Protected Patch", "content": "<p>Contenu public</p>"},
+        headers=headers,
+    ).json()
+    client.post(f"/articles/{article['id']}/publish", headers=headers)
+
+    patch = client.patch(
+        f"/articles/{article['id']}",
+        json={"content": ""},
+        headers=headers,
+    )
+    assert patch.status_code == 409
+    assert "contenu vide" in patch.json()["detail"].lower()
+
+    public = client.get(f"/api/public/projects/{project['id']}/articles/{article['slug']}")
+    assert public.status_code == 200
+    assert public.json()["content"] == "<p>Contenu public</p>"
+
+
 def test_public_api_draft_not_found_by_slug(client):
     headers, project = _setup(client)
     client.post(f"/projects/{project['id']}/articles", json={"title": "Draft Article"}, headers=headers)

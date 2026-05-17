@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+import re
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.models.article import Article
 from app.models.article_log import ArticleLog
@@ -10,6 +12,17 @@ from app.models.seo_analysis import SeoAnalysis
 from app.schemas.article import ArticleCreate, ArticleUpdate, ArticlePublicApiResponse, CategoryBrief
 from app.core.utils import slugify, generate_unique_slug, calculate_word_count
 from app.services.callout_template_service import extract_callouts_from_content
+
+_EMPTY_CONTENT_MESSAGE = "Protection : contenu vide non sauvegardé pour éviter d'écraser un article existant."
+
+
+def _is_effectively_empty_content(value: str | None) -> bool:
+    if value is None:
+        return True
+    text = re.sub(r"<[^>]+>", " ", value)
+    text = text.replace("&nbsp;", " ").replace("\xa0", " ")
+    text = re.sub(r"\s+", " ", text).strip()
+    return text == ""
 
 
 def _unique_slug(db: Session, project_id: str, title: str, exclude_id: str | None = None) -> str:
@@ -81,6 +94,13 @@ def list_articles(
 
 def update_article(db: Session, article: Article, data: ArticleUpdate) -> Article:
     update_dict = data.model_dump(exclude_unset=True)
+    if (
+        article.status == "published"
+        and "content" in update_dict
+        and _is_effectively_empty_content(update_dict.get("content"))
+        and not _is_effectively_empty_content(article.content)
+    ):
+        raise HTTPException(status_code=409, detail=_EMPTY_CONTENT_MESSAGE)
     for field, value in update_dict.items():
         setattr(article, field, value)
     if "content" in update_dict:
