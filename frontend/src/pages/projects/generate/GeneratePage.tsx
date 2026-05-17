@@ -85,6 +85,18 @@ export default function GeneratePage() {
     return parts.join(' — ')
   }
 
+  const generationPayload = {
+    context_hint: buildContextHint() || undefined,
+    preferred_title: preferredTitle.trim() || undefined,
+    keyword: keyword.trim() || undefined,
+    category_id: category || undefined,
+    audience: audience.trim() || undefined,
+    angle: angle.trim() || undefined,
+    search_intent: articleType.trim() || undefined,
+    include_faq: withFaq,
+    include_callouts: withCallouts,
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!projectId) return
@@ -94,13 +106,13 @@ export default function GeneratePage() {
 
     try {
       if (mode === 'idea') {
-        const res = await generateIdea(projectId, {
-          context_hint: buildContextHint() || undefined,
-          preferred_title: preferredTitle.trim() || undefined,
-        })
+        const res = await generateIdea(projectId, generationPayload)
         setResult(res)
       } else if (mode === 'full_article') {
-        const res = await launchIdeas(projectId, { mode: 'full_article' })
+        const res = await launchIdeas(projectId, {
+          mode: 'full_article',
+          ...generationPayload,
+        })
         if (res.article_ids.length > 0) {
           navigate(`/projects/${projectId}/articles/${res.article_ids[0]}/edit`)
         } else {
@@ -303,7 +315,12 @@ export default function GeneratePage() {
                 <p className="mt-0.5 text-[12px] text-tertiary">🔑 {result.keyword}</p>
               )}
               {result.angle && (
-                <p className="mt-1 text-[12px] text-secondary leading-snug">{result.angle}</p>
+              <p className="mt-1 text-[12px] text-secondary leading-snug">{result.angle}</p>
+              )}
+              {result.provider_name && (
+                <p className="mt-1 text-[11px] text-tertiary">
+                  Provider : {result.provider_name}{result.model_name ? ` · ${result.model_name}` : ''}
+                </p>
               )}
             </div>
             <div className="flex gap-2 pt-1">

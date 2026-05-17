@@ -93,3 +93,37 @@ def test_pipeline_requires_manager_role(client: TestClient):
     other_h = register_and_login(client, email="pipe_other@test.com")
     resp = client.patch(f"/projects/{project['id']}/pipeline", json={"enabled": True}, headers=other_h)
     assert resp.status_code == 403
+
+
+def test_pipeline_disabled_is_skipped_by_scheduler_flag():
+    from app.cli import _should_run_pipeline_today
+
+    class Pipe:
+        enabled = False
+        active_days = "[]"
+
+    assert _should_run_pipeline_today(Pipe()) is False
+
+
+def test_pipeline_articles_per_week_affects_daily_target_and_never_publishes(client: TestClient):
+    headers, project = _setup(client, "pipe_target@test.com")
+    client.patch(
+        f"/projects/{project['id']}/pipeline",
+        json={
+            "enabled": True,
+            "active_days": ["monday", "wednesday", "friday"],
+            "articles_per_week": 5,
+            "category_priorities": {"seo": 10},
+        },
+        headers=headers,
+    )
+
+    run = client.post(f"/projects/{project['id']}/pipeline/run", headers=headers)
+    assert run.status_code == 200
+    data = run.json()
+    assert data["articles_created"] == 0
+    assert data["ideas_generated"] == 2
+
+    articles = client.get(f"/projects/{project['id']}/articles", headers=headers).json()
+    assert len(articles) == 2
+    assert all(article["status"] == "idea_proposed" for article in articles)

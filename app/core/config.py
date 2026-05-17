@@ -9,10 +9,15 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     IDEAS_PER_DAY: int = 1
-    DEFAULT_LLM_PROVIDER: str = "ollama"
+    MIN_GENERATED_ARTICLE_WORDS: int = 800
+    WORDS_PER_READING_MINUTE: int = 220
+    DEFAULT_LLM_PROVIDER: str = "openai"
     DEFAULT_SEARCH_PROVIDER: str = "mock"
     OLLAMA_URL: str = ""
     OLLAMA_MODEL: str = "llama3.2"
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
     SEARXNG_URL: str = ""
 
     UPLOAD_DIR: str = "uploads"

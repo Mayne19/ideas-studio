@@ -121,7 +121,7 @@ export default function ProjectPipelinePage() {
           <div>
             <p className="text-[13px] font-medium text-primary">Pipeline automatique</p>
             <p className="mt-0.5 text-[12px] text-tertiary">
-              Génération automatique d'idées et d'articles selon votre planification.
+              Génération automatique d'idées uniquement pour l'instant, selon votre planification.
             </p>
           </div>
           <label className="relative inline-flex h-5 w-9 cursor-pointer items-center">
@@ -137,8 +137,8 @@ export default function ProjectPipelinePage() {
         </div>
         {enabled && (
           <p className="mt-3 text-[12px] text-secondary leading-snug border-t border-border pt-3">
-            Les articles générés restent en brouillon. Vous les relisez, corrigez, ajoutez les images,
-            puis publiez ou programmez manuellement.
+            Le pipeline génère des idées uniquement pour l'instant. Il ne publie jamais automatiquement,
+            et les priorités par catégorie ne sont pas encore appliquées à la sélection.
           </p>
         )}
       </div>

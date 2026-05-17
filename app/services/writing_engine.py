@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime, timezone
 from time import perf_counter
 from sqlalchemy.orm import Session
@@ -6,7 +7,13 @@ from sqlalchemy.orm import Session
 from app.models.article import Article
 from app.services.providers.llm_provider import LLMProvider, GenerationFailedError
 from app.services.log_service import log_step
-from app.core.utils import calculate_word_count
+from app.core.config import settings
+from app.core.utils import (
+    calculate_reading_time_minutes,
+    calculate_word_count,
+    generate_unique_slug,
+    slugify,
+)
 from app.core.markdown import markdown_to_html
 
 
@@ -45,12 +52,89 @@ def _extract_excerpt(content: str, max_length: int = 300) -> str:
     return text[:max_length]
 
 
+def _ensure_article_slug(db: Session, article: Article) -> None:
+    if article.slug and not article.slug.startswith("idea-"):
+        return
+    base = slugify(article.title or article.keyword or "article")
+    existing = {
+        row[0]
+        for row in db.query(Article.slug).filter(
+            Article.project_id == article.project_id,
+            Article.id != article.id,
+            Article.slug.like(f"{base}%"),
+        ).all()
+    }
+    article.slug = generate_unique_slug(base, existing)
+
+
+def _contains_forbidden_placeholder(content: str) -> bool:
+    lowered = content.lower()
+    return "[mock]" in lowered or "lorem ipsum" in lowered
+
+
+def _normalize_generated_html(content: str) -> str:
+    cleaned = content.strip()
+    cleaned = re.sub(r"<p>\s*</p>", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"<h([1-6])[^>]*>\s*</h\1>", "", cleaned, flags=re.IGNORECASE)
+    return cleaned.strip()
+
+
+def _generate_faq_json(article: Article, llm: LLMProvider) -> str | None:
+    if llm.is_mock:
+        return article.faq_json
+    faq_prompt = (
+        f"À partir de l'article suivant, génère 3 à 5 questions fréquentes utiles.\n"
+        f"Titre : {article.title}\n"
+        f"Mot-clé principal : {article.keyword}\n"
+        f"Contenu HTML :\n{article.content}\n\n"
+        "Réponds uniquement avec un objet JSON au format "
+        '{"faq":[{"question":"...","answer":"..."}]}.'
+    )
+    faq_data = llm.generate_json(
+        faq_prompt,
+        schema_hint='{"faq":[{"question":"...","answer":"..."}]}',
+    )
+    faq_items = faq_data.get("faq") if isinstance(faq_data, dict) else None
+    if not isinstance(faq_items, list):
+        return None
+    normalized = []
+    for item in faq_items:
+        if not isinstance(item, dict):
+            continue
+        question = str(item.get("question", "")).strip()
+        answer = str(item.get("answer", "")).strip()
+        if question and answer:
+            normalized.append({"question": question, "answer": answer})
+    if not normalized:
+        return None
+    return json.dumps(normalized)
+
+
 def start_writing_from_idea(
     db: Session,
     article: Article,
     llm: LLMProvider,
+    *,
+    preferred_title: str | None = None,
+    keyword: str | None = None,
+    audience: str | None = None,
+    angle: str | None = None,
+    search_intent: str | None = None,
+    include_faq: bool | None = None,
+    include_callouts: bool | None = None,
 ) -> Article:
     started_at = perf_counter()
+    if preferred_title:
+        article.title = preferred_title.strip()
+    if keyword:
+        article.keyword = keyword.strip()
+    if audience:
+        article.audience = audience.strip()
+    if angle:
+        article.angle = angle.strip()
+    if search_intent:
+        article.search_intent = search_intent.strip()
+
     # Mark as in progress before any generation
     article.status = "writing_in_progress"
     article.updated_at = datetime.now(timezone.utc)
@@ -84,9 +168,9 @@ def start_writing_from_idea(
             f"Mot-clé principal : {article.keyword}\n"
             f"Intention de recherche : {article.search_intent or 'informational'}\n"
             f"Audience : {article.audience or 'grand public'}\n\n"
-            f"Réponds en JSON : liste d'objets {{\"heading\": \"...\", \"notes\": \"...\"}}"
+            f"Réponds en JSON : {{\"outline\": [{{\"heading\": \"...\", \"notes\": \"...\"}}]}}"
         )
-        outline_data = llm.generate_json(outline_prompt)
+        outline_data = llm.generate_json(outline_prompt, schema_hint='{"outline":[{"heading":"...","notes":"..."}]}')
         outline = outline_data if isinstance(outline_data, list) else outline_data.get("outline", _MOCK_OUTLINE)
         if not outline:
             outline = _MOCK_OUTLINE
@@ -107,8 +191,12 @@ def start_writing_from_idea(
         content_prompt += (
             "\nRédige l'article en Markdown, avec une introduction développée, "
             "plusieurs sections détaillées (H2/H3), des paragraphes riches, "
-            "des exemples concrets, des listes si pertinent, et une FAQ en fin d'article. "
-            "Minimum 800 mots. Sois précis, utile et original."
+            "des exemples concrets, des listes si pertinent, des blockquotes si utile "
+            "et des tableaux Markdown si cela apporte une vraie valeur. "
+            f"Minimum {settings.MIN_GENERATED_ARTICLE_WORDS} mots. "
+            "N'inclus pas de section FAQ dans le contenu principal : la FAQ sera générée séparément. "
+            f"{'Prévois 1 ou 2 encadrés callout pertinents sous forme de paragraphes introduits naturellement.' if include_callouts else ''} "
+            "Sois précis, utile et original."
         )
 
         content = llm.generate_text(content_prompt, temperature=0.7)
@@ -124,10 +212,27 @@ def start_writing_from_idea(
                 article_id=article.id,
             )
             raise GenerationFailedError("Provider IA indisponible, génération réelle impossible.")
-        content = markdown_to_html(content)
+        content = _normalize_generated_html(markdown_to_html(content))
+        if _contains_forbidden_placeholder(content):
+            article.status = "failed"
+            article.updated_at = datetime.now(timezone.utc)
+            log_step(
+                db,
+                article.project_id,
+                "Le contenu généré contient des placeholders interdits ([Mock] ou lorem ipsum).",
+                level="error",
+                step="start_writing",
+                article_id=article.id,
+            )
+            raise GenerationFailedError("Le provider IA a retourné un contenu non exploitable.")
 
     article.content = content
     article.word_count = calculate_word_count(content)
+    article.reading_time_minutes = calculate_reading_time_minutes(
+        article.word_count,
+        settings.WORDS_PER_READING_MINUTE,
+    )
+    _ensure_article_slug(db, article)
 
     # Generate meta_title if absent
     if not article.meta_title:
@@ -149,13 +254,21 @@ def start_writing_from_idea(
     if not article.excerpt:
         article.excerpt = _extract_excerpt(content)
 
+    if include_faq is not False:
+        article.faq_json = _generate_faq_json(article, llm)
+
     article.status = "draft_ready"
     article.updated_at = datetime.now(timezone.utc)
 
     log_step(
         db,
         article.project_id,
-        f"Rédaction terminée — {article.word_count} mots en {int((perf_counter() - started_at) * 1000)} ms via {llm.describe()}",
+        (
+            f"Rédaction terminée — {article.word_count} mots, "
+            f"{article.reading_time_minutes} min de lecture, "
+            f"faq={'oui' if article.faq_json else 'non'} "
+            f"en {int((perf_counter() - started_at) * 1000)} ms via {llm.describe()}"
+        ),
         level="info",
         step="start_writing",
         article_id=article.id,

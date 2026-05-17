@@ -20,7 +20,7 @@ class LLMProvider(ABC):
         ...
 
     @abstractmethod
-    def generate_json(self, prompt: str, schema_hint: str | None = None) -> dict:
+    def generate_json(self, prompt: str, schema_hint: str | None = None):
         ...
 
     @abstractmethod
@@ -42,7 +42,7 @@ class MockLLMProvider(LLMProvider):
         # Return a short but structured mock response
         return f"[Mock] Contenu généré pour : {prompt[:80].strip()}..."
 
-    def generate_json(self, prompt: str, schema_hint: str | None = None) -> dict:
+    def generate_json(self, prompt: str, schema_hint: str | None = None):
         return {}
 
     def is_available(self) -> bool:
@@ -71,16 +71,20 @@ class OllamaLLMProvider(LLMProvider):
         except Exception as exc:
             raise ProviderUnavailableError("Provider IA indisponible, génération réelle impossible.") from exc
 
-    def generate_json(self, prompt: str, schema_hint: str | None = None) -> dict:
+    def generate_json(self, prompt: str, schema_hint: str | None = None):
         full_prompt = prompt
         if schema_hint:
             full_prompt += f"\n\nRéponds UNIQUEMENT avec un JSON valide respectant ce schéma : {schema_hint}"
         text = self.generate_text(full_prompt, temperature=0.2)
         try:
-            start = text.find("{")
-            end = text.rfind("}") + 1
-            if start >= 0 and end > start:
-                return json.loads(text[start:end])
+            object_start = text.find("{")
+            object_end = text.rfind("}")
+            array_start = text.find("[")
+            array_end = text.rfind("]")
+            if object_start >= 0 and object_end > object_start:
+                return json.loads(text[object_start:object_end + 1])
+            if array_start >= 0 and array_end > array_start:
+                return json.loads(text[array_start:array_end + 1])
         except Exception:
             pass
         return {}
@@ -96,12 +100,24 @@ class OllamaLLMProvider(LLMProvider):
 
 def get_llm_provider() -> LLMProvider:
     from app.core.config import settings
+    from app.services.providers.openai_provider import OpenAILLMProvider
 
     def _mock_or_raise(reason: str) -> LLMProvider:
         if settings.APP_ENV.lower() in {"production", "staging"}:
             raise ProviderUnavailableError(f"Provider IA indisponible, génération réelle impossible. {reason}")
         return MockLLMProvider()
 
+    if settings.DEFAULT_LLM_PROVIDER == "openai":
+        if not settings.OPENAI_API_KEY:
+            return _mock_or_raise("OPENAI_API_KEY est manquant.")
+        provider = OpenAILLMProvider(
+            api_key=settings.OPENAI_API_KEY,
+            model=settings.OPENAI_MODEL,
+            base_url=settings.OPENAI_BASE_URL,
+        )
+        if provider.is_available():
+            return provider
+        return _mock_or_raise("Le provider OpenAI est configuré mais inaccessible.")
     if settings.DEFAULT_LLM_PROVIDER == "ollama" and settings.OLLAMA_URL:
         provider = OllamaLLMProvider(settings.OLLAMA_URL, settings.OLLAMA_MODEL)
         if provider.is_available():

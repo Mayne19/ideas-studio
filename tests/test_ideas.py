@@ -71,6 +71,28 @@ def test_get_llm_provider_raises_in_production_when_ollama_unavailable(monkeypat
         settings.OLLAMA_URL = old_url
 
 
+def test_get_llm_provider_returns_openai_when_configured(monkeypatch):
+    from app.core.config import settings
+    from app.services.providers.llm_provider import get_llm_provider
+    from app.services.providers.openai_provider import OpenAILLMProvider
+
+    old_provider = settings.DEFAULT_LLM_PROVIDER
+    old_key = settings.OPENAI_API_KEY
+    old_model = settings.OPENAI_MODEL
+    try:
+        settings.DEFAULT_LLM_PROVIDER = "openai"
+        settings.OPENAI_API_KEY = "test-key"
+        settings.OPENAI_MODEL = "gpt-test"
+        monkeypatch.setattr(OpenAILLMProvider, "is_available", lambda self: True)
+        provider = get_llm_provider()
+        assert isinstance(provider, OpenAILLMProvider)
+        assert provider.model_name == "gpt-test"
+    finally:
+        settings.DEFAULT_LLM_PROVIDER = old_provider
+        settings.OPENAI_API_KEY = old_key
+        settings.OPENAI_MODEL = old_model
+
+
 def test_get_search_provider_returns_mock_by_default():
     from app.services.providers.search_provider import get_search_provider, MockSearchProvider
     provider = get_search_provider()
@@ -259,6 +281,17 @@ def test_start_writing_converts_markdown_to_html(client: TestClient, monkeypatch
     assert "## Section test" not in content
 
 
+def test_markdown_to_html_supports_tables_and_blockquotes():
+    from app.core.markdown import markdown_to_html
+
+    html = markdown_to_html(
+        "# Titre\n\n> Citation utile\n\n| Col A | Col B |\n| --- | --- |\n| 1 | 2 |\n"
+    )
+    assert "<blockquote>" in html
+    assert "<table>" in html
+    assert "<h1>Titre</h1>" in html
+
+
 def test_start_writing_invalid_status(client: TestClient):
     headers = register_and_login(client)
     project = _create_project(client, headers)
@@ -435,6 +468,118 @@ def test_launch_full_article_mode(client: TestClient):
     for article_id in data["article_ids"]:
         article_resp = client.get(f"/articles/{article_id}", headers=headers)
         assert article_resp.json()["status"] == "draft_ready"
+
+
+def test_launch_full_article_transmits_fields_and_generates_metadata(client: TestClient, monkeypatch):
+    from app.routers import ideas as ideas_router
+    from app.models.category import Category
+    import uuid
+
+    class FakeFullArticleLLM:
+        is_mock = False
+        provider_name = "fake-openai"
+        model_name = "test-cloud"
+
+        def describe(self) -> str:
+            return "fake-openai model=test-cloud mock=False"
+
+        def generate_text(self, prompt: str, system: str | None = None, temperature: float = 0.7) -> str:
+            if "meta title" in prompt.lower():
+                return "Titre SEO test"
+            if "meta description" in prompt.lower():
+                return "Meta description de test suffisamment longue pour être utilisable en SEO."
+            return (
+                "# Introduction\n\n"
+                "Un paragraphe d'introduction détaillé pour lancer le sujet.\n\n"
+                "## Première section\n\n"
+                "Un contenu développé avec des explications concrètes et utiles pour l'utilisateur.\n\n"
+                "### Exemple\n\n"
+                "- Point détaillé 1\n- Point détaillé 2\n\n"
+                "> Conseil terrain.\n\n"
+                "| Étape | Détail |\n| --- | --- |\n| 1 | Action |\n"
+            )
+
+        def generate_json(self, prompt: str, schema_hint: str | None = None):
+            prompt_lower = prompt.lower()
+            if '"faq"' in (schema_hint or "") or "faq" in prompt_lower:
+                return {
+                    "faq": [
+                        {"question": "Qu'est-ce qu'une landing page ?", "answer": "Une page conçue pour convertir."},
+                        {"question": "Pourquoi optimiser le SEO ?", "answer": "Pour attirer un trafic qualifié."},
+                    ]
+                }
+            if '"outline"' in (schema_hint or "") or "plan détaillé" in prompt_lower:
+                return {
+                    "outline": [
+                        {"heading": "Première section", "notes": "Développer le sujet"},
+                        {"heading": "Exemple", "notes": "Illustrer avec un cas concret"},
+                    ]
+                }
+            return {
+                "title": "Titre généré ignoré",
+                "keyword": "mot-clé généré",
+                "angle": "Angle généré",
+                "search_intent": "informational",
+                "audience": "Audience générée",
+            }
+
+        def is_available(self) -> bool:
+            return True
+
+    headers = register_and_login(client, email="launch_full_fields@test.com")
+    project = _create_project(client, headers)
+
+    db = TestingSessionLocal()
+    try:
+        category = Category(
+            id=str(uuid.uuid4()),
+            project_id=project["id"],
+            name="SEO",
+            slug="seo",
+            color="#ff6600",
+            priority=0,
+        )
+        db.add(category)
+        db.commit()
+        category_id = category.id
+    finally:
+        db.close()
+
+    monkeypatch.setattr(ideas_router, "get_llm_provider", lambda: FakeFullArticleLLM())
+
+    resp = client.post(
+        f"/projects/{project['id']}/launch",
+        json={
+            "mode": "full_article",
+            "preferred_title": "Titre utilisateur prioritaire",
+            "keyword": "landing page mobile",
+            "category_id": category_id,
+            "audience": "Founders mobile",
+            "angle": "Guide pratique",
+            "search_intent": "commercial",
+            "include_faq": True,
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["provider_name"] == "fake-openai"
+    assert len(data["article_ids"]) == 1
+
+    article_resp = client.get(f"/articles/{data['article_ids'][0]}", headers=headers)
+    article = article_resp.json()
+    assert article["title"] == "Titre utilisateur prioritaire"
+    assert article["category_id"] == category_id
+    assert article["status"] == "draft_ready"
+    assert article["keyword"] == "landing page mobile"
+    assert article["reading_time_minutes"] >= 1
+    assert article["slug"] == "titre-utilisateur-prioritaire"
+    assert "<h2>Première section</h2>" in article["content"]
+    assert "## Première section" not in article["content"]
+
+    preview = client.get(f"/articles/{article['id']}/preview", headers=headers).json()
+    assert preview["faq_json"] is not None
+    assert "Qu'est-ce qu'une landing page ?" in preview["faq_json"]
 
 
 def test_launch_dry_run(client: TestClient):

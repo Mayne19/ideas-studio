@@ -1,5 +1,10 @@
 import re
 
+try:
+    import markdown as _markdown_lib
+except Exception:  # pragma: no cover - fallback kept for local dev without dependency installed
+    _markdown_lib = None
+
 
 def _convert_headings(text: str) -> str:
     text = re.sub(r'(?m)^#### (.+)$', r'<h4>\1</h4>', text)
@@ -120,6 +125,13 @@ def _clean_horizontal_rules(text: str) -> str:
 def markdown_to_html(md: str) -> str:
     if not md:
         return md
+    if _markdown_lib is not None:
+        html = _markdown_lib.markdown(
+            md,
+            extensions=["extra", "tables", "sane_lists", "fenced_code", "nl2br"],
+            output_format="html5",
+        )
+        return html.strip()
     html = md
     html = _convert_images(html)
     html = _convert_links(html)

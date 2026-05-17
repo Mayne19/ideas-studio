@@ -81,6 +81,11 @@ def generate_idea(
     search: SearchProvider,
     context_hint: str | None = None,
     preferred_title: str | None = None,
+    keyword: str | None = None,
+    category_id: str | None = None,
+    audience: str | None = None,
+    angle: str | None = None,
+    search_intent: str | None = None,
 ) -> Article | None:
     started_at = perf_counter()
     log_step(
@@ -98,49 +103,58 @@ def generate_idea(
             level="warning",
             step="generate_idea",
         )
-        idea_data = _next_mock_idea(project_audience)
+        idea_data = _next_mock_idea(audience or project_audience)
     else:
-        query = context_hint or f"idées d'articles SEO pour {project_audience or 'un blog'} en {project_language}"
+        query = keyword or context_hint or f"idées d'articles SEO pour {audience or project_audience or 'un blog'} en {project_language}"
         search_results = search.search(query, limit=5)
         serp_snippets = "\n".join(f"- {r.title}: {r.snippet}" for r in search_results)
 
         schema_hint = '{"title": "...", "keyword": "...", "angle": "...", "search_intent": "informational|commercial|transactional|navigational", "audience": "..."}'
         prompt = (
             f"Génère une idée d'article SEO originale pour un blog en langue '{project_language}'.\n"
-            f"Audience cible : {project_audience or 'grand public'}.\n"
+            f"Audience cible : {audience or project_audience or 'grand public'}.\n"
+            f"Titre souhaité : {preferred_title or 'à proposer librement'}.\n"
+            f"Mot-clé prioritaire : {keyword or 'à déduire du contexte'}.\n"
+            f"Angle éditorial souhaité : {angle or 'à proposer librement'}.\n"
+            f"Intention de recherche souhaitée : {search_intent or 'à estimer'}.\n"
+            f"Contexte utilisateur : {context_hint or 'aucun contexte additionnel'}.\n"
             f"Contexte SERP actuel :\n{serp_snippets}\n\n"
             f"Réponds uniquement en JSON."
         )
         idea_data = llm.generate_json(prompt, schema_hint=schema_hint)
         if not isinstance(idea_data, dict) or not idea_data:
             raise GenerationFailedError("La génération IA n'a pas produit de proposition d'idée exploitable.")
-        if not idea_data.get("keyword"):
+        if not idea_data.get("keyword") and not keyword:
             log_step(db, project_id, "LLM n'a pas retourné de keyword valide", level="warning", step="generate_idea")
             return None
 
         idea_data["opportunity_score"] = min(1.0, len(search_results) / 10.0 + 0.3)
         idea_data["serp_summary"] = {"top_results": [{"title": r.title, "url": r.url} for r in search_results]}
 
-    keyword = idea_data.get("keyword", "").strip()
-    if not keyword:
+    final_keyword = (keyword or idea_data.get("keyword", "")).strip()
+    if not final_keyword:
         return None
 
-    if _keyword_already_active(db, project_id, keyword):
-        log_step(db, project_id, f"Idée ignorée (keyword déjà actif) : {keyword}", level="info", step="generate_idea")
+    if _keyword_already_active(db, project_id, final_keyword):
+        log_step(db, project_id, f"Idée ignorée (keyword déjà actif) : {final_keyword}", level="info", step="generate_idea")
         return None
 
-    generated_title = idea_data.get("title", keyword)
+    generated_title = idea_data.get("title", final_keyword)
     final_title = preferred_title or generated_title
+    final_audience = audience or idea_data.get("audience") or project_audience
+    final_angle = angle or idea_data.get("angle")
+    final_search_intent = search_intent or idea_data.get("search_intent")
 
     article = Article(
         id=str(uuid.uuid4()),
         project_id=project_id,
+        category_id=category_id,
         title=final_title,
         slug=f"idea-{uuid.uuid4().hex[:8]}",
-        keyword=keyword,
-        angle=idea_data.get("angle"),
-        search_intent=idea_data.get("search_intent"),
-        audience=idea_data.get("audience"),
+        keyword=final_keyword,
+        angle=final_angle,
+        search_intent=final_search_intent,
+        audience=final_audience,
         opportunity_score=idea_data.get("opportunity_score", 0.5),
         serp_summary_json=json.dumps(idea_data.get("serp_summary", {})),
         status="idea_proposed",

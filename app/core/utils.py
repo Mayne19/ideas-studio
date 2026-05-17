@@ -27,6 +27,14 @@ def calculate_word_count(content: str | None) -> int:
     return len(text.split())
 
 
+def calculate_reading_time_minutes(word_count: int, words_per_minute: int = 220) -> int:
+    if word_count <= 0:
+        return 1
+    if words_per_minute <= 0:
+        words_per_minute = 220
+    return max(1, (word_count + words_per_minute - 1) // words_per_minute)
+
+
 def mask_secret_key(key: str) -> str:
     if len(key) <= 12:
         return "***"

@@ -112,17 +112,27 @@ export type IdeaStatus = 'idea_proposed' | 'idea_priority' | 'idea_rejected'
 export type IdeaGenerateRequest = {
   context_hint?: string | null
   preferred_title?: string | null
+  keyword?: string | null
+  category_id?: string | null
+  audience?: string | null
+  angle?: string | null
+  search_intent?: string | null
+  include_faq?: boolean | null
+  include_callouts?: boolean | null
 }
 
 export type IdeaGenerateResponse = {
   id: string
   title: string
   keyword: string | null
+  category_id?: string | null
   angle: string | null
   search_intent: string | null
   audience: string | null
   opportunity_score: number | null
   status: string
+  provider_name?: string | null
+  model_name?: string | null
 }
 
 export type IdeaRejectRequest = {
@@ -137,6 +147,15 @@ export type IdeaPriorityRequest = {
 export type IdeaLaunchRequest = {
   mode: 'idea_only' | 'full_article'
   dry_run?: boolean
+  context_hint?: string | null
+  preferred_title?: string | null
+  keyword?: string | null
+  category_id?: string | null
+  audience?: string | null
+  angle?: string | null
+  search_intent?: string | null
+  include_faq?: boolean | null
+  include_callouts?: boolean | null
 }
 
 export type IdeaLaunchResponse = {
@@ -145,6 +164,8 @@ export type IdeaLaunchResponse = {
   dry_run: boolean
   ideas_generated: number
   article_ids: string[]
+  provider_name?: string | null
+  model_name?: string | null
 }
 
 export const IDEA_STATUSES: IdeaStatus[] = ['idea_proposed', 'idea_priority', 'idea_rejected']

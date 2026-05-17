@@ -63,16 +63,19 @@ def _check_role(db: Session, user_id: str, project_id: str, allowed_roles: tuple
     return member
 
 
-def _idea_response(article: Article) -> IdeaGenerateResponse:
+def _idea_response(article: Article, provider=None) -> IdeaGenerateResponse:
     return IdeaGenerateResponse(
         id=article.id,
         title=article.title,
         keyword=article.keyword,
+        category_id=article.category_id,
         angle=article.angle,
         search_intent=article.search_intent,
         audience=article.audience,
         opportunity_score=article.opportunity_score,
         status=article.status,
+        provider_name=getattr(provider, "provider_name", None),
+        model_name=getattr(provider, "model_name", None),
     )
 
 
@@ -105,6 +108,11 @@ def generate_idea_route(
             search=search,
             context_hint=body.context_hint,
             preferred_title=body.preferred_title,
+            keyword=body.keyword,
+            category_id=body.category_id,
+            audience=body.audience,
+            angle=body.angle,
+            search_intent=body.search_intent,
         )
     except (ProviderUnavailableError, GenerationFailedError) as exc:
         raise _generation_http_error(exc) from exc
@@ -112,7 +120,7 @@ def generate_idea_route(
         raise HTTPException(status_code=409, detail="Idea could not be generated (duplicate keyword or LLM failure)")
     db.commit()
     db.refresh(article)
-    return _idea_response(article)
+    return _idea_response(article, llm)
 
 
 @router.post("/articles/{article_id}/start-writing", response_model=IdeaGenerateResponse)
@@ -132,7 +140,7 @@ def start_writing_route(
         raise _generation_http_error(exc) from exc
     db.commit()
     db.refresh(article)
-    return _idea_response(article)
+    return _idea_response(article, llm)
 
 
 @router.post("/articles/{article_id}/reject")
@@ -222,7 +230,7 @@ def rerun_writing_route(
         raise _generation_http_error(exc) from exc
     db.commit()
     db.refresh(article)
-    return _idea_response(article)
+    return _idea_response(article, llm)
 
 
 @router.post("/projects/{project_id}/launch")
@@ -242,7 +250,8 @@ def launch_project_route(
 
     from app.core.config import settings
     generated = []
-    for _ in range(settings.IDEAS_PER_DAY):
+    generation_count = 1 if body.mode == "full_article" else 1
+    for _ in range(generation_count):
         if body.dry_run:
             break
         try:
@@ -253,13 +262,31 @@ def launch_project_route(
                 project_language=project.language,
                 llm=llm,
                 search=search,
+                context_hint=body.context_hint,
+                preferred_title=body.preferred_title,
+                keyword=body.keyword,
+                category_id=body.category_id,
+                audience=body.audience,
+                angle=body.angle,
+                search_intent=body.search_intent,
             )
         except (ProviderUnavailableError, GenerationFailedError) as exc:
             raise _generation_http_error(exc) from exc
         if article:
             if body.mode == "full_article":
                 try:
-                    article = start_writing_from_idea(db=db, article=article, llm=llm)
+                    article = start_writing_from_idea(
+                        db=db,
+                        article=article,
+                        llm=llm,
+                        preferred_title=body.preferred_title,
+                        keyword=body.keyword,
+                        audience=body.audience,
+                        angle=body.angle,
+                        search_intent=body.search_intent,
+                        include_faq=body.include_faq,
+                        include_callouts=body.include_callouts,
+                    )
                 except (ProviderUnavailableError, GenerationFailedError) as exc:
                     raise _generation_http_error(exc) from exc
             generated.append(article.id)
@@ -273,4 +300,6 @@ def launch_project_route(
         "dry_run": body.dry_run,
         "ideas_generated": len(generated),
         "article_ids": generated,
+        "provider_name": getattr(llm, "provider_name", None),
+        "model_name": getattr(llm, "model_name", None),
     }
