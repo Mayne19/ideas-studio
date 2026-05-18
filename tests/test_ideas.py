@@ -46,10 +46,16 @@ def test_mock_search_provider():
         assert r.snippet
 
 
-def test_get_llm_provider_returns_mock_by_default():
+def test_get_llm_provider_returns_mock_by_default(monkeypatch):
+    from app.core.config import settings
     from app.services.providers.llm_provider import get_llm_provider, MockLLMProvider
-    provider = get_llm_provider()
-    assert isinstance(provider, MockLLMProvider)
+    old = settings.DEFAULT_LLM_PROVIDER
+    settings.DEFAULT_LLM_PROVIDER = "mock"
+    try:
+        provider = get_llm_provider()
+        assert isinstance(provider, MockLLMProvider)
+    finally:
+        settings.DEFAULT_LLM_PROVIDER = old
 
 
 def test_get_llm_provider_raises_in_production_when_ollama_unavailable(monkeypatch):
@@ -231,11 +237,44 @@ def test_non_member_cannot_generate_idea(client: TestClient):
 
 # ── Writing Engine ─────────────────────────────────────────────────────────────
 
-def test_start_writing_produces_draft_ready(client: TestClient):
+def test_start_writing_produces_draft_ready(client: TestClient, monkeypatch):
+    from app.routers import ideas as ideas_router
+
+    class FakeArticleLLM:
+        is_mock = False
+        provider_name = "fake"
+        model_name = "test-model"
+
+        def describe(self) -> str:
+            return "fake model=test-model mock=False"
+
+        def generate_text(self, prompt: str, system: str | None = None, temperature: float = 0.7) -> str:
+            if "meta title" in prompt.lower():
+                return "Meta title de test"
+            if "meta description" in prompt.lower():
+                return "Meta description de test suffisamment longue pour valider le chemin."
+            return (
+                "# Introduction\n\n"
+                "## Reponse rapide\n\n"
+                "Contenu de test.\n\n"
+                "## Etapes detaillees\n\n"
+                + ("Contenu detaille avec source et exemple concret. " * 30)
+            )
+
+        def generate_json(self, prompt: str, schema_hint: str | None = None):
+            return [
+                {"heading": "Reponse rapide", "notes": "Donner la reponse principale"},
+                {"heading": "Etapes detaillees", "notes": "Donner un plan concret"},
+            ]
+
+        def is_available(self) -> bool:
+            return True
+
     headers = register_and_login(client)
     project = _create_project(client, headers)
     idea = _generate_idea(client, headers, project["id"])
 
+    monkeypatch.setattr(ideas_router, "get_llm_provider", lambda: FakeArticleLLM())
     resp = client.post(f"/articles/{idea['id']}/start-writing", headers=headers)
     assert resp.status_code == 200
     data = resp.json()

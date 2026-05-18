@@ -4,6 +4,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.main import app
 from app.core.database import Base, get_db
+from app.core.config import settings
+
+settings.DEFAULT_LLM_PROVIDER = "mock"
 
 engine = None
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False)

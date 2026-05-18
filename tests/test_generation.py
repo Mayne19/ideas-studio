@@ -15,25 +15,37 @@ def _generate_article(client: TestClient, headers: dict, project_id: str, **over
     return resp
 
 
-def test_generate_article_returns_draft_ready(client: TestClient):
-    headers = register_and_login(client)
-    project = _create_project(client, headers)
-    resp = _generate_article(client, headers, project["id"])
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["status"] == "draft_ready"
-    assert data["title"] == "Test Article"
-    assert data["keyword"] == "test keyword"
-    assert data["id"]
-    assert data["word_count"] > 0
+def test_generate_article_returns_draft_ready(client: TestClient, monkeypatch):
+    from app.core.config import settings
+    old = settings.DEFAULT_LLM_PROVIDER
+    settings.DEFAULT_LLM_PROVIDER = "mock"
+    try:
+        headers = register_and_login(client)
+        project = _create_project(client, headers)
+        resp = _generate_article(client, headers, project["id"])
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "draft_ready"
+        assert data["title"] == "Test Article"
+        assert data["keyword"] == "test keyword"
+        assert data["id"]
+        assert data["word_count"] > 0
+    finally:
+        settings.DEFAULT_LLM_PROVIDER = old
 
 
-def test_generate_article_respects_preferred_title(client: TestClient):
-    headers = register_and_login(client, email="title-test@test.com")
-    project = _create_project(client, headers)
-    resp = _generate_article(client, headers, project["id"], preferred_title="Mon super article")
-    assert resp.status_code == 200
-    assert resp.json()["title"] == "Mon super article"
+def test_generate_article_respects_preferred_title(client: TestClient, monkeypatch):
+    from app.core.config import settings
+    old = settings.DEFAULT_LLM_PROVIDER
+    settings.DEFAULT_LLM_PROVIDER = "mock"
+    try:
+        headers = register_and_login(client, email="title-test@test.com")
+        project = _create_project(client, headers)
+        resp = _generate_article(client, headers, project["id"], preferred_title="Mon super article")
+        assert resp.status_code == 200
+        assert resp.json()["title"] == "Mon super article"
+    finally:
+        settings.DEFAULT_LLM_PROVIDER = old
 
 
 def test_generate_article_requires_auth(client: TestClient):
@@ -85,27 +97,39 @@ def test_generate_article_returns_503_when_no_provider(client: TestClient):
         settings.OLLAMA_URL = old_url
 
 
-def test_generate_article_mock_provider_produces_content(client: TestClient):
-    headers = register_and_login(client, email="mock_gen@test.com")
-    project = _create_project(client, headers)
-    resp = _generate_article(client, headers, project["id"])
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["status"] == "draft_ready"
-    assert data["provider_name"] == "mock"
+def test_generate_article_mock_provider_produces_content(client: TestClient, monkeypatch):
+    from app.core.config import settings
+    old = settings.DEFAULT_LLM_PROVIDER
+    settings.DEFAULT_LLM_PROVIDER = "mock"
+    try:
+        headers = register_and_login(client, email="mock_gen@test.com")
+        project = _create_project(client, headers)
+        resp = _generate_article(client, headers, project["id"])
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "draft_ready"
+        assert data["provider_name"] == "mock"
+    finally:
+        settings.DEFAULT_LLM_PROVIDER = old
 
 
-def test_auto_generate_ideas_returns_ideas(client: TestClient):
-    headers = register_and_login(client)
-    project = _create_project(client, headers)
-    resp = client.post(f"/projects/{project['id']}/ideas/auto-generate", json={"count": 2}, headers=headers)
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["generated"] >= 1
-    assert len(data["ideas"]) >= 1
-    for idea in data["ideas"]:
-        assert idea["id"]
-        assert idea["title"]
+def test_auto_generate_ideas_returns_ideas(client: TestClient, monkeypatch):
+    from app.core.config import settings
+    old = settings.DEFAULT_LLM_PROVIDER
+    settings.DEFAULT_LLM_PROVIDER = "mock"
+    try:
+        headers = register_and_login(client)
+        project = _create_project(client, headers)
+        resp = client.post(f"/projects/{project['id']}/ideas/auto-generate", json={"count": 2}, headers=headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["generated"] >= 1
+        assert len(data["ideas"]) >= 1
+        for idea in data["ideas"]:
+            assert idea["id"]
+            assert idea["title"]
+    finally:
+        settings.DEFAULT_LLM_PROVIDER = old
 
 
 def test_auto_generate_ideas_requires_auth(client: TestClient):
