@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Integer, Float, DateTime, ForeignKey, Text
+from sqlalchemy import String, Integer, Float, DateTime, ForeignKey, Text, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
@@ -59,6 +59,7 @@ class Article(Base):
     quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     eeat_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     readiness_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    seo_review_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     faq_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     callouts_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     internal_links_json: Mapped[str | None] = mapped_column(Text, nullable=True)

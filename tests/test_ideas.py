@@ -281,6 +281,65 @@ def test_start_writing_converts_markdown_to_html(client: TestClient, monkeypatch
     assert "## Section test" not in content
 
 
+def test_start_writing_saves_seo_review_json(client: TestClient, monkeypatch):
+    from app.routers import ideas as ideas_router
+
+    class FakeArticleLLM:
+        is_mock = False
+        provider_name = "fake"
+        model_name = "test-model"
+
+        def describe(self) -> str:
+            return "fake model=test-model mock=False"
+
+        def generate_text(self, prompt: str, system: str | None = None, temperature: float = 0.7) -> str:
+            if "meta title" in prompt.lower():
+                return "Meta title de test"
+            if "meta description" in prompt.lower():
+                return "Meta description de test suffisamment longue pour valider le chemin."
+            return (
+                "# Introduction\n\n"
+                "## Reponse rapide\n\n"
+                "Selon Google Search Central, il faut d'abord traiter les bases techniques avant d'optimiser le reste.\n\n"
+                "## Etapes detaillees\n\n"
+                + ("Un paragraphe utile avec exemple concret et source citee. " * 180)
+            )
+
+        def generate_json(self, prompt: str, schema_hint: str | None = None):
+            prompt_lower = prompt.lower()
+            if '"faq"' in (schema_hint or "") or "faq" in prompt_lower:
+                return {
+                    "faq": [
+                        {"question": "Qu'est-ce que le SEO technique ?", "answer": "L'ensemble des bases techniques qui aident l'exploration et l'indexation."},
+                        {"question": "Par quoi commencer ?", "answer": "Par le crawl, l'indexation et les signaux essentiels."},
+                    ]
+                }
+            return {
+                "outline": [
+                    {"heading": "Reponse rapide", "notes": "Donner la reponse principale"},
+                    {"heading": "Etapes detaillees", "notes": "Donner un plan concret"},
+                ]
+            }
+
+        def is_available(self) -> bool:
+            return True
+
+    headers = register_and_login(client, email="seo_review_generation@test.com")
+    project = _create_project(client, headers)
+    idea = _generate_idea(client, headers, project["id"])
+
+    monkeypatch.setattr(ideas_router, "get_llm_provider", lambda: FakeArticleLLM())
+    resp = client.post(f"/articles/{idea['id']}/start-writing", headers=headers)
+    assert resp.status_code == 200
+
+    editor = client.get(f"/articles/{idea['id']}/editor", headers=headers)
+    assert editor.status_code == 200
+    seo_review = editor.json()["seo_review_json"]
+    assert seo_review is not None
+    assert "score_global" in seo_review
+    assert isinstance(seo_review["issues"], list)
+
+
 def test_markdown_to_html_supports_tables_and_blockquotes():
     from app.core.markdown import markdown_to_html
 

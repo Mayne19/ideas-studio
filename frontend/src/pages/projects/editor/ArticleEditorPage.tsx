@@ -1698,6 +1698,12 @@ export default function ArticleEditorPage() {
                       } : prev)
                     }}
                     onReadinessUpdate={setLatestReadyCheck}
+                    onExpertReviewUpdate={(review) => {
+                      setArticle((prev) => prev ? {
+                        ...prev,
+                        seo_review_json: review,
+                      } : prev)
+                    }}
                   />
                 </div>
               )}

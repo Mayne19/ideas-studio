@@ -23,6 +23,10 @@ from app.services.article_service import (
     schedule_article,
     unpublish_article,
 )
+from app.services.seo.seo_review_service import (
+    build_review_error_report,
+    run_and_store_seo_review,
+)
 
 router = APIRouter(tags=["articles"])
 
@@ -89,6 +93,34 @@ def patch_article_route(
     if member.role == "writer" and article.status not in WRITER_EDITABLE_STATUSES:
         raise HTTPException(status_code=403, detail="Writers can only edit draft articles")
     return update_article(db, article, data)
+
+
+@router.post("/projects/{project_id}/articles/{article_id}/seo-expert-review")
+def seo_expert_review_route(
+    project_id: str,
+    article_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    article = get_article_by_id(db, article_id)
+    if not article or article.project_id != project_id:
+        raise HTTPException(status_code=404, detail="Article not found")
+    member = get_member_for_project(db, current_user.id, article.project_id)
+    if not member:
+        raise HTTPException(status_code=403, detail="Access denied")
+    if member.role == "viewer":
+        raise HTTPException(status_code=403, detail="Viewers cannot run SEO expert review")
+
+    try:
+        review = run_and_store_seo_review(article)
+    except Exception as exc:
+        review = build_review_error_report(f"L'audit SEO Expert a echoue: {exc}")
+        article.seo_review_json = review
+        logger.warning("SEO expert review failed for article %s: %s", article.id, exc)
+
+    db.commit()
+    db.refresh(article)
+    return review
 
 
 @router.post("/articles/{article_id}/promote", response_model=PromoteResponse)

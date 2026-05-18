@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { AlertCircle, AlertTriangle, Info, RefreshCw, CheckCircle, XCircle, MinusCircle, HelpCircle } from 'lucide-react'
-import { analyzeArticle, readyCheck } from '@/api/seo'
+import { analyzeArticle, readyCheck, runSeoExpertReview } from '@/api/seo'
 import { ApiError } from '@/api/client'
-import type { SeoAnalysis, SeoIssue, ReadyCheck, EditorArticle } from '@/types'
+import type { SeoAnalysis, SeoIssue, ReadyCheck, EditorArticle, SeoExpertIssue, SeoExpertReview } from '@/types'
 import Button from '@/components/ui/Button'
 
 function translateSeoError(err: unknown): string {
   if (err instanceof ApiError) {
     switch (err.status) {
       case 403: return 'Permission refusee pour cette analyse.'
+      case 404: return "Article introuvable pour cet audit."
       case 409: return 'Une analyse est deja en cours.'
       case 422: return "Contenu invalide. Verifiez que l'article a un titre et du contenu."
       case 500: return "Erreur serveur lors de l'analyse. Reessayez dans quelques instants."
@@ -86,6 +87,23 @@ function IssueItem({ issue }: { issue: SeoIssue }) {
   )
 }
 
+function ExpertIssueItem({ issue }: { issue: SeoExpertIssue }) {
+  const icon =
+    issue.severity === 'critical' ? <AlertCircle size={12} className="mt-0.5 shrink-0 text-danger" /> :
+    issue.severity === 'warning' ? <AlertTriangle size={12} className="mt-0.5 shrink-0 text-warning" /> :
+    <Info size={12} className="mt-0.5 shrink-0 text-accent" />
+
+  return (
+    <div className="flex gap-2 text-[11px]">
+      {icon}
+      <div>
+        <p className="leading-snug text-primary">{issue.message}</p>
+        <p className="mt-0.5 leading-snug text-tertiary">{issue.check}</p>
+      </div>
+    </div>
+  )
+}
+
 function ReadinessBlock({ check, hasTitleH1 }: { check: ReadyCheck; hasTitleH1: boolean }) {
   const blockingIssues = hasTitleH1
     ? check.blocking_issues.filter((issue) => !isMissingH1Issue(issue))
@@ -125,6 +143,7 @@ export default function SeoPanel({
   initialReadiness = null,
   onAnalysisUpdate,
   onReadinessUpdate,
+  onExpertReviewUpdate,
 }: {
   article: EditorArticle
   projectId: string
@@ -133,11 +152,16 @@ export default function SeoPanel({
   initialReadiness?: ReadyCheck | null
   onAnalysisUpdate?: (analysis: SeoAnalysis) => void
   onReadinessUpdate?: (check: ReadyCheck) => void
+  onExpertReviewUpdate?: (review: SeoExpertReview) => void
 }) {
   const [analysis, setAnalysis] = useState<SeoAnalysis | null>(initialAnalysis)
   const [readiness, setReadiness] = useState<ReadyCheck | null>(initialReadiness)
+  const [expertReviewOverride, setExpertReviewOverride] = useState<SeoExpertReview | null>(null)
   const [loading, setLoading] = useState(false)
+  const [expertLoading, setExpertLoading] = useState(false)
   const [error, setError] = useState('')
+  const [expertError, setExpertError] = useState('')
+  const expertReview = expertReviewOverride ?? article.seo_review_json ?? null
 
   const brief = analysis ?? article.latest_analysis
   const hasTitleH1 = Boolean(article.title?.trim())
@@ -165,6 +189,21 @@ export default function SeoPanel({
     }
   }
 
+  async function runExpertAnalysis() {
+    setExpertLoading(true)
+    setExpertError('')
+    try {
+      await onBeforeAnalyze?.()
+      const result = await runSeoExpertReview(projectId, article.id)
+      setExpertReviewOverride(result)
+      onExpertReviewUpdate?.(result)
+    } catch (err) {
+      setExpertError(translateSeoError(err))
+    } finally {
+      setExpertLoading(false)
+    }
+  }
+
   const groupedIssues: Record<string, SeoIssue[]> = {}
   for (const issue of visibleIssues) {
     const cat = issue.category ?? 'seo'
@@ -185,6 +224,78 @@ export default function SeoPanel({
       )}
 
       {readiness && <ReadinessBlock check={readiness} hasTitleH1={hasTitleH1} />}
+
+      <div className="rounded-[12px] border border-border bg-surface p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[12px] font-semibold text-primary">SEO Expert</p>
+            <p className="mt-1 text-[10px] leading-snug text-tertiary">
+              Analyse SEO actuelle = regles rapides. SEO Expert = audit editorial, EEAT, lisibilite et recommandations.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={<RefreshCw size={12} />}
+            loading={expertLoading}
+            className="shrink-0"
+            onClick={runExpertAnalysis}
+          >
+            Relancer l'audit SEO Expert
+          </Button>
+        </div>
+
+        {expertError && (
+          <div className="mt-3 flex items-start gap-2 rounded-[8px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[11px] text-danger">
+            <AlertCircle size={12} className="mt-0.5 shrink-0" />
+            <span className="leading-snug">{expertError}</span>
+          </div>
+        )}
+
+        {expertReview ? (
+          <div className="mt-3 flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <ScoreRing label="Global" score={expertReview.score_global} />
+              <ScoreRing label="SEO Expert" score={expertReview.seo_score} />
+              <ScoreRing label="EEAT Expert" score={expertReview.eeat_score} />
+              <ScoreRing label="Lisibilite Expert" score={expertReview.readability_score} />
+            </div>
+
+            {expertReview.issues.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-secondary">Issues SEO Expert</p>
+                {expertReview.issues.map((issue, index) => (
+                  <ExpertIssueItem key={`${issue.check}-${index}`} issue={issue} />
+                ))}
+              </div>
+            )}
+
+            {expertReview.recommendations.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-secondary">Recommandations</p>
+                {expertReview.recommendations.map((recommendation, index) => (
+                  <p key={index} className="text-[11px] leading-snug text-secondary">- {recommendation}</p>
+                ))}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3 text-[11px]">
+              <div className="rounded-[10px] border border-border bg-[#fafafc] p-2.5">
+                <p className="font-medium text-secondary">Checks valides</p>
+                <p className="mt-1 text-primary">{expertReview.passed_checks.length}</p>
+              </div>
+              <div className="rounded-[10px] border border-border bg-[#fafafc] p-2.5">
+                <p className="font-medium text-secondary">Checks en echec</p>
+                <p className="mt-1 text-primary">{expertReview.failed_checks.length}</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 text-[11px] leading-snug text-tertiary">
+            Aucun rapport SEO Expert enregistre pour cet article pour l'instant.
+          </p>
+        )}
+      </div>
 
       {error && (
         <div className="flex items-start gap-2 rounded-[8px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[11px] text-danger">
@@ -231,7 +342,6 @@ export default function SeoPanel({
         </div>
       )}
 
-      {/* How scores are calculated */}
       <details className="group">
         <summary className="flex cursor-pointer items-center gap-1.5 text-[11px] font-medium text-secondary hover:text-primary">
           <HelpCircle size={12} />
@@ -243,7 +353,7 @@ export default function SeoPanel({
             <li>- Meta title present et evalue avec fallback sur le titre de l'article si besoin.</li>
             <li>- Meta description presente et longueur du meta title / de la meta description.</li>
             <li>- Mot-cle principal dans le titre, le H1, le meta title, l'introduction et le slug.</li>
-            <li>- Densite du mot-cle (0.5% a 3%)</li>
+            <li>- Densite du mot-cle (0.5% a 3%).</li>
             <li>- Presence d'un seul H1 et au moins 2 sections H2.</li>
           </ul>
           <p className="font-medium text-secondary">Lisibilite</p>
@@ -256,11 +366,11 @@ export default function SeoPanel({
           </ul>
           <p className="font-medium text-secondary">Qualite</p>
           <ul className="flex flex-col gap-1 pl-3">
-            <li>- Structure H2 (au moins 2 sections)</li>
-            <li>- Longueur du contenu (300+ mots critique, 800+ recommande)</li>
-            <li>- Presence d'une introduction et d'une conclusion</li>
-            <li>- Image de couverture</li>
-            <li>- Extrait (excerpt)</li>
+            <li>- Structure H2 (au moins 2 sections).</li>
+            <li>- Longueur du contenu (300+ mots critique, 800+ recommande).</li>
+            <li>- Presence d'une introduction et d'une conclusion.</li>
+            <li>- Image de couverture.</li>
+            <li>- Extrait (excerpt).</li>
             <li>- Detection de contenu trop mince ou de texte placeholder/mock.</li>
           </ul>
           <p className="font-medium text-secondary">EEAT</p>

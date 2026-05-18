@@ -7,6 +7,10 @@ from sqlalchemy.orm import Session
 from app.models.article import Article
 from app.services.providers.llm_provider import LLMProvider, GenerationFailedError
 from app.services.log_service import log_step
+from app.services.seo.seo_review_service import (
+    build_review_error_report,
+    run_and_store_seo_review,
+)
 from app.core.config import settings
 from app.core.utils import (
     calculate_reading_time_minutes,
@@ -256,6 +260,21 @@ def start_writing_from_idea(
 
     if include_faq is not False:
         article.faq_json = _generate_faq_json(article, llm)
+
+    try:
+        run_and_store_seo_review(article)
+    except Exception as exc:
+        article.seo_review_json = build_review_error_report(
+            f"L'audit SEO Expert automatique a echoue: {exc}"
+        )
+        log_step(
+            db,
+            article.project_id,
+            f"Audit SEO Expert auto en echec: {exc}",
+            level="warning",
+            step="seo_expert_review",
+            article_id=article.id,
+        )
 
     article.status = "draft_ready"
     article.updated_at = datetime.now(timezone.utc)

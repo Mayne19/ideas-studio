@@ -36,6 +36,7 @@ class EditorData(BaseModel):
     quality_score: Optional[float]
     eeat_score: Optional[float]
     readiness_status: Optional[str]
+    seo_review_json: Optional[dict] = None
     author_name: Optional[str] = None
     reading_time_minutes: Optional[int] = None
     latest_analysis: Optional[AnalysisBrief]

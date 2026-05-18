@@ -15,6 +15,7 @@ from app.services.seo.seo_knowledge_pack_service import (
     get_humanization_rules,
 )
 from app.services.seo.seo_review_service import review_article_with_knowledge_pack
+from tests.conftest import register_and_login
 
 
 def test_knowledge_pack_returns_rules():
@@ -128,3 +129,29 @@ def test_review_detects_isolated_h3():
     )
     review = review_article_with_knowledge_pack(article)
     assert "no_isolated_h3" in review["failed_checks"]
+
+
+def test_seo_expert_review_endpoint_returns_and_saves_report(client):
+    headers = register_and_login(client, email="seo_expert_review_endpoint@test.com")
+    project = client.post("/projects", json={"name": "SEO Project"}, headers=headers).json()
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={
+            "title": "How to improve technical SEO",
+            "slug": "improve-technical-seo",
+            "meta_description": "A practical guide to improving technical SEO.",
+            "content": "<h2>How to improve technical SEO</h2>" + "<p>According to Google Search Central, fixing crawl and indexing basics matters.</p>" * 120,
+        },
+        headers=headers,
+    ).json()
+
+    response = client.post(f"/projects/{project['id']}/articles/{article['id']}/seo-expert-review", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert "score_global" in data
+    assert "issues" in data
+
+    editor = client.get(f"/articles/{article['id']}/editor", headers=headers)
+    assert editor.status_code == 200
+    assert editor.json()["seo_review_json"] is not None
+    assert "score_global" in editor.json()["seo_review_json"]

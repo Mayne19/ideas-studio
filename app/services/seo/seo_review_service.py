@@ -5,6 +5,8 @@ import re
 from html import unescape
 from typing import Any
 
+from app.models.article import Article
+
 from app.services.seo.seo_knowledge_pack_service import (
     get_article_review_rules,
     get_content_quality_checklist,
@@ -363,3 +365,32 @@ def review_article_with_knowledge_pack(article: Any) -> dict:
             "average_sentence_length": average_sentence_length,
         },
     }
+
+
+def build_review_error_report(message: str) -> dict:
+    return {
+        "score_global": 0,
+        "seo_score": 0,
+        "eeat_score": 0,
+        "readability_score": 0,
+        "issues": [
+            {
+                "check": "seo_expert_runtime",
+                "severity": "critical",
+                "message": message,
+            }
+        ],
+        "recommendations": [
+            "Relancez l'audit SEO Expert apres verification du brouillon et des services internes."
+        ],
+        "passed_checks": [],
+        "failed_checks": ["seo_expert_runtime"],
+        "knowledge_pack_sources": {},
+        "diagnostics": {},
+    }
+
+
+def run_and_store_seo_review(article: Article) -> dict:
+    review = review_article_with_knowledge_pack(article)
+    article.seo_review_json = review
+    return review

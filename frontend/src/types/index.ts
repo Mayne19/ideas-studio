@@ -237,6 +237,36 @@ export type SeoAnalysis = {
   created_at: string
 }
 
+export type SeoExpertIssue = {
+  check: string
+  severity: 'info' | 'warning' | 'critical' | string
+  message: string
+}
+
+export type SeoExpertReview = {
+  score_global: number
+  seo_score: number
+  eeat_score: number
+  readability_score: number
+  issues: SeoExpertIssue[]
+  recommendations: string[]
+  passed_checks: string[]
+  failed_checks: string[]
+  knowledge_pack_sources?: {
+    google?: Array<{ name: string; url: string; role: string }>
+    eeat?: string
+    content_quality?: string
+    humanization?: string
+    review_rules?: string
+  }
+  diagnostics?: {
+    word_count?: number
+    first_h2?: string
+    faq_count?: number
+    average_sentence_length?: number
+  }
+}
+
 export type ReadyCheck = {
   article_id: string
   readiness_status: string | null
@@ -266,6 +296,7 @@ export type EditorArticle = Article & {
   internal_links_json: unknown | null
   external_links_json: unknown | null
   content_blocks_json: unknown | null
+  seo_review_json: SeoExpertReview | null
   latest_analysis: AnalysisBrief | null
   published_content: string | null
   published_title: string | null

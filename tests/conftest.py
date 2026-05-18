@@ -5,17 +5,19 @@ from sqlalchemy.orm import sessionmaker
 from app.main import app
 from app.core.database import Base, get_db
 
-TEST_DATABASE_URL = "sqlite:///./test_ideas_studio.db"
-
-engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = None
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False)
 
 
 @pytest.fixture(autouse=True)
-def reset_db():
+def reset_db(tmp_path):
+    global engine
+    db_path = tmp_path / "test_ideas_studio.db"
+    engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
+    TestingSessionLocal.configure(bind=engine)
     Base.metadata.create_all(bind=engine)
     yield
-    Base.metadata.drop_all(bind=engine)
+    engine.dispose()
 
 
 @pytest.fixture
