@@ -2,6 +2,11 @@ import pytest
 from fastapi.testclient import TestClient
 from tests.conftest import register_and_login
 
+_REQUIRES_OPENROUTER = pytest.mark.skipif(
+    "not __import__('os').environ.get('OPENROUTER_API_KEY') and not __import__('app.core.config', fromlist=['settings']).settings.OPENROUTER_API_KEY",
+    reason="OPENROUTER_API_KEY required for real AI generation tests",
+)
+
 
 def _create_project(client: TestClient, headers: dict, name: str = "Test Blog") -> dict:
     resp = client.post("/projects", json={"name": name, "domain": "testblog.com", "language": "fr"}, headers=headers)
@@ -15,37 +20,28 @@ def _generate_article(client: TestClient, headers: dict, project_id: str, **over
     return resp
 
 
-def test_generate_article_returns_draft_ready(client: TestClient, monkeypatch):
-    from app.core.config import settings
-    old = settings.DEFAULT_LLM_PROVIDER
-    settings.DEFAULT_LLM_PROVIDER = "mock"
-    try:
-        headers = register_and_login(client)
-        project = _create_project(client, headers)
-        resp = _generate_article(client, headers, project["id"])
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["status"] == "draft_ready"
-        assert data["title"] == "Test Article"
-        assert data["keyword"] == "test keyword"
-        assert data["id"]
-        assert data["word_count"] > 0
-    finally:
-        settings.DEFAULT_LLM_PROVIDER = old
+@_REQUIRES_OPENROUTER
+def test_generate_article_returns_draft_ready(client: TestClient):
+    headers = register_and_login(client)
+    project = _create_project(client, headers)
+    resp = _generate_article(client, headers, project["id"])
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "draft_ready"
+    assert data["title"] == "Test Article"
+    assert data["keyword"] == "test keyword"
+    assert data["id"]
+    assert data["word_count"] > 0
+    assert data["provider_name"] == "openrouter"
 
 
-def test_generate_article_respects_preferred_title(client: TestClient, monkeypatch):
-    from app.core.config import settings
-    old = settings.DEFAULT_LLM_PROVIDER
-    settings.DEFAULT_LLM_PROVIDER = "mock"
-    try:
-        headers = register_and_login(client, email="title-test@test.com")
-        project = _create_project(client, headers)
-        resp = _generate_article(client, headers, project["id"], preferred_title="Mon super article")
-        assert resp.status_code == 200
-        assert resp.json()["title"] == "Mon super article"
-    finally:
-        settings.DEFAULT_LLM_PROVIDER = old
+@_REQUIRES_OPENROUTER
+def test_generate_article_respects_preferred_title(client: TestClient):
+    headers = register_and_login(client, email="title-test@test.com")
+    project = _create_project(client, headers)
+    resp = _generate_article(client, headers, project["id"], preferred_title="Mon super article")
+    assert resp.status_code == 200
+    assert resp.json()["title"] == "Mon super article"
 
 
 def test_generate_article_requires_auth(client: TestClient):
@@ -90,46 +86,25 @@ def test_generate_article_returns_503_when_no_provider(client: TestClient):
         settings.OLLAMA_URL = "http://127.0.0.1:9"
         resp = client.post(f"/projects/{project['id']}/articles/generate", json={}, headers=headers)
         assert resp.status_code == 503
-        assert "Aucun provider IA disponible" in resp.json()["detail"]
+        assert "Aucun provider IA réel disponible" in resp.json()["detail"]
     finally:
         settings.APP_ENV = old_env
         settings.DEFAULT_LLM_PROVIDER = old_provider
         settings.OLLAMA_URL = old_url
 
 
-def test_generate_article_mock_provider_produces_content(client: TestClient, monkeypatch):
-    from app.core.config import settings
-    old = settings.DEFAULT_LLM_PROVIDER
-    settings.DEFAULT_LLM_PROVIDER = "mock"
-    try:
-        headers = register_and_login(client, email="mock_gen@test.com")
-        project = _create_project(client, headers)
-        resp = _generate_article(client, headers, project["id"])
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["status"] == "draft_ready"
-        assert data["provider_name"] == "mock"
-    finally:
-        settings.DEFAULT_LLM_PROVIDER = old
-
-
-def test_auto_generate_ideas_returns_ideas(client: TestClient, monkeypatch):
-    from app.core.config import settings
-    old = settings.DEFAULT_LLM_PROVIDER
-    settings.DEFAULT_LLM_PROVIDER = "mock"
-    try:
-        headers = register_and_login(client)
-        project = _create_project(client, headers)
-        resp = client.post(f"/projects/{project['id']}/ideas/auto-generate", json={"count": 2}, headers=headers)
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["generated"] >= 1
-        assert len(data["ideas"]) >= 1
-        for idea in data["ideas"]:
-            assert idea["id"]
-            assert idea["title"]
-    finally:
-        settings.DEFAULT_LLM_PROVIDER = old
+@_REQUIRES_OPENROUTER
+def test_auto_generate_ideas_returns_ideas(client: TestClient):
+    headers = register_and_login(client)
+    project = _create_project(client, headers)
+    resp = client.post(f"/projects/{project['id']}/ideas/auto-generate", json={"count": 2}, headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["generated"] >= 1
+    assert len(data["ideas"]) >= 1
+    for idea in data["ideas"]:
+        assert idea["id"]
+        assert idea["title"]
 
 
 def test_auto_generate_ideas_requires_auth(client: TestClient):
@@ -183,9 +158,9 @@ def test_openrouter_provider_inherits_openai():
     assert config_provider.fallback_model == "openrouter/free"
 
 
-def test_get_llm_provider_auto_falls_back_to_mock(monkeypatch):
+def test_get_llm_provider_raises_when_no_key():
     from app.core.config import settings
-    from app.services.providers.llm_provider import get_llm_provider, MockLLMProvider
+    from app.services.providers.llm_provider import get_llm_provider, ProviderUnavailableError
 
     old_provider = settings.DEFAULT_LLM_PROVIDER
     old_key = settings.OPENROUTER_API_KEY
@@ -196,26 +171,10 @@ def test_get_llm_provider_auto_falls_back_to_mock(monkeypatch):
         settings.OPENROUTER_API_KEY = ""
         settings.OLLAMA_URL = ""
         settings.OPENAI_API_KEY = ""
-        provider = get_llm_provider()
-        assert isinstance(provider, MockLLMProvider)
+        with pytest.raises(ProviderUnavailableError, match="Aucun provider IA réel disponible"):
+            get_llm_provider()
     finally:
         settings.DEFAULT_LLM_PROVIDER = old_provider
         settings.OPENROUTER_API_KEY = old_key
         settings.OLLAMA_URL = old_url
         settings.OPENAI_API_KEY = old_openai_key
-
-
-def test_get_llm_provider_openrouter_returns_mock_when_not_configured(monkeypatch):
-    from app.core.config import settings
-    from app.services.providers.llm_provider import get_llm_provider, MockLLMProvider
-
-    old_provider = settings.DEFAULT_LLM_PROVIDER
-    old_key = settings.OPENROUTER_API_KEY
-    try:
-        settings.DEFAULT_LLM_PROVIDER = "openrouter"
-        settings.OPENROUTER_API_KEY = ""
-        provider = get_llm_provider()
-        assert isinstance(provider, MockLLMProvider)
-    finally:
-        settings.DEFAULT_LLM_PROVIDER = old_provider
-        settings.OPENROUTER_API_KEY = old_key

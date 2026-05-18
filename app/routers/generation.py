@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
@@ -16,6 +17,8 @@ from app.services.providers.llm_provider import (
     get_llm_provider,
 )
 from app.services.providers.search_provider import get_search_provider
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["generation"])
 
@@ -82,6 +85,11 @@ def generate_article_route(
         search = get_search_provider()
     except ProviderUnavailableError as exc:
         raise _generation_http_error(exc) from exc
+
+    logger.info(
+        "generation_start provider=%s model=%s is_mock=%s project=%s",
+        llm.provider_name, llm.model_name, llm.is_mock, project_id,
+    )
 
     # Step 1: generate idea
     try:
@@ -152,6 +160,11 @@ def auto_generate_ideas_route(
         search = get_search_provider()
     except ProviderUnavailableError as exc:
         raise _generation_http_error(exc) from exc
+
+    logger.info(
+        "auto_ideas_start provider=%s model=%s is_mock=%s project=%s count=%d",
+        llm.provider_name, llm.model_name, llm.is_mock, project_id, body.count,
+    )
 
     generated = []
     errors = []

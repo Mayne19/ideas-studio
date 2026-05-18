@@ -103,10 +103,8 @@ def get_llm_provider() -> LLMProvider:
     from app.services.providers.openai_provider import OpenAILLMProvider
     from app.services.providers.openrouter_provider import OpenRouterLLMProvider
 
-    def _mock_or_raise(reason: str) -> LLMProvider:
-        if settings.APP_ENV.lower() in {"production", "staging"}:
-            raise ProviderUnavailableError(f"Aucun provider IA disponible. Configure OPENROUTER_API_KEY ou démarre Ollama. {reason}")
-        return MockLLMProvider()
+    def _raise_or_raise(reason: str) -> LLMProvider:
+        raise ProviderUnavailableError(f"Aucun provider IA réel disponible. Configure OPENROUTER_API_KEY ou démarre Ollama. {reason}")
 
     def _try_openrouter() -> LLMProvider | None:
         if not settings.OPENROUTER_API_KEY:
@@ -151,27 +149,24 @@ def get_llm_provider() -> LLMProvider:
             p = try_provider()
             if p is not None:
                 return p
-        return _mock_or_raise("Aucun provider IA disponible.")
+        return _raise_or_raise("Aucun provider IA disponible.")
 
     if requested == "openrouter":
         p = _try_openrouter()
         if p is not None:
             return p
-        return _mock_or_raise("OpenRouter configuré mais indisponible.")
+        return _raise_or_raise("OpenRouter configuré mais indisponible.")
 
     if requested == "openai":
         p = _try_openai()
         if p is not None:
             return p
-        return _mock_or_raise("OpenAI configuré mais indisponible.")
+        return _raise_or_raise("OpenAI configuré mais indisponible.")
 
     if requested == "ollama":
         p = _try_ollama()
         if p is not None:
             return p
-        return _mock_or_raise("Ollama configuré mais indisponible.")
+        return _raise_or_raise("Ollama configuré mais indisponible.")
 
-    if requested == "mock":
-        return MockLLMProvider()
-
-    return _mock_or_raise(f"Provider '{requested}' non supporté.")
+    return _raise_or_raise(f"Provider '{requested}' non supporté.")

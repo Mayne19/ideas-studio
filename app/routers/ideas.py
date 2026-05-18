@@ -1,9 +1,12 @@
 import json
+import logging
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+
+logger = logging.getLogger(__name__)
 from app.core.utils import calculate_word_count
 from app.dependencies.auth import get_current_user, require_project_role
 from app.models.user import User
@@ -99,6 +102,10 @@ def generate_idea_route(
     try:
         llm = get_llm_provider()
         search = get_search_provider()
+        logger.info(
+            "generate_idea provider=%s model=%s is_mock=%s project=%s",
+            llm.provider_name, llm.model_name, llm.is_mock, project_id,
+        )
         article = generate_idea(
             db=db,
             project_id=project_id,
@@ -135,6 +142,10 @@ def start_writing_route(
         raise HTTPException(status_code=400, detail=f"Cannot start writing from status '{article.status}'")
     try:
         llm = get_llm_provider()
+        logger.info(
+            "start_writing provider=%s model=%s is_mock=%s article=%s",
+            llm.provider_name, llm.model_name, llm.is_mock, article_id,
+        )
         article = start_writing_from_idea(db=db, article=article, llm=llm)
     except (ProviderUnavailableError, GenerationFailedError) as exc:
         raise _generation_http_error(exc) from exc
@@ -225,6 +236,10 @@ def rerun_writing_route(
         raise HTTPException(status_code=400, detail=f"Cannot rerun from status '{article.status}'")
     try:
         llm = get_llm_provider()
+        logger.info(
+            "rerun_writing provider=%s model=%s is_mock=%s article=%s",
+            llm.provider_name, llm.model_name, llm.is_mock, article_id,
+        )
         article = start_writing_from_idea(db=db, article=article, llm=llm)
     except (ProviderUnavailableError, GenerationFailedError) as exc:
         raise _generation_http_error(exc) from exc
