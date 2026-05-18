@@ -101,15 +101,36 @@ class OllamaLLMProvider(LLMProvider):
 def get_llm_provider() -> LLMProvider:
     from app.core.config import settings
     from app.services.providers.openai_provider import OpenAILLMProvider
+    from app.services.providers.openrouter_provider import OpenRouterLLMProvider
 
     def _mock_or_raise(reason: str) -> LLMProvider:
         if settings.APP_ENV.lower() in {"production", "staging"}:
-            raise ProviderUnavailableError(f"Provider IA indisponible, génération réelle impossible. {reason}")
+            raise ProviderUnavailableError(f"Aucun provider IA disponible. Configure OPENROUTER_API_KEY ou démarre Ollama. {reason}")
         return MockLLMProvider()
 
-    if settings.DEFAULT_LLM_PROVIDER == "openai":
+    def _try_openrouter() -> LLMProvider | None:
+        if not settings.OPENROUTER_API_KEY:
+            return None
+        provider = OpenRouterLLMProvider(
+            api_key=settings.OPENROUTER_API_KEY,
+            model=settings.OPENROUTER_MODEL,
+            base_url=settings.OPENROUTER_BASE_URL,
+        )
+        if provider.is_available():
+            return provider
+        return None
+
+    def _try_ollama() -> LLMProvider | None:
+        if not settings.OLLAMA_URL:
+            return None
+        provider = OllamaLLMProvider(settings.OLLAMA_URL, settings.OLLAMA_MODEL)
+        if provider.is_available():
+            return provider
+        return None
+
+    def _try_openai() -> LLMProvider | None:
         if not settings.OPENAI_API_KEY:
-            return _mock_or_raise("OPENAI_API_KEY est manquant.")
+            return None
         provider = OpenAILLMProvider(
             api_key=settings.OPENAI_API_KEY,
             model=settings.OPENAI_MODEL,
@@ -117,14 +138,37 @@ def get_llm_provider() -> LLMProvider:
         )
         if provider.is_available():
             return provider
-        return _mock_or_raise("Le provider OpenAI est configuré mais inaccessible.")
-    if settings.DEFAULT_LLM_PROVIDER == "ollama" and settings.OLLAMA_URL:
-        provider = OllamaLLMProvider(settings.OLLAMA_URL, settings.OLLAMA_MODEL)
-        if provider.is_available():
-            return provider
-        return _mock_or_raise("Ollama est configuré mais inaccessible.")
-    if settings.DEFAULT_LLM_PROVIDER == "mock":
+        return None
+
+    requested = settings.DEFAULT_LLM_PROVIDER
+
+    # Auto mode: OpenRouter > Ollama > OpenAI
+    if requested == "auto":
+        for try_provider in (_try_openrouter, _try_ollama, _try_openai):
+            p = try_provider()
+            if p is not None:
+                return p
+        return _mock_or_raise("Aucun provider IA disponible.")
+
+    if requested == "openrouter":
+        p = _try_openrouter()
+        if p is not None:
+            return p
+        return _mock_or_raise("OpenRouter configuré mais indisponible.")
+
+    if requested == "openai":
+        p = _try_openai()
+        if p is not None:
+            return p
+        return _mock_or_raise("OpenAI configuré mais indisponible.")
+
+    if requested == "ollama":
+        p = _try_ollama()
+        if p is not None:
+            return p
+        return _mock_or_raise("Ollama configuré mais indisponible.")
+
+    if requested == "mock":
         return MockLLMProvider()
-    if settings.DEFAULT_LLM_PROVIDER == "ollama":
-        return _mock_or_raise("OLLAMA_URL est manquant.")
-    return _mock_or_raise(f"Provider '{settings.DEFAULT_LLM_PROVIDER}' non supporté.")
+
+    return _mock_or_raise(f"Provider '{requested}' non supporté.")

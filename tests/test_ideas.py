@@ -79,10 +79,12 @@ def test_get_llm_provider_returns_openai_when_configured(monkeypatch):
     old_provider = settings.DEFAULT_LLM_PROVIDER
     old_key = settings.OPENAI_API_KEY
     old_model = settings.OPENAI_MODEL
+    old_orkey = settings.OPENROUTER_API_KEY
     try:
         settings.DEFAULT_LLM_PROVIDER = "openai"
         settings.OPENAI_API_KEY = "test-key"
         settings.OPENAI_MODEL = "gpt-test"
+        settings.OPENROUTER_API_KEY = ""
         monkeypatch.setattr(OpenAILLMProvider, "is_available", lambda self: True)
         provider = get_llm_provider()
         assert isinstance(provider, OpenAILLMProvider)
@@ -91,6 +93,7 @@ def test_get_llm_provider_returns_openai_when_configured(monkeypatch):
         settings.DEFAULT_LLM_PROVIDER = old_provider
         settings.OPENAI_API_KEY = old_key
         settings.OPENAI_MODEL = old_model
+        settings.OPENROUTER_API_KEY = old_orkey
 
 
 def test_get_search_provider_returns_mock_by_default():
@@ -158,7 +161,7 @@ def test_generate_idea_returns_503_when_provider_unavailable_in_production(clien
         settings.OLLAMA_URL = "http://127.0.0.1:9"
         resp = client.post(f"/projects/{project['id']}/ideas/generate", json={}, headers=headers)
         assert resp.status_code == 503
-        assert "Provider IA indisponible" in resp.json()["detail"]
+        assert "Aucun provider IA disponible" in resp.json()["detail"]
     finally:
         settings.APP_ENV = old_env
         settings.DEFAULT_LLM_PROVIDER = old_provider

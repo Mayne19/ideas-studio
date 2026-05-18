@@ -73,3 +73,46 @@ export function patchArticle(_projectId: string, articleId: string, data: Partia
 export function deleteArticle(_projectId: string, articleId: string): Promise<void> {
   return api.delete(`/articles/${articleId}`)
 }
+
+export type GenerateArticleRequest = {
+  preferred_title?: string | null
+  keyword?: string | null
+  category_id?: string | null
+  audience?: string | null
+  angle?: string | null
+  search_intent?: string | null
+  context_hint?: string | null
+  include_faq?: boolean | null
+  include_callouts?: boolean | null
+}
+
+export type GenerateArticleResponse = {
+  id: string
+  title: string
+  keyword: string | null
+  status: string
+  word_count: number
+  provider_name?: string | null
+  model_name?: string | null
+}
+
+export function generateArticle(projectId: string, payload: GenerateArticleRequest = {}): Promise<GenerateArticleResponse> {
+  return api.post<GenerateArticleResponse>(`/projects/${projectId}/articles/generate`, payload)
+}
+
+export type AutoGenerateIdeasResponse = {
+  ideas: Array<{
+    id: string
+    title: string
+    keyword: string | null
+    angle: string | null
+    search_intent: string | null
+    audience: string | null
+    opportunity_score: number | null
+  }>
+  generated: number
+}
+
+export function autoGenerateIdeas(projectId: string, count: number = 3, context_hint?: string | null): Promise<AutoGenerateIdeasResponse> {
+  return api.post<AutoGenerateIdeasResponse>(`/projects/${projectId}/ideas/auto-generate`, { count, context_hint })
+}

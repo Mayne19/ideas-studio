@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Plus, FileText, Pencil, Calendar, Trash2, Sparkles } from 'lucide-react'
-import { listArticles, createArticle, publishArticle, unpublishArticle, markReadyArticle, archiveArticle, scheduleArticle, analyzeSeoArticle, deleteArticle } from '@/api/articles'
-import type { CreateArticlePayload } from '@/api/articles'
+import { Plus, FileText, Pencil, Calendar, Trash2, Sparkles, Zap, Loader2, CheckCircle } from 'lucide-react'
+import { listArticles, createArticle, publishArticle, unpublishArticle, markReadyArticle, archiveArticle, scheduleArticle, analyzeSeoArticle, deleteArticle, generateArticle } from '@/api/articles'
+import type { CreateArticlePayload, GenerateArticleRequest } from '@/api/articles'
 import { listCategories } from '@/api/categories'
 import type { Article, ArticleStatus, Category } from '@/types'
 import { STATUS_LABELS, getAvailableActions } from '@/utils/articleActions'
@@ -169,6 +169,12 @@ export default function ArticlesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Article | null>(null)
   const [deleting, setDeleting] = useState(false)
 
+  const [generateOpen, setGenerateOpen] = useState(false)
+  const [generateForm, setGenerateForm] = useState<GenerateArticleRequest>({})
+  const [generating, setGenerating] = useState(false)
+  const [generateError, setGenerateError] = useState('')
+  const [generateResult, setGenerateResult] = useState<{ id: string; title: string } | null>(null)
+
   useEffect(() => {
     if (!projectId) return
     listCategories(projectId).then(setCategories).catch(() => {})
@@ -284,6 +290,23 @@ export default function ArticlesPage() {
     }
   }
 
+  async function handleGenerate(e: React.FormEvent) {
+    e.preventDefault()
+    if (!projectId) return
+    setGenerateError('')
+    setGenerateResult(null)
+    setGenerating(true)
+    try {
+      const res = await generateArticle(projectId, generateForm)
+      setGenerateResult({ id: res.id, title: res.title })
+      setTick((t) => t + 1)
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : 'Erreur lors de la génération')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
   async function handleScheduleConfirm() {
     if (!projectId || !scheduleTarget || !scheduleDate) return
     setScheduling(true)
@@ -324,9 +347,9 @@ export default function ArticlesPage() {
               icon={<Sparkles size={14} />}
               size="sm"
               variant="secondary"
-              onClick={() => navigate(`/projects/${projectId}/generate`)}
+              onClick={() => { setGenerateOpen(true); setGenerateForm({}); setGenerateError(''); setGenerateResult(null) }}
             >
-              Générer
+              Générer un article
             </Button>
             <Button icon={<Plus size={14} />} size="sm" onClick={() => setCreateOpen(true)}>
               Créer un article
@@ -550,6 +573,124 @@ export default function ArticlesPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Generate article modal */}
+      <Modal
+        open={generateOpen}
+        onClose={() => { setGenerateOpen(false); setGenerateForm({}); setGenerateError(''); setGenerateResult(null) }}
+        title="Générer un article complet"
+        size="md"
+      >
+        {generateResult ? (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-start gap-3 rounded-[12px] border border-success/20 bg-success/5 px-3.5 py-3">
+              <CheckCircle size={15} className="mt-0.5 shrink-0 text-[#1a7a3a]" />
+              <div>
+                <p className="text-[13px] font-medium text-primary">{generateResult.title}</p>
+                <p className="mt-0.5 text-[12px] text-secondary">Article généré avec succès</p>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="flex-1 justify-center"
+                onClick={() => { setGenerateOpen(false); setGenerateResult(null); setGenerateForm({}) }}
+              >
+                Fermer
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1 justify-center"
+                onClick={() => { navigate(`/projects/${projectId}/articles/${generateResult.id}/edit`); setGenerateOpen(false) }}
+              >
+                Ouvrir dans l'éditeur
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleGenerate} className="flex flex-col gap-4">
+            {generateError && (
+              <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+                {generateError}
+              </div>
+            )}
+            <Input
+              label="Titre souhaité"
+              value={generateForm.preferred_title ?? ''}
+              onChange={(e) => setGenerateForm((f) => ({ ...f, preferred_title: e.target.value || null }))}
+              placeholder="Comment optimiser son SEO en 2025"
+              hint="Laissez vide pour que l'IA propose un titre"
+            />
+            <Input
+              label="Mot-clé principal"
+              value={generateForm.keyword ?? ''}
+              onChange={(e) => setGenerateForm((f) => ({ ...f, keyword: e.target.value || null }))}
+              placeholder="optimisation seo"
+            />
+            {categories.length > 0 && (
+              <Select
+                label="Catégorie"
+                options={[{ value: '', label: 'Aucune catégorie' }, ...categories.map((c) => ({ value: c.id, label: c.name }))]}
+                value={generateForm.category_id ?? ''}
+                onChange={(e) => setGenerateForm((f) => ({ ...f, category_id: e.target.value || null }))}
+              />
+            )}
+            <Input
+              label="Audience cible (optionnel)"
+              value={generateForm.audience ?? ''}
+              onChange={(e) => setGenerateForm((f) => ({ ...f, audience: e.target.value || null }))}
+              placeholder="Développeurs web"
+            />
+            <Input
+              label="Angle éditorial (optionnel)"
+              value={generateForm.angle ?? ''}
+              onChange={(e) => setGenerateForm((f) => ({ ...f, angle: e.target.value || null }))}
+              placeholder="Guide pratique avec exemples"
+            />
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={generateForm.include_faq ?? true}
+                  onChange={(e) => setGenerateForm((f) => ({ ...f, include_faq: e.target.checked }))}
+                  className="rounded"
+                />
+                <span className="text-[12px] text-secondary">Inclure FAQ</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={generateForm.include_callouts ?? false}
+                  onChange={(e) => setGenerateForm((f) => ({ ...f, include_callouts: e.target.checked }))}
+                  className="rounded"
+                />
+                <span className="text-[12px] text-secondary">Inclure callouts</span>
+              </label>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="flex-1 justify-center"
+                onClick={() => { setGenerateOpen(false); setGenerateForm({}); setGenerateError('') }}
+              >
+                Annuler
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                loading={generating}
+                icon={generating ? <Loader2 size={13} className="animate-spin" /> : <Zap size={13} />}
+                className="flex-1 justify-center"
+              >
+                Générer
+              </Button>
+            </div>
+          </form>
+        )}
       </Modal>
     </>
   )

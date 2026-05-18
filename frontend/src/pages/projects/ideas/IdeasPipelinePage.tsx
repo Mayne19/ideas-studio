@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Lightbulb, Plus, Star, Pencil, X, ExternalLink, Loader2, RefreshCw, ChevronDown, ChevronUp, Search, Info } from 'lucide-react'
+import { Lightbulb, Plus, Star, Pencil, X, ExternalLink, Loader2, RefreshCw, ChevronDown, ChevronUp, Search, Info, Sparkles, CheckCircle } from 'lucide-react'
 import {
   listIdeas,
   generateIdea,
@@ -8,7 +8,9 @@ import {
   setIdeaPriority,
   startWriting,
   createManualDraft,
+  autoGenerateIdeas,
 } from '@/api/ideas'
+import type { AutoGenerateIdeasResponse } from '@/api/ideas'
 import { listCategories } from '@/api/categories'
 import { ApiError } from '@/api/client'
 import type { Article, Category } from '@/types'
@@ -308,6 +310,12 @@ export default function IdeasPipelinePage() {
   const [rejectError, setRejectError] = useState('')
   const [actionError, setActionError] = useState('')
 
+  const [autoOpen, setAutoOpen] = useState(false)
+  const [autoGenerating, setAutoGenerating] = useState(false)
+  const [autoResult, setAutoResult] = useState<AutoGenerateIdeasResponse | null>(null)
+  const [autoError, setAutoError] = useState('')
+  const [autoCount, setAutoCount] = useState(3)
+
   useEffect(() => {
     if (!projectId) return
     listCategories(projectId).then(setCategories).catch(() => {})
@@ -406,6 +414,22 @@ export default function IdeasPipelinePage() {
     }
   }
 
+  async function handleAutoGenerate() {
+    if (!projectId) return
+    setAutoError('')
+    setAutoResult(null)
+    setAutoGenerating(true)
+    try {
+      const res = await autoGenerateIdeas(projectId, autoCount)
+      setAutoResult(res)
+      setTick((t) => t + 1)
+    } catch (err) {
+      setAutoError(err instanceof Error ? err.message : 'Erreur lors de la génération automatique')
+    } finally {
+      setAutoGenerating(false)
+    }
+  }
+
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault()
     if (!projectId) return
@@ -460,6 +484,14 @@ export default function IdeasPipelinePage() {
               onClick={() => setTick((t) => t + 1)}
             >
               Rafraîchir
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<Sparkles size={14} />}
+              onClick={() => { setAutoOpen(true); setAutoResult(null); setAutoError(''); setAutoCount(3) }}
+            >
+              Mode automatique
             </Button>
             <Button
               size="sm"
@@ -615,6 +647,110 @@ export default function IdeasPipelinePage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Auto-generate ideas modal */}
+      <Modal
+        open={autoOpen}
+        onClose={() => { setAutoOpen(false); setAutoResult(null); setAutoError('') }}
+        title="Mode automatique : proposer des idées"
+        size="md"
+      >
+        <div className="flex flex-col gap-4">
+          {autoError && (
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+              {autoError}
+            </div>
+          )}
+
+          {autoResult ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2 text-[#1a7a3a]">
+                <CheckCircle size={15} />
+                <p className="text-[13px] font-semibold">{autoResult.generated} idée(s) proposée(s)</p>
+              </div>
+              <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
+                {autoResult.ideas.map((idea) => (
+                  <div key={idea.id} className="rounded-[10px] border border-border bg-[#f9f9fb] p-3">
+                    <p className="text-[13px] font-medium text-primary">{idea.title}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      {idea.keyword && (
+                        <span className="rounded-full bg-accent/8 px-2 py-0.5 text-[10px] text-accent">
+                          {idea.keyword}
+                        </span>
+                      )}
+                      {idea.opportunity_score !== null && (
+                        <span className="text-[10px] text-tertiary">
+                          Score: {Math.round(idea.opportunity_score * 100)}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="flex-1 justify-center"
+                  onClick={() => { setAutoOpen(false); setAutoResult(null) }}
+                >
+                  Fermer
+                </Button>
+                <Button
+                  size="sm"
+                  className="flex-1 justify-center"
+                  onClick={() => { setAutoOpen(false); setAutoResult(null); navigate(`/projects/${projectId}/ideas`) }}
+                >
+                  Voir dans le pipeline
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div className="flex items-start gap-3 rounded-[12px] border border-border bg-[#f9f9fb] px-3.5 py-3">
+                <Sparkles size={15} className="mt-0.5 shrink-0 text-accent" />
+                <div>
+                  <p className="text-[13px] font-medium text-primary">Génération automatique</p>
+                  <p className="mt-0.5 text-[12px] text-secondary leading-snug">
+                    L'IA va proposer plusieurs idées d'articles basées sur le contexte de votre projet. Les idées seront ajoutées directement dans le pipeline.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[12px] font-medium text-secondary">Nombre d'idées</label>
+                <select
+                  value={autoCount}
+                  onChange={(e) => setAutoCount(Number(e.target.value))}
+                  className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+                >
+                  <option value={1}>1 idée</option>
+                  <option value={3}>3 idées</option>
+                  <option value={5}>5 idées</option>
+                  <option value={10}>10 idées</option>
+                </select>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="flex-1 justify-center"
+                  onClick={() => { setAutoOpen(false); setAutoResult(null) }}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  size="sm"
+                  loading={autoGenerating}
+                  className="flex-1 justify-center"
+                  onClick={handleAutoGenerate}
+                >
+                  Proposer des idées
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </Modal>
 
       {/* Reject modal */}
