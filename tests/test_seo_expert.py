@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+from app.routers import articles as articles_router
 from app.services.seo.google_watch_service import (
     build_action_recommendations,
     classify_update_impact,
@@ -155,3 +156,58 @@ def test_seo_expert_review_endpoint_returns_and_saves_report(client):
     assert editor.status_code == 200
     assert editor.json()["seo_review_json"] is not None
     assert "score_global" in editor.json()["seo_review_json"]
+
+
+def test_editor_article_without_seo_review_json_is_safe(client):
+    headers = register_and_login(client, email="seo_review_missing@test.com")
+    project = client.post("/projects", json={"name": "SEO Project"}, headers=headers).json()
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Draft without review", "slug": "draft-without-review", "content": "<p>Draft body.</p>"},
+        headers=headers,
+    ).json()
+
+    editor = client.get(f"/articles/{article['id']}/editor", headers=headers)
+    assert editor.status_code == 200
+    assert editor.json()["seo_review_json"] is None
+
+
+def test_seo_expert_review_rejects_wrong_project_id(client):
+    headers = register_and_login(client, email="seo_review_project_mismatch@test.com")
+    project_a = client.post("/projects", json={"name": "Project A"}, headers=headers).json()
+    project_b = client.post("/projects", json={"name": "Project B"}, headers=headers).json()
+    article = client.post(
+        f"/projects/{project_a['id']}/articles",
+        json={"title": "Article A", "slug": "article-a", "content": "<p>Body</p>"},
+        headers=headers,
+    ).json()
+
+    response = client.post(
+        f"/projects/{project_b['id']}/articles/{article['id']}/seo-expert-review",
+        headers=headers,
+    )
+    assert response.status_code == 404
+
+
+def test_seo_expert_review_stores_error_report_when_runtime_fails(client, monkeypatch):
+    headers = register_and_login(client, email="seo_review_runtime_error@test.com")
+    project = client.post("/projects", json={"name": "SEO Project"}, headers=headers).json()
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Runtime Review", "slug": "runtime-review", "content": "<p>Body</p>"},
+        headers=headers,
+    ).json()
+
+    def fail_review(_article):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(articles_router, "run_and_store_seo_review", fail_review)
+
+    response = client.post(f"/projects/{project['id']}/articles/{article['id']}/seo-expert-review", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert "seo_expert_runtime" in data["failed_checks"]
+
+    editor = client.get(f"/articles/{article['id']}/editor", headers=headers)
+    assert editor.status_code == 200
+    assert "seo_expert_runtime" in editor.json()["seo_review_json"]["failed_checks"]

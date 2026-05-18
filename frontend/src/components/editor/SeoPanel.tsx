@@ -104,6 +104,22 @@ function ExpertIssueItem({ issue }: { issue: SeoExpertIssue }) {
   )
 }
 
+function normalizeExpertReview(review: SeoExpertReview | null | undefined): SeoExpertReview | null {
+  if (!review || typeof review !== 'object') return null
+  return {
+    score_global: typeof review.score_global === 'number' ? review.score_global : 0,
+    seo_score: typeof review.seo_score === 'number' ? review.seo_score : 0,
+    eeat_score: typeof review.eeat_score === 'number' ? review.eeat_score : 0,
+    readability_score: typeof review.readability_score === 'number' ? review.readability_score : 0,
+    issues: Array.isArray(review.issues) ? review.issues : [],
+    recommendations: Array.isArray(review.recommendations) ? review.recommendations : [],
+    passed_checks: Array.isArray(review.passed_checks) ? review.passed_checks : [],
+    failed_checks: Array.isArray(review.failed_checks) ? review.failed_checks : [],
+    knowledge_pack_sources: review.knowledge_pack_sources,
+    diagnostics: review.diagnostics,
+  }
+}
+
 function ReadinessBlock({ check, hasTitleH1 }: { check: ReadyCheck; hasTitleH1: boolean }) {
   const blockingIssues = hasTitleH1
     ? check.blocking_issues.filter((issue) => !isMissingH1Issue(issue))
@@ -161,7 +177,8 @@ export default function SeoPanel({
   const [expertLoading, setExpertLoading] = useState(false)
   const [error, setError] = useState('')
   const [expertError, setExpertError] = useState('')
-  const expertReview = expertReviewOverride ?? article.seo_review_json ?? null
+  const [expertSuccess, setExpertSuccess] = useState('')
+  const expertReview = normalizeExpertReview(expertReviewOverride ?? article.seo_review_json ?? null)
 
   const brief = analysis ?? article.latest_analysis
   const hasTitleH1 = Boolean(article.title?.trim())
@@ -192,11 +209,13 @@ export default function SeoPanel({
   async function runExpertAnalysis() {
     setExpertLoading(true)
     setExpertError('')
+    setExpertSuccess('')
     try {
       await onBeforeAnalyze?.()
       const result = await runSeoExpertReview(projectId, article.id)
       setExpertReviewOverride(result)
       onExpertReviewUpdate?.(result)
+      setExpertSuccess("Audit SEO Expert mis a jour.")
     } catch (err) {
       setExpertError(translateSeoError(err))
     } finally {
@@ -249,6 +268,13 @@ export default function SeoPanel({
           <div className="mt-3 flex items-start gap-2 rounded-[8px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[11px] text-danger">
             <AlertCircle size={12} className="mt-0.5 shrink-0" />
             <span className="leading-snug">{expertError}</span>
+          </div>
+        )}
+
+        {expertSuccess && !expertError && (
+          <div className="mt-3 flex items-start gap-2 rounded-[8px] border border-success/20 bg-success/8 px-2.5 py-2 text-[11px] text-success">
+            <CheckCircle size={12} className="mt-0.5 shrink-0" />
+            <span className="leading-snug">{expertSuccess}</span>
           </div>
         )}
 
