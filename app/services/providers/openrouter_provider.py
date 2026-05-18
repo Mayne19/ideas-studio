@@ -7,9 +7,12 @@ class OpenRouterLLMProvider(OpenAILLMProvider):
     def __init__(
         self,
         api_key: str,
-        model: str = "google/gemini-2.0-flash-001",
+        model: str = "deepseek/deepseek-v4-flash:free",
         base_url: str = "https://openrouter.ai/api/v1",
         timeout_seconds: int = 120,
+        writer_model: str | None = None,
+        planner_model: str | None = None,
+        fallback_model: str | None = None,
     ):
         super().__init__(
             api_key=api_key,
@@ -17,3 +20,6 @@ class OpenRouterLLMProvider(OpenAILLMProvider):
             base_url=base_url,
             timeout_seconds=timeout_seconds,
         )
+        self.writer_model = writer_model or model
+        self.planner_model = planner_model or model
+        self.fallback_model = fallback_model or model

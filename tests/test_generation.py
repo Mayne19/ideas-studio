@@ -142,8 +142,21 @@ def test_openrouter_provider_inherits_openai():
     provider = OpenRouterLLMProvider(api_key="test-key")
     assert isinstance(provider, OpenAILLMProvider)
     assert provider.provider_name == "openrouter"
-    assert provider.model_name == "google/gemini-2.0-flash-001"
+    assert provider.model_name == "deepseek/deepseek-v4-flash:free"
     assert provider.base_url == "https://openrouter.ai/api/v1"
+    assert provider.writer_model == "deepseek/deepseek-v4-flash:free"
+    assert provider.planner_model == "deepseek/deepseek-v4-flash:free"
+    assert provider.fallback_model == "deepseek/deepseek-v4-flash:free"
+
+    config_provider = OpenRouterLLMProvider(
+        api_key="test-key",
+        writer_model="deepseek/deepseek-v4-flash:free",
+        planner_model="openai/gpt-oss-120b:free",
+        fallback_model="openrouter/free",
+    )
+    assert config_provider.writer_model == "deepseek/deepseek-v4-flash:free"
+    assert config_provider.planner_model == "openai/gpt-oss-120b:free"
+    assert config_provider.fallback_model == "openrouter/free"
 
 
 def test_get_llm_provider_auto_falls_back_to_mock(monkeypatch):

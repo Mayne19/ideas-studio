@@ -115,6 +115,9 @@ def get_llm_provider() -> LLMProvider:
             api_key=settings.OPENROUTER_API_KEY,
             model=settings.OPENROUTER_MODEL,
             base_url=settings.OPENROUTER_BASE_URL,
+            writer_model=settings.OPENROUTER_WRITER_MODEL,
+            planner_model=settings.OPENROUTER_PLANNER_MODEL,
+            fallback_model=settings.OPENROUTER_FALLBACK_MODEL,
         )
         if provider.is_available():
             return provider
