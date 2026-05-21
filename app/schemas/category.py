@@ -25,6 +25,12 @@ class CategoryCreate(BaseModel):
     color: Optional[str] = None
     priority: int = 0
     target_frequency: Optional[int] = None
+    priority_score: Optional[float] = None
+    monthly_frequency: Optional[int] = None
+    pipeline_enabled: bool = True
+    editorial_goal: Optional[str] = None
+    target_audience: Optional[str] = None
+    internal_notes: Optional[str] = None
 
     @field_validator("color")
     @classmethod
@@ -39,6 +45,12 @@ class CategoryUpdate(BaseModel):
     color: Optional[str] = None
     priority: Optional[int] = None
     target_frequency: Optional[int] = None
+    priority_score: Optional[float] = None
+    monthly_frequency: Optional[int] = None
+    pipeline_enabled: Optional[bool] = None
+    editorial_goal: Optional[str] = None
+    target_audience: Optional[str] = None
+    internal_notes: Optional[str] = None
 
     @field_validator("color")
     @classmethod
@@ -57,5 +69,11 @@ class CategoryPublic(BaseModel):
     color: Optional[str]
     priority: int
     target_frequency: Optional[int]
+    priority_score: Optional[float] = None
+    monthly_frequency: Optional[int] = None
+    pipeline_enabled: Optional[bool] = None
+    editorial_goal: Optional[str] = None
+    target_audience: Optional[str] = None
+    internal_notes: Optional[str] = None
     created_at: datetime
     updated_at: datetime

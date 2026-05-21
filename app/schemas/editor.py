@@ -37,6 +37,26 @@ class EditorData(BaseModel):
     eeat_score: Optional[float]
     readiness_status: Optional[str]
     seo_review_json: Optional[dict] = None
+    project_context_json: Optional[dict] = None
+    category_strategy_json: Optional[dict] = None
+    idea_discovery_json: Optional[dict] = None
+    intent_analysis_json: Optional[dict] = None
+    research_brief_json: Optional[dict] = None
+    keyword_brief_json: Optional[dict] = None
+    cannibalization_check_json: Optional[dict] = None
+    editorial_angle_json: Optional[dict] = None
+    outline_json: Optional[str] = None
+    image_plan_json: Optional[dict] = None
+    image_sources_json: Optional[dict] = None
+    callout_plan_json: Optional[dict] = None
+    language_quality_report_json: Optional[dict] = None
+    originality_report_json: Optional[dict] = None
+    humanization_report_json: Optional[dict] = None
+    eeat_checklist_json: Optional[dict] = None
+    editorial_quality_report_json: Optional[dict] = None
+    seo_final_checklist_json: Optional[dict] = None
+    generation_report_json: Optional[dict] = None
+    sources_json: Optional[dict] = None
     author_name: Optional[str] = None
     reading_time_minutes: Optional[int] = None
     latest_analysis: Optional[AnalysisBrief]

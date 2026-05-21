@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Integer, DateTime, ForeignKey, UniqueConstraint, Text
+from sqlalchemy import String, Integer, Float, Boolean, DateTime, ForeignKey, UniqueConstraint, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
@@ -17,6 +17,12 @@ class Category(Base):
     color: Mapped[str | None] = mapped_column(String(20), nullable=True)
     priority: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     target_frequency: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    priority_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    monthly_frequency: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    pipeline_enabled: Mapped[bool | None] = mapped_column(Boolean, default=True, nullable=True)
+    editorial_goal: Mapped[str | None] = mapped_column(Text, nullable=True)
+    target_audience: Mapped[str | None] = mapped_column(Text, nullable=True)
+    internal_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )

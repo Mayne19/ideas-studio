@@ -9,6 +9,12 @@ class PipelineSettings(BaseModel):
     launch_hour: int = 8
     articles_per_week: int = 5
     category_priorities: dict[str, int] = {}
+    ideas_per_week: Optional[int] = 5
+    max_pending_drafts: Optional[int] = 10
+    paused_until: Optional[datetime] = None
+    paused_indefinitely: bool = False
+    default_quality_mode: str = "quality"
+    launch_hours: Optional[list[str]] = None
 
 
 class PipelineSettingsUpdate(BaseModel):
@@ -17,6 +23,12 @@ class PipelineSettingsUpdate(BaseModel):
     launch_hour: Optional[int] = None
     articles_per_week: Optional[int] = None
     category_priorities: Optional[dict[str, int]] = None
+    ideas_per_week: Optional[int] = None
+    max_pending_drafts: Optional[int] = None
+    paused_until: Optional[datetime] = None
+    paused_indefinitely: Optional[bool] = None
+    default_quality_mode: Optional[str] = None
+    launch_hours: Optional[list[str]] = None
 
 
 class PipelineSettingsPublic(BaseModel):
@@ -29,6 +41,12 @@ class PipelineSettingsPublic(BaseModel):
     launch_hour: int
     articles_per_week: int
     category_priorities: dict[str, int]
+    ideas_per_week: Optional[int] = None
+    max_pending_drafts: Optional[int] = None
+    paused_until: Optional[datetime] = None
+    paused_indefinitely: Optional[bool] = None
+    default_quality_mode: Optional[str] = None
+    launch_hours: Optional[list[str]] = None
     created_at: datetime
     updated_at: datetime
 

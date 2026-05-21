@@ -105,6 +105,7 @@ class ArticlePublic(BaseModel):
     eeat_score: Optional[float]
     readiness_status: Optional[str]
     seo_review_json: Optional[dict] = None
+    generation_report_json: Optional[dict] = None
     published_at: Optional[datetime]
     scheduled_at: Optional[datetime]
     created_at: datetime

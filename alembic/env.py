@@ -19,6 +19,8 @@ from app.models import invitation  # noqa: F401
 from app.models import project_callout_template  # noqa: F401
 from app.models import pipeline  # noqa: F401
 from app.models import pipeline_log  # noqa: F401
+from app.models import article_version  # noqa: F401
+from app.models import media_asset  # noqa: F401
 
 config = context.config
 database_url = settings.DATABASE_URL.replace("%", "%%")

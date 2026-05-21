@@ -1,3 +1,5 @@
+import secrets
+
 from pydantic_settings import BaseSettings
 
 
@@ -6,7 +8,7 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     APP_URL: str = "http://localhost:8000"
     DATABASE_URL: str = "sqlite:///./ideas_studio.db"
-    SECRET_KEY: str = "change-me"
+    SECRET_KEY: str = secrets.token_urlsafe(48)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     IDEAS_PER_DAY: int = 1
     MIN_GENERATED_ARTICLE_WORDS: int = 800

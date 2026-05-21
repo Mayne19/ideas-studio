@@ -6,6 +6,7 @@ from html import unescape
 from typing import Any
 
 from app.models.article import Article
+from app.services.seo.helpers import safe_json_load
 
 from app.services.seo.seo_knowledge_pack_service import (
     get_article_review_rules,
@@ -40,14 +41,11 @@ def _extract_headings(content: str) -> list[dict]:
     if re.search(r"<[a-z][\s\S]*>", content, flags=re.IGNORECASE):
         headings: list[dict] = []
         for match in re.finditer(r"<h([2-4])[^>]*>(.*?)</h\1>", content, flags=re.IGNORECASE | re.DOTALL):
-            headings.append(
-                {
-                    "level": int(match.group(1)),
-                    "text": _strip_html(match.group(2)).strip(),
-                }
-            )
+            headings.append({
+                "level": int(match.group(1)),
+                "text": _strip_html(match.group(2)).strip(),
+            })
         return headings
-
     headings = []
     for line in content.splitlines():
         match = re.match(r"^(#{2,4})\s+(.+?)\s*$", line.strip())
@@ -96,19 +94,9 @@ def _parse_faq(faq_json: Any) -> list[dict]:
 def _is_sensitive_or_factual(topic: str, content: str) -> bool:
     haystack = f"{topic} {content}".lower()
     markers = (
-        "study",
-        "research",
-        "statistics",
-        "statistique",
-        "finance",
-        "financial",
-        "medical",
-        "health",
-        "legal",
-        "law",
-        "safety",
-        "tax",
-        "security",
+        "study", "research", "statistics", "statistique",
+        "finance", "financial", "medical", "health",
+        "legal", "law", "safety", "tax", "security",
     )
     return any(marker in haystack for marker in markers)
 
@@ -144,14 +132,9 @@ def _has_isolated_h3(content: str) -> bool:
 def _looks_generic_or_ai_sounding(content: str) -> bool:
     haystack = content.lower()
     suspicious_patterns = (
-        "[mock]",
-        "lorem ipsum",
-        "i hope this helps",
-        "let's dive in",
-        "in conclusion, the future looks bright",
-        "pivotal moment",
-        "digital landscape",
-        "testament to",
+        "[mock]", "lorem ipsum", "i hope this helps",
+        "let's dive in", "in conclusion, the future looks bright",
+        "pivotal moment", "digital landscape", "testament to",
     )
     return any(pattern in haystack for pattern in suspicious_patterns)
 
@@ -177,14 +160,8 @@ def _first_h2_answers_intent(title: str, first_h2: str) -> bool:
         return bool(h2_tokens)
     overlap = len(title_tokens & h2_tokens)
     direct_markers = (
-        "comment",
-        "why",
-        "what",
-        "pourquoi",
-        "quand",
-        "ce qu",
-        "réponse",
-        "answer",
+        "comment", "why", "what", "pourquoi", "quand",
+        "ce qu", "réponse", "answer",
     )
     return overlap >= max(1, min(2, len(title_tokens) // 3)) or any(marker in first_h2.lower() for marker in direct_markers)
 
@@ -214,50 +191,39 @@ def review_article_with_knowledge_pack(article: Any) -> dict:
 
     def fail_check(name: str, severity: str, message: str, recommendation: str) -> None:
         failed_checks.append(name)
-        issues.append(
-            {
-                "check": name,
-                "severity": severity,
-                "message": message,
-            }
-        )
+        issues.append({"check": name, "severity": severity, "message": message})
         if recommendation and recommendation not in recommendations:
             recommendations.append(recommendation)
 
     if title:
         pass_check("title_present")
     else:
-        fail_check("title_present", "critical", "Le titre est absent.", "Ajoutez un titre clair aligné avec l'intention de recherche.")
+        fail_check("title_present", "critical", "Le titre est absent.", "Ajoutez un titre clair.")
 
     if slug:
         pass_check("slug_present")
     else:
-        fail_check("slug_present", "critical", "Le slug est absent.", "Ajoutez un slug stable et descriptif.")
+        fail_check("slug_present", "critical", "Le slug est absent.", "Ajoutez un slug stable.")
 
     if meta_description:
         pass_check("meta_description_present")
     else:
-        fail_check("meta_description_present", "warning", "La meta description est absente.", "Ajoutez une meta description utile et orientée clic.")
+        fail_check("meta_description_present", "warning", "La meta description est absente.", "Ajoutez une meta description utile.")
 
     word_count = _count_words(content)
     if word_count >= 800:
         pass_check("content_depth")
     else:
-        fail_check("content_depth", "critical", f"Le contenu est trop court ({word_count} mots).", "Développez le brouillon pour atteindre une couverture utile du sujet.")
+        fail_check("content_depth", "critical", f"Contenu trop court ({word_count} mots).", "Développez le brouillon.")
 
     first_h2 = _first_h2_text(content)
     if _first_h2_answers_intent(title, first_h2):
         pass_check("first_h2_answers_intent")
     else:
-        fail_check(
-            "first_h2_answers_intent",
-            "warning",
-            "Le premier H2 ne répond pas assez vite à l'intention principale.",
-            "Réécrivez le premier H2 pour donner une réponse directe dès le début.",
-        )
+        fail_check("first_h2_answers_intent", "warning", "Le premier H2 ne répond pas assez vite à l'intention.", "Réécrivez le premier H2.")
 
     if _has_isolated_h3(content):
-        fail_check("no_isolated_h3", "warning", "Un H3 isolé a été détecté sous un H2.", "Ajoutez un second H3 ou remontez la section au niveau H2.")
+        fail_check("no_isolated_h3", "warning", "Un H3 isolé détecté.", "Ajoutez un second H3 ou remontez au H2.")
     else:
         pass_check("no_isolated_h3")
 
@@ -265,7 +231,7 @@ def review_article_with_knowledge_pack(article: Any) -> dict:
         if 2 <= len(faq_items) <= 6:
             pass_check("faq_count_valid")
         else:
-            fail_check("faq_count_valid", "warning", f"La FAQ contient {len(faq_items)} question(s).", "Gardez entre 2 et 6 questions utiles dans la FAQ.")
+            fail_check("faq_count_valid", "warning", f"FAQ a {len(faq_items)} question(s).", "Gardez 2-6 questions.")
     else:
         pass_check("faq_count_valid")
 
@@ -273,17 +239,12 @@ def review_article_with_knowledge_pack(article: Any) -> dict:
         if _has_sources(content):
             pass_check("sources_for_sensitive_topics")
         else:
-            fail_check(
-                "sources_for_sensitive_topics",
-                "warning",
-                "Le sujet semble factuel ou sensible mais aucune source claire n'est visible.",
-                "Ajoutez des sources crédibles ou des références explicites pour les affirmations importantes.",
-            )
+            fail_check("sources_for_sensitive_topics", "warning", "Sujet sensible sans sources.", "Ajoutez des sources crédibles.")
     else:
         pass_check("sources_for_sensitive_topics")
 
     if _keyword_stuffing(keyword, content):
-        fail_check("no_keyword_stuffing", "warning", "Le contenu semble sur-optimisé pour le mot-clé principal.", "Réduisez les répétitions exactes du mot-clé et utilisez plus de variations naturelles.")
+        fail_check("no_keyword_stuffing", "warning", "Sur-optimisation du mot-clé.", "Variez les formulations.")
     else:
         pass_check("no_keyword_stuffing")
 
@@ -291,12 +252,7 @@ def review_article_with_knowledge_pack(article: Any) -> dict:
     if sentence_count and average_sentence_length <= 24:
         pass_check("readability_ok")
     else:
-        fail_check(
-            "readability_ok",
-            "warning",
-            "La lisibilité semble faible, avec des phrases trop longues ou trop compactes.",
-            "Raccourcissez les phrases et aérez davantage les paragraphes.",
-        )
+        fail_check("readability_ok", "warning", "Lisibilité faible.", "Raccourcissez les phrases.")
 
     eeat_signals = 0
     if author_name:
@@ -310,20 +266,10 @@ def review_article_with_knowledge_pack(article: Any) -> dict:
     if eeat_signals >= 2:
         pass_check("basic_eeat_signals")
     else:
-        fail_check(
-            "basic_eeat_signals",
-            "warning",
-            "Les signaux EEAT de base sont trop faibles.",
-            "Ajoutez un auteur, des sources, des exemples concrets ou davantage de profondeur éditoriale.",
-        )
+        fail_check("basic_eeat_signals", "warning", "Signaux EEAT faibles.", "Ajoutez auteur, sources, exemples.")
 
     if _looks_generic_or_ai_sounding(content):
-        fail_check(
-            "not_too_generic_or_ai_sounding",
-            "warning",
-            "Le texte contient des marqueurs génériques ou des formulations trop IA.",
-            "Passez une relecture de humanization pour retirer les formulations trop génériques.",
-        )
+        fail_check("not_too_generic_or_ai_sounding", "warning", "Marqueurs IA détectés.", "Relecture humanisation.")
     else:
         pass_check("not_too_generic_or_ai_sounding")
 
@@ -373,20 +319,67 @@ def build_review_error_report(message: str) -> dict:
         "seo_score": 0,
         "eeat_score": 0,
         "readability_score": 0,
-        "issues": [
-            {
-                "check": "seo_expert_runtime",
-                "severity": "critical",
-                "message": message,
-            }
-        ],
-        "recommendations": [
-            "Relancez l'audit SEO Expert apres verification du brouillon et des services internes."
-        ],
+        "issues": [{"check": "seo_expert_runtime", "severity": "critical", "message": message}],
+        "recommendations": ["Relancez l'audit SEO Expert après vérification."],
         "passed_checks": [],
         "failed_checks": ["seo_expert_runtime"],
         "knowledge_pack_sources": {},
         "diagnostics": {},
+    }
+
+
+def build_aggregated_seo_review(
+    language_quality: dict | None = None,
+    originality: dict | None = None,
+    humanization: dict | None = None,
+    eeat: dict | None = None,
+    editorial_quality: dict | None = None,
+    seo_final: dict | None = None,
+) -> dict:
+    lq = language_quality or {}
+    orig = originality or {}
+    hum = humanization or {}
+    eeat_r = eeat or {}
+    eq = editorial_quality or {}
+    sf = seo_final or {}
+
+    issues = []
+    recommendations = []
+    passed_checks = []
+    failed_checks = []
+
+    for r, prefix in [(lq, "lang"), (orig, "orig"), (hum, "hum"), (eeat_r, "eeat"), (eq, "eq"), (sf, "seo")]:
+        for issue in r.get("issues", []):
+            issue["source"] = prefix
+            issues.append(issue)
+        for rec in r.get("recommendations", []):
+            if rec not in recommendations:
+                recommendations.append(rec)
+        for c in r.get("passed_checks", []) or r.get("passed", []):
+            passed_checks.append(f"{prefix}_{c}")
+        for c in r.get("failed_checks", []) or r.get("failed", []):
+            failed_checks.append(f"{prefix}_{c}")
+
+    manual_review = any(
+        r.get("manual_review_needed", False)
+        for r in [lq, orig, hum, eeat_r, eq, sf]
+    )
+
+    total_checks = max(1, len(passed_checks) + len(failed_checks))
+    score_global = round((len(passed_checks) / total_checks) * 100, 1) if total_checks else 0
+
+    return {
+        "score_global": score_global,
+        "seo_score": sf.get("score", 0),
+        "eeat_score": eeat_r.get("score", 0),
+        "editorial_quality_score": eq.get("score", 0),
+        "originality_score": orig.get("heuristic_score", 100),
+        "readability_score": 100 - (lq.get("issues_count", 0) * 2) if lq.get("issues") else 100,
+        "issues": issues[:50],
+        "recommendations": recommendations[:20],
+        "passed_checks": passed_checks,
+        "failed_checks": failed_checks,
+        "manual_review_needed": manual_review,
     }
 
 
