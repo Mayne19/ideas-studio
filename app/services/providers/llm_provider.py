@@ -50,26 +50,88 @@ class MockLLMProvider(LLMProvider):
 
 
 class OllamaLLMProvider(LLMProvider):
-    """Uses a local Ollama instance for generation."""
+    """Uses a local Ollama instance for generation — free, no API key needed."""
     is_mock: bool = False
     provider_name: str = "ollama"
 
-    def __init__(self, base_url: str, model: str = "llama3.2"):
+    def __init__(
+        self,
+        base_url: str = "http://127.0.0.1:11434",
+        model: str = "qwen3:14b",
+        fallback_model: str | None = None,
+        timeout_seconds: int = 180,
+    ):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.model_name = model
+        self.fallback_model = fallback_model
+        self.timeout_seconds = timeout_seconds
+        self._model_checked = False
+        self._model_available = False
 
-    def generate_text(self, prompt: str, system: str | None = None, temperature: float = 0.7) -> str:
+    def _ensure_model(self):
+        if self._model_checked:
+            return self._model_available
+        self._model_checked = True
         try:
             import httpx
-            payload: dict = {"model": self.model, "prompt": prompt, "stream": False, "options": {"temperature": temperature}}
-            if system:
-                payload["system"] = system
-            resp = httpx.post(f"{self.base_url}/api/generate", json=payload, timeout=90)
+            resp = httpx.get(f"{self.base_url}/api/tags", timeout=10)
             resp.raise_for_status()
-            return resp.json().get("response", "")
+            models = resp.json().get("models", [])
+            available = [m["name"] for m in models]
+            if self.model in available:
+                self._model_available = True
+            elif self.fallback_model and self.fallback_model in available:
+                self.model = self.fallback_model
+                self.model_name = self.fallback_model
+                self._model_available = True
+            else:
+                self._last_error = f"Modèle Ollama '{self.model}' non disponible. Modèles trouvés: {', '.join(available) if available else 'aucun'}"
+                self._model_available = False
+        except httpx.ConnectError:
+            self._last_error = f"Ollama local indisponible sur {self.base_url}"
+            self._model_available = False
         except Exception as exc:
-            raise ProviderUnavailableError("Provider IA indisponible, génération réelle impossible.") from exc
+            self._last_error = f"Erreur Ollama: {exc}"
+            self._model_available = False
+        return self._model_available
+
+    def generate_text(self, prompt: str, system: str | None = None, temperature: float = 0.7) -> str:
+        import httpx
+        if not self._ensure_model():
+            raise ProviderUnavailableError(self._last_error or "Aucun modèle Ollama disponible")
+        try:
+            messages: list[dict[str, str]] = []
+            if system:
+                messages.append({"role": "system", "content": system})
+            messages.append({"role": "user", "content": prompt})
+            payload = {
+                "model": self.model,
+                "messages": messages,
+                "stream": False,
+                "options": {"temperature": temperature},
+            }
+            resp = httpx.post(f"{self.base_url}/api/chat", json=payload, timeout=self.timeout_seconds)
+            if resp.status_code == 404:
+                raise ProviderUnavailableError(
+                    f"Modèle Ollama '{self.model}' non trouvé. Lancez: ollama pull {self.model}"
+                )
+            resp.raise_for_status()
+            data = resp.json()
+            content = data.get("message", {}).get("content", "")
+            if not content:
+                raise ProviderUnavailableError("Ollama a retourné une réponse vide")
+            return content.strip()
+        except ProviderUnavailableError:
+            raise
+        except httpx.ConnectError:
+            raise ProviderUnavailableError(f"Ollama local indisponible sur {self.base_url}")
+        except httpx.TimeoutException:
+            raise ProviderUnavailableError(
+                f"Ollama modèle {self.model} : timeout après {self.timeout_seconds}s"
+            )
+        except Exception as exc:
+            raise ProviderUnavailableError(f"Ollama: {exc}") from exc
 
     def generate_json(self, prompt: str, schema_hint: str | None = None):
         full_prompt = prompt
@@ -90,12 +152,29 @@ class OllamaLLMProvider(LLMProvider):
         return {}
 
     def is_available(self) -> bool:
+        return self._ensure_model()
+
+    def health_check(self) -> dict:
+        """Return structured health status (does NOT raise)."""
         try:
             import httpx
-            httpx.get(f"{self.base_url}/api/tags", timeout=5)
-            return True
-        except Exception:
-            return False
+            tags_resp = httpx.get(f"{self.base_url}/api/tags", timeout=10)
+            if tags_resp.status_code != 200:
+                return {"provider": "ollama", "model": self.model, "configured": True, "available": False, "error": f"Ollama API erreur HTTP {tags_resp.status_code}"}
+            models = tags_resp.json().get("models", [])
+            available = [m["name"] for m in models]
+            if self.model in available:
+                return {"provider": "ollama", "model": self.model, "configured": True, "available": True}
+            if self.fallback_model and self.fallback_model in available:
+                return {"provider": "ollama", "model": self.fallback_model, "configured": True, "available": True}
+            return {
+                "provider": "ollama", "model": self.model, "configured": True, "available": False,
+                "error": f"Modèle '{self.model}' non disponible. Modèles trouvés: {', '.join(available) if available else 'aucun'}. Lancez: ollama pull {self.model}",
+            }
+        except httpx.ConnectError:
+            return {"provider": "ollama", "model": self.model, "configured": True, "available": False, "error": f"Ollama local indisponible sur {self.base_url}"}
+        except Exception as exc:
+            return {"provider": "ollama", "model": self.model, "configured": True, "available": False, "error": str(exc)}
 
 
 def get_llm_provider() -> LLMProvider:
@@ -122,9 +201,15 @@ def get_llm_provider() -> LLMProvider:
         return None
 
     def _try_ollama() -> LLMProvider | None:
-        if not settings.OLLAMA_URL:
+        base_url = settings.OLLAMA_BASE_URL or settings.OLLAMA_URL or "http://127.0.0.1:11434"
+        if not base_url:
             return None
-        provider = OllamaLLMProvider(settings.OLLAMA_URL, settings.OLLAMA_MODEL)
+        provider = OllamaLLMProvider(
+            base_url=base_url,
+            model=settings.OLLAMA_MODEL or "qwen3:14b",
+            fallback_model=settings.OLLAMA_FALLBACK_MODEL or "qwen3:8b",
+            timeout_seconds=settings.OLLAMA_TIMEOUT_SECONDS or 180,
+        )
         if provider.is_available():
             return provider
         return None

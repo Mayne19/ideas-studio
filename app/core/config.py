@@ -16,7 +16,10 @@ class Settings(BaseSettings):
     DEFAULT_LLM_PROVIDER: str = "auto"
     DEFAULT_SEARCH_PROVIDER: str = "mock"
     OLLAMA_URL: str = ""
-    OLLAMA_MODEL: str = "llama3.2"
+    OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
+    OLLAMA_MODEL: str = "qwen3:14b"
+    OLLAMA_FALLBACK_MODEL: str = "qwen3:8b"
+    OLLAMA_TIMEOUT_SECONDS: int = 180
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o-mini"
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"

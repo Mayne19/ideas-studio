@@ -267,6 +267,7 @@ class GenerationReport:
     sources_used: list[str] = field(default_factory=list)
     tools_used: list[str] = field(default_factory=list)
     tools_not_configured: list[str] = field(default_factory=list)
+    adapters_status: dict = field(default_factory=dict)
     word_count: int = 0
     reading_time_minutes: int = 0
     steps_completed: list[str] = field(default_factory=list)

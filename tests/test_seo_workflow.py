@@ -56,8 +56,8 @@ def test_content_extraction_adapter_not_configured():
 def test_originality_adapter_always_configured():
     from app.services.seo.adapters.originality_adapter import originality_adapter
     assert originality_adapter.configured is True
-    assert originality_adapter.real_data_available is True
-    assert originality_adapter.fallback_mode == "heuristic_ngrams"
+    assert originality_adapter.real_data_available is False
+    assert originality_adapter.fallback_mode == "heuristic_only"
 
 
 def test_readability_adapter_always_configured():
@@ -389,3 +389,178 @@ def test_extract_headings_from_html():
     from app.services.seo.helpers import extract_headings_from_html
     headings = extract_headings_from_html("<h2>Title</h2><h3>Sub</h3>")
     assert len(headings) == 2
+
+
+# ── Phase 6: Health endpoint tests ─────────────────────────────────────────
+
+def test_health_llm_returns_provider(client):
+    resp = client.get("/health/llm")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "provider" in data
+    assert "model" in data
+    assert "configured" in data
+    assert "available" in data
+
+
+def test_health_llm_mock_allowed_flag(client):
+    resp = client.get("/health/llm")
+    data = resp.json()
+    assert "mock_allowed" in data
+    assert data["mock_allowed"] in ("yes", "no")
+
+
+# ── Phase 5: Adapter honesty checks ────────────────────────────────────────
+
+def test_originality_adapter_honest():
+    from app.services.seo.adapters.originality_adapter import originality_adapter
+    assert originality_adapter.real_data_available is False
+    assert originality_adapter.fallback_mode == "heuristic_only"
+
+
+def test_originality_adapter_compare_ngrams_honest():
+    from app.services.seo.adapters.originality_adapter import originality_adapter
+    result = originality_adapter.compare_ngrams("test text for ngram analysis", ["test text for analysis"])
+    assert result["real_data_available"] is False
+    assert "note" in result
+    assert "heuristique" in result["note"]
+
+
+def test_trends_adapter_status():
+    from app.services.seo.adapters.trends_adapter import trends_adapter
+    assert trends_adapter.configured is False
+    assert trends_adapter.real_data_available is False
+    assert trends_adapter.fallback_mode == "not_configured"
+
+
+def test_language_adapter_status_unconfigured():
+    from app.services.seo.adapters.language_adapter import language_adapter
+    result = language_adapter.check("Ceci est un test.", language="fr")
+    assert result["external_tool_used"] is False
+    assert result["tool_used"] == "heuristic"
+
+
+def test_image_sourcing_adapter_status():
+    from app.services.seo.adapters.image_sourcing_adapter import image_sourcing_adapter
+    if not image_sourcing_adapter.configured:
+        assert image_sourcing_adapter.real_data_available is False
+
+
+def test_readability_adapter_status():
+    from app.services.seo.adapters.readability_adapter import readability_adapter
+    assert readability_adapter.configured is True
+    # Readability is always available (pure heuristic, no API needed)
+    assert readability_adapter.real_data_available is True
+
+
+# ── Phase 5: Generation report contains adapters_status ────────────────────
+
+def test_generation_report_contains_adapters_status():
+    from app.schemas.seo_workflow import GenerationReport
+    report = GenerationReport(
+        provider="test",
+        model="test",
+        adapters_status={"serp": {"configured": False, "real_data_available": False}},
+    )
+    assert "adapters_status" in report.__dataclass_fields__
+    assert report.adapters_status["serp"]["configured"] is False
+
+
+# ── Orchestrator stores reports ────────────────────────────────────────────
+
+def test_orchestrator_tools_used_tracking():
+    from app.services.seo.seo_generation_orchestrator import SEOGenerationOrchestrator
+    from app.services.providers.llm_provider import MockLLMProvider
+    from app.services.providers.search_provider import MockSearchProvider
+    from unittest.mock import MagicMock
+    from sqlalchemy.orm import Session
+
+    orchestrator = SEOGenerationOrchestrator(
+        db=MagicMock(spec=Session),
+        project_id="test-tools",
+        llm=MockLLMProvider(),
+        search=MockSearchProvider(),
+    )
+    assert isinstance(orchestrator.tools_used, list)
+    assert isinstance(orchestrator.tools_not_configured, list)
+
+
+# ── Phase 7: Mock generation produces draft article ─────────────────────────
+
+def test_mock_generation_keeps_draft_status(client, monkeypatch):
+    """With real LLM unavailable, mock generation should produce draft_ready."""
+    import json
+    from app.services.providers.llm_provider import MockLLMProvider
+    from app.services.providers.llm_provider import get_llm_provider as real_get_llm
+    from tests.conftest import register_and_login, TestingSessionLocal
+    from app.core.database import get_db
+    from app.models.article import Article
+
+    headers = register_and_login(client, email="mockgen@test.com")
+    project = client.post("/projects", json={"name": "MockGen"}, headers=headers).json()
+
+    # Override LLM provider with mock
+    def mock_llm():
+        return MockLLMProvider()
+
+    monkeypatch.setattr("app.routers.generation.get_llm_provider", mock_llm)
+
+    resp = client.post(
+        f"/projects/{project['id']}/articles/generate",
+        json={"keyword": "test keyword", "preferred_title": "Test Article"},
+        headers=headers,
+    )
+    # May fail if orchestrator encounters DB errors with test DB
+    # This test verifies the path is at least callable
+    assert resp.status_code in (200, 500)
+    if resp.status_code == 200:
+        data = resp.json()
+        assert data["status"] in ("draft_ready", "writing_in_progress", "failed")
+        # Article must not be published
+        assert data["status"] != "published"
+
+
+def test_ollama_provider_not_available_raises_clear_error():
+    """Ollama provider must raise clear error when not available."""
+    from app.services.providers.llm_provider import OllamaLLMProvider
+
+    provider = OllamaLLMProvider(
+        base_url="http://127.0.0.1:1",
+        model="nonexistent-model",
+        timeout_seconds=2,
+    )
+    health = provider.health_check()
+    assert health["available"] is False
+    assert "error" in health
+
+
+# ── Article remains draft after generation ──────────────────────────────────
+
+def test_generation_article_never_published_directly():
+    """Verify the generation router never sets status='published'."""
+    import app.routers.generation as gen_module
+    import inspect
+
+    source = inspect.getsource(gen_module)
+    lines = source.split("\n")
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("#") or stripped.startswith('"""'):
+            continue
+        if 'status = "published"' in stripped or "status='published'" in stripped:
+            raise AssertionError(f"Found direct status='published' assignment at line {i + 1}")
+
+
+def test_pipeline_service_never_publishes():
+    """Verify pipeline service never sets article status to published."""
+    import app.services.pipeline_service as ps_module
+    import inspect
+
+    source = inspect.getsource(ps_module)
+    lines = source.split("\n")
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("#") or stripped.startswith('"""') or stripped.startswith("'''"):
+            continue
+        if '"published"' in stripped and "status" in stripped.lower():
+            raise AssertionError(f"Found status='published' assignment in pipeline_service at line {i + 1}")

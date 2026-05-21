@@ -40,6 +40,13 @@ from app.services.seo.seo_final_checklist_service import check_seo_final_dict
 from app.services.seo.seo_review_service import build_aggregated_seo_review, build_review_error_report, run_and_store_seo_review
 from app.services.seo.generation_report_service import build_generation_report_dict
 from app.services.seo.adapters.serp_adapter import serp_adapter
+from app.services.seo.adapters.trends_adapter import trends_adapter
+from app.services.seo.adapters.image_sourcing_adapter import image_sourcing_adapter
+from app.services.seo.adapters.language_adapter import language_adapter
+from app.services.seo.adapters.content_extraction_adapter import content_extraction_adapter
+from app.services.seo.adapters.originality_adapter import originality_adapter as orig_adapter
+from app.services.seo.adapters.readability_adapter import readability_adapter
+from app.services.seo.adapters.google_watch_adapter import google_watch_adapter
 
 
 class SEOGenerationOrchestrator:
@@ -262,6 +269,9 @@ class SEOGenerationOrchestrator:
         article.keyword_brief_json = keyword_brief
         article.editorial_angle_json = editorial_angle
         article.outline_json = safe_json_dump(outline)
+        article.image_plan_json = safe_json_dump(image_plan_result.get("image_plan", {}))
+        article.image_sources_json = safe_json_dump(image_plan_result.get("image_sources", []))
+        article.callout_plan_json = safe_json_dump(callout_plan)
         article.internal_links_json = safe_json_dump(internal_links)
         article.external_links_json = safe_json_dump(external_links)
 
@@ -517,6 +527,16 @@ class SEOGenerationOrchestrator:
         callout_plan: dict,
         image_plan_result: dict,
     ):
+        adapters_status = {}
+        for adapter in (
+            serp_adapter, trends_adapter, image_sourcing_adapter, language_adapter,
+            content_extraction_adapter, orig_adapter, readability_adapter, google_watch_adapter,
+        ):
+            try:
+                adapters_status[adapter.provider_name] = adapter.get_status()
+            except Exception:
+                adapters_status[adapter.provider_name] = {"error": "status_unavailable"}
+
         try:
             report = build_generation_report_dict(
                 provider=self.llm.provider_name,
@@ -540,6 +560,7 @@ class SEOGenerationOrchestrator:
                 sources_used=[s.get("url", "") for s in research_brief.get("sources_consulted", []) if isinstance(s, dict)],
                 tools_used=self.tools_used,
                 tools_not_configured=self.tools_not_configured,
+                adapters_status=adapters_status,
                 word_count=article.word_count,
                 reading_time_minutes=article.reading_time_minutes or 1,
                 steps_completed=self.steps_completed,

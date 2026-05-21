@@ -10,8 +10,8 @@ class OriginalityAdapter:
     configured = True
     requires_api_key = False
     last_error: str | None = None
-    real_data_available = True
-    fallback_mode = "heuristic_ngrams"
+    real_data_available = False
+    fallback_mode = "heuristic_only"
     trust_level = "low"
 
     def compare_ngrams(self, text: str, sources: list[str]) -> dict:
@@ -40,6 +40,8 @@ class OriginalityAdapter:
             "overlap_ratio": round(overlap_ratio, 4),
             "suspicious": suspicious[:20],
             "method": "heuristic_ngrams",
+            "real_data_available": False,
+            "note": "Contrôle originalité heuristique contre sources collectées, pas contrôle web complet.",
         }
 
     def _ngrams(self, text: str, n: int = 4) -> set[str]:
