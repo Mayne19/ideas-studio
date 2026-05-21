@@ -283,7 +283,7 @@ class SEOGenerationOrchestrator:
 
         # 15. Writing
         try:
-            self._generate_content(article, outline, keyword_brief, include_callouts)
+            self._generate_content(article, outline, keyword_brief, include_callouts, include_faq)
         except Exception as exc:
             self._error("Writing", str(exc))
             article.status = "failed"
@@ -398,7 +398,7 @@ class SEOGenerationOrchestrator:
 
         return article
 
-    def _generate_content(self, article: Article, outline: dict, keyword_brief: dict, include_callouts: bool | None):
+    def _generate_content(self, article: Article, outline: dict, keyword_brief: dict, include_callouts: bool | None, include_faq: bool | None = None):
         if self.llm.is_mock:
             article.content = f"<h1>{article.title}</h1><p>Contenu mock pour {article.keyword}</p>"
             article.word_count = calculate_word_count(article.content)

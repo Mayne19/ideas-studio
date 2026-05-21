@@ -107,6 +107,46 @@ def health_llm():
                 "environment": settings.APP_ENV,
             }
 
+    if requested == "gemini":
+        if not settings.GEMINI_API_KEY:
+            return {
+                "provider": "gemini",
+                "model": settings.GEMINI_MODEL,
+                "configured": True,
+                "available": False,
+                "error": "GEMINI_API_KEY non configurée",
+                "mock_allowed": mock_allowed,
+                "environment": settings.APP_ENV,
+            }
+        try:
+            from app.services.providers.gemini_provider import GeminiLLMProvider
+            provider = GeminiLLMProvider(
+                api_key=settings.GEMINI_API_KEY,
+                model=settings.GEMINI_MODEL,
+                base_url=settings.GEMINI_BASE_URL,
+                timeout_seconds=settings.GEMINI_TIMEOUT_SECONDS,
+            )
+            available = provider.is_available()
+            return {
+                "provider": "gemini",
+                "model": settings.GEMINI_MODEL,
+                "configured": True,
+                "available": available,
+                "error": None if available else "Gemini API a retourné une erreur (clé invalide ?)",
+                "mock_allowed": mock_allowed,
+                "environment": settings.APP_ENV,
+            }
+        except Exception as exc:
+            return {
+                "provider": "gemini",
+                "model": settings.GEMINI_MODEL,
+                "configured": True,
+                "available": False,
+                "error": str(exc),
+                "mock_allowed": mock_allowed,
+                "environment": settings.APP_ENV,
+            }
+
     return {
         "provider": requested,
         "model": "",

@@ -254,4 +254,20 @@ def get_llm_provider() -> LLMProvider:
             return p
         return _raise_or_raise("Ollama configuré mais indisponible.")
 
+    if requested == "gemini":
+        if not settings.GEMINI_API_KEY:
+            raise ProviderUnavailableError(
+                "GEMINI_API_KEY non configurée. Ajoute GEMINI_API_KEY dans le .env ou les variables Render."
+            )
+        from app.services.providers.gemini_provider import GeminiLLMProvider
+        provider = GeminiLLMProvider(
+            api_key=settings.GEMINI_API_KEY,
+            model=settings.GEMINI_MODEL,
+            base_url=settings.GEMINI_BASE_URL,
+            timeout_seconds=settings.GEMINI_TIMEOUT_SECONDS,
+        )
+        if provider.is_available():
+            return provider
+        return _raise_or_raise("Gemini configuré mais indisponible (clé invalide ou API saturée).")
+
     return _raise_or_raise(f"Provider '{requested}' non supporté.")

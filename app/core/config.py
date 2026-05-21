@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     OPENROUTER_PLANNER_MODEL: str = "openai/gpt-oss-120b:free"
     OPENROUTER_FALLBACK_MODEL: str = "openrouter/free"
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
+    GEMINI_TIMEOUT_SECONDS: int = 180
     SEARXNG_URL: str = ""
 
     UPLOAD_DIR: str = "uploads"

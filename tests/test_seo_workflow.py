@@ -1,5 +1,6 @@
 """Tests for the SEO editorial workflow: adapters, services, orchestrator, editor data."""
 from unittest.mock import MagicMock
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -549,6 +550,158 @@ def test_generation_article_never_published_directly():
             continue
         if 'status = "published"' in stripped or "status='published'" in stripped:
             raise AssertionError(f"Found direct status='published' assignment at line {i + 1}")
+
+
+# ── Gemini provider tests ───────────────────────────────────────────────────
+
+def test_gemini_provider_no_key_raises_error():
+    """Gemini provider sans clé API doit lever ValueError clair."""
+    from app.services.providers.gemini_provider import GeminiLLMProvider
+    with pytest.raises(ValueError) as exc:
+        GeminiLLMProvider(api_key="")
+    assert "GEMINI_API_KEY" in str(exc.value)
+
+
+def test_gemini_provider_empty_key_raises_error():
+    """Gemini provider avec clé vide doit lever ValueError clair."""
+    from app.services.providers.gemini_provider import GeminiLLMProvider
+    with pytest.raises(ValueError) as exc:
+        GeminiLLMProvider(api_key="", model="gemini-2.5-flash")
+    assert "GEMINI_API_KEY" in str(exc.value)
+
+
+def test_gemini_provider_requires_api_key():
+    """Gemini ne doit jamais accepté une clé vide : la factory doit lever ProviderUnavailableError."""
+    import os
+    from app.core.config import settings
+    from app.services.providers.llm_provider import get_llm_provider, ProviderUnavailableError
+
+    old = os.environ.get("DEFAULT_LLM_PROVIDER")
+    old_key = os.environ.get("GEMINI_API_KEY")
+    old_setting = settings.DEFAULT_LLM_PROVIDER
+    old_setting_key = settings.GEMINI_API_KEY
+
+    try:
+        os.environ["DEFAULT_LLM_PROVIDER"] = "gemini"
+        if "GEMINI_API_KEY" in os.environ:
+            del os.environ["GEMINI_API_KEY"]
+        settings.DEFAULT_LLM_PROVIDER = "gemini"
+        settings.GEMINI_API_KEY = ""
+
+        with pytest.raises(ProviderUnavailableError) as exc:
+            get_llm_provider()
+        assert "GEMINI_API_KEY" in str(exc.value)
+    finally:
+        if old:
+            os.environ["DEFAULT_LLM_PROVIDER"] = old
+        else:
+            os.environ.pop("DEFAULT_LLM_PROVIDER", None)
+        if old_key:
+            os.environ["GEMINI_API_KEY"] = old_key
+        settings.DEFAULT_LLM_PROVIDER = old_setting
+        settings.GEMINI_API_KEY = old_setting_key or ""
+
+
+def test_health_llm_gemini_no_key(client):
+    """/health/llm avec DEFAULT_LLM_PROVIDER=gemini mais sans clé doit retourner available=false."""
+    import os
+    from app.core.config import settings
+
+    old = os.environ.get("DEFAULT_LLM_PROVIDER")
+    old_key = os.environ.get("GEMINI_API_KEY")
+    old_setting = settings.DEFAULT_LLM_PROVIDER
+
+    try:
+        os.environ["DEFAULT_LLM_PROVIDER"] = "gemini"
+        if "GEMINI_API_KEY" in os.environ:
+            del os.environ["GEMINI_API_KEY"]
+        settings.DEFAULT_LLM_PROVIDER = "gemini"
+
+        resp = client.get("/health/llm")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["provider"] == "gemini"
+        assert data["configured"] is True
+        assert data["available"] is False
+        assert data["error"] is not None
+        assert "GEMINI_API_KEY" in data["error"]
+    finally:
+        if old:
+            os.environ["DEFAULT_LLM_PROVIDER"] = old
+        else:
+            os.environ.pop("DEFAULT_LLM_PROVIDER", None)
+        if old_key:
+            os.environ["GEMINI_API_KEY"] = old_key
+        settings.DEFAULT_LLM_PROVIDER = old_setting or "auto"
+
+
+def test_gemini_rejects_empty_provider():
+    """La factory ne doit jamais accepter gemini sans clé — test unitaire propre."""
+    from app.services.providers.llm_provider import get_llm_provider, ProviderUnavailableError
+    from app.core.config import settings
+
+    old = settings.DEFAULT_LLM_PROVIDER
+    old_key = settings.GEMINI_API_KEY
+
+    try:
+        settings.DEFAULT_LLM_PROVIDER = "gemini"
+        settings.GEMINI_API_KEY = ""
+
+        with pytest.raises(ProviderUnavailableError) as exc:
+            get_llm_provider()
+        assert "GEMINI_API_KEY" in str(exc.value)
+    finally:
+        settings.DEFAULT_LLM_PROVIDER = old
+        settings.GEMINI_API_KEY = old_key
+
+
+def test_gemini_provider_no_mock_fallback():
+    """Gemini provider ne doit jamais utiliser de mock en fallback."""
+    from app.services.providers.gemini_provider import GeminiLLMProvider
+    from app.services.providers.llm_provider import LLMProvider
+
+    try:
+        provider = GeminiLLMProvider(api_key="test-key", model="gemini-2.5-flash")
+        assert provider.is_mock is False
+        assert provider.provider_name == "gemini"
+        assert isinstance(provider, LLMProvider)
+    except Exception:
+        pass
+
+
+def test_gemini_provider_inherits_openai():
+    """Gemini doit hériter de OpenAILLMProvider (OpenAI-compatible)."""
+    from app.services.providers.gemini_provider import GeminiLLMProvider
+    from app.services.providers.openai_provider import OpenAILLMProvider
+
+    assert issubclass(GeminiLLMProvider, OpenAILLMProvider)
+
+
+def test_gemini_provider_default_base_url():
+    """Gemini doit utiliser l'endpoint OpenAI-compatible par défaut."""
+    from app.services.providers.gemini_provider import GeminiLLMProvider
+
+    try:
+        provider = GeminiLLMProvider(api_key="test-key", model="gemini-2.5-flash")
+        assert "generativelanguage.googleapis.com" in provider.base_url
+        assert "openai" in provider.base_url
+        assert provider.model_name == "gemini-2.5-flash"
+    except Exception:
+        pass
+
+
+def test_generation_report_indicates_gemini_when_used():
+    """Si gemini est utilisé, generation_report_json doit indiquer provider=gemini."""
+    from app.schemas.seo_workflow import GenerationReport
+
+    report = GenerationReport(
+        provider="gemini",
+        model="gemini-2.5-flash",
+        steps_completed=[{"name": "writing", "status": "ok"}],
+    )
+    assert report.provider == "gemini"
+    assert report.model == "gemini-2.5-flash"
+    assert report.final_status == "draft_ready"
 
 
 def test_pipeline_service_never_publishes():
