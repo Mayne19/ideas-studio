@@ -40,20 +40,7 @@ export type SyncCalloutsResult = {
 }
 
 export async function syncCalloutTemplates(projectId: string): Promise<SyncCalloutsResult> {
-  const res = await fetch(`${import.meta.env['VITE_API_URL']}/projects/${projectId}/callouts/sync`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-  })
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({})) as { detail?: string }
-    throw new Error(data.detail || `Erreur ${res.status}`)
-  }
-
-  const callouts: CalloutTemplate[] = await res.json()
-  const message = res.headers.get('X-Sync-Message') || `${callouts.length} callout(s) synchronise(s).`
+  const callouts = await api.post<CalloutTemplate[]>(`/projects/${projectId}/callouts/sync`)
+  const message = `${callouts.length} callout(s) synchronise(s).`
   return { callouts, message }
 }

@@ -3,6 +3,7 @@ export type User = {
   username: string | null
   name: string
   email: string
+  avatar_url: string | null
   created_at: string
 }
 
@@ -23,7 +24,20 @@ export type Project = {
   updated_at: string
 }
 
-export type ProjectRole = 'owner' | 'admin' | 'editor' | 'writer' | 'designer' | 'viewer'
+export type ProjectRole = 'owner' | 'admin' | 'editor' | 'writer' | 'viewer'
+
+export type ActivityLog = {
+  id: string
+  project_id: string
+  user_id: string
+  user_name: string | null
+  action: string
+  resource_type: string | null
+  resource_id: string | null
+  description: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+}
 
 export type ProjectMember = {
   id: string

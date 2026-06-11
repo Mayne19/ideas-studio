@@ -21,3 +21,36 @@ export type KeywordOpportunitiesResponse = {
 export function getKeywordOpportunities(projectId: string): Promise<KeywordOpportunitiesResponse> {
   return api.get<KeywordOpportunitiesResponse>(`/projects/${projectId}/search-console/keywords`)
 }
+
+export type SearchConsoleStatus = {
+  connected: boolean
+  message: string | null
+}
+
+export type SearchConsolePage = {
+  url: string
+  clicks: number
+  impressions: number
+  ctr: number
+  position: number
+}
+
+export type SearchConsolePerformance = {
+  clicks: number
+  impressions: number
+  ctr: number
+  position: number
+  date: string
+}
+
+export function getSearchConsoleStatus(projectId: string): Promise<SearchConsoleStatus> {
+  return api.get<SearchConsoleStatus>(`/projects/${projectId}/search-console/status`)
+}
+
+export function getSearchConsolePages(projectId: string): Promise<SearchConsolePage[]> {
+  return api.get<SearchConsolePage[]>(`/projects/${projectId}/search-console/pages`)
+}
+
+export function getSearchConsolePerformance(projectId: string): Promise<SearchConsolePerformance[]> {
+  return api.get<SearchConsolePerformance[]>(`/projects/${projectId}/search-console/performance`)
+}

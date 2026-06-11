@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from alembic.config import Config
 from alembic import command
 from app.core.config import settings
-from app.routers import auth, projects, health, categories, articles, public_api, tracking, ideas, seo, performance, recommendations, notifications, members, editor, versions, media, invitations, editorial_setup, callouts, pipeline, generation, comments, search, search_console, profile, ai_providers, activity, webhooks
+from app.routers import auth, projects, health, categories, articles, public_api, tracking, ideas, seo, performance, recommendations, notifications, members, editor, versions, media, invitations, editorial_setup, callouts, pipeline, generation, comments, search, search_console, profile, ai_providers, activity, webhooks, kanban_columns
 
 logging.basicConfig(
     level=logging.INFO,
@@ -65,3 +65,4 @@ app.include_router(search_console.router)
 app.include_router(ai_providers.router)
 app.include_router(activity.router)
 app.include_router(webhooks.router)
+app.include_router(kanban_columns.router)

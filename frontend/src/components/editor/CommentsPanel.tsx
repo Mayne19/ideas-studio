@@ -143,7 +143,7 @@ export default function CommentsPanel({
       await onResolve(id, resolved)
       return
     }
-    const updated = await resolveComment(id, resolved)
+    const updated = await resolveComment(articleId, id, resolved)
     setLocalComments((prev) => prev.map((c) => c.id === id ? updated : c))
   }
 
@@ -152,7 +152,7 @@ export default function CommentsPanel({
       await onDelete(id)
       return
     }
-    await deleteComment(id)
+    await deleteComment(articleId, id)
     setLocalComments((prev) => prev.filter((c) => c.id !== id))
   }
 

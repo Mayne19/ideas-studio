@@ -12,3 +12,7 @@ export function markNotificationRead(notificationId: string): Promise<Notificati
 export function markAllNotificationsRead(projectId: string): Promise<{ marked_read: number }> {
   return api.post<{ marked_read: number }>(`/projects/${projectId}/notifications/read-all`)
 }
+
+export function deleteNotification(notificationId: string): Promise<void> {
+  return api.delete(`/notifications/${notificationId}`)
+}

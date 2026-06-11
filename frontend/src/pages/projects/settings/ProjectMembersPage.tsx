@@ -9,7 +9,7 @@ import {
   FilePenLine,
   Link,
   Mail,
-  Palette,
+
   PenLine,
   Shield,
   Trash2,
@@ -17,7 +17,8 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { listMembers, addMemberByUsername, inviteByEmail, updateMemberRole, removeMember, listInvitations } from '@/api/members'
-import type { Invitation, ProjectMember, ProjectRole } from '@/types'
+import { listActivity } from '@/api/activity'
+import type { Invitation, ProjectMember, ProjectRole, ActivityLog } from '@/types'
 import { useAuth } from '@/context/AuthContext'
 import { useProject } from '@/context/ProjectContext'
 import FormCard from '@/components/ui/FormCard'
@@ -31,6 +32,7 @@ import RoleBadge from '@/components/ui/RoleBadge'
 import ErrorState from '@/components/ui/ErrorState'
 import EmptyState from '@/components/ui/EmptyState'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { formatDate } from '@/utils/format'
 
 const ASSIGNABLE_ROLES = [
   { value: 'admin', label: 'Administrateur' },
@@ -42,26 +44,22 @@ const ASSIGNABLE_ROLES = [
 const ROLE_GUIDE: Array<{
   role: ProjectRole
   title: string
-  backendReady: boolean
   icon: LucideIcon
   permissions: string[]
 }> = [
   {
     role: 'owner',
     title: 'Owner',
-    backendReady: true,
     icon: Crown,
     permissions: [
       'Contrôle total du projet',
       'Peut supprimer le projet',
-      'Gère le billing',
       'Gère tous les membres',
     ],
   },
   {
     role: 'admin',
     title: 'Admin',
-    backendReady: true,
     icon: Shield,
     permissions: [
       'Gère le projet',
@@ -73,51 +71,31 @@ const ROLE_GUIDE: Array<{
   {
     role: 'editor',
     title: 'Editor',
-    backendReady: true,
     icon: FilePenLine,
     permissions: [
       'Corrige les contenus',
       'Modifie tous les articles',
       'Valide et marque prêt',
-      'Ne publie pas en V1',
     ],
   },
   {
     role: 'writer',
     title: 'Writer',
-    backendReady: true,
     icon: PenLine,
     permissions: [
       'Crée des brouillons',
       'Écrit du contenu',
       'Modifie ses brouillons',
       'Envoie en relecture',
-      'Ne publie pas',
-    ],
-  },
-  {
-    role: 'designer',
-    title: 'Designer',
-    backendReady: false,
-    icon: Palette,
-    permissions: [
-      'Accès médias',
-      'Upload images',
-      'Image de couverture',
-      'Visuels et bannières',
-      'Ne publie pas',
-      'Ne modifie pas forcément le texte',
     ],
   },
   {
     role: 'viewer',
     title: 'Viewer',
-    backendReady: true,
     icon: Eye,
     permissions: [
       'Lecture seule',
       'Consulte articles et analyses',
-      'Ne modifie pas le projet',
     ],
   },
 ]
@@ -185,6 +163,8 @@ export default function ProjectMembersPage() {
   const [members, setMembers] = useState<ProjectMember[]>([])
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [invitations, setInvitations] = useState<Invitation[]>([])
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([])
+  const [activityStatus, setActivityStatus] = useState<'loading' | 'success' | 'error'>('loading')
 
   // Add member by username
   const [addOpen, setAddOpen] = useState(false)
@@ -227,6 +207,9 @@ export default function ProjectMembersPage() {
       .then((data) => { setMembers(data); setStatus('success') })
       .catch(() => setStatus('error'))
     listInvitations(projectId).then(setInvitations).catch(() => {})
+    listActivity(projectId)
+      .then((data) => { setActivityLogs(data); setActivityStatus('success') })
+      .catch(() => setActivityStatus('error'))
   }, [projectId])
 
   async function handleAdd(e: React.FormEvent) {
@@ -417,14 +400,7 @@ export default function ProjectMembersPage() {
                     </span>
                     <p className="text-[13px] font-semibold text-primary">{item.title}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <RoleBadge role={item.role} />
-                    {!item.backendReady && (
-                      <span className="rounded-full bg-[#f0f0f2] px-2 py-0.5 text-[10px] font-medium text-tertiary">
-                        Bientôt disponible
-                      </span>
-                    )}
-                  </div>
+                  <RoleBadge role={item.role} />
                 </div>
                 <ul className="mt-2 flex flex-col gap-1">
                   {item.permissions.map((permission) => (
@@ -433,11 +409,6 @@ export default function ProjectMembersPage() {
                     </li>
                   ))}
                 </ul>
-                {!item.backendReady && (
-                  <p className="mt-2 text-[11px] leading-snug text-tertiary">
-                    Designer est documenté dans l'UI, mais n'est pas encore assignable côté API.
-                  </p>
-                )}
               </div>
             )
           })}
@@ -448,17 +419,57 @@ export default function ProjectMembersPage() {
         title="Activité équipe"
         description="Suivez qui a modifié quoi, ajouté une image ou travaillé sur un article."
       >
-        <div className="flex items-start gap-3 rounded-[16px] bg-[#f9f9fb] px-4 py-4">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-[#f0f0f2] text-tertiary">
-            <Activity size={16} />
-          </span>
-          <div>
-            <p className="text-[13px] font-medium text-primary">Activité équipe bientôt disponible</p>
-            <p className="mt-0.5 text-[12px] leading-relaxed text-secondary">
-              Le backend ne fournit pas encore de journal d'activité membre. Aucun faux événement n'est affiché.
-            </p>
+        {activityStatus === 'loading' && (
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full rounded-[10px]" />
+            ))}
           </div>
-        </div>
+        )}
+        {activityStatus === 'error' && (
+          <div className="flex items-start gap-3 rounded-[16px] bg-[#f9f9fb] px-4 py-4">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-[#f0f0f2] text-tertiary">
+              <Activity size={16} />
+            </span>
+            <div>
+              <p className="text-[13px] font-medium text-primary">Aucune activité récente</p>
+              <p className="mt-0.5 text-[12px] leading-relaxed text-secondary">
+                Les actions de l'équipe apparaîtront ici au fur et à mesure.
+              </p>
+            </div>
+          </div>
+        )}
+        {activityStatus === 'success' && activityLogs.length === 0 && (
+          <div className="flex items-start gap-3 rounded-[16px] bg-[#f9f9fb] px-4 py-4">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-[#f0f0f2] text-tertiary">
+              <Activity size={16} />
+            </span>
+            <div>
+              <p className="text-[13px] font-medium text-primary">Aucune activité récente</p>
+              <p className="mt-0.5 text-[12px] leading-relaxed text-secondary">
+                Les actions de l'équipe apparaîtront ici au fur et à mesure.
+              </p>
+            </div>
+          </div>
+        )}
+        {activityStatus === 'success' && activityLogs.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            {activityLogs.map((log) => (
+              <div key={log.id} className="flex items-start gap-3 rounded-[10px] bg-[#f9f9fb] px-3 py-2.5">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent text-[9px] font-bold">
+                  {(log.user_name || '?').charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] text-primary">
+                    <span className="font-medium">{log.user_name || 'Quelqu\'un'}</span>
+                    {' '}{log.description || log.action}
+                  </p>
+                  <p className="text-[10px] text-tertiary mt-0.5">{formatDate(log.created_at)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </FormCard>
 
       {/* Add member modal */}

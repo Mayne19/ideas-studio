@@ -22,6 +22,7 @@ import {
   scheduleArticle, patchArticle,
 } from '@/api/articles'
 import { listCategories } from '@/api/categories'
+import { listKanbanColumns, createKanbanColumn, deleteKanbanColumn } from '@/api/kanbanColumns'
 import type { Article, ArticleStatus, Category } from '@/types'
 import { formatDate } from '@/utils/format'
 import LoadingState from '@/components/ui/LoadingState'
@@ -96,10 +97,6 @@ function getUsefulDate(article: Article): { label: string; value: string } {
   if (article.scheduled_at) return { label: 'Planifié', value: article.scheduled_at }
   if (article.updated_at) return { label: 'Maj', value: article.updated_at }
   return { label: 'Créé', value: article.created_at }
-}
-
-function customColumnsStorageKey(projectId: string): string {
-  return `ideas-studio:kanban-custom-columns:${projectId}`
 }
 
 function fallbackColumnLabel(status: string): string {
@@ -235,6 +232,7 @@ function KanbanColumn({
   onEdit,
   onAction,
   onAddArticle,
+  onRemoveColumn,
 }: {
   column: ColumnDef
   articles: Article[]
@@ -242,6 +240,7 @@ function KanbanColumn({
   onEdit: (a: Article) => void
   onAction: (key: string, a: Article) => void
   onAddArticle: (status: string) => void
+  onRemoveColumn?: (status: string) => void
 }) {
   const articleIds = articles.map((a) => a.id)
   const { setNodeRef, isOver } = useDroppable({ id: column.status })
@@ -252,7 +251,16 @@ function KanbanColumn({
       <div className="relative mb-3 flex items-center gap-2 rounded-t-[14px] px-1 py-2 shadow-[0_18px_26px_-26px_rgba(15,23,42,0.45)] after:absolute after:bottom-[-10px] after:left-0 after:right-0 after:h-3 after:bg-gradient-to-b after:from-black/[0.035] after:to-transparent after:content-['']">
         <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: column.color }} />
         <span className="text-[12px] font-semibold text-primary">{column.label}</span>
-        <span className="ml-auto text-[11px] text-tertiary bg-[#f0f0f2] rounded-full px-1.5 py-0.5">
+        {column.custom && onRemoveColumn && (
+          <button
+            onClick={() => onRemoveColumn(column.status)}
+            className="ml-1 flex h-4 w-4 items-center justify-center rounded-[4px] text-tertiary hover:bg-danger/10 hover:text-danger transition-colors"
+            title="Supprimer cette colonne"
+          >
+            ✕
+          </button>
+        )}
+        <span className="text-[11px] text-tertiary bg-[#f0f0f2] rounded-full px-1.5 py-0.5">
           {articles.length}
         </span>
       </div>
@@ -300,6 +308,7 @@ export default function KanbanPage() {
   const [tick, setTick] = useState(0)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [customColumns, setCustomColumns] = useState<ColumnDef[]>([])
+  const [customColumnIds, setCustomColumnIds] = useState<Map<string, string>>(new Map())
   const [columnModalOpen, setColumnModalOpen] = useState(false)
   const [newColumnName, setNewColumnName] = useState('')
 
@@ -326,25 +335,18 @@ export default function KanbanPage() {
 
   useEffect(() => {
     if (!projectId) return
-    let active = true
-    try {
-      const raw = window.localStorage.getItem(customColumnsStorageKey(projectId))
-      const parsed = raw ? JSON.parse(raw) : []
-      let nextColumns: ColumnDef[] = []
-      if (Array.isArray(parsed)) {
-        nextColumns = parsed.filter((column): column is ColumnDef =>
-          column &&
-          typeof column === 'object' &&
-          typeof column.status === 'string' &&
-          typeof column.label === 'string' &&
-          typeof column.color === 'string'
-        )
-      }
-      Promise.resolve().then(() => { if (active) setCustomColumns(nextColumns) })
-    } catch {
-      Promise.resolve().then(() => { if (active) setCustomColumns([]) })
-    }
-    return () => { active = false }
+    let cancelled = false
+    listKanbanColumns(projectId).then((cols) => {
+      if (cancelled) return
+      const idMap = new Map<string, string>()
+      const defs: ColumnDef[] = cols.map((c) => {
+        idMap.set(c.status, c.id)
+        return { status: c.status, label: c.label, color: c.color, custom: true }
+      })
+      setCustomColumns(defs)
+      setCustomColumnIds(idMap)
+    }).catch(() => {})
+    return () => { cancelled = true }
   }, [projectId])
 
   useEffect(() => {
@@ -401,17 +403,41 @@ export default function KanbanPage() {
     if (!projectId) return
     const label = newColumnName.trim()
     if (!label) return
-    const column: ColumnDef = {
-      status: `custom_${Date.now()}`,
-      label,
-      color: '#007aff',
-      custom: true,
-    }
-    const next = [...customColumns, column]
-    setCustomColumns(next)
-    window.localStorage.setItem(customColumnsStorageKey(projectId), JSON.stringify(next))
+    createKanbanColumn(projectId, { label }).then((col) => {
+      setCustomColumnIds((prev) => { const m = new Map(prev); m.set(col.status, col.id); return m })
+      setCustomColumns((prev) => [...prev, {
+        status: col.status,
+        label: col.label,
+        color: col.color,
+        custom: true,
+      }])
+    }).catch((err) => {
+      setActionError(err instanceof Error ? err.message : "Erreur lors de la création de la colonne.")
+    })
     setNewColumnName('')
     setColumnModalOpen(false)
+  }
+
+  async function handleRemoveColumn(status: string) {
+    if (!projectId) return
+    const colId = customColumnIds.get(status)
+    if (!colId) return
+    setCustomColumns((prev) => prev.filter((c) => c.status !== status))
+    setCustomColumnIds((prev) => { const m = new Map(prev); m.delete(status); return m })
+    try {
+      await deleteKanbanColumn(colId)
+    } catch {
+      // Revert on error
+      listKanbanColumns(projectId).then((cols) => {
+        const idMap = new Map<string, string>()
+        const defs: ColumnDef[] = cols.map((c) => {
+          idMap.set(c.status, c.id)
+          return { status: c.status, label: c.label, color: c.color, custom: true }
+        })
+        setCustomColumns(defs)
+        setCustomColumnIds(idMap)
+      })
+    }
   }
 
   function handleAddArticle(status: string) {
@@ -549,6 +575,7 @@ export default function KanbanPage() {
                 onEdit={(a) => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
                 onAction={handleAction}
                 onAddArticle={handleAddArticle}
+                onRemoveColumn={col.custom ? handleRemoveColumn : undefined}
               />
             ))}
           </div>
@@ -586,7 +613,7 @@ export default function KanbanPage() {
               autoFocus
             />
             <p className="text-[11px] leading-snug text-tertiary">
-              La colonne est ajoutée au Kanban de ce projet sur ce navigateur. Les cartes déplacées dans cette colonne sont enregistrées avec ce statut.
+              La colonne est partagée avec toute l'équipe du projet. Les cartes déplacées dans cette colonne sont enregistrées avec ce statut.
             </p>
           </div>
           <div className="flex gap-2 pt-1">

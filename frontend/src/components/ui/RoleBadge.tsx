@@ -7,7 +7,6 @@ const ROLE_LABELS: Record<ProjectRole, string> = {
   admin:  'Administrateur',
   editor: 'Éditeur',
   writer: 'Rédacteur',
-  designer: 'Designer',
   viewer: 'Lecteur',
 }
 
@@ -16,7 +15,6 @@ const ROLE_COLORS: Record<ProjectRole, RoleBadgeVariant> = {
   admin:  'blue',
   editor: 'green',
   writer: 'orange',
-  designer: 'pink',
   viewer: 'gray',
 }
 

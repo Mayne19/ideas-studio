@@ -21,6 +21,11 @@ from app.models import pipeline  # noqa: F401
 from app.models import pipeline_log  # noqa: F401
 from app.models import article_version  # noqa: F401
 from app.models import media_asset  # noqa: F401
+from app.models import webhook  # noqa: F401
+from app.models import activity_log  # noqa: F401
+from app.models import ai_provider_config  # noqa: F401
+from app.models import article_comment  # noqa: F401
+from app.models import kanban_column  # noqa: F401
 
 config = context.config
 database_url = settings.DATABASE_URL.replace("%", "%%")

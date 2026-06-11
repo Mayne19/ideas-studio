@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Save, Info, Sparkles } from 'lucide-react'
+import { Save, Sparkles } from 'lucide-react'
 import { getProject, updateProject } from '@/api/projects'
 import type { Project } from '@/types'
 import Input from '@/components/ui/Input'
@@ -108,25 +108,7 @@ export default function ProjectStrategyPage() {
         />
       </div>
 
-      {/* Planned fields — coming soon */}
-      <div className="rounded-[22px] bg-[#fafafa] p-5 flex flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <p className="text-[12px] font-semibold text-secondary uppercase tracking-wide">Stratégie avancée</p>
-          <span className="rounded-full bg-[#f0f0f2] px-2 py-0.5 text-[10px] font-medium text-tertiary">Bientôt</span>
-        </div>
-        <div className="flex items-start gap-2">
-          <Info size={13} className="mt-0.5 shrink-0 text-tertiary" />
-          <p className="text-[12px] text-secondary leading-snug">
-            Les champs suivants seront disponibles prochainement : concurrents analysés, sujets prioritaires,
-            sujets à éviter, objectifs de trafic, fréquence cible de publication.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 gap-3 opacity-40 pointer-events-none">
-          <Input label="Concurrents (séparés par des virgules)" placeholder="blog1.com, blog2.com" disabled />
-          <Input label="Sujets prioritaires" placeholder="SEO technique, performances Web, Core Web Vitals" disabled />
-          <Input label="Sujets à éviter" placeholder="Politique, actualités hors domaine" disabled />
-        </div>
-      </div>
+
 
       <div className="flex items-center gap-3">
         <Button type="submit" size="sm" loading={saving} icon={<Save size={13} />}>

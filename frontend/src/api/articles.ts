@@ -100,19 +100,4 @@ export function generateArticle(projectId: string, payload: GenerateArticleReque
   return api.post<GenerateArticleResponse>(`/projects/${projectId}/articles/generate`, payload)
 }
 
-export type AutoGenerateIdeasResponse = {
-  ideas: Array<{
-    id: string
-    title: string
-    keyword: string | null
-    angle: string | null
-    search_intent: string | null
-    audience: string | null
-    opportunity_score: number | null
-  }>
-  generated: number
-}
 
-export function autoGenerateIdeas(projectId: string, count: number = 3, context_hint?: string | null): Promise<AutoGenerateIdeasResponse> {
-  return api.post<AutoGenerateIdeasResponse>(`/projects/${projectId}/ideas/auto-generate`, { count, context_hint })
-}

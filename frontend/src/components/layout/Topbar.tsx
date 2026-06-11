@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronRight, LogOut, User, Bell, Search, Sun, Moon } from 'lucide-react'
+import { ChevronRight, LogOut, User, Bell, Search, Sun, Moon, FileText, FolderOpen, Loader2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useTheme } from '@/context/ThemeContext'
 import { useProject } from '@/context/ProjectContext'
+import { globalSearch, type SearchResult } from '@/api/search'
 import { cn } from '@/utils/cn'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 
@@ -16,11 +17,15 @@ export default function Topbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [searching, setSearching] = useState(false)
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const notifRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLDivElement>(null)
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -43,6 +48,37 @@ export default function Topbar() {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [notifOpen])
+
+  useEffect(() => {
+    if (!searchFocused) {
+      const timer = setTimeout(() => {
+        setSearchQuery('')
+        setSearchResults([])
+      }, 0)
+      return () => clearTimeout(timer)
+    }
+  }, [searchFocused])
+
+  async function handleSearchInput(value: string) {
+    setSearchQuery(value)
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    if (!value.trim()) {
+      setSearchResults([])
+      setSearching(false)
+      return
+    }
+    searchTimerRef.current = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const results = await globalSearch(value.trim())
+        setSearchResults(results)
+      } catch {
+        setSearchResults([])
+      } finally {
+        setSearching(false)
+      }
+    }, 300)
+  }
 
   async function handleLogout() {
     setLoggingOut(true)
@@ -96,14 +132,43 @@ export default function Topbar() {
               <input
                 type="text"
                 placeholder="Rechercher…"
+                value={searchQuery}
+                onChange={(e) => handleSearchInput(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
-                onBlur={() => setTimeout(() => setSearchFocused(false), 100)}
+                onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
                 className="rounded-[10px] border border-border bg-[#f0f0f2] pl-7 pr-3 py-1.5 text-[13px] placeholder:text-tertiary focus:outline-none focus:ring-1 focus:ring-accent/30 focus:border-accent/50 w-44 transition-all focus:w-56"
               />
             </div>
-            {searchFocused && (
-              <div className="absolute right-0 top-10 z-50 w-64 rounded-[16px] border border-border bg-surface p-4 shadow-float">
-                <p className="text-[12px] text-tertiary text-center">Recherche globale bientôt disponible</p>
+            {searchFocused && searchQuery && (
+              <div className="absolute right-0 top-10 z-50 w-80 rounded-[16px] border border-border bg-surface p-2 shadow-float">
+                {searching ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 size={16} className="animate-spin text-tertiary" />
+                  </div>
+                ) : searchResults.length === 0 ? (
+                  <p className="py-4 text-center text-[12px] text-tertiary">Aucun résultat</p>
+                ) : (
+                  <div className="flex flex-col gap-0.5">
+                    {searchResults.map((result) => (
+                      <Link
+                        key={`${result.type}-${result.id}`}
+                        to={result.url}
+                        className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 hover:bg-[#f0f0f2] transition-colors"
+                        onClick={() => setSearchFocused(false)}
+                      >
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] bg-accent/10 text-accent">
+                          {result.type === 'article' ? <FileText size={13} /> : <FolderOpen size={13} />}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[13px] font-medium text-primary truncate">{result.title}</p>
+                          {result.subtitle && (
+                            <p className="text-[11px] text-tertiary truncate">{result.subtitle}</p>
+                          )}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -135,7 +200,7 @@ export default function Topbar() {
                 <div className="flex flex-col items-center gap-2 py-4 text-center">
                   <Bell size={18} className="text-tertiary opacity-40" />
                   <p className="text-[12px] text-secondary">
-                    Les notifications en temps réel seront disponibles prochainement.
+                    Consultez vos notifications dans la page dédiée.
                   </p>
                 </div>
               </div>

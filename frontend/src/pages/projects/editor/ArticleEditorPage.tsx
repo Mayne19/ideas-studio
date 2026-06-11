@@ -1023,7 +1023,8 @@ export default function ArticleEditorPage() {
   }
 
   async function handleResolveInlineComment(id: string, resolved = true) {
-    const updated = await resolveComment(id, resolved)
+    if (!articleId) return
+    const updated = await resolveComment(articleId, id, resolved)
     setComments((prev) => prev.map((comment) => comment.id === id ? updated : comment))
     if (resolved) {
       removeCommentMark(id)
@@ -1033,7 +1034,8 @@ export default function ArticleEditorPage() {
   }
 
   async function handleDeleteInlineComment(id: string) {
-    await deleteComment(id)
+    if (!articleId) return
+    await deleteComment(articleId, id)
     removeCommentMark(id)
     setComments((prev) => prev.filter((comment) => comment.id !== id))
     setSelectedCommentId(null)

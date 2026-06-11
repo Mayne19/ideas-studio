@@ -53,3 +53,21 @@ export type AutoGenerateIdeasResponse = {
 export function autoGenerateIdeas(projectId: string, count: number = 3, context_hint?: string | null): Promise<AutoGenerateIdeasResponse> {
   return api.post<AutoGenerateIdeasResponse>(`/projects/${projectId}/ideas/auto-generate`, { count, context_hint })
 }
+
+export type DiscoverIdeasResponse = {
+  ideas: Array<{
+    id: string
+    title: string
+    keyword: string | null
+    angle: string | null
+    search_intent: string | null
+    audience: string | null
+    opportunity_score: number | null
+    serp_terms: string[]
+  }>
+  generated: number
+}
+
+export function discoverIdeas(projectId: string, topic: string, count: number = 5): Promise<DiscoverIdeasResponse> {
+  return api.post<DiscoverIdeasResponse>(`/projects/${projectId}/ideas/discover`, { topic, count })
+}

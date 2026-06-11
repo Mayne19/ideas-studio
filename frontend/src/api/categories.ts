@@ -39,20 +39,7 @@ export type SyncResult = {
 }
 
 export async function syncCategories(projectId: string): Promise<SyncResult> {
-  const res = await fetch(`${import.meta.env['VITE_API_URL']}/projects/${projectId}/categories/sync`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('token')}`,
-    },
-  })
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({})) as { detail?: string }
-    throw new Error(data.detail || `Erreur ${res.status}`)
-  }
-
-  const categories: Category[] = await res.json()
-  const message = res.headers.get('X-Sync-Message') || `${categories.length} categorie(s) synchronisee(s).`
+  const categories = await api.post<Category[]>(`/projects/${projectId}/categories/sync`)
+  const message = `${categories.length} categorie(s) synchronisee(s).`
   return { categories, message }
 }

@@ -269,7 +269,7 @@ function KeywordOpportunities() {
     <Card className="h-full">
       <SectionTitle>Mots-clés suivis</SectionTitle>
       <p className="rounded-[12px] bg-[#f9f9fb] px-3 py-3 text-[13px] text-secondary">
-        Données mots-clés bientôt disponibles avec Search Console.
+        Connectez Google Search Console depuis les <a href="/settings/integrations" className="text-accent hover:underline">paramètres du projet</a> pour voir les mots-clés.
       </p>
     </Card>
   )
