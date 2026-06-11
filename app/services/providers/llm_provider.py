@@ -270,4 +270,7 @@ def get_llm_provider() -> LLMProvider:
             return provider
         return _raise_or_raise("Gemini configuré mais indisponible (clé invalide ou API saturée).")
 
+    if requested == "mock":
+        return MockLLMProvider()
+
     return _raise_or_raise(f"Provider '{requested}' non supporté.")

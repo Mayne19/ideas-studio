@@ -68,3 +68,23 @@ def mark_all_notifications_read(
         n.read_at = now
     db.commit()
     return {"marked_read": len(updated)}
+
+
+@router.delete("/notifications/{notification_id}", status_code=204)
+def delete_notification(
+    notification_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    notif = db.query(Notification).filter(Notification.id == notification_id).first()
+    if not notif:
+        raise HTTPException(status_code=404, detail="Notification not found")
+
+    from app.dependencies.auth import get_member_for_project
+    member = get_member_for_project(db, current_user.id, notif.project_id)
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a project member")
+
+    db.delete(notif)
+    db.commit()
+    return None

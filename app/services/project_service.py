@@ -58,6 +58,43 @@ def update_project(db: Session, project: Project, data: ProjectUpdate) -> Projec
     return project
 
 
+def delete_project(db: Session, project: Project) -> None:
+    """Delete a project and all related data."""
+    from app.models.article import Article
+    from app.models.article_version import ArticleVersion
+    from app.models.article_log import ArticleLog
+    from app.models.category import Category
+    from app.models.media_asset import MediaAsset
+    from app.models.notification import Notification
+    from app.models.optimization_recommendation import OptimizationRecommendation
+    from app.models.project_member import ProjectMember
+    from app.models.project_callout_template import ProjectCalloutTemplate
+    from app.models.pipeline import ProjectPipeline
+    from app.models.pipeline_log import PipelineLog
+    from app.models.invitation import Invitation
+    from app.models.traffic_event import TrafficEvent
+    from app.models.seo_analysis import SeoAnalysis
+
+    article_ids = [a.id for a in db.query(Article).filter(Article.project_id == project.id).all()]
+    db.query(ArticleVersion).filter(ArticleVersion.project_id == project.id).delete()
+    db.query(ArticleLog).filter(ArticleLog.project_id == project.id).delete()
+    for aid in article_ids:
+        db.query(SeoAnalysis).filter(SeoAnalysis.article_id == aid).delete()
+    db.query(OptimizationRecommendation).filter(OptimizationRecommendation.project_id == project.id).delete()
+    db.query(Article).filter(Article.project_id == project.id).delete()
+    db.query(MediaAsset).filter(MediaAsset.project_id == project.id).delete()
+    db.query(Category).filter(Category.project_id == project.id).delete()
+    db.query(Notification).filter(Notification.project_id == project.id).delete()
+    db.query(ProjectCalloutTemplate).filter(ProjectCalloutTemplate.project_id == project.id).delete()
+    db.query(ProjectMember).filter(ProjectMember.project_id == project.id).delete()
+    db.query(ProjectPipeline).filter(ProjectPipeline.project_id == project.id).delete()
+    db.query(PipelineLog).filter(PipelineLog.project_id == project.id).delete()
+    db.query(Invitation).filter(Invitation.project_id == project.id).delete()
+    db.query(TrafficEvent).filter(TrafficEvent.project_id == project.id).delete()
+    db.delete(project)
+    db.commit()
+
+
 def disconnect_project(db: Session, project: Project) -> Project:
     project.status = "not_connected"
     project.connected_at = None

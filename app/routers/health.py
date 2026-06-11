@@ -13,7 +13,7 @@ def health():
 def health_llm():
     """Return LLM provider status — available, configured, model, etc."""
     from app.services.providers.llm_provider import (
-        OllamaLLMProvider, MockLLMProvider, ProviderUnavailableError,
+        OllamaLLMProvider, MockLLMProvider, ProviderUnavailableError, get_llm_provider,
     )
     from app.services.providers.openai_provider import OpenAILLMProvider
     from app.services.providers.openrouter_provider import OpenRouterLLMProvider
@@ -30,6 +30,28 @@ def health_llm():
             "mock_allowed": "yes",
             "environment": settings.APP_ENV,
         }
+
+    if requested == "auto":
+        try:
+            provider = get_llm_provider()
+            return {
+                "provider": provider.provider_name,
+                "model": provider.model_name,
+                "configured": True,
+                "available": True,
+                "mock_allowed": mock_allowed,
+                "environment": settings.APP_ENV,
+            }
+        except ProviderUnavailableError as exc:
+            return {
+                "provider": "auto",
+                "model": "",
+                "configured": True,
+                "available": False,
+                "error": str(exc),
+                "mock_allowed": mock_allowed,
+                "environment": settings.APP_ENV,
+            }
 
     if requested == "ollama":
         base_url = settings.OLLAMA_BASE_URL or settings.OLLAMA_URL or "http://127.0.0.1:11434"
@@ -66,6 +88,7 @@ def health_llm():
             "model": settings.OPENAI_MODEL,
             "configured": True,
             "available": available,
+            "error": None if available else "OpenAI API a retourné une erreur (clé invalide ?)",
             "mock_allowed": mock_allowed,
             "environment": settings.APP_ENV,
         }
@@ -93,6 +116,7 @@ def health_llm():
                 "model": settings.OPENROUTER_MODEL,
                 "configured": True,
                 "available": available,
+                "error": None if available else "OpenRouter API a retourné une erreur",
                 "mock_allowed": mock_allowed,
                 "environment": settings.APP_ENV,
             }

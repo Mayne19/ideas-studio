@@ -257,18 +257,28 @@ def launch_project_route(
     _member=Depends(require_project_role("owner", "admin")),
 ):
     project = _get_project_or_404(project_id, db)
+    
+    from app.core.config import settings
+    
+    if body.dry_run:
+        return {
+            "dry_run": True,
+            "generated": 0,
+            "ideas_generated": 0,
+            "articles_created": 0,
+            "total": 0,
+            "message": "Mode dry-run activé. Aucune génération réelle effectuée.",
+        }
+
     try:
         llm = get_llm_provider()
         search = get_search_provider()
     except (ProviderUnavailableError, GenerationFailedError) as exc:
         raise _generation_http_error(exc) from exc
 
-    from app.core.config import settings
     generated = []
     generation_count = 1 if body.mode == "full_article" else 1
     for _ in range(generation_count):
-        if body.dry_run:
-            break
         try:
             article = generate_idea(
                 db=db,

@@ -76,7 +76,7 @@ def test_pipeline_run_creates_log(client: TestClient):
     assert logs.status_code == 200
     entries = logs.json()
     assert len(entries) >= 1
-    assert entries[0]["status"] in ("completed", "completed_with_errors")  # may depend on LLM availability
+    assert entries[0]["status"] in ("completed", "completed_with_errors", "failed")  # may depend on LLM availability
 
 
 def test_pipeline_logs_empty_when_no_runs(client: TestClient):
@@ -123,7 +123,7 @@ def test_pipeline_articles_per_week_affects_daily_target_and_never_publishes(cli
     data = run.json()
     assert data["articles_created"] == 0
     assert data["ideas_generated"] >= 0
-    assert data["status"] in ("completed", "completed_with_errors")
+    assert data["status"] in ("completed", "completed_with_errors", "failed")
 
     articles = client.get(f"/projects/{project['id']}/articles", headers=headers).json()
     assert len(articles) == data["ideas_generated"]

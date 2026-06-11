@@ -100,6 +100,31 @@ def cmd_review(args) -> None:
         db.close()
 
 
+def cmd_worker(_args) -> None:
+    """Start the background worker (scheduler)."""
+    from app.services.worker import start_scheduler, stop_scheduler
+    import time
+    print("Starting Ideas Studio worker...")
+    start_scheduler()
+    print("Worker started. Press Ctrl+C to stop.")
+    try:
+        while True:
+            time.sleep(60)
+    except KeyboardInterrupt:
+        stop_scheduler()
+        print("Worker stopped.")
+
+
+def cmd_scheduler(_args) -> None:
+    """Run all scheduled tasks once (for cron-based scheduling)."""
+    from app.services.worker import check_scheduled_publications, run_daily_tasks, run_pipelines
+    print("Running scheduled tasks...")
+    check_scheduled_publications()
+    run_daily_tasks()
+    run_pipelines()
+    print("Scheduled tasks completed.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m app.cli",
@@ -115,6 +140,9 @@ def main() -> None:
     rev = subparsers.add_parser("review", help="Review published articles for a project")
     rev.add_argument("--project-id", required=True)
 
+    subparsers.add_parser("worker", help="Start the background scheduler worker")
+    subparsers.add_parser("scheduler", help="Run all scheduled tasks once")
+
     args = parser.parse_args()
 
     if args.command == "daily":
@@ -123,10 +151,18 @@ def main() -> None:
         cmd_generate_ideas(args)
     elif args.command == "review":
         cmd_review(args)
+    elif args.command == "worker":
+        cmd_worker(args)
+    elif args.command == "scheduler":
+        cmd_scheduler(args)
     else:
         parser.print_help()
         sys.exit(1)
 
+
+# Aliases for worker.py entry point
+run_worker = cmd_worker
+run_scheduler = cmd_scheduler
 
 if __name__ == "__main__":
     main()

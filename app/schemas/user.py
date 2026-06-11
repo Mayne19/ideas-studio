@@ -39,6 +39,7 @@ class UserPublic(BaseModel):
     username: Optional[str] = None
     name: str
     email: EmailStr
+    avatar_url: Optional[str] = None
     is_active: bool
     is_platform_admin: bool
     created_at: datetime

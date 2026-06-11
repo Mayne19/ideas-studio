@@ -1,15 +1,5 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from tests.conftest import register_and_login, TEST_DATABASE_URL
+from tests.conftest import register_and_login, TestingSessionLocal
 from app.models.project_member import ProjectMember
-
-engine_test = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine_test)
-
-
-def _db() -> Session:
-    return TestingSessionLocal()
 
 
 def test_create_project(client):
@@ -63,7 +53,7 @@ def test_project_member_created_as_owner(client):
     headers = register_and_login(client)
     create = client.post("/projects", json={"name": "My Blog"}, headers=headers)
     project_id = create.json()["id"]
-    db = _db()
+    db = TestingSessionLocal()
     try:
         member = db.query(ProjectMember).filter(ProjectMember.project_id == project_id).first()
         assert member is not None

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.config import settings
@@ -9,6 +9,7 @@ from app.models.project_member import ProjectMember
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectPublic, ProjectConnectInfo
 from app.services.project_service import (
     create_project,
+    delete_project,
     get_user_projects,
     get_project_by_id,
     update_project,
@@ -87,6 +88,19 @@ def connect_info(
             "article_by_slug": f"{settings.APP_URL}/api/public/projects/{project.id}/articles/{{slug}}",
         },
     )
+
+
+@router.delete("/{project_id}", status_code=204)
+def delete_project_route(
+    project_id: str,
+    member: ProjectMember = Depends(require_project_role("owner", "admin")),
+    db: Session = Depends(get_db),
+):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    delete_project(db, project)
+    return None
 
 
 @router.post("/{project_id}/disconnect", response_model=ProjectPublic)
