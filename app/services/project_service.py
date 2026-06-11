@@ -74,10 +74,15 @@ def delete_project(db: Session, project: Project) -> None:
     from app.models.invitation import Invitation
     from app.models.traffic_event import TrafficEvent
     from app.models.seo_analysis import SeoAnalysis
+    from app.models.article_comment import ArticleComment
+    from app.models.activity_log import ActivityLog
+    from app.models.webhook import Webhook
+    from app.models.kanban_column import KanbanColumn
 
     article_ids = [a.id for a in db.query(Article).filter(Article.project_id == project.id).all()]
     db.query(ArticleVersion).filter(ArticleVersion.project_id == project.id).delete()
     db.query(ArticleLog).filter(ArticleLog.project_id == project.id).delete()
+    db.query(ArticleComment).filter(ArticleComment.project_id == project.id).delete()
     for aid in article_ids:
         db.query(SeoAnalysis).filter(SeoAnalysis.article_id == aid).delete()
     db.query(OptimizationRecommendation).filter(OptimizationRecommendation.project_id == project.id).delete()
@@ -91,6 +96,9 @@ def delete_project(db: Session, project: Project) -> None:
     db.query(PipelineLog).filter(PipelineLog.project_id == project.id).delete()
     db.query(Invitation).filter(Invitation.project_id == project.id).delete()
     db.query(TrafficEvent).filter(TrafficEvent.project_id == project.id).delete()
+    db.query(ActivityLog).filter(ActivityLog.project_id == project.id).delete()
+    db.query(Webhook).filter(Webhook.project_id == project.id).delete()
+    db.query(KanbanColumn).filter(KanbanColumn.project_id == project.id).delete()
     db.delete(project)
     db.commit()
 

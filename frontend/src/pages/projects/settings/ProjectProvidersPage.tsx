@@ -28,9 +28,7 @@ type ProviderDef = {
 const SUPPORTED_PROVIDERS: ProviderDef[] = [
   { key: 'gemini', label: 'Google Gemini', default_model: 'gemini-2.5-flash', default_base_url: 'https://generativelanguage.googleapis.com/v1beta/openai/' },
   { key: 'openai', label: 'OpenAI', default_model: 'gpt-4o-mini', default_base_url: 'https://api.openai.com/v1' },
-  { key: 'openrouter', label: 'OpenRouter', default_model: 'deepseek/deepseek-v4-flash:free', default_base_url: 'https://openrouter.ai/api/v1' },
-  { key: 'anthropic', label: 'Anthropic', default_model: 'claude-3-haiku-20240307', default_base_url: 'https://api.anthropic.com/v1' },
-  { key: 'mistral', label: 'Mistral AI', default_model: 'mistral-small-latest', default_base_url: 'https://api.mistral.ai/v1' },
+  { key: 'openrouter', label: 'OpenRouter', default_model: 'deepseek/deepseek-v4-flash', default_base_url: 'https://openrouter.ai/api/v1' },
   { key: 'ollama', label: 'Ollama (local)', default_model: 'qwen3:14b', default_base_url: 'http://127.0.0.1:11434/v1' },
   { key: 'custom', label: 'Custom OpenAI-compatible', default_model: '', default_base_url: '' },
 ]
@@ -450,7 +448,7 @@ export default function ProjectProvidersPage() {
       <div className="rounded-[14px] border border-accent/20 bg-accent/5 px-4 py-3">
         <p className="text-[12px] text-secondary leading-snug">
           Les providers configurés ici sont prioritaires par rapport aux variables d'environnement. 
-          Vous pouvez ajouter plusieurs providers du même type, tester leur connexion, et définir un provider par défaut.
+          Vous pouvez ajouter un provider par type, tester sa connexion, et définir le provider par défaut.
           Les clés API sont stockées de manière sécurisée et ne sont jamais exposées au frontend.
         </p>
       </div>

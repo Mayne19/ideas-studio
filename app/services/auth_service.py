@@ -15,10 +15,12 @@ def get_user_by_username(db: Session, username: str) -> User | None:
 
 
 def create_user(db: Session, data: RegisterRequest) -> User:
+    is_first_user = db.query(User.id).first() is None
     kwargs = {
         "name": data.name,
         "email": data.email,
         "password_hash": hash_password(data.password),
+        "is_platform_admin": is_first_user,
     }
     if data.username:
         clean = data.username.strip().lstrip("@").lower()

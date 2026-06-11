@@ -414,7 +414,7 @@ export default function TrafficPage() {
             <Card>
               <SectionTitle>Trafic organique / mots-clés</SectionTitle>
               <p className="rounded-[12px] bg-[#f9f9fb] px-3 py-3 text-[13px] text-secondary">
-                Connectez Google Search Console depuis les <a href="/settings/integrations" className="text-accent hover:underline">paramètres du projet</a> pour voir les mots-clés organiques.
+                Connectez Google Search Console depuis les <a href={`/projects/${projectId}/settings/integration`} className="text-accent hover:underline">paramètres du projet</a> pour voir les mots-clés organiques.
               </p>
             </Card>
           </div>

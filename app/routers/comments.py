@@ -84,6 +84,8 @@ def update_comment(
     member = get_member_for_project(db, current_user.id, article.project_id)
     if not member:
         raise HTTPException(status_code=403, detail="Access denied")
+    if member.role not in _MANAGE_ROLES and comment.author_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     if data.resolved is not None:
         comment.resolved = data.resolved
@@ -110,7 +112,9 @@ def delete_comment(
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
     member = get_member_for_project(db, current_user.id, article.project_id)
-    if not member or member.role not in _MANAGE_ROLES:
+    if not member:
+        raise HTTPException(status_code=403, detail="Access denied")
+    if member.role not in _MANAGE_ROLES and comment.author_id != current_user.id:
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     db.delete(comment)
     db.commit()

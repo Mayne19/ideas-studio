@@ -181,9 +181,79 @@ def get_llm_provider() -> LLMProvider:
     from app.core.config import settings
     from app.services.providers.openai_provider import OpenAILLMProvider
     from app.services.providers.openrouter_provider import OpenRouterLLMProvider
+    from app.services.providers.gemini_provider import GeminiLLMProvider
 
     def _raise_or_raise(reason: str) -> LLMProvider:
         raise ProviderUnavailableError(f"Aucun provider IA réel disponible. Configure OPENROUTER_API_KEY ou démarre Ollama. {reason}")
+
+    def _from_db_default() -> LLMProvider | None:
+        if settings.APP_ENV == "test":
+            return None
+        try:
+            from app.core.database import SessionLocal
+            from app.core.security import decrypt_secret
+            from app.models.ai_provider_config import AIProviderConfig
+        except Exception:
+            return None
+
+        db = SessionLocal()
+        try:
+            config = db.query(AIProviderConfig).filter(
+                AIProviderConfig.is_default == True,
+                AIProviderConfig.enabled == True,
+            ).first()
+            if not config:
+                return None
+            api_key = decrypt_secret(config.api_key_encrypted)
+            provider_name = config.provider
+
+            if provider_name == "ollama":
+                base_url = (config.base_url or settings.OLLAMA_BASE_URL or settings.OLLAMA_URL or "http://127.0.0.1:11434").rstrip("/")
+                if base_url.endswith("/v1"):
+                    base_url = base_url[:-3]
+                provider = OllamaLLMProvider(
+                    base_url=base_url,
+                    model=config.model or settings.OLLAMA_MODEL or "qwen3:14b",
+                    fallback_model=settings.OLLAMA_FALLBACK_MODEL or "qwen3:8b",
+                    timeout_seconds=settings.OLLAMA_TIMEOUT_SECONDS or 180,
+                )
+            elif provider_name == "gemini":
+                if not api_key:
+                    return None
+                provider = GeminiLLMProvider(
+                    api_key=api_key,
+                    model=config.model or settings.GEMINI_MODEL,
+                    base_url=config.base_url or settings.GEMINI_BASE_URL,
+                    timeout_seconds=settings.GEMINI_TIMEOUT_SECONDS,
+                )
+            elif provider_name == "openrouter":
+                if not api_key:
+                    return None
+                provider = OpenRouterLLMProvider(
+                    api_key=api_key,
+                    model=config.model or settings.OPENROUTER_MODEL,
+                    base_url=config.base_url or settings.OPENROUTER_BASE_URL,
+                    writer_model=config.model or settings.OPENROUTER_WRITER_MODEL,
+                    planner_model=config.model or settings.OPENROUTER_PLANNER_MODEL,
+                    fallback_model=settings.OPENROUTER_FALLBACK_MODEL,
+                )
+            elif provider_name in {"openai", "custom"}:
+                if not api_key:
+                    return None
+                provider = OpenAILLMProvider(
+                    api_key=api_key,
+                    model=config.model or settings.OPENAI_MODEL,
+                    base_url=config.base_url or settings.OPENAI_BASE_URL,
+                )
+                provider.provider_name = provider_name
+            else:
+                return None
+
+            if provider.is_available():
+                return provider
+            return None
+        finally:
+            db.close()
 
     def _try_openrouter() -> LLMProvider | None:
         if not settings.OPENROUTER_API_KEY:
@@ -228,6 +298,13 @@ def get_llm_provider() -> LLMProvider:
 
     requested = settings.DEFAULT_LLM_PROVIDER
 
+    if requested == "mock":
+        return MockLLMProvider()
+
+    db_provider = _from_db_default()
+    if db_provider is not None:
+        return db_provider
+
     # Auto mode: OpenRouter > Ollama > OpenAI
     if requested == "auto":
         for try_provider in (_try_openrouter, _try_ollama, _try_openai):
@@ -259,7 +336,6 @@ def get_llm_provider() -> LLMProvider:
             raise ProviderUnavailableError(
                 "GEMINI_API_KEY non configurée. Ajoute GEMINI_API_KEY dans le .env ou les variables Render."
             )
-        from app.services.providers.gemini_provider import GeminiLLMProvider
         provider = GeminiLLMProvider(
             api_key=settings.GEMINI_API_KEY,
             model=settings.GEMINI_MODEL,
@@ -269,8 +345,5 @@ def get_llm_provider() -> LLMProvider:
         if provider.is_available():
             return provider
         return _raise_or_raise("Gemini configuré mais indisponible (clé invalide ou API saturée).")
-
-    if requested == "mock":
-        return MockLLMProvider()
 
     return _raise_or_raise(f"Provider '{requested}' non supporté.")

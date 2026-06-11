@@ -1,4 +1,5 @@
 import os
+os.environ["APP_ENV"] = "test"
 os.environ["DEFAULT_LLM_PROVIDER"] = "mock"
 os.environ["OPENROUTER_API_KEY"] = ""
 os.environ["OPENAI_API_KEY"] = ""

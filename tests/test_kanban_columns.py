@@ -103,6 +103,45 @@ def test_delete_kanban_column(client):
     assert len(resp.json()) == 0
 
 
+def test_viewer_cannot_update_or_delete_kanban_column(client):
+    owner_headers = register_and_login(client, "owner-kanban@test.com", "pass1234", "Owner")
+    viewer_headers = register_and_login(client, "viewer-kanban@test.com", "pass1234", "Viewer")
+    project = _create_project(client, owner_headers)
+    col = client.post(
+        f"/projects/{project['id']}/kanban-columns",
+        json={"label": "Protégée"},
+        headers=owner_headers,
+    ).json()
+
+    viewer_id = client.get("/auth/me", headers=viewer_headers).json()["id"]
+    from tests.conftest import TestingSessionLocal
+    from app.models.project_member import ProjectMember
+    import uuid
+
+    db = TestingSessionLocal()
+    try:
+        db.add(ProjectMember(
+            id=str(uuid.uuid4()),
+            project_id=project["id"],
+            user_id=viewer_id,
+            role="viewer",
+            status="active",
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+    patch_resp = client.patch(
+        f"/kanban-columns/{col['id']}",
+        json={"label": "Ne devrait pas passer"},
+        headers=viewer_headers,
+    )
+    delete_resp = client.delete(f"/kanban-columns/{col['id']}", headers=viewer_headers)
+
+    assert patch_resp.status_code == 403
+    assert delete_resp.status_code == 403
+
+
 def test_kanban_column_other_project_not_visible(client):
     headers1 = register_and_login(client, "a@test.com", "pass1234", "A")
     headers2 = register_and_login(client, "b@test.com", "pass1234", "B")

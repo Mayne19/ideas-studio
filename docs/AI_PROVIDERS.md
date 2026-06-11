@@ -81,13 +81,13 @@ Le premier provider disponible est utilisé. Si aucun n'est disponible, une erre
 1. Allez sur [AI Studio Google](https://aistudio.google.com/apikey)
 2. Connectez-vous avec votre compte Google
 3. Cliquez sur **Create API Key**
-4. Copiez la clé (commence par `AIza...`)
+4. Copiez la clé depuis Google AI Studio.
 
 ### Configuration
 
 ```bash
 DEFAULT_LLM_PROVIDER=gemini
-GEMINI_API_KEY=AIzaSy...
+GEMINI_API_KEY=
 GEMINI_MODEL=gemini-2.5-flash
 GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
 GEMINI_TIMEOUT_SECONDS=180
@@ -259,9 +259,9 @@ OpenRouter donne accès à de nombreux modèles via une API unique, dont des mod
 
 ```bash
 DEFAULT_LLM_PROVIDER=openrouter
-OPENROUTER_API_KEY=sk-or-...
-OPENROUTER_MODEL=deepseek/deepseek-v4-flash:free
-OPENROUTER_WRITER_MODEL=deepseek/deepseek-v4-flash:free
+OPENROUTER_API_KEY=
+OPENROUTER_MODEL=deepseek/deepseek-v4-flash
+OPENROUTER_WRITER_MODEL=deepseek/deepseek-v4-flash
 OPENROUTER_PLANNER_MODEL=openai/gpt-oss-120b:free
 OPENROUTER_FALLBACK_MODEL=openrouter/free
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
@@ -393,7 +393,7 @@ DEFAULT_LLM_PROVIDER=mock
 curl http://127.0.0.1:11434/api/tags
 
 # Test Gemini
-curl -H "Authorization: Bearer AIza..." \
+curl -H "Authorization: Bearer <your-gemini-api-key>" \
   https://generativelanguage.googleapis.com/v1beta/models
 
 # Test OpenAI
@@ -401,7 +401,7 @@ curl -H "Authorization: Bearer sk-..." \
   https://api.openai.com/v1/models
 
 # Test OpenRouter
-curl -H "Authorization: Bearer sk-or-..." \
+curl -H "Authorization: Bearer <openrouter-api-key>" \
   https://openrouter.ai/api/v1/models
 ```
 

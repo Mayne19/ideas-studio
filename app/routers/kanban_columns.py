@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.dependencies.auth import get_current_user, get_project_member, require_project_role, user_can_access_project
+from app.dependencies.auth import get_current_user, get_member_for_project, get_project_member, require_project_role
 from app.models.user import User
 from app.models.project_member import ProjectMember
 from app.models.kanban_column import KanbanColumn
@@ -78,8 +78,11 @@ def update_kanban_column(
     column = db.query(KanbanColumn).filter(KanbanColumn.id == column_id).first()
     if not column:
         raise HTTPException(status_code=404, detail="Colonne introuvable.")
-    if not user_can_access_project(current_user.id, column.project_id, db):
+    member = get_member_for_project(db, current_user.id, column.project_id)
+    if not member:
         raise HTTPException(status_code=403, detail="Accès refusé.")
+    if member.role not in _MANAGE_ROLES:
+        raise HTTPException(status_code=403, detail="Permissions insuffisantes.")
     if data.label is not None:
         column.label = data.label
     if data.color is not None:
@@ -100,7 +103,10 @@ def delete_kanban_column(
     column = db.query(KanbanColumn).filter(KanbanColumn.id == column_id).first()
     if not column:
         raise HTTPException(status_code=404, detail="Colonne introuvable.")
-    if not user_can_access_project(current_user.id, column.project_id, db):
+    member = get_member_for_project(db, current_user.id, column.project_id)
+    if not member:
         raise HTTPException(status_code=403, detail="Accès refusé.")
+    if member.role not in _MANAGE_ROLES:
+        raise HTTPException(status_code=403, detail="Permissions insuffisantes.")
     db.delete(column)
     db.commit()

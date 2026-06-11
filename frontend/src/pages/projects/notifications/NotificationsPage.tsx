@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Bell, CheckCheck, Loader2 } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import { listNotifications, markNotificationRead, markAllNotificationsRead } from '@/api/notifications'
@@ -29,7 +29,7 @@ export default function NotificationsPage() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [markingAll, setMarkingAll] = useState(false)
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!projectId) return
     setStatus('loading')
     try {
@@ -39,9 +39,9 @@ export default function NotificationsPage() {
     } catch {
       setStatus('error')
     }
-  }
+  }, [projectId])
 
-  useEffect(() => { load() }, [projectId]) // eslint-disable-line react-hooks/set-state-in-effect
+  useEffect(() => { load() }, [load]) // eslint-disable-line react-hooks/set-state-in-effect
 
   async function handleRead(id: string) {
     try {

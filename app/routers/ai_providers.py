@@ -6,7 +6,7 @@ from app.dependencies.auth import get_current_user
 from app.models.user import User
 from app.models.ai_provider_config import AIProviderConfig
 from app.schemas.ai_provider import AIProviderCreate, AIProviderUpdate, AIProviderPublic, AIProviderTestResult
-from app.services.providers.llm_provider import get_llm_provider
+from app.core.security import decrypt_secret, encrypt_secret
 from app.core.config import settings
 from datetime import datetime, timezone
 
@@ -17,9 +17,7 @@ router = APIRouter(prefix="/settings/ai-providers", tags=["ai_providers"])
 SUPPORTED_PROVIDERS = {
     "gemini": {"label": "Google Gemini", "default_model": "gemini-2.5-flash", "default_base_url": "https://generativelanguage.googleapis.com/v1beta/openai/"},
     "openai": {"label": "OpenAI", "default_model": "gpt-4o-mini", "default_base_url": "https://api.openai.com/v1"},
-    "openrouter": {"label": "OpenRouter", "default_model": "deepseek/deepseek-v4-flash:free", "default_base_url": "https://openrouter.ai/api/v1"},
-    "anthropic": {"label": "Anthropic", "default_model": "claude-3-haiku-20240307", "default_base_url": "https://api.anthropic.com/v1"},
-    "mistral": {"label": "Mistral AI", "default_model": "mistral-small-latest", "default_base_url": "https://api.mistral.ai/v1"},
+    "openrouter": {"label": "OpenRouter", "default_model": "deepseek/deepseek-v4-flash", "default_base_url": "https://openrouter.ai/api/v1"},
     "ollama": {"label": "Ollama (local)", "default_model": "qwen3:14b", "default_base_url": "http://127.0.0.1:11434/v1"},
     "custom": {"label": "Custom OpenAI-compatible", "default_model": "", "default_base_url": ""},
 }
@@ -33,13 +31,24 @@ def _mask_key(key: str) -> str:
     return key[:4] + "****" + key[-4:]
 
 
+def _ensure_platform_admin(current_user: User, db: Session) -> None:
+    if current_user.is_platform_admin:
+        return
+    admin_exists = db.query(User.id).filter(User.is_platform_admin == True).first()
+    if not admin_exists:
+        current_user.is_platform_admin = True
+        db.commit()
+        db.refresh(current_user)
+        return
+    raise HTTPException(status_code=403, detail="Admin access required")
+
+
 @router.get("", response_model=list[AIProviderPublic])
 def list_providers(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if not current_user.is_platform_admin:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    _ensure_platform_admin(current_user, db)
     configs = db.query(AIProviderConfig).order_by(AIProviderConfig.provider).all()
     result = []
     for config in configs:
@@ -55,8 +64,7 @@ def create_provider(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if not current_user.is_platform_admin:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    _ensure_platform_admin(current_user, db)
     existing = db.query(AIProviderConfig).filter(AIProviderConfig.provider == data.provider).first()
     if existing:
         raise HTTPException(status_code=409, detail=f"Provider '{data.provider}' already configured")
@@ -64,7 +72,7 @@ def create_provider(
     config = AIProviderConfig(
         provider=data.provider,
         label=data.label,
-        api_key_encrypted=data.api_key,
+        api_key_encrypted=encrypt_secret(data.api_key),
         model=data.model,
         base_url=data.base_url,
         is_default=data.is_default,
@@ -83,22 +91,6 @@ def create_provider(
     return public
 
 
-@router.get("/{provider_id}", response_model=AIProviderPublic)
-def get_provider(
-    provider_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    if not current_user.is_platform_admin:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    config = db.query(AIProviderConfig).filter(AIProviderConfig.id == provider_id).first()
-    if not config:
-        raise HTTPException(status_code=404, detail="Provider not found")
-    public = AIProviderPublic.model_validate(config)
-    public.api_key_configured = bool(config.api_key_encrypted)
-    return public
-
-
 @router.patch("/{provider_id}", response_model=AIProviderPublic)
 def update_provider(
     provider_id: str,
@@ -106,15 +98,14 @@ def update_provider(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if not current_user.is_platform_admin:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    _ensure_platform_admin(current_user, db)
     config = db.query(AIProviderConfig).filter(AIProviderConfig.id == provider_id).first()
     if not config:
         raise HTTPException(status_code=404, detail="Provider not found")
     
     update_data = data.model_dump(exclude_unset=True)
     if "api_key" in update_data:
-        update_data["api_key_encrypted"] = update_data.pop("api_key")
+        update_data["api_key_encrypted"] = encrypt_secret(update_data.pop("api_key"))
     if "is_default" in update_data and update_data["is_default"]:
         db.query(AIProviderConfig).filter(AIProviderConfig.is_default == True, AIProviderConfig.id != provider_id).update({"is_default": False})
     
@@ -136,8 +127,7 @@ def delete_provider(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if not current_user.is_platform_admin:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    _ensure_platform_admin(current_user, db)
     config = db.query(AIProviderConfig).filter(AIProviderConfig.id == provider_id).first()
     if not config:
         raise HTTPException(status_code=404, detail="Provider not found")
@@ -152,13 +142,13 @@ def test_provider(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if not current_user.is_platform_admin:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    _ensure_platform_admin(current_user, db)
     config = db.query(AIProviderConfig).filter(AIProviderConfig.id == provider_id).first()
     if not config:
         raise HTTPException(status_code=404, detail="Provider not found")
     
-    if not config.api_key_encrypted:
+    api_key = decrypt_secret(config.api_key_encrypted)
+    if not api_key:
         config.last_test_status = "error"
         config.last_test_error = "Aucune clé API configurée"
         config.last_tested_at = datetime.now(timezone.utc)
@@ -167,13 +157,23 @@ def test_provider(
     
     try:
         from app.services.providers.openai_provider import OpenAILLMProvider
-        
-        test_prov = OpenAILLMProvider(
-            api_key=config.api_key_encrypted,
-            model=config.model or "gpt-4o-mini",
-            base_url=config.base_url or "https://api.openai.com/v1",
-            timeout_seconds=30,
-        )
+        from app.services.providers.gemini_provider import GeminiLLMProvider
+
+        if config.provider == "gemini":
+            test_prov = GeminiLLMProvider(
+                api_key=api_key,
+                model=config.model or SUPPORTED_PROVIDERS["gemini"]["default_model"],
+                base_url=config.base_url or SUPPORTED_PROVIDERS["gemini"]["default_base_url"],
+                timeout_seconds=30,
+            )
+        else:
+            test_prov = OpenAILLMProvider(
+                api_key=api_key,
+                model=config.model or "gpt-4o-mini",
+                base_url=config.base_url or "https://api.openai.com/v1",
+                timeout_seconds=30,
+            )
+            test_prov.provider_name = config.provider
         available = test_prov.is_available()
         
         config.last_test_status = "connected" if available else "error"
@@ -219,3 +219,18 @@ def get_default_provider(
         "enabled": True,
         "source": "env",
     }
+
+
+@router.get("/{provider_id}", response_model=AIProviderPublic)
+def get_provider(
+    provider_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _ensure_platform_admin(current_user, db)
+    config = db.query(AIProviderConfig).filter(AIProviderConfig.id == provider_id).first()
+    if not config:
+        raise HTTPException(status_code=404, detail="Provider not found")
+    public = AIProviderPublic.model_validate(config)
+    public.api_key_configured = bool(config.api_key_encrypted)
+    return public

@@ -46,12 +46,12 @@ OLLAMA_TIMEOUT_SECONDS=180
 
 # Option 2 : Gemini (cloud, gratuit avec quota)
 DEFAULT_LLM_PROVIDER=gemini
-GEMINI_API_KEY=AIza...
+GEMINI_API_KEY=
 GEMINI_MODEL=gemini-2.5-flash
 
 # Option 3 : OpenRouter (cloud, modèles gratuits disponibles)
 DEFAULT_LLM_PROVIDER=openrouter
-OPENROUTER_API_KEY=sk-or-...
+OPENROUTER_API_KEY=
 OPENROUTER_MODEL=deepseek/deepseek-v4-flash:free
 
 # Option 4 : OpenAI (cloud, payant)
