@@ -1,16 +1,21 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Boolean, DateTime, Text
+from sqlalchemy import String, Boolean, DateTime, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
 
 class AIProviderConfig(Base):
     __tablename__ = "ai_provider_configs"
+    __table_args__ = (
+        UniqueConstraint("project_id", "provider", name="uq_project_provider"),
+    )
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    provider: Mapped[str] = mapped_column(String(50), nullable=False, unique=True, index=True)
+    project_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    provider: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     label: Mapped[str] = mapped_column(String(100), nullable=False)
+    display_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     api_key_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     model: Mapped[str | None] = mapped_column(String(100), nullable=True)
     base_url: Mapped[str | None] = mapped_column(String(500), nullable=True)

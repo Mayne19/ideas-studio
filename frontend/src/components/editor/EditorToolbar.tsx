@@ -32,6 +32,7 @@ import type { MediaAsset } from '@/api/media'
 import type { CalloutAttrs } from '@/lib/tiptap/CalloutExtension'
 import type { CalloutTemplate } from '@/types'
 import ColorPickerField from '@/components/ui/ColorPickerField'
+import ToggleSwitch from '@/components/ui/ToggleSwitch'
 import { DEFAULT_ACCENT_COLOR, normalizeHexColor } from '@/lib/colors'
 import { deriveCalloutColors, slugifyCalloutLabel } from '@/lib/callouts'
 
@@ -714,14 +715,11 @@ export default function EditorToolbar({
                       className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
                     />
                   </label>
-                  <label className="flex items-center gap-2 text-[12px] text-secondary">
-                    <input type="checkbox" checked={tableHeader} onChange={(event) => setTableHeader(event.target.checked)} />
-                    Ligne d'en-tete
-                  </label>
+                  <ToggleSwitch checked={tableHeader} onChange={setTableHeader} label="Ligne d'en-tête" />
                   <div className="flex items-center justify-end gap-2 pt-1">
                     <button type="button" onClick={() => closePopover('table')} className="text-[12px] text-tertiary hover:text-secondary">Annuler</button>
                     <button type="button" onClick={insertTable} className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-medium text-white">
-                      Inserer
+                      Insérer
                     </button>
                   </div>
                 </>

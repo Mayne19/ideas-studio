@@ -13,7 +13,7 @@ class ImageSourcingAdapter:
 
     def __init__(self):
         from app.core.config import settings
-        if getattr(settings, "UNSPLASH_ACCESS_KEY", None):
+        if settings.UNSPLASH_ACCESS_KEY:
             self.configured = True
             self.enabled = True
             self.fallback_mode = "unsplash"
@@ -23,12 +23,13 @@ class ImageSourcingAdapter:
             return []
         try:
             import httpx
-            key = __import__("app.core.config", fromlist=["settings"]).settings.UNSPLASH_ACCESS_KEY
+            from app.core.config import settings
+            key = settings.UNSPLASH_ACCESS_KEY
             resp = httpx.get(
                 "https://api.unsplash.com/search/photos",
                 params={"query": query, "per_page": limit},
                 headers={"Authorization": f"Client-ID {key}"},
-                timeout=15,
+                timeout=settings.SEARCH_TIMEOUT_SECONDS or 30,
             )
             resp.raise_for_status()
             data = resp.json()

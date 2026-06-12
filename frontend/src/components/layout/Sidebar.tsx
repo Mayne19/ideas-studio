@@ -8,18 +8,17 @@ import {
   Sparkles,
   Settings,
   FolderOpen,
-  Columns,
   ChevronDown,
   Zap,
   CalendarDays,
   TrendingUp,
   Bell,
-  HelpCircle,
   ImageIcon,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
   Check,
+  ClipboardList,
 } from 'lucide-react'
 import { useProject } from '@/context/ProjectContext'
 import { useAuth } from '@/context/AuthContext'
@@ -27,6 +26,7 @@ import { listProjects } from '@/api/projects'
 import type { Project } from '@/types'
 import { cn } from '@/utils/cn'
 import ConfirmModal from '@/components/ui/ConfirmModal'
+import { getSettingsSections } from '@/lib/settingsSections'
 
 type NavItem = {
   label: string
@@ -110,6 +110,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
   }, [projectsOpen])
 
   const sidebarWidth = collapsed ? 'w-14' : 'w-64'
+  const settingsSections = getSettingsSections(projectId)
 
   async function handleLogout() {
     setLoggingOut(true)
@@ -217,20 +218,20 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
             </SidebarSection>
 
             <SidebarSection title="Éditorial" collapsed={collapsed}>
-              <SidebarLink to={`/projects/${projectId}/ideas`} icon={<Lightbulb size={16} />} label="Idées" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/kanban`} icon={<Columns size={16} />} label="Kanban" collapsed={collapsed} />
               <SidebarLink to={`/projects/${projectId}/articles`} icon={<FileText size={16} />} label="Articles" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/calendar`} icon={<CalendarDays size={16} />} label="Calendrier" collapsed={collapsed} />
               <SidebarLink to={`/projects/${projectId}/categories`} icon={<FolderOpen size={16} />} label="Catégories" collapsed={collapsed} />
+              <SidebarLink to={`/projects/${projectId}/ideas`} icon={<Lightbulb size={16} />} label="Idées" collapsed={collapsed} />
+              <SidebarLink to={`/projects/${projectId}/production`} icon={<ClipboardList size={16} />} label="Production" collapsed={collapsed} />
               <SidebarLink to={`/projects/${projectId}/media`} icon={<ImageIcon size={16} />} label="Médias" collapsed={collapsed} />
+              <SidebarLink to={`/projects/${projectId}/calendar`} icon={<CalendarDays size={16} />} label="Calendrier" collapsed={collapsed} />
             </SidebarSection>
 
             <SidebarSection title="Intelligence" collapsed={collapsed}>
               <SidebarLink to={`/projects/${projectId}/performance`} icon={<BarChart2 size={16} />} label="Performance" collapsed={collapsed} />
               <SidebarLink to={`/projects/${projectId}/traffic`} icon={<TrendingUp size={16} />} label="Trafic" collapsed={collapsed} />
               <SidebarLink to={`/projects/${projectId}/recommendations`} icon={<Sparkles size={16} />} label="Optimisations" collapsed={collapsed} />
+              <SidebarLink to={`/projects/${projectId}/generate`} icon={<Zap size={16} />} label="Génération IA" collapsed={collapsed} />
               <SidebarLink to={`/projects/${projectId}/notifications`} icon={<Bell size={16} />} label="Notifications" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/generate`} icon={<Zap size={16} />} label="Générer" collapsed={collapsed} />
             </SidebarSection>
 
             <SidebarSection title="Projet" collapsed={collapsed}>
@@ -268,18 +269,10 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                   </div>
                   {settingsOpen && (
                     <div className="ml-4 flex flex-col gap-0.5 border-l border-border pl-3">
-                      {[
-                        { to: `/projects/${projectId}/settings`, label: 'Général', end: true },
-                        { to: `/projects/${projectId}/settings/strategy`, label: 'Stratégie', end: false },
-                        { to: `/projects/${projectId}/settings/team`, label: 'Équipe', end: false },
-                        { to: `/projects/${projectId}/settings/integration`, label: 'Intégration', end: false },
-                        { to: `/projects/${projectId}/settings/callouts`, label: 'Callouts', end: false },
-                        { to: `/projects/${projectId}/settings/providers`, label: 'Providers', end: false },
-                        { to: `/account`, label: 'Profil', end: false },
-                      ].map((item) => (
+                      {settingsSections.map((item) => (
                         <NavLink
-                          key={item.to}
-                          to={item.to}
+                          key={item.key}
+                          to={item.path}
                           end={item.end}
                           className={({ isActive }) =>
                             cn(
@@ -300,13 +293,6 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
             </SidebarSection>
 
             <div className={cn('mt-auto flex flex-col gap-0.5 border-t border-border pt-3', collapsed && 'w-full')}>
-              <SidebarLink
-                to="#"
-                icon={<HelpCircle size={16} />}
-                label="Help"
-                disabled
-                collapsed={collapsed}
-              />
               <button
                 type="button"
                 onClick={() => setLogoutConfirmOpen(true)}

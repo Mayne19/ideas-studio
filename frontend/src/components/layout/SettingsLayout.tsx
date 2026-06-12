@@ -1,26 +1,10 @@
 import { NavLink, Outlet, useParams } from 'react-router-dom'
 import { cn } from '@/utils/cn'
-
-type SettingsTab = {
-  label: string
-  to: string
-  description: string
-  end?: boolean
-}
+import { getSettingsSections } from '@/lib/settingsSections'
 
 export default function SettingsLayout() {
   const { projectId } = useParams<{ projectId: string }>()
-
-  const tabs: SettingsTab[] = [
-    { label: 'Général', description: 'Nom, domaine, langue', to: `/projects/${projectId}/settings`, end: true },
-    { label: 'Stratégie', description: 'Audience et ton éditorial', to: `/projects/${projectId}/settings/strategy` },
-    { label: 'Équipe', description: 'Membres, rôles et accès', to: `/projects/${projectId}/settings/team` },
-    { label: 'Intégration', description: 'Site connecté et API', to: `/projects/${projectId}/settings/integration` },
-    { label: 'Callouts', description: 'Templates importés et manuels', to: `/projects/${projectId}/settings/callouts` },
-    { label: 'Providers', description: 'Services IA et connecteurs', to: `/projects/${projectId}/settings/providers` },
-    { label: 'Pipeline', description: 'Génération automatique d\'articles', to: `/projects/${projectId}/settings/pipeline` },
-    { label: 'Profil', description: 'Compte utilisateur', to: `/account` },
-  ]
+  const tabs = getSettingsSections(projectId)
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -36,8 +20,8 @@ export default function SettingsLayout() {
           <nav className="flex flex-col gap-1 rounded-[18px] bg-surface p-2">
             {tabs.map((tab) => (
               <NavLink
-                key={tab.to}
-                to={tab.to}
+                key={tab.key}
+                to={tab.path}
                 end={tab.end}
                 className={({ isActive }) =>
                   cn(

@@ -344,3 +344,40 @@ def safe_json_load(value, default=None):
         except (json.JSONDecodeError, TypeError):
             return default
     return default
+
+
+class MonthlyPlanRequest(BaseModel):
+    force: bool = False
+    generation_day: int | None = None
+
+
+@router.post("/projects/{project_id}/planning/monthly")
+def generate_monthly_plan_route(
+    project_id: str,
+    body: MonthlyPlanRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _member=Depends(require_project_role("owner", "admin")),
+):
+    from app.services.monthly_planning import generate_monthly_plan
+    from app.services.agents.agent_router import get_agent_router
+
+    project = _get_project_or_404(project_id, db)
+    try:
+        llm = get_llm_provider()
+        search = get_search_provider()
+    except (ProviderUnavailableError, GenerationFailedError) as exc:
+        raise _generation_http_error(exc) from exc
+
+    agent_router = get_agent_router(db=db)
+    result = generate_monthly_plan(
+        db=db,
+        project_id=project_id,
+        llm=llm,
+        search=search,
+        agent_router=agent_router,
+        generation_day=body.generation_day or 27,
+        force=body.force,
+    )
+    db.commit()
+    return result

@@ -1,10 +1,19 @@
 from typing import Optional
+from typing import Literal
 from pydantic import BaseModel
 
 
 class DayViews(BaseModel):
     date: str
     views: int
+
+
+class ChannelDayViews(BaseModel):
+    date: str
+    direct: int
+    organic: int
+    social: int
+    referral: int
 
 
 class TopPage(BaseModel):
@@ -28,6 +37,7 @@ class DeviceStats(BaseModel):
 
 
 class ProjectTrafficSummary(BaseModel):
+    tracking_status: Literal["not_configured", "configured_no_data", "connected_with_data", "error"]
     total_views: int
     unique_pages: int
     top_pages: list[TopPage]
@@ -35,6 +45,7 @@ class ProjectTrafficSummary(BaseModel):
     countries: list[CountryStats]
     devices: list[DeviceStats]
     trend_by_day: list[DayViews]
+    channel_trend_by_day: list[ChannelDayViews]
     period: str
 
 

@@ -21,6 +21,7 @@ from app.schemas.ideas import (
 from app.services.idea_engine import generate_idea
 from app.services.writing_engine import start_writing_from_idea, _mock_content_from_outline, _MOCK_OUTLINE
 from app.services.log_service import log_step
+from app.services.production_queue import send_to_production, process_queue, get_queue_summary
 from app.services.providers.llm_provider import (
     GenerationFailedError,
     ProviderUnavailableError,
@@ -170,8 +171,48 @@ def reject_idea_route(
     article.rejection_note = body.rejection_note
     article.updated_at = datetime.now(timezone.utc)
     log_step(db, article.project_id, f"Idée rejetée : {article.title}", level="info", step="reject", article_id=article.id)
+
+    # Auto-replacement: generate a new idea if this was part of monthly planning
+    replacement = None
+    if article.scheduled_at or article.target_write_at:
+        try:
+            from app.services.providers.llm_provider import get_llm_provider
+            from app.services.providers.search_provider import get_search_provider
+            from app.services.idea_engine import generate_idea
+            from app.models.project import Project
+
+            project = db.get(Project, article.project_id)
+            if project:
+                llm = get_llm_provider()
+                search = get_search_provider()
+                replacement = generate_idea(
+                    db=db,
+                    project_id=article.project_id,
+                    project_audience=project.audience,
+                    project_language=project.language,
+                    llm=llm,
+                    search=search,
+                    category_id=article.category_id,
+                    keyword=article.keyword,
+                )
+                if replacement:
+                    # Carry forward the target dates
+                    replacement.target_write_at = article.target_write_at
+                    replacement.target_review_at = article.target_review_at
+                    replacement.scheduled_at = article.scheduled_at
+                    log_step(
+                        db, article.project_id,
+                        f"Idée de remplacement générée : {replacement.title}",
+                        level="info", step="auto_replace", article_id=replacement.id,
+                    )
+        except Exception:
+            logger.exception("Auto-replacement failed after rejection")
+
     db.commit()
-    return {"status": "rejected"}
+    result = {"status": "rejected"}
+    if replacement:
+        result["replacement"] = {"id": replacement.id, "title": replacement.title}
+    return result
 
 
 @router.post("/articles/{article_id}/priority")
@@ -327,4 +368,50 @@ def launch_project_route(
         "article_ids": generated,
         "provider_name": getattr(llm, "provider_name", None),
         "model_name": getattr(llm, "model_name", None),
+    }
+
+
+@router.post("/articles/{article_id}/send-to-production")
+def send_to_production_route(
+    article_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    article = _get_article_or_404(article_id, db)
+    _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor"))
+    result = send_to_production(db, article_id)
+    if not result:
+        raise HTTPException(status_code=400, detail="Article cannot be sent to production (invalid status)")
+    db.commit()
+    db.refresh(result)
+    return {
+        "id": result.id,
+        "title": result.title,
+        "status": result.status,
+        "next_agent_key": result.next_agent_key,
+        "workflow_status": result.workflow_status,
+    }
+
+
+@router.get("/projects/{project_id}/production/queue")
+def get_production_queue_route(
+    project_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _member=Depends(require_project_role("owner", "admin", "editor", "writer")),
+):
+    return get_queue_summary(db, project_id)
+
+
+@router.post("/projects/{project_id}/production/process")
+def process_production_queue_route(
+    project_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _member=Depends(require_project_role("owner", "admin")),
+):
+    processed = process_queue(db, project_id, max_articles=1)
+    return {
+        "processed": len(processed),
+        "articles": [{"id": a.id, "title": a.title, "status": a.status, "next_agent_key": a.next_agent_key} for a in processed],
     }

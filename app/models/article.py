@@ -22,6 +22,10 @@ ARTICLE_STATUSES = frozenset({
     "ready_to_publish",
     "unpublished",
     "archived",
+    # Monitoring / improvement statuses
+    "improvement_proposed",
+    "improvement_in_progress",
+    "improvement_ready",
 })
 
 # Statuses a writer role is allowed to edit
@@ -95,6 +99,42 @@ class Article(Base):
     )
     author_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     reading_time_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # --- Workflow tracking ---
+    workflow_run_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    completed_agent_keys: Mapped[str | None] = mapped_column(Text, nullable=True)
+    next_agent_key: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    agent_outputs_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    planning_brief_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    production_brief_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    workflow_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+    # --- Target dates ---
+    target_write_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    target_review_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # --- Pre-brief fields ---
+    main_answer_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    opportunity_justification: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recommended_format: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    target_word_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    needs_faq: Mapped[bool | None] = mapped_column(Integer, nullable=True)
+    needs_images: Mapped[bool | None] = mapped_column(Integer, nullable=True)
+    suggested_internal_links: Mapped[str | None] = mapped_column(Text, nullable=True)
+    suggested_external_links: Mapped[str | None] = mapped_column(Text, nullable=True)
+    estimated_difficulty: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    proposal_source: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # --- Monitoring / improvement ---
+    improvement_proposal_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    performance_diagnosis_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    original_article_id: Mapped[str | None] = mapped_column(String, ForeignKey("articles.id"), nullable=True)
+    revision_of_article_id: Mapped[str | None] = mapped_column(String, ForeignKey("articles.id"), nullable=True)
+    proposed_changes_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    improvement_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    monitoring_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    next_review_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

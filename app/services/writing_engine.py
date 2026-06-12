@@ -83,8 +83,14 @@ def _normalize_generated_html(content: str) -> str:
     return cleaned.strip()
 
 
-def _generate_faq_json(article: Article, llm: LLMProvider) -> str | None:
-    if llm.is_mock:
+def _generate_faq_json(article: Article, llm: LLMProvider, agent_router=None) -> str | None:
+    provider = llm
+    if agent_router is not None:
+        try:
+            provider = agent_router.get_provider("faq_generator")
+        except Exception:
+            pass
+    if provider.is_mock:
         return article.faq_json
     faq_prompt = (
         f"À partir de l'article suivant, génère 3 à 5 questions fréquentes utiles.\n"
@@ -94,7 +100,7 @@ def _generate_faq_json(article: Article, llm: LLMProvider) -> str | None:
         "Réponds uniquement avec un objet JSON au format "
         '{"faq":[{"question":"...","answer":"..."}]}.'
     )
-    faq_data = llm.generate_json(
+    faq_data = provider.generate_json(
         faq_prompt,
         schema_hint='{"faq":[{"question":"...","answer":"..."}]}',
     )
@@ -126,6 +132,7 @@ def start_writing_from_idea(
     search_intent: str | None = None,
     include_faq: bool | None = None,
     include_callouts: bool | None = None,
+    agent_router=None,
 ) -> Article:
     started_at = perf_counter()
     if preferred_title:
@@ -153,7 +160,14 @@ def start_writing_from_idea(
         article_id=article.id,
     )
 
-    if llm.is_mock:
+    writer_provider = llm
+    if agent_router is not None:
+        try:
+            writer_provider = agent_router.get_provider("content_writer")
+        except Exception:
+            pass
+
+    if writer_provider.is_mock:
         log_step(
             db,
             article.project_id,
@@ -174,7 +188,7 @@ def start_writing_from_idea(
             f"Audience : {article.audience or 'grand public'}\n\n"
             f"Réponds en JSON : {{\"outline\": [{{\"heading\": \"...\", \"notes\": \"...\"}}]}}"
         )
-        outline_data = llm.generate_json(outline_prompt, schema_hint='{"outline":[{"heading":"...","notes":"..."}]}')
+        outline_data = writer_provider.generate_json(outline_prompt, schema_hint='{"outline":[{"heading":"...","notes":"..."}]}')
         outline = outline_data if isinstance(outline_data, list) else outline_data.get("outline", _MOCK_OUTLINE)
         if not outline:
             outline = _MOCK_OUTLINE
@@ -203,7 +217,7 @@ def start_writing_from_idea(
             "Sois précis, utile et original."
         )
 
-        content = llm.generate_text(content_prompt, temperature=0.7)
+        content = writer_provider.generate_text(content_prompt, temperature=0.7)
         if not content or not content.strip():
             article.status = "failed"
             article.updated_at = datetime.now(timezone.utc)
@@ -240,26 +254,38 @@ def start_writing_from_idea(
 
     # Generate meta_title if absent
     if not article.meta_title:
-        if llm.is_mock:
+        title_provider = writer_provider
+        if agent_router is not None:
+            try:
+                title_provider = agent_router.get_provider("title_generator")
+            except Exception:
+                pass
+        if title_provider.is_mock:
             article.meta_title = f"{article.title}"[:255]
         else:
             meta_prompt = f"Écris un meta title SEO pour cet article (max 60 caractères) : {article.title}. Mot-clé : {article.keyword}"
-            article.meta_title = (llm.generate_text(meta_prompt, temperature=0.3) or article.title)[:255]
+            article.meta_title = (title_provider.generate_text(meta_prompt, temperature=0.3) or article.title)[:255]
 
     # Generate meta_description if absent
     if not article.meta_description:
-        if llm.is_mock:
+        desc_provider = writer_provider
+        if agent_router is not None:
+            try:
+                desc_provider = agent_router.get_provider("meta_description_writer")
+            except Exception:
+                pass
+        if desc_provider.is_mock:
             article.meta_description = f"Découvrez tout ce que vous devez savoir sur {article.keyword or article.title}. Guide complet avec conseils pratiques."[:500]
         else:
             desc_prompt = f"Écris une meta description SEO (140-160 caractères) pour cet article : {article.title}. Mot-clé : {article.keyword}"
-            article.meta_description = (llm.generate_text(desc_prompt, temperature=0.3) or "")[:500]
+            article.meta_description = (desc_provider.generate_text(desc_prompt, temperature=0.3) or "")[:500]
 
     # Generate excerpt if absent
     if not article.excerpt:
         article.excerpt = _extract_excerpt(content)
 
     if include_faq is not False:
-        article.faq_json = _generate_faq_json(article, llm)
+        article.faq_json = _generate_faq_json(article, llm, agent_router=agent_router)
 
     try:
         run_and_store_seo_review(article)

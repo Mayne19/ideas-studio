@@ -5,6 +5,7 @@ import { getPipelineSettings, updatePipelineSettings, triggerPipelineRun, getPip
 import type { PipelineLog } from '@/api/pipeline'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
+import ToggleSwitch from '@/components/ui/ToggleSwitch'
 
 const DAYS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
 const DAYS_EN = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
@@ -121,24 +122,21 @@ export default function ProjectPipelinePage() {
           <div>
             <p className="text-[13px] font-medium text-primary">Pipeline automatique</p>
             <p className="mt-0.5 text-[12px] text-tertiary">
-              Génération automatique d'idées uniquement pour l'instant, selon votre planification.
+              Planifiez les automatisations éditoriales du projet.
             </p>
           </div>
-          <label className="relative inline-flex h-5 w-9 cursor-pointer items-center">
-            <input
-              type="checkbox"
-              checked={enabled}
-              onChange={(e) => { setEnabled(e.target.checked); setDirty(true) }}
-              className="peer sr-only"
-            />
-            <span className="absolute inset-0 rounded-full bg-[#d1d1d6] transition-colors peer-checked:bg-accent" />
-            <span className="absolute left-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-4" />
-          </label>
+          <ToggleSwitch
+            checked={enabled}
+            onChange={(next) => {
+              setEnabled(next)
+              setDirty(true)
+            }}
+            ariaLabel="Activer le pipeline automatique"
+          />
         </div>
         {enabled && (
           <p className="mt-3 text-[12px] text-secondary leading-snug border-t border-border pt-3">
-            Le pipeline génère des idées uniquement pour l'instant. Il ne publie jamais automatiquement,
-            et les priorités par catégorie ne sont pas encore appliquées à la sélection.
+            Le pipeline prépare le contenu dans Ideas Studio. La publication reste toujours une action humaine.
           </p>
         )}
       </div>

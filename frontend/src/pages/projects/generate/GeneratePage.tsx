@@ -9,6 +9,7 @@ import { ApiError } from '@/api/client'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
+import ToggleSwitch from '@/components/ui/ToggleSwitch'
 
 type Mode = 'idea' | 'full_article' | 'manual'
 
@@ -249,25 +250,9 @@ export default function GeneratePage() {
                 onChange={(e) => setTargetLength(e.target.value)}
               />
             </div>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={withFaq}
-                  onChange={(e) => setWithFaq(e.target.checked)}
-                  className="rounded"
-                />
-                <span className="text-[12px] text-secondary">Inclure une FAQ</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={withCallouts}
-                  onChange={(e) => setWithCallouts(e.target.checked)}
-                  className="rounded"
-                />
-                <span className="text-[12px] text-secondary">Inclure des callouts</span>
-              </label>
+            <div className="flex flex-wrap items-center gap-4">
+              <ToggleSwitch checked={withFaq} onChange={setWithFaq} label="Inclure une FAQ" />
+              <ToggleSwitch checked={withCallouts} onChange={setWithCallouts} label="Inclure des callouts" />
             </div>
 
             {mode === 'full_article' && (

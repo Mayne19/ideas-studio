@@ -71,3 +71,78 @@ export type DiscoverIdeasResponse = {
 export function discoverIdeas(projectId: string, topic: string, count: number = 5): Promise<DiscoverIdeasResponse> {
   return api.post<DiscoverIdeasResponse>(`/projects/${projectId}/ideas/discover`, { topic, count })
 }
+
+export type SendToProductionResponse = {
+  id: string
+  title: string
+  status: string
+  next_agent_key: string | null
+  workflow_status: string | null
+}
+
+export function sendToProduction(articleId: string): Promise<SendToProductionResponse> {
+  return api.post<SendToProductionResponse>(`/articles/${articleId}/send-to-production`)
+}
+
+export type ProductionQueueSummary = {
+  total_in_queue: number
+  counts: Record<string, number>
+  next_up: {
+    id: string
+    title: string
+    next_agent_key: string | null
+  } | null
+}
+
+export function getProductionQueue(projectId: string): Promise<ProductionQueueSummary> {
+  return api.get<ProductionQueueSummary>(`/projects/${projectId}/production/queue`)
+}
+
+export function processProductionQueue(projectId: string): Promise<{ processed: number; articles: Array<{ id: string; title: string; status: string; next_agent_key: string | null }> }> {
+  return api.post(`/projects/${projectId}/production/process`)
+}
+
+export type MonthlyPlanResponse = {
+  status: string
+  month?: string
+  ideas_generated?: number
+  categories_used?: number
+  errors?: string[] | null
+  message?: string
+}
+
+export function generateMonthlyPlan(projectId: string, force: boolean = false, generation_day?: number): Promise<MonthlyPlanResponse> {
+  return api.post<MonthlyPlanResponse>(`/projects/${projectId}/planning/monthly`, { force, generation_day })
+}
+
+export type ImprovementAnalysisResponse = {
+  id: string
+  monitoring_status: string | null
+  performance_diagnosis: Record<string, unknown> | null
+  improvement_proposal: Record<string, unknown> | null
+}
+
+export function analyzeArticleImprovement(articleId: string): Promise<ImprovementAnalysisResponse> {
+  return api.post<ImprovementAnalysisResponse>(`/articles/${articleId}/analyze-improvement`)
+}
+
+export type CreateImprovementDraftResponse = {
+  id: string
+  title: string
+  status: string
+  original_article_id: string | null
+  monitoring_status: string | null
+}
+
+export function createImprovementDraft(articleId: string): Promise<CreateImprovementDraftResponse> {
+  return api.post<CreateImprovementDraftResponse>(`/articles/${articleId}/create-improvement-draft`)
+}
+
+export type ScanMonitoringResponse = {
+  scanned: number
+  articles_with_proposals: Array<{ id: string; title: string; monitoring_status: string | null }>
+}
+
+export function scanMonitoring(projectId: string): Promise<ScanMonitoringResponse> {
+  return api.post<ScanMonitoringResponse>(`/projects/${projectId}/monitoring/scan`)
+}

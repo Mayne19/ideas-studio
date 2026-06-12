@@ -1,18 +1,19 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronRight, LogOut, User, Bell, Search, Sun, Moon, FileText, FolderOpen, Loader2 } from 'lucide-react'
+import { ChevronRight, LogOut, User, Bell, Search, FileText, FolderOpen, Loader2, Moon, Sun } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { useTheme } from '@/context/ThemeContext'
 import { useProject } from '@/context/ProjectContext'
+import { useTheme } from '@/context/ThemeContext'
 import { globalSearch, type SearchResult } from '@/api/search'
 import { cn } from '@/utils/cn'
 import ConfirmModal from '@/components/ui/ConfirmModal'
+import ToggleSwitch from '@/components/ui/ToggleSwitch'
 
 export default function Topbar() {
   const { user, logout } = useAuth()
   const { project } = useProject()
-  const { projectId } = useParams<{ projectId?: string }>()
   const { isDark, toggleTheme } = useTheme()
+  const { projectId } = useParams<{ projectId?: string }>()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
@@ -208,15 +209,13 @@ export default function Topbar() {
           </div>
         )}
 
-        {/* Theme toggle */}
-        <button
-          onClick={toggleTheme}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-tertiary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
-          title={isDark ? 'Mode clair' : 'Mode sombre'}
-          aria-label="Changer le thème"
+        <div
+          className="flex h-8 items-center gap-1.5 rounded-full border border-border bg-surface px-2"
+          title={isDark ? 'Mode sombre actif' : 'Mode clair actif'}
         >
-          {isDark ? <Sun size={15} /> : <Moon size={15} />}
-        </button>
+          {isDark ? <Moon size={13} className="text-tertiary" /> : <Sun size={13} className="text-tertiary" />}
+          <ToggleSwitch checked={isDark} onChange={() => toggleTheme()} ariaLabel="Changer le thème" />
+        </div>
 
         {/* User menu */}
         <div className="relative" ref={menuRef}>

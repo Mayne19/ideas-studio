@@ -5,6 +5,7 @@ from time import perf_counter
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
+from typing import Any
 from app.models.article import Article
 from app.services.providers.llm_provider import LLMProvider, GenerationFailedError
 from app.services.providers.search_provider import SearchProvider
@@ -18,6 +19,14 @@ _MOCK_IDEA_TEMPLATES = [
         "angle": "Guide pratique avec étapes concrètes",
         "search_intent": "informational",
         "audience": "Marketeurs et blogueurs débutants",
+        "main_answer_summary": "Une stratégie de contenu SEO repose sur 5 piliers : recherche de mots-clés, analyse d'intention, production de contenu, optimisation technique et mesure des performances.",
+        "opportunity_justification": "Fort potentiel car sujet lié à une catégorie prioritaire et manque de contenu existant.",
+        "recommended_format": "guide",
+        "target_word_count": 2500,
+        "needs_faq": True,
+        "needs_images": True,
+        "estimated_difficulty": "moyenne",
+        "secondary_keywords": ["content marketing", "SEO stratégique", "calendrier éditorial"],
     },
     {
         "title": "Les meilleures pratiques pour accélérer votre site web",
@@ -25,6 +34,14 @@ _MOCK_IDEA_TEMPLATES = [
         "angle": "Checklist technique actionnable",
         "search_intent": "informational",
         "audience": "Développeurs web",
+        "main_answer_summary": "Les 7 optimisations clés : mise en cache, compression des images, minification CSS/JS, chargement différé, CDN, optimisation du temps de réponse serveur et réduction des requêtes HTTP.",
+        "opportunity_justification": "Sujet toujours recherché avec fort volume et concurrence modérée.",
+        "recommended_format": "list",
+        "target_word_count": 2000,
+        "needs_faq": True,
+        "needs_images": True,
+        "estimated_difficulty": "moyenne",
+        "secondary_keywords": ["Core Web Vitals", "Lighthouse", "PageSpeed Insights"],
     },
     {
         "title": "Guide complet : créer un blog rentable en partant de zéro",
@@ -32,6 +49,14 @@ _MOCK_IDEA_TEMPLATES = [
         "angle": "Étapes détaillées du débutant à l'expert",
         "search_intent": "informational",
         "audience": "Entrepreneurs en ligne",
+        "main_answer_summary": "Un blog rentable nécessite : une niche bien choisie, du contenu régulier de qualité, une stratégie SEO solide, des sources de monétisation diversifiées et une audience engagée.",
+        "opportunity_justification": "Sujet intemporel avec fort potentiel de conversion.",
+        "recommended_format": "guide",
+        "target_word_count": 3000,
+        "needs_faq": True,
+        "needs_images": True,
+        "estimated_difficulty": "faible",
+        "secondary_keywords": ["monétisation blog", "choisir niche blog", "SEO débutant"],
     },
 ]
 
@@ -51,6 +76,14 @@ def _next_mock_idea(project_audience: str | None) -> dict:
         "audience": project_audience or tpl["audience"],
         "opportunity_score": 0.75,
         "serp_summary": {"mock": True, "top_results": []},
+        "main_answer_summary": tpl["main_answer_summary"],
+        "opportunity_justification": tpl["opportunity_justification"],
+        "recommended_format": tpl["recommended_format"],
+        "target_word_count": tpl["target_word_count"],
+        "needs_faq": tpl["needs_faq"],
+        "needs_images": tpl["needs_images"],
+        "estimated_difficulty": tpl["estimated_difficulty"],
+        "secondary_keywords": tpl["secondary_keywords"],
     }
 
 
@@ -86,8 +119,15 @@ def generate_idea(
     audience: str | None = None,
     angle: str | None = None,
     search_intent: str | None = None,
+    agent_router: Any | None = None,
 ) -> Article | None:
     started_at = perf_counter()
+
+    if agent_router is not None:
+        try:
+            llm = agent_router.get_provider("idea_generator")
+        except Exception:
+            pass
     log_step(
         db,
         project_id,
@@ -109,7 +149,7 @@ def generate_idea(
         search_results = search.search(query, limit=5)
         serp_snippets = "\n".join(f"- {r.title}: {r.snippet}" for r in search_results)
 
-        schema_hint = '{"title": "...", "keyword": "...", "angle": "...", "search_intent": "informational|commercial|transactional|navigational", "audience": "..."}'
+        schema_hint = '{"title": "...", "keyword": "...", "angle": "...", "search_intent": "informational|commercial|transactional|navigational", "audience": "...", "main_answer_summary": "...", "opportunity_justification": "...", "recommended_format": "guide|list|comparatif|tutoriel|analyse|definition", "target_word_count": 2000, "needs_faq": true, "needs_images": true, "estimated_difficulty": "faible|moyenne|forte", "secondary_keywords": ["kw1", "kw2"]}'
         prompt = (
             f"Génère une idée d'article SEO originale pour un blog en langue '{project_language}'.\n"
             f"Audience cible : {audience or project_audience or 'grand public'}.\n"
@@ -119,6 +159,7 @@ def generate_idea(
             f"Intention de recherche souhaitée : {search_intent or 'à estimer'}.\n"
             f"Contexte utilisateur : {context_hint or 'aucun contexte additionnel'}.\n"
             f"Contexte SERP actuel :\n{serp_snippets}\n\n"
+            f"L'idée doit inclure un pré-brief complet : résumé de la réponse principale, justification du score d'opportunité, format recommandé, longueur cible, besoin FAQ/images, difficulté estimée et mots-clés secondaires.\n"
             f"Réponds uniquement en JSON."
         )
         idea_data = llm.generate_json(prompt, schema_hint=schema_hint)
@@ -162,6 +203,40 @@ def generate_idea(
         word_count=0,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
+        # Pre-brief fields
+        main_answer_summary=idea_data.get("main_answer_summary"),
+        opportunity_justification=idea_data.get("opportunity_justification"),
+        recommended_format=idea_data.get("recommended_format"),
+        target_word_count=idea_data.get("target_word_count"),
+        needs_faq=idea_data.get("needs_faq"),
+        needs_images=idea_data.get("needs_images"),
+        estimated_difficulty=idea_data.get("estimated_difficulty"),
+        proposal_source="ia_generation",
+        # Secondary keywords stored as secondary_keywords_json
+        secondary_keywords_json=json.dumps(idea_data.get("secondary_keywords", [])),
+        # Initial workflow tracking
+        workflow_run_id=str(uuid.uuid4()),
+        workflow_status="planning",
+        completed_agent_keys=json.dumps(["idea_generator"]),
+        next_agent_key="intent_analyzer",
+        planning_brief_json=json.dumps({
+            "title": final_title,
+            "keyword": final_keyword,
+            "angle": final_angle,
+            "search_intent": final_search_intent,
+            "audience": final_audience,
+            "main_answer_summary": idea_data.get("main_answer_summary"),
+            "opportunity_score": idea_data.get("opportunity_score", 0.5),
+            "opportunity_justification": idea_data.get("opportunity_justification"),
+            "recommended_format": idea_data.get("recommended_format"),
+            "target_word_count": idea_data.get("target_word_count"),
+            "needs_faq": idea_data.get("needs_faq"),
+            "needs_images": idea_data.get("needs_images"),
+            "estimated_difficulty": idea_data.get("estimated_difficulty"),
+            "secondary_keywords": idea_data.get("secondary_keywords", []),
+            "proposal_source": "ia_generation",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }, ensure_ascii=False),
     )
     db.add(article)
     log_step(db, project_id, f"Idée générée : {article.title}", level="info", step="generate_idea", article_id=article.id)

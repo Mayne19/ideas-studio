@@ -206,10 +206,17 @@ export default function CalendarPage() {
     Promise.all([
       listArticles(projectId, { status: 'scheduled', limit: 200 }),
       listArticles(projectId, { status: 'published', limit: 200 }),
+      listArticles(projectId, { status: 'idea_proposed', limit: 100 }),
+      listArticles(projectId, { status: 'idea_priority', limit: 100 }),
+      listArticles(projectId, { status: 'writing_requested', limit: 100 }),
+      listArticles(projectId, { status: 'writing_in_progress', limit: 100 }),
+      listArticles(projectId, { status: 'draft_ready', limit: 100 }),
+      listArticles(projectId, { status: 'review_needed', limit: 100 }),
+      listArticles(projectId, { status: 'ready_to_publish', limit: 100 }),
     ])
-      .then(([scheduled, published]) => {
+      .then(([scheduled, published, ...workflow]) => {
         if (!cancelled) {
-          const all = [...scheduled, ...published]
+          const all = [...scheduled, ...published, ...workflow.flat()]
             .sort((a, b) => {
               const dateA = getCalendarDate(a) ?? ''
               const dateB = getCalendarDate(b) ?? ''
@@ -338,7 +345,7 @@ export default function CalendarPage() {
                           const displayDate = dateKey ? formatDateKey(dateKey) : '—'
                           const displayDay = dateKey ? String(dateFromKey(dateKey).getDate()).padStart(2, '0') : '—'
                           const displayMonth = dateKey ? MONTH_NAMES[dateFromKey(dateKey).getMonth()]?.slice(0, 3) : ''
-                          const dateLabel = a.status === 'scheduled' ? 'Programmé le' : a.status === 'published' ? 'Publié le' : 'Daté le'
+                          const dateLabel = a.status === 'scheduled' ? 'Programmé le' : a.status === 'published' ? 'Publié le' : a.status === 'idea_proposed' || a.status === 'idea_priority' ? 'Idée le' : a.status === 'writing_requested' || a.status === 'writing_in_progress' ? 'Rédaction le' : a.status === 'draft_ready' ? 'Brouillon le' : a.status === 'review_needed' ? 'Relecture le' : a.status === 'ready_to_publish' ? 'Prêt le' : 'Daté le'
                           return (
                             <div
                               key={a.id}
@@ -428,7 +435,15 @@ export default function CalendarPage() {
                         className={`rounded-[4px] px-1.5 py-0.5 text-left text-[10px] font-medium truncate transition-colors ${
                           a.status === 'scheduled'
                             ? 'bg-accent/10 text-accent hover:bg-accent/20'
-                            : 'bg-success/10 text-[#1a7a3a] hover:bg-success/20'
+                            : a.status === 'published'
+                            ? 'bg-success/10 text-[#1a7a3a] hover:bg-success/20'
+                            : a.status === 'idea_proposed' || a.status === 'idea_priority'
+                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                            : a.status === 'writing_requested' || a.status === 'writing_in_progress' || a.status === 'draft_ready'
+                            ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                            : a.status === 'review_needed' || a.status === 'ready_to_publish'
+                            ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                            : 'bg-[#f0f0f2] text-secondary hover:bg-[#e5e5e7]'
                         }`}
                         title={a.title}
                       >
@@ -445,7 +460,15 @@ export default function CalendarPage() {
           </div>
 
           {/* Legend */}
-          <div className="mt-3 flex items-center gap-4 text-[11px] text-tertiary">
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-tertiary">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-blue-400" />
+              Idée
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-purple-400" />
+              En rédaction
+            </span>
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-accent" />
               {STATUS_LABELS['scheduled']}

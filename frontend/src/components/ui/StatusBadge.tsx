@@ -24,6 +24,9 @@ const STATUS_VARIANTS: Record<ArticleStatus, BadgeVariant> = {
   unpublished:          'gray',
   archived:             'gray',
   failed:               'red',
+  improvement_proposed:   'orange',
+  improvement_in_progress: 'orange',
+  improvement_ready:      'blue',
 }
 
 type StatusBadgeProps = {

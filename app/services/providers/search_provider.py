@@ -60,8 +60,10 @@ class SearXNGSearchProvider(SearchProvider):
     def search(self, query: str, limit: int = 10) -> list[SearchResult]:
         try:
             import httpx
-            params = {"q": query, "format": "json", "number_of_results": limit}
-            resp = httpx.get(f"{self.base_url}/search", params=params, timeout=15)
+            from app.core.config import settings
+            fmt = settings.SEARXNG_FORMAT or "json"
+            params = {"q": query, "format": fmt, "number_of_results": limit}
+            resp = httpx.get(f"{self.base_url}/search", params=params, timeout=settings.SEARCH_TIMEOUT_SECONDS or 30)
             resp.raise_for_status()
             data = resp.json()
             results = []
@@ -78,7 +80,9 @@ class SearXNGSearchProvider(SearchProvider):
     def is_available(self) -> bool:
         try:
             import httpx
-            httpx.get(f"{self.base_url}/search", params={"q": "test", "format": "json"}, timeout=5)
+            from app.core.config import settings
+            fmt = settings.SEARXNG_FORMAT or "json"
+            httpx.get(f"{self.base_url}/search", params={"q": "test", "format": fmt}, timeout=5)
             return True
         except Exception:
             return False

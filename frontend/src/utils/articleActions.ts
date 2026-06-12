@@ -24,6 +24,9 @@ export const STATUS_LABELS: Record<ArticleStatus, string> = {
   unpublished: 'Dépublié',
   archived: 'Archivé',
   failed: 'Échec',
+  improvement_proposed: 'Amélioration proposée',
+  improvement_in_progress: 'Amélioration en cours',
+  improvement_ready: 'Amélioration prête',
 }
 
 

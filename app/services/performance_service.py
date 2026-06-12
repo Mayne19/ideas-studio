@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app.models.article import Article
+from app.models.project import Project
 from app.models.traffic_event import TrafficEvent
 
 
@@ -16,8 +17,20 @@ def _parse_period(period: str) -> datetime:
     return datetime.now(timezone.utc) - timedelta(days=days)
 
 
+def _source_channel(referrer: str | None) -> str:
+    value = (referrer or "").lower()
+    if not value:
+        return "direct"
+    if "google." in value:
+        return "organic"
+    if any(source in value for source in ("linkedin.", "twitter.", "x.com", "facebook.", "fb.", "reddit.")):
+        return "social"
+    return "referral"
+
+
 def get_project_traffic_summary(db: Session, project_id: str, period: str = "30d") -> dict:
     since = _parse_period(period)
+    project = db.query(Project).filter(Project.id == project_id).first()
 
     events = (
         db.query(TrafficEvent)
@@ -32,12 +45,19 @@ def get_project_traffic_summary(db: Session, project_id: str, period: str = "30d
     events = [e for e in events if not any(p in (e.url or "").lower() for p in _LOCALHOST_PATTERNS)]
 
     total_views = len(events)
+    if not project or not project.domain:
+        tracking_status = "not_configured"
+    elif total_views > 0:
+        tracking_status = "connected_with_data"
+    else:
+        tracking_status = "configured_no_data"
+
     unique_pages = len({e.path or e.url for e in events})
 
     path_counts = Counter(e.path or e.url for e in events)
     top_pages = [{"path": p, "views": c} for p, c in path_counts.most_common(10)]
 
-    referrer_counts = Counter(e.referrer for e in events if e.referrer)
+    referrer_counts = Counter(e.referrer or "" for e in events)
     referrers = [{"referrer": r, "views": c} for r, c in referrer_counts.most_common(10)]
 
     country_counts = Counter(e.country for e in events if e.country)
@@ -47,12 +67,30 @@ def get_project_traffic_summary(db: Session, project_id: str, period: str = "30d
     devices = [{"device": d, "views": c} for d, c in device_counts.most_common(5)]
 
     trend: dict[str, int] = defaultdict(int)
+    channel_trend: dict[str, dict[str, int]] = defaultdict(lambda: {
+        "direct": 0,
+        "organic": 0,
+        "social": 0,
+        "referral": 0,
+    })
     for e in events:
         day = e.created_at.strftime("%Y-%m-%d")
         trend[day] += 1
+        channel_trend[day][_source_channel(e.referrer)] += 1
     trend_by_day = [{"date": d, "views": v} for d, v in sorted(trend.items())]
+    channel_trend_by_day = [
+        {
+            "date": day,
+            "direct": values["direct"],
+            "organic": values["organic"],
+            "social": values["social"],
+            "referral": values["referral"],
+        }
+        for day, values in sorted(channel_trend.items())
+    ]
 
     return {
+        "tracking_status": tracking_status,
         "total_views": total_views,
         "unique_pages": unique_pages,
         "top_pages": top_pages,
@@ -60,6 +98,7 @@ def get_project_traffic_summary(db: Session, project_id: str, period: str = "30d
         "countries": countries,
         "devices": devices,
         "trend_by_day": trend_by_day,
+        "channel_trend_by_day": channel_trend_by_day,
         "period": period,
     }
 
@@ -85,7 +124,7 @@ def get_article_performance(db: Session, article_id: str, period: str = "30d") -
 
     views = len(matching)
 
-    referrer_counts = Counter(e.referrer for e in matching if e.referrer)
+    referrer_counts = Counter(e.referrer or "" for e in matching)
     referrers = [{"referrer": r, "views": c} for r, c in referrer_counts.most_common(10)]
 
     country_counts = Counter(e.country for e in matching if e.country)

@@ -25,6 +25,7 @@ import type { Article, ArticlePerformanceBrief, Category, PerformanceSummary } f
 import { Card } from '@/components/ui/Card'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
+import PeriodFilter, { type PeriodOption } from '@/components/ui/PeriodFilter'
 import { formatAxisTick, formatMetric, percentOf } from '@/utils/trafficDisplay'
 
 type Period = '1d' | '7d' | '30d' | '90d' | '180d' | '365d'
@@ -39,7 +40,7 @@ type ArticleMetric = {
   recommendation: string
 }
 
-const PERIODS: { value: Period; label: string }[] = [
+const PERIODS: PeriodOption<Period>[] = [
   { value: '1d', label: '1 jour' },
   { value: '7d', label: '7 jours' },
   { value: '30d', label: '30 jours' },
@@ -183,6 +184,23 @@ function compactArticleTitle(article: Article) {
   return article.keyword || article.title
 }
 
+function trackingStatusMessage(status: PerformanceSummary['tracking_status'] | undefined) {
+  if (status === 'not_configured') return 'Snippet non configuré.'
+  if (status === 'configured_no_data') return 'Snippet connecté, aucune donnée reçue pour cette période.'
+  if (status === 'error') return 'Impossible de lire l’état du tracking.'
+  return 'Aucune donnée pour cette période.'
+}
+
+function ChartEmpty({ message }: { message: string }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      <span className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[12px] text-secondary">
+        {message}
+      </span>
+    </div>
+  )
+}
+
 function getRecommendation(metric: Pick<ArticleMetric, 'article' | 'views' | 'engagement'>) {
   const article = metric.article
   if ((article.seo_score ?? 100) < 60) return 'Optimiser le titre'
@@ -281,12 +299,13 @@ function KeywordOpportunities() {
 export default function PerformanceDashboardPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
-  const [period, setPeriod] = useState<Period>('1d')
+  const [period, setPeriod] = useState<Period>('30d')
   const [data, setData] = useState<PerformanceSummary | null>(null)
   const [articles, setArticles] = useState<Article[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [articlePerf, setArticlePerf] = useState<ArticlePerformanceBrief[]>([])
   const [loadStatus, setLoadStatus] = useState<'loading' | 'success' | 'error'>('loading')
+  const [tick, setTick] = useState(0)
 
   useEffect(() => {
     if (!projectId) return
@@ -308,9 +327,8 @@ export default function PerformanceDashboardPage() {
       })
       .catch(() => { if (!cancelled) setLoadStatus('error') })
     return () => { cancelled = true }
-  }, [projectId, period])
+  }, [projectId, period, tick])
 
-  const hasRealTraffic = Boolean(data && data.total_views > 0)
   const displayData = data
   const displayCategories = categories
   const displayArticles = articles
@@ -318,11 +336,13 @@ export default function PerformanceDashboardPage() {
     () => buildArticleMetrics(displayArticles, displayCategories, articlePerf).sort((a, b) => b.views - a.views),
     [displayArticles, displayCategories, articlePerf],
   )
-  const hasData = !!displayData && hasRealTraffic
 
   if (loadStatus === 'loading') return <LoadingState />
   if (loadStatus === 'error') {
-    return <ErrorState message="Impossible de charger les données de performance." onRetry={() => setLoadStatus('loading')} />
+    return <ErrorState message="Impossible de charger les données de performance." onRetry={() => setTick((t) => t + 1)} />
+  }
+  if (!displayData) {
+    return <ErrorState message="Impossible de charger les données de performance." onRetry={() => setTick((t) => t + 1)} />
   }
 
   const publishedCount = articles.filter((article) => article.status === 'published').length
@@ -348,10 +368,15 @@ export default function PerformanceDashboardPage() {
     .filter((row) => row.count > 0)
     .sort((a, b) => b.views - a.views)
   const totalArticleViews = articleMetrics.reduce((sum, item) => sum + item.views, 0)
-  const trendData = displayData?.trend_by_day ?? []
+  const trendData = displayData.trend_by_day ?? []
   const bestRiser = risingItems[0]
   const leaderCategory = categoryRows[0]
   const averageScore = scoreAverage(articleMetrics)
+  const trackingMessage = trackingStatusMessage(displayData.tracking_status)
+  const showPeriodEmpty = displayData.tracking_status !== 'connected_with_data'
+  const hasTrendData = trendData.length > 0
+  const topArticleRows = articleMetrics.slice(0, 6).map((item) => ({ title: item.article.title, views: item.views }))
+  const hasTopArticleViews = topArticleRows.some((item) => item.views > 0)
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -362,35 +387,16 @@ export default function PerformanceDashboardPage() {
             <p className="mt-0.5 text-[13px] text-secondary">Identifiez les contenus qui montent, baissent ou méritent une optimisation.</p>
           </div>
         </div>
-        <div className="flex overflow-hidden rounded-[10px] border border-border bg-surface">
-          {PERIODS.map((p) => (
-            <button
-              key={p.value}
-              onClick={() => setPeriod(p.value)}
-              className={`px-3 py-1.5 text-[12px] font-medium transition-colors ${
-                period === p.value ? 'bg-accent text-white' : 'text-secondary hover:bg-[#f0f0f2] hover:text-primary'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+        <PeriodFilter options={PERIODS} value={period} onChange={setPeriod} />
       </div>
 
-      {!hasData || !displayData ? (
-        <div className="flex flex-col items-center gap-4 py-20 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-[#f0f0f2] text-tertiary">
-            <Eye size={22} />
-          </div>
-          <div>
-            <p className="text-[15px] font-medium text-primary">Aucune donnée disponible pour le moment</p>
-            <p className="mt-1 max-w-xs text-[13px] text-secondary">
-              Connectez votre site pour commencer à collecter les statistiques.
-            </p>
-          </div>
-        </div>
-      ) : (
         <div className="flex flex-col gap-6">
+          {showPeriodEmpty && (
+            <div className="rounded-[14px] border border-border bg-surface px-4 py-3 text-[13px] text-secondary">
+              {trackingMessage}
+            </div>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <StatCard icon={<Eye size={18} />} value={formatMetric(displayData.total_views)} label="Vues totales" variation={null} tone="accent" />
             <StatCard icon={<Clock3 size={18} />} value={<DurationMetric seconds={averageReadSeconds} />} label="Temps de lecture" variation={null} tone="violet" />
@@ -407,8 +413,8 @@ export default function PerformanceDashboardPage() {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] lg:items-stretch">
             <Card className="h-[320px]">
               <SectionTitle>Évolution des vues contenus</SectionTitle>
-              <div className="h-[255px]">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="relative h-[255px]">
+                <ResponsiveContainer width="100%" height="100%" debounce={100}>
                   <LineChart data={trendData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
                     <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} tickFormatter={(v) => trendTick(period, v)} interval="preserveStartEnd" />
@@ -417,6 +423,7 @@ export default function PerformanceDashboardPage() {
                     <Line type="monotone" dataKey="views" stroke="#007aff" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#007aff' }} />
                   </LineChart>
                 </ResponsiveContainer>
+                {!hasTrendData && <ChartEmpty message="Aucune donnée pour cette période." />}
               </div>
             </Card>
             <div className="grid grid-cols-2 gap-3 lg:h-[320px]">
@@ -436,15 +443,16 @@ export default function PerformanceDashboardPage() {
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,1fr)]">
             <Card>
               <SectionTitle>Top articles par vues</SectionTitle>
-              <div className="mb-4 h-[190px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={articleMetrics.slice(0, 6).map((item) => ({ title: item.article.title, views: item.views }))} layout="vertical" margin={{ top: 0, right: 12, bottom: 0, left: 0 }}>
+              <div className="relative mb-4 h-[190px]">
+                <ResponsiveContainer width="100%" height="100%" debounce={100}>
+                  <BarChart data={topArticleRows} layout="vertical" margin={{ top: 0, right: 12, bottom: 0, left: 0 }}>
                     <XAxis type="number" tick={{ fontSize: 10, fill: '#86868b' }} tickLine={false} axisLine={false} allowDecimals={false} domain={[0, 'dataMax']} tickFormatter={formatAxisTick} />
                     <YAxis type="category" dataKey="title" tick={{ fontSize: 10, fill: '#86868b' }} tickLine={false} axisLine={false} width={128} tickFormatter={(v: string) => v.length > 22 ? `${v.slice(0, 21)}…` : v} />
                     <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)' }} formatter={(v) => [formatMetric(Number(v)), 'Vues']} />
                     <Bar dataKey="views" fill={TOP_ARTICLE_BAR_COLOR} radius={[0, 4, 4, 0]} barSize={12} />
                   </BarChart>
                 </ResponsiveContainer>
+                {!hasTopArticleViews && <ChartEmpty message="Aucun article avec vues sur cette période." />}
               </div>
               <button onClick={() => navigate(`/projects/${projectId}/performance/articles`)} className="text-[12px] text-accent hover:underline">
                 Voir tous les articles →
@@ -530,7 +538,6 @@ export default function PerformanceDashboardPage() {
             </div>
           </Card>
         </div>
-      )}
     </div>
   )
 }

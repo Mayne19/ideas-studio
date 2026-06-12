@@ -22,7 +22,7 @@ else
   fi
 
   echo "Démarrage du backend sur http://127.0.0.1:8000"
-  "${ROOT_DIR}/venv/bin/python" -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload &
+  "${ROOT_DIR}/venv/bin/python" -m uvicorn app.main:app --app-dir "${ROOT_DIR}" --host 127.0.0.1 --port 8000 --reload &
   BACKEND_PID="$!"
 
   for _ in {1..40}; do

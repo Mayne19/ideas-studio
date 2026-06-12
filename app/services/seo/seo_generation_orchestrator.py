@@ -4,7 +4,10 @@ import json
 import uuid
 from datetime import datetime, timezone
 from time import perf_counter
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.services.agents.agent_router import AgentRouter
 
 from sqlalchemy.orm import Session
 
@@ -50,11 +53,19 @@ from app.services.seo.adapters.google_watch_adapter import google_watch_adapter
 
 
 class SEOGenerationOrchestrator:
-    def __init__(self, db: Session, project_id: str, llm: LLMProvider, search: SearchProviderType):
+    def __init__(
+        self,
+        db: Session,
+        project_id: str,
+        llm: LLMProvider,
+        search: SearchProviderType,
+        agent_router: Any | None = None,
+    ):
         self.db = db
         self.project_id = project_id
         self.llm = llm
         self.search = search
+        self.agent_router = agent_router
         self.project = db.query(Project).filter(Project.id == project_id).first()
         self.steps_completed: list[str] = []
         self.errors: list[str] = []
@@ -391,6 +402,59 @@ class SEOGenerationOrchestrator:
             self._error("SEOReview", str(exc))
             article.seo_review_json = build_review_error_report(str(exc))
 
+        # 20b. FactCheckPass (LLM-based)
+        try:
+            if self.agent_router is not None:
+                from app.services.agents.agent_services import fact_check_article
+                fact_check = fact_check_article(article.content or "", article.title, article.keyword, db=self.db)
+                article.sources_json = fact_check
+                self._step("FactCheckPass")
+        except Exception as exc:
+            self._error("FactCheckPass", str(exc))
+
+        # 20c. EditorialReview (LLM-based)
+        try:
+            if self.agent_router is not None:
+                from app.services.agents.agent_services import editorial_review
+                review_data = editorial_review(article.content or "", article.title, article.keyword, db=self.db)
+                if not article.editorial_quality_report_json or not isinstance(article.editorial_quality_report_json, dict):
+                    article.editorial_quality_report_json = {}
+                if isinstance(article.editorial_quality_report_json, dict):
+                    article.editorial_quality_report_json["llm_review"] = review_data
+                self._step("EditorialReview")
+        except Exception as exc:
+            self._error("EditorialReview", str(exc))
+
+        # 20d. SEOOptimizerPass (LLM-based)
+        try:
+            if self.agent_router is not None:
+                from app.services.agents.agent_services import seo_optimize_content
+                seo_opt = seo_optimize_content(
+                    article.content or "", article.title, article.keyword,
+                    meta_title=article.meta_title, meta_description=article.meta_description,
+                    db=self.db,
+                )
+                if not article.seo_final_checklist_json or not isinstance(article.seo_final_checklist_json, dict):
+                    article.seo_final_checklist_json = {}
+                if isinstance(article.seo_final_checklist_json, dict):
+                    article.seo_final_checklist_json["llm_optimizations"] = seo_opt
+                self._step("SEOOptimizerPass")
+        except Exception as exc:
+            self._error("SEOOptimizerPass", str(exc))
+
+        # 20e. QualityRating (LLM-based)
+        try:
+            if self.agent_router is not None:
+                from app.services.agents.agent_services import quality_rate_article
+                quality = quality_rate_article(article.content or "", article.title, article.keyword, db=self.db)
+                if not article.eeat_checklist_json or not isinstance(article.eeat_checklist_json, dict):
+                    article.eeat_checklist_json = {}
+                if isinstance(article.eeat_checklist_json, dict):
+                    article.eeat_checklist_json["llm_quality_rating"] = quality
+                self._step("QualityRatingPass")
+        except Exception as exc:
+            self._error("QualityRatingPass", str(exc))
+
         # 23. GenerationReport
         self._finalize_report(article, category_name, intent_analysis, research_brief, keyword_brief, outline, faq_plan, callout_plan, image_plan_result)
 
@@ -398,8 +462,21 @@ class SEOGenerationOrchestrator:
 
         return article
 
+    def _get_agent_provider(self, agent_id: str, fallback: LLMProvider | None = None) -> LLMProvider:
+        if self.agent_router is not None:
+            try:
+                return self.agent_router.get_provider(agent_id)
+            except Exception:
+                pass
+        return fallback or self.llm
+
+    def _write_through_agent(self, prompt: str, agent_id: str, **kwargs) -> str:
+        provider = self._get_agent_provider(agent_id)
+        return provider.generate_text(prompt, **kwargs)
+
     def _generate_content(self, article: Article, outline: dict, keyword_brief: dict, include_callouts: bool | None, include_faq: bool | None = None):
-        if self.llm.is_mock:
+        writer_llm = self._get_agent_provider("content_writer", self.llm)
+        if writer_llm.is_mock:
             article.content = f"<h1>{article.title}</h1><p>Contenu mock pour {article.keyword}</p>"
             article.word_count = calculate_word_count(article.content)
             article.reading_time_minutes = calculate_reading_time_minutes(article.word_count)
@@ -450,7 +527,7 @@ class SEOGenerationOrchestrator:
         prompt_parts.append("La FAQ sera générée séparément — ne l'inclus pas dans le contenu principal.")
         prompt_parts.append("Sois précis, original et utile.")
 
-        content = self.llm.generate_text("\n".join(prompt_parts), temperature=0.7)
+        content = writer_llm.generate_text("\n".join(prompt_parts), temperature=0.7)
 
         if not content or not content.strip():
             raise GenerationFailedError("Le provider IA n'a pas retourné de contenu exploitable pour la rédaction.")
@@ -462,11 +539,13 @@ class SEOGenerationOrchestrator:
 
         if not article.meta_title:
             meta_prompt = f"Écris un meta title SEO (max 60 car.) pour : {article.title}. Mot-clé : {article.keyword}"
-            article.meta_title = (self.llm.generate_text(meta_prompt, temperature=0.3) or article.title)[:255]
+            title_llm = self._get_agent_provider("title_generator", writer_llm)
+            article.meta_title = (title_llm.generate_text(meta_prompt, temperature=0.3) or article.title)[:255]
 
         if not article.meta_description:
             desc_prompt = f"Écris une meta description SEO (140-160 car.) pour : {article.title}. Mot-clé : {article.keyword}"
-            article.meta_description = (self.llm.generate_text(desc_prompt, temperature=0.3) or "")[:500]
+            desc_llm = self._get_agent_provider("meta_description_writer", writer_llm)
+            article.meta_description = (desc_llm.generate_text(desc_prompt, temperature=0.3) or "")[:500]
 
         article.excerpt = self._extract_excerpt(content)
 
@@ -479,7 +558,8 @@ class SEOGenerationOrchestrator:
         self.db.flush()
 
     def _generate_faq(self, article: Article):
-        if self.llm.is_mock:
+        faq_llm = self._get_agent_provider("faq_generator", self.llm)
+        if faq_llm.is_mock:
             return
         faq_prompt = (
             f"À partir de l'article suivant, génère 3 à 5 questions fréquentes utiles.\n"
@@ -489,7 +569,7 @@ class SEOGenerationOrchestrator:
             'Réponds uniquement avec un objet JSON au format {"faq":[{"question":"...","answer":"..."}]}.'
         )
         try:
-            faq_data = self.llm.generate_json(
+            faq_data = faq_llm.generate_json(
                 faq_prompt,
                 schema_hint='{"faq":[{"question":"...","answer":"..."}]}',
             )
@@ -590,8 +670,9 @@ def generate_full_article(
     context_hint: str | None = None,
     include_faq: bool | None = None,
     include_callouts: bool | None = None,
+    agent_router: Any | None = None,
 ) -> Article:
-    orchestrator = SEOGenerationOrchestrator(db, project_id, llm, search)
+    orchestrator = SEOGenerationOrchestrator(db, project_id, llm, search, agent_router=agent_router)
     return orchestrator.generate_full_article(
         preferred_title=preferred_title,
         keyword=keyword,

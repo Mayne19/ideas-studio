@@ -97,10 +97,14 @@ export default function ProjectCalloutsPage() {
       setCallouts(result.callouts)
       setSyncMessage(result.message)
     } catch (err) {
-      setSyncMessage(err instanceof Error ? err.message : 'Synchronisation impossible.')
+      const msg = err instanceof Error ? err.message : 'Synchronisation impossible.'
+      setSyncMessage(msg)
+      if (msg.includes('aucun domaine') || msg.includes('Aucun domaine') || msg.includes('Aucun site externe')) {
+        setSyncMessage('Aucun site externe configuré pour synchroniser les callouts.')
+      }
     } finally {
       setSyncing(false)
-      window.setTimeout(() => setSyncMessage(''), 5000)
+      window.setTimeout(() => setSyncMessage(''), 8000)
     }
   }
 
@@ -158,7 +162,7 @@ export default function ProjectCalloutsPage() {
     <div className="flex flex-col gap-5">
       <FormCard
         title="Templates de callouts"
-        description="Importez les encadres du site connecte ou creez vos propres variantes pour l'editeur."
+        description="Importez les encadrés du site connecté ou créez vos propres variantes pour l'éditeur."
         footer={
           <div className="flex items-center gap-3">
             {syncMessage && <span className="text-[12px] text-secondary">{syncMessage}</span>}
@@ -166,14 +170,14 @@ export default function ProjectCalloutsPage() {
               Importer depuis le site
             </Button>
             <Button type="button" size="sm" icon={<Plus size={14} />} onClick={openCreate}>
-              Creer un callout
+              Créer un callout
             </Button>
           </div>
         }
       >
         {callouts.length === 0 ? (
           <div className="rounded-[14px] bg-[#f9f9fb] px-4 py-5 text-[13px] text-secondary">
-            Aucun callout configure pour ce projet. Importez-les depuis le site connecte ou creez un template manuel.
+            Aucun callout configuré pour ce projet. Importez-les depuis le site connecté ou créez un template manuel.
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
@@ -183,10 +187,10 @@ export default function ProjectCalloutsPage() {
                   <div className="min-w-0">
                     <p className="text-[14px] font-semibold text-primary">{callout.label}</p>
                     <p className="mt-0.5 text-[12px] text-secondary">
-                      Style {callout.style ?? '—'} · {callout.source === 'imported' ? 'Importe' : 'Manuel'}
+                      Style {callout.style ?? '—'} · {callout.source === 'imported' ? 'Importé' : 'Manuel'}
                     </p>
                     {callout.default_title && (
-                      <p className="mt-1 text-[12px] text-tertiary">Titre par defaut : {callout.default_title}</p>
+                      <p className="mt-1 text-[12px] text-tertiary">Titre par défaut : {callout.default_title}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-1">
@@ -207,7 +211,7 @@ export default function ProjectCalloutsPage() {
                   }}
                 >
                   <p className="text-[12px] font-semibold">{callout.default_title || callout.label}</p>
-                  <p className="mt-1 text-[12px] opacity-85">Exemple de rendu du template dans l'editeur.</p>
+                  <p className="mt-1 text-[12px] opacity-85">Exemple de rendu du template dans l'éditeur.</p>
                 </div>
               </div>
             ))}
@@ -218,14 +222,14 @@ export default function ProjectCalloutsPage() {
       <Modal
         open={modalOpen}
         onClose={() => !saving && setModalOpen(false)}
-        title={editing ? 'Modifier le callout' : 'Creer un callout'}
+        title={editing ? 'Modifier le callout' : 'Créer un callout'}
       >
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <p className="text-[13px] text-secondary">
-            Creez un template simple pour l'editeur. Les variantes de fond, bordure et texte sont derivees automatiquement.
+            Créez un template simple pour l'éditeur. Les variantes de fond, bordure et texte sont dérivées automatiquement.
           </p>
           <Input label="Nom" value={form.label} onChange={setField('label')} required />
-          <Input label="Titre par defaut" value={form.default_title} onChange={setField('default_title')} placeholder="A retenir" />
+          <Input label="Titre par défaut" value={form.default_title} onChange={setField('default_title')} placeholder="À retenir" />
           <ColorPickerField
             label="Couleur principale"
             value={form.primary_color}
@@ -245,7 +249,7 @@ export default function ProjectCalloutsPage() {
           {formError && <p className="text-[12px] text-danger">{formError}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>Annuler</Button>
-            <Button type="submit" loading={saving}>{editing ? 'Mettre a jour' : 'Creer'}</Button>
+            <Button type="submit" loading={saving}>{editing ? 'Mettre à jour' : 'Créer'}</Button>
           </div>
         </form>
       </Modal>
@@ -255,7 +259,7 @@ export default function ProjectCalloutsPage() {
         onClose={() => !deleting && setDeleteTarget(null)}
         onConfirm={handleDelete}
         title="Supprimer ce callout ?"
-        description="Le template sera retire du projet s'il n'est pas deja utilise dans un article."
+        description="Le template sera retiré du projet s'il n'est pas déjà utilisé dans un article."
         confirmLabel="Supprimer"
         loading={deleting}
         variant="danger"

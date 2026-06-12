@@ -85,6 +85,9 @@ export type ArticleStatus =
   | 'unpublished'
   | 'archived'
   | 'failed'
+  | 'improvement_proposed'
+  | 'improvement_in_progress'
+  | 'improvement_ready'
 
 export type Article = {
   id: string
@@ -117,6 +120,37 @@ export type Article = {
   audience: string | null
   rejection_reason: string | null
   rejection_note: string | null
+  // Workflow tracking
+  workflow_run_id: string | null
+  completed_agent_keys: string | null
+  next_agent_key: string | null
+  agent_outputs_json: Record<string, unknown> | null
+  planning_brief_json: Record<string, unknown> | null
+  production_brief_json: Record<string, unknown> | null
+  workflow_status: string | null
+  // Target dates
+  target_write_at: string | null
+  target_review_at: string | null
+  // Pre-brief fields
+  main_answer_summary: string | null
+  opportunity_justification: string | null
+  recommended_format: string | null
+  target_word_count: number | null
+  needs_faq: boolean | null
+  needs_images: boolean | null
+  suggested_internal_links: string | null
+  suggested_external_links: string | null
+  estimated_difficulty: string | null
+  proposal_source: string | null
+  // Monitoring / improvement
+  improvement_proposal_json: Record<string, unknown> | null
+  performance_diagnosis_json: Record<string, unknown> | null
+  original_article_id: string | null
+  revision_of_article_id: string | null
+  proposed_changes_json: Record<string, unknown> | null
+  improvement_reason: string | null
+  monitoring_status: string | null
+  next_review_at: string | null
   created_at: string
   updated_at: string
 }
@@ -311,6 +345,26 @@ export type EditorArticle = Article & {
   external_links_json: unknown | null
   content_blocks_json: unknown | null
   seo_review_json: SeoExpertReview | null
+  generation_report_json: Record<string, unknown> | null
+  project_context_json: Record<string, unknown> | null
+  category_strategy_json: Record<string, unknown> | null
+  idea_discovery_json: Record<string, unknown> | null
+  intent_analysis_json: Record<string, unknown> | null
+  research_brief_json: Record<string, unknown> | null
+  keyword_brief_json: Record<string, unknown> | null
+  cannibalization_check_json: Record<string, unknown> | null
+  editorial_angle_json: Record<string, unknown> | null
+  outline_json: unknown | null
+  image_plan_json: Record<string, unknown> | null
+  image_sources_json: Record<string, unknown> | null
+  callout_plan_json: Record<string, unknown> | null
+  language_quality_report_json: Record<string, unknown> | null
+  originality_report_json: Record<string, unknown> | null
+  humanization_report_json: Record<string, unknown> | null
+  eeat_checklist_json: Record<string, unknown> | null
+  editorial_quality_report_json: Record<string, unknown> | null
+  seo_final_checklist_json: Record<string, unknown> | null
+  sources_json: Record<string, unknown> | null
   latest_analysis: AnalysisBrief | null
   published_content: string | null
   published_title: string | null
@@ -385,6 +439,7 @@ export type TrafficDevice = {
 }
 
 export type PerformanceSummary = {
+  tracking_status: 'not_configured' | 'configured_no_data' | 'connected_with_data' | 'error'
   total_views: number
   unique_pages: number
   top_pages: TopPage[]
@@ -392,6 +447,13 @@ export type PerformanceSummary = {
   countries: TrafficCountry[]
   devices: TrafficDevice[]
   trend_by_day: TrafficTrendPoint[]
+  channel_trend_by_day: {
+    date: string
+    direct: number
+    organic: number
+    social: number
+    referral: number
+  }[]
   period: string
 }
 
@@ -468,4 +530,49 @@ export type Notification = {
   level: string
   read_at: string | null
   created_at: string
+}
+
+// ── AI Agents ─────────────────────────────────────────────────────────────
+
+export type AgentInfo = {
+  agent_id: string
+  name: string
+  description: string
+  category: 'research' | 'strategy' | 'creation' | 'review'
+  requires_llm: boolean
+  requires_search: boolean
+  icon: string
+  has_implementation: boolean
+}
+
+export type AgentAssignment = {
+  id: string
+  project_id: string | null
+  agent_id: string
+  provider_id: string
+  enabled: boolean
+  priority: number
+  created_at: string
+  updated_at: string
+  agent: AgentInfo
+  provider_name: string
+  provider_label: string
+}
+
+export type AIProviderConfig = {
+  id: string
+  project_id: string | null
+  provider: string
+  label: string
+  display_name: string | null
+  api_key_configured: boolean
+  model: string | null
+  base_url: string | null
+  is_default: boolean
+  enabled: boolean
+  last_test_status: string | null
+  last_test_error: string | null
+  last_tested_at: string | null
+  created_at: string
+  updated_at: string
 }

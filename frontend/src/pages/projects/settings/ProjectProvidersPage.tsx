@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useParams } from 'react-router-dom'
 import { Plus, Trash2, TestTube, CheckCircle, XCircle, Loader2, Eye, EyeOff, Save } from 'lucide-react'
 import { api } from '@/api/client'
+import ToggleSwitch from '@/components/ui/ToggleSwitch'
 
 type AIProviderConfig = {
   id: string
@@ -58,6 +60,7 @@ const emptyForm: ProviderFormData = {
 }
 
 export default function ProjectProvidersPage() {
+  const { projectId } = useParams<{ projectId: string }>()
   const [configs, setConfigs] = useState<AIProviderConfig[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -72,9 +75,9 @@ export default function ProjectProvidersPage() {
 
   const loadConfigs = useCallback(async () => {
     setLoading(true)
-    setError(null)
+      setError(null)
     try {
-      const data = await api.get<AIProviderConfig[]>('/settings/ai-providers')
+      const data = await api.get<AIProviderConfig[]>(projectId ? `/settings/ai-providers?project_id=${projectId}` : '/settings/ai-providers')
       setConfigs(data)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur de chargement'
@@ -83,7 +86,7 @@ export default function ProjectProvidersPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [projectId])
 
   useEffect(() => {
     const timer = setTimeout(() => loadConfigs(), 0)
@@ -128,6 +131,7 @@ export default function ProjectProvidersPage() {
       const body: Record<string, unknown> = {
         provider: form.provider,
         label: form.label || form.provider,
+        project_id: projectId,
         model: form.model || undefined,
         base_url: form.base_url || undefined,
         is_default: form.is_default,
@@ -371,7 +375,7 @@ export default function ProjectProvidersPage() {
                   type={showKeys.has('form') ? 'text' : 'password'}
                   value={form.api_key}
                   onChange={(e) => setForm({ ...form, api_key: e.target.value })}
-                  placeholder={editingId ? 'Nouvelle clé (optionnelle)' : 'sk-...'}
+                  placeholder={editingId ? 'Nouvelle clé (optionnelle)' : 'Votre clé API'}
                   className="w-full rounded-[10px] border border-border bg-surface px-3 py-2 pr-8 text-[13px] text-primary outline-none focus:border-accent"
                 />
                 <button
@@ -406,24 +410,8 @@ export default function ProjectProvidersPage() {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.is_default}
-                  onChange={(e) => setForm({ ...form, is_default: e.target.checked })}
-                  className="rounded-[4px] border-border accent-accent"
-                />
-                <span className="text-[12px] text-secondary">Provider par défaut</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.enabled}
-                  onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
-                  className="rounded-[4px] border-border accent-accent"
-                />
-                <span className="text-[12px] text-secondary">Activé</span>
-              </label>
+              <ToggleSwitch checked={form.is_default} onChange={(v) => setForm({ ...form, is_default: v })} label="Provider par défaut" />
+              <ToggleSwitch checked={form.enabled} onChange={(v) => setForm({ ...form, enabled: v })} label="Activé" />
             </div>
             <div className="flex items-center gap-2 pt-2">
               <button

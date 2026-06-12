@@ -1,12 +1,13 @@
 import logging
 import os
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from alembic.config import Config
 from alembic import command
 from app.core.config import settings
-from app.routers import auth, projects, health, categories, articles, public_api, tracking, ideas, seo, performance, recommendations, notifications, members, editor, versions, media, invitations, editorial_setup, callouts, pipeline, generation, comments, search, search_console, profile, ai_providers, activity, webhooks, kanban_columns
+from app.routers import auth, projects, health, categories, articles, public_api, tracking, ideas, seo, performance, recommendations, notifications, members, editor, versions, media, invitations, editorial_setup, callouts, pipeline, generation, comments, search, search_console, profile, ai_providers, activity, webhooks, kanban_columns, ai_agents, monitoring
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,7 +24,11 @@ app = FastAPI(
 
 @app.on_event("startup")
 def run_migrations():
-    alembic_cfg = Config("alembic.ini")
+    if settings.APP_ENV == "test":
+        return
+    root_dir = Path(__file__).resolve().parents[1]
+    alembic_cfg = Config(str(root_dir / "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", str(root_dir / "alembic"))
     command.upgrade(alembic_cfg, "head")
 
 app.add_middleware(
@@ -63,6 +68,8 @@ app.include_router(comments.router)
 app.include_router(search.router)
 app.include_router(search_console.router)
 app.include_router(ai_providers.router)
+app.include_router(ai_agents.router)
+app.include_router(monitoring.router)
 app.include_router(activity.router)
 app.include_router(webhooks.router)
 app.include_router(kanban_columns.router)

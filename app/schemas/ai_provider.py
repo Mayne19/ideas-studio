@@ -6,6 +6,8 @@ from pydantic import BaseModel, ConfigDict
 class AIProviderCreate(BaseModel):
     provider: str
     label: str
+    project_id: Optional[str] = None
+    display_name: Optional[str] = None
     api_key: Optional[str] = None
     model: Optional[str] = None
     base_url: Optional[str] = None
@@ -15,6 +17,7 @@ class AIProviderCreate(BaseModel):
 
 class AIProviderUpdate(BaseModel):
     label: Optional[str] = None
+    display_name: Optional[str] = None
     api_key: Optional[str] = None
     model: Optional[str] = None
     base_url: Optional[str] = None
@@ -26,8 +29,10 @@ class AIProviderPublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
+    project_id: Optional[str] = None
     provider: str
     label: str
+    display_name: Optional[str] = None
     api_key_configured: bool = False
     model: Optional[str] = None
     base_url: Optional[str] = None

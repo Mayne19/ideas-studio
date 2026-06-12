@@ -122,7 +122,7 @@ def sync_project_callouts(
     if not project:
         raise HTTPException(status_code=404, detail="Projet introuvable.")
     if not project.domain:
-        raise HTTPException(status_code=400, detail="Aucun domaine configure pour ce projet.")
+        raise HTTPException(status_code=400, detail="Aucun site externe configuré pour synchroniser les callouts.")
 
     url = _build_config_url(project.domain)
 

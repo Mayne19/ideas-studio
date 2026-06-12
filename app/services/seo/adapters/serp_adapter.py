@@ -13,7 +13,7 @@ class SerpAdapter:
 
     def __init__(self):
         from app.core.config import settings
-        if getattr(settings, "SERP_API_KEY", None):
+        if settings.SERP_API_KEY:
             self.configured = True
             self.enabled = True
             self.real_data_available = True
@@ -24,11 +24,12 @@ class SerpAdapter:
             return []
         try:
             import httpx
-            api_key = __import__("app.core.config", fromlist=["settings"]).settings.SERP_API_KEY
+            from app.core.config import settings
+            api_key = settings.SERP_API_KEY
             resp = httpx.get(
                 "https://serpapi.com/search",
                 params={"q": query, "api_key": api_key, "num": limit},
-                timeout=15,
+                timeout=settings.SEARCH_TIMEOUT_SECONDS or 30,
             )
             resp.raise_for_status()
             data = resp.json()

@@ -1,15 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Lightbulb, Plus, Star, Pencil, X, ExternalLink, Loader2, RefreshCw, ChevronDown, ChevronUp, Search, Info, Sparkles, CheckCircle } from 'lucide-react'
 import {
-  listIdeas,
-  generateIdea,
-  rejectIdea,
-  setIdeaPriority,
-  startWriting,
-  createManualDraft,
-  autoGenerateIdeas,
-} from '@/api/ideas'
+  Lightbulb, Plus, Star, Pencil, X, ExternalLink, RefreshCw,
+  Search, Info, Sparkles, CheckCircle, Eye, Send,
+} from 'lucide-react'
+import { listIdeas, generateIdea, rejectIdea, setIdeaPriority, startWriting, createManualDraft, autoGenerateIdeas, sendToProduction } from '@/api/ideas'
 import type { AutoGenerateIdeasResponse } from '@/api/ideas'
 import { listCategories } from '@/api/categories'
 import { ApiError } from '@/api/client'
@@ -22,13 +17,28 @@ import Textarea from '@/components/ui/Textarea'
 import ErrorState from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 
+const IDEA_STATUSES_TO_FETCH = [
+  'idea_proposed', 'idea_priority', 'idea_rejected',
+  'outline_ready', 'writing_requested', 'writing_in_progress', 'draft_ready',
+]
+
+const IDEA_STATI: { key: string; label: string; color: string }[] = [
+  { key: '', label: 'Tous', color: '' },
+  { key: 'idea_proposed', label: 'Proposée', color: 'bg-blue-100 text-blue-700' },
+  { key: 'idea_priority', label: 'Prioritaire', color: 'bg-orange-100 text-orange-700' },
+  { key: 'idea_rejected', label: 'Rejetée', color: 'bg-red-100 text-red-700' },
+  { key: 'writing_requested', label: 'Rédaction demandée', color: 'bg-purple-100 text-purple-700' },
+  { key: 'writing_in_progress', label: 'En rédaction', color: 'bg-purple-100 text-purple-700' },
+  { key: 'draft_ready', label: 'Brouillon prêt', color: 'bg-green-100 text-green-700' },
+]
+
 function translateIdeaError(err: unknown, context: 'action' | 'generate' | 'reject'): string {
   if (err instanceof ApiError) {
     switch (err.status) {
-      case 403: return 'Vous n\'avez pas la permission d\'effectuer cette action.'
+      case 403: return "Vous n'avez pas la permission d'effectuer cette action."
       case 409:
         if (context === 'generate') return 'Une idée est déjà en cours de génération. Attendez quelques instants.'
-        return 'Cette action n\'est pas possible dans l\'état actuel de l\'idée.'
+        return "Cette action n'est pas possible dans l'état actuel de l'idée."
       case 422: return 'Données invalides. Vérifiez les informations saisies.'
       case 503: return err.message || 'Provider IA indisponible, génération réelle impossible.'
       default: return err.message || `Erreur ${err.status}`
@@ -37,253 +47,46 @@ function translateIdeaError(err: unknown, context: 'action' | 'generate' | 'reje
   return 'Une erreur inattendue est survenue.'
 }
 
-type PipelineColumn = {
-  key: string
-  label: string
-  statuses: string[]
-  color: string
-  emptyLabel: string
+function getLastCompletedAgent(article: Article): string | null {
+  if (article.completed_agent_keys) {
+    try {
+      const keys = JSON.parse(article.completed_agent_keys)
+      if (Array.isArray(keys) && keys.length > 0) {
+        return keys[keys.length - 1]
+      }
+    } catch { /* invalid JSON */ }
+  }
+  return null
 }
 
-const PIPELINE_COLUMNS: PipelineColumn[] = [
-  {
-    key: 'proposed',
-    label: 'Idées',
-    statuses: ['idea_proposed'],
-    color: 'bg-blue-50 border-blue-100',
-    emptyLabel: 'Utilisez "Générer" pour proposer des idées via l\'IA.',
-  },
-  {
-    key: 'priority',
-    label: 'Prioritaires',
-    statuses: ['idea_priority'],
-    color: 'bg-orange-50 border-orange-100',
-    emptyLabel: 'Étoilez une idée pour la prioriser.',
-  },
-  {
-    key: 'writing',
-    label: 'En rédaction',
-    statuses: ['outline_ready', 'writing_requested', 'writing_in_progress', 'draft_ready'],
-    color: 'bg-purple-50 border-purple-100',
-    emptyLabel: 'Cliquez "Rédiger" sur une idée pour commencer.',
-  },
-  {
-    key: 'rejected',
-    label: 'Rejetées',
-    statuses: ['idea_rejected'],
-    color: 'bg-[#fdf2f2] border-red-100',
-    emptyLabel: 'Aucune idée rejetée.',
-  },
-]
-
-const WRITING_STATUS_LABELS: Record<string, string> = {
-  outline_ready: 'Plan prêt',
-  writing_requested: 'Rédaction demandée',
-  writing_in_progress: 'En rédaction',
-  draft_ready: 'Brouillon prêt',
+function getNextAgent(article: Article): string | null {
+  if (article.next_agent_key) return article.next_agent_key
+  return null
 }
 
-function OpportunityDot({ score }: { score: number | null }) {
-  if (score === null) return null
+function OpportunityBadge({ score, reason }: { score: number | null; reason?: string | null }) {
+  if (score === null) return <span className="text-[12px] text-tertiary">—</span>
   const pct = Math.round(score * 100)
-  const color = pct >= 70 ? 'bg-success' : pct >= 40 ? 'bg-warning' : 'bg-[#c8c8cc]'
+  const color = pct >= 70 ? 'bg-success/10 text-success' : pct >= 40 ? 'bg-warning/10 text-warning' : 'bg-danger/10 text-danger'
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] text-tertiary">
-      <span className={`h-1.5 w-1.5 rounded-full ${color}`} />
-      {pct}%
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${color}`} title={reason ?? ''}>
+      {pct}/100
     </span>
   )
 }
 
-function IdeaCard({
-  article,
-  columnKey,
-  categories,
-  onAction,
-}: {
-  article: Article
-  columnKey: string
-  categories: Category[]
-  onAction: (action: string, article: Article) => void
-}) {
-  const [loading, setLoading] = useState<string | null>(null)
-  const [expanded, setExpanded] = useState(false)
-
-  async function doAction(action: string) {
-    setLoading(action)
-    await onAction(action, article)
-    setLoading(null)
-  }
-
-  const isIdea = ['proposed', 'priority'].includes(columnKey)
-  const isWriting = columnKey === 'writing'
-  const isRejected = columnKey === 'rejected'
-  const category = categories.find((c) => c.id === article.category_id)
-
-  // Parse outline if available
-  let outlineItems: string[] = []
-  try {
-    if ((article as Record<string, unknown>).outline_json) {
-      const parsed = JSON.parse((article as Record<string, unknown>).outline_json as string)
-      if (Array.isArray(parsed)) outlineItems = parsed.slice(0, 4).map((h: unknown) => String(h))
-    }
-  } catch { /* non-critical */ }
-
+function StatusBadgeSmall({ status }: { status: string }) {
+  const match = IDEA_STATI.find((s) => s.key === status)
+  if (!match) return <span className="text-[11px] text-tertiary">{status}</span>
   return (
-    <div className="rounded-[12px] border border-border bg-surface p-3 shadow-sm hover:shadow-card transition-shadow">
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <p className="text-[12px] font-medium text-primary leading-snug flex-1">{article.title}</p>
-        {isWriting && article.status in WRITING_STATUS_LABELS && (
-          <span className="shrink-0 rounded-full bg-[#f0f0f2] px-1.5 py-0.5 text-[10px] text-secondary">
-            {WRITING_STATUS_LABELS[article.status] ?? article.status}
-          </span>
-        )}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-1.5 mb-2">
-        {article.keyword && (
-          <span className="rounded-full bg-accent/8 px-2 py-0.5 text-[10px] text-accent truncate max-w-[120px]">
-            {article.keyword}
-          </span>
-        )}
-        {category && (
-          <span className="rounded-full bg-[#f0f0f2] px-2 py-0.5 text-[10px] text-tertiary truncate max-w-[80px]">
-            {category.name}
-          </span>
-        )}
-        <OpportunityDot score={article.opportunity_score} />
-        <span className="text-[10px] text-tertiary ml-auto">{formatDate(article.created_at)}</span>
-      </div>
-
-      {article.angle && (
-        <p className="text-[11px] text-tertiary mb-2 leading-snug line-clamp-2">{article.angle}</p>
-      )}
-
-      {/* Expandable detail */}
-      {(article.search_intent || article.audience || outlineItems.length > 0) && (
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          className="flex items-center gap-1 text-[10px] text-tertiary hover:text-secondary transition-colors mb-1"
-        >
-          {expanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-          {expanded ? 'Moins' : 'Détails'}
-        </button>
-      )}
-
-      {expanded && (
-        <div className="mb-2 flex flex-col gap-1.5 border-t border-border pt-2">
-          {article.search_intent && (
-            <p className="text-[10px] text-tertiary">
-              <span className="font-medium text-secondary">Intention :</span> {article.search_intent}
-            </p>
-          )}
-          {article.audience && (
-            <p className="text-[10px] text-tertiary">
-              <span className="font-medium text-secondary">Audience :</span> {article.audience}
-            </p>
-          )}
-          {outlineItems.length > 0 && (
-            <div>
-              <p className="text-[10px] font-medium text-secondary mb-0.5">Plan :</p>
-              <ul className="flex flex-col gap-0.5">
-                {outlineItems.map((h, i) => (
-                  <li key={i} className="text-[10px] text-tertiary leading-snug">• {h}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="flex items-center gap-1 flex-wrap">
-        {isWriting && (
-          <Button
-            size="sm"
-            variant="secondary"
-            icon={<ExternalLink size={11} />}
-            className="text-[11px] h-6 px-2"
-            onClick={() => onAction('open', article)}
-          >
-            Ouvrir
-          </Button>
-        )}
-        {isIdea && (
-          <>
-            {columnKey === 'proposed' && (
-              <button
-                onClick={() => doAction('prioritize')}
-                disabled={loading === 'prioritize'}
-                className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[11px] text-secondary hover:bg-orange-50 hover:text-orange-600 transition-colors disabled:opacity-40"
-              >
-                {loading === 'prioritize' ? <Loader2 size={11} className="animate-spin" /> : <Star size={11} />}
-                Prioriser
-              </button>
-            )}
-            <button
-              onClick={() => doAction('start-writing')}
-              disabled={!!loading}
-              className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[11px] text-secondary hover:bg-purple-50 hover:text-purple-600 transition-colors disabled:opacity-40"
-            >
-              {loading === 'start-writing' ? <Loader2 size={11} className="animate-spin" /> : <Pencil size={11} />}
-              Rédiger
-            </button>
-            <button
-              onClick={() => doAction('manual-draft')}
-              disabled={!!loading}
-              className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[11px] text-secondary hover:bg-[#f0f0f2] hover:text-primary transition-colors disabled:opacity-40"
-            >
-              {loading === 'manual-draft' ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />}
-              Manuel
-            </button>
-            <button
-              onClick={() => doAction('reject')}
-              disabled={!!loading}
-              className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[11px] text-tertiary hover:bg-danger/5 hover:text-danger transition-colors disabled:opacity-40"
-            >
-              {loading === 'reject' ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
-              Rejeter
-            </button>
-          </>
-        )}
-        {isRejected && article.rejection_reason && (
-          <p className="text-[10px] text-tertiary italic truncate">{article.rejection_reason}</p>
-        )}
-      </div>
-    </div>
+    <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${match.color}`}>
+      {match.label}
+    </span>
   )
 }
 
-function KanbanColumn({
-  column,
-  articles,
-  categories,
-  onAction,
-}: {
-  column: PipelineColumn
-  articles: Article[]
-  categories: Category[]
-  onAction: (action: string, article: Article) => void
-}) {
-  return (
-    <div className={`flex flex-col rounded-[16px] border p-3 min-w-[220px] flex-1 max-w-[280px] ${column.color}`}>
-      <div className="flex items-center justify-between mb-3 px-1">
-        <span className="text-[12px] font-semibold text-secondary">{column.label}</span>
-        <span className="rounded-full bg-white/70 px-1.5 py-0.5 text-[10px] font-medium text-tertiary">
-          {articles.length}
-        </span>
-      </div>
-      <div className="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-280px)]">
-        {articles.length === 0 ? (
-          <p className="text-[11px] text-tertiary text-center py-6">{column.emptyLabel}</p>
-        ) : (
-          articles.map((a) => (
-            <IdeaCard key={a.id} article={a} columnKey={column.key} categories={categories} onAction={onAction} />
-          ))
-        )}
-      </div>
-    </div>
-  )
-}
+type SortField = 'opportunity_score' | 'priority' | 'created_at' | 'title'
+type SortDir = 'asc' | 'desc'
 
 export default function IdeasPipelinePage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -291,11 +94,20 @@ export default function IdeasPipelinePage() {
 
   const [allIdeas, setAllIdeas] = useState<Article[]>([])
   const [categories, setCategories] = useState<Category[]>([])
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
+  const [loadStatus, setLoadStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [tick, setTick] = useState(0)
+  const [actionError, setActionError] = useState('')
+
   const [filterCategory, setFilterCategory] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
   const [filterSearch, setFilterSearch] = useState('')
   const [filterMinScore, setFilterMinScore] = useState(0)
+  const [sortField, setSortField] = useState<SortField>('opportunity_score')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
+
+  const [selectedIdeas, setSelectedIdeas] = useState<Set<string>>(new Set())
+
+  const [previewIdea, setPreviewIdea] = useState<Article | null>(null)
 
   const [generateOpen, setGenerateOpen] = useState(false)
   const [contextHint, setContextHint] = useState('')
@@ -308,7 +120,6 @@ export default function IdeasPipelinePage() {
   const [rejectNote, setRejectNote] = useState('')
   const [rejecting, setRejecting] = useState(false)
   const [rejectError, setRejectError] = useState('')
-  const [actionError, setActionError] = useState('')
 
   const [autoOpen, setAutoOpen] = useState(false)
   const [autoGenerating, setAutoGenerating] = useState(false)
@@ -324,45 +135,70 @@ export default function IdeasPipelinePage() {
   useEffect(() => {
     if (!projectId) return
     let cancelled = false
-    Promise.resolve().then(() => { if (!cancelled) setStatus('loading') })
-
-    const IDEA_STATUSES_TO_FETCH = [
-      'idea_proposed',
-      'idea_priority',
-      'idea_rejected',
-      'outline_ready',
-      'writing_requested',
-      'writing_in_progress',
-      'draft_ready',
-    ]
-
-    Promise.all(
-      IDEA_STATUSES_TO_FETCH.map((s) => listIdeas(projectId, s))
-    )
+    Promise.resolve().then(() => { if (!cancelled) setLoadStatus('loading') })
+    Promise.all(IDEA_STATUSES_TO_FETCH.map((s) => listIdeas(projectId, s)))
       .then((results) => {
         if (cancelled) return
         setAllIdeas(results.flat())
-        setStatus('success')
+        setLoadStatus('success')
       })
-      .catch(() => { if (!cancelled) setStatus('error') })
-
+      .catch(() => { if (!cancelled) setLoadStatus('error') })
     return () => { cancelled = true }
   }, [projectId, tick])
 
-  function getColumn(col: PipelineColumn): Article[] {
-    return allIdeas.filter((a) => {
-      if (!col.statuses.includes(a.status)) return false
-      if (filterCategory && a.category_id !== filterCategory) return false
-      if (filterSearch) {
-        const q = filterSearch.toLowerCase()
-        if (!a.title.toLowerCase().includes(q) && !(a.keyword ?? '').toLowerCase().includes(q)) return false
-      }
-      if (filterMinScore > 0) {
+  const filtered = useMemo(() => {
+    let items = [...allIdeas]
+    if (filterCategory) items = items.filter((a) => a.category_id === filterCategory)
+    if (filterStatus) items = items.filter((a) => a.status === filterStatus)
+    if (filterSearch) {
+      const q = filterSearch.toLowerCase()
+      items = items.filter((a) =>
+        a.title.toLowerCase().includes(q) || (a.keyword ?? '').toLowerCase().includes(q)
+      )
+    }
+    if (filterMinScore > 0) {
+      items = items.filter((a) => {
         const score = a.opportunity_score !== null ? Math.round(a.opportunity_score * 100) : 0
-        if (score < filterMinScore) return false
-      }
-      return true
+        return score >= filterMinScore
+      })
+    }
+    items.sort((a, b) => {
+      const cmp = sortField === 'opportunity_score'
+        ? (a.opportunity_score ?? 0) - (b.opportunity_score ?? 0)
+        : sortField === 'priority'
+        ? a.priority - b.priority
+        : sortField === 'created_at'
+        ? a.created_at.localeCompare(b.created_at)
+        : a.title.localeCompare(b.title)
+      return sortDir === 'desc' ? -cmp : cmp
     })
+    return items
+  }, [allIdeas, filterCategory, filterStatus, filterSearch, filterMinScore, sortField, sortDir])
+
+  function toggleSort(field: SortField) {
+    if (sortField === field) {
+      setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))
+    } else {
+      setSortField(field)
+      setSortDir('desc')
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIdeas((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    if (selectedIdeas.size === filtered.length) {
+      setSelectedIdeas(new Set())
+    } else {
+      setSelectedIdeas(new Set(filtered.map((a) => a.id)))
+    }
   }
 
   async function handleAction(action: string, article: Article) {
@@ -387,11 +223,32 @@ export default function IdeasPipelinePage() {
         const res = await createManualDraft(article.id)
         navigate(`/projects/${projectId}/articles/${res.id}/edit`)
         return
+      } else if (action === 'send-to-production') {
+        await sendToProduction(article.id)
       }
       setTick((t) => t + 1)
     } catch (err) {
       setActionError(translateIdeaError(err, 'action'))
     }
+  }
+
+  async function handleBatchAction(action: string) {
+    if (!projectId || selectedIdeas.size === 0) return
+    setActionError('')
+    let errored = false
+    for (const id of selectedIdeas) {
+      const article = allIdeas.find((a) => a.id === id)
+      if (!article) continue
+      try {
+        if (action === 'prioritize') await setIdeaPriority(id, 1)
+        else if (action === 'reject') await rejectIdea(id, { rejection_reason: 'Action groupée' })
+      } catch {
+        errored = true
+      }
+    }
+    if (errored) setActionError('Certaines actions ont échoué.')
+    setSelectedIdeas(new Set())
+    setTick((t) => t + 1)
   }
 
   async function handleReject(e: React.FormEvent) {
@@ -451,60 +308,49 @@ export default function IdeasPipelinePage() {
     }
   }
 
+  const catMap = useMemo(() => {
+    const m = new Map<string, Category>()
+    for (const c of categories) m.set(c.id, c)
+    return m
+  }, [categories])
+
   return (
     <>
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between shrink-0">
+        <div className="mb-4 flex items-center justify-between shrink-0">
           <div>
-            <h1 className="text-[20px] font-semibold text-primary tracking-tight">Pipeline d'idées</h1>
+            <h1 className="text-[20px] font-semibold text-primary tracking-tight">Idées</h1>
             <p className="mt-0.5 text-[13px] text-secondary">
-              De l'idée à la publication — gérez votre cycle éditorial.
+              Backlog éditorial — idées proposées par l'IA, briefs et préparation production.
             </p>
-            <div className="mt-4 flex items-start gap-2.5 rounded-[12px] border border-border bg-[#f9f9fb] px-4 py-3">
-              <Info size={14} className="mt-0.5 shrink-0 text-tertiary" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] text-secondary leading-snug">
-                  Générez et sélectionnez ici les idées à transformer en articles. Le suivi de production complet se fait dans le{' '}
-                  <button
-                    onClick={() => navigate(`/projects/${projectId}/kanban`)}
-                    className="text-accent hover:underline"
-                  >
-                    Kanban
-                  </button>.
-                </p>
-              </div>
-            </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<RefreshCw size={13} />}
-              onClick={() => setTick((t) => t + 1)}
-            >
+            <Button variant="secondary" size="sm" icon={<RefreshCw size={13} />} onClick={() => setTick((t) => t + 1)}>
               Rafraîchir
             </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              icon={<Sparkles size={14} />}
-              onClick={() => { setAutoOpen(true); setAutoResult(null); setAutoError(''); setAutoCount(3) }}
-            >
-              Mode automatique
+            <Button size="sm" variant="secondary" icon={<Sparkles size={14} />} onClick={() => { setAutoOpen(true); setAutoResult(null); setAutoError(''); setAutoCount(3) }}>
+              Génération automatique
             </Button>
-            <Button
-              size="sm"
-              icon={<Plus size={14} />}
-              onClick={() => setGenerateOpen(true)}
-            >
+            <Button size="sm" icon={<Plus size={14} />} onClick={() => setGenerateOpen(true)}>
               Générer une idée
             </Button>
           </div>
         </div>
 
+        {/* Info banner */}
+        <div className="mb-4 flex items-start gap-2.5 rounded-[12px] border border-border bg-[#f9f9fb] px-4 py-3 shrink-0">
+          <Info size={14} className="mt-0.5 shrink-0 text-tertiary" />
+          <p className="text-[13px] text-secondary leading-snug">
+            Les idées sont générées par les agents IA de planification. Validez une idée pour l'envoyer en{' '}
+            <button onClick={() => navigate(`/projects/${projectId}/production`)} className="text-accent hover:underline">
+              Production
+            </button>.
+          </p>
+        </div>
+
         {/* Filters */}
-        <div className="mb-4 flex flex-wrap items-center gap-2 shrink-0">
+        <div className="mb-3 flex flex-wrap items-center gap-2 shrink-0">
           <div className="flex items-center gap-1.5 rounded-[10px] border border-border bg-surface px-3 py-1.5">
             <Search size={12} className="text-tertiary" />
             <input
@@ -512,7 +358,7 @@ export default function IdeasPipelinePage() {
               value={filterSearch}
               onChange={(e) => setFilterSearch(e.target.value)}
               placeholder="Rechercher..."
-              className="w-32 bg-transparent text-[12px] text-primary outline-none placeholder:text-tertiary"
+              className="w-28 bg-transparent text-[12px] text-primary outline-none placeholder:text-tertiary"
             />
           </div>
           {categories.length > 0 && (
@@ -521,25 +367,34 @@ export default function IdeasPipelinePage() {
               onChange={(e) => setFilterCategory(e.target.value)}
               className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-[12px] text-secondary cursor-pointer"
             >
-              <option value="">Toutes les catégories</option>
+              <option value="">Toutes catégories</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           )}
           <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-[12px] text-secondary cursor-pointer"
+          >
+            {IDEA_STATI.map((s) => (
+              <option key={s.key} value={s.key}>{s.label}</option>
+            ))}
+          </select>
+          <select
             value={filterMinScore}
             onChange={(e) => setFilterMinScore(Number(e.target.value))}
             className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-[12px] text-secondary cursor-pointer"
           >
-            <option value={0}>Tous les scores</option>
-            <option value={70}>Score ≥ 70%</option>
-            <option value={50}>Score ≥ 50%</option>
-            <option value={30}>Score ≥ 30%</option>
+            <option value={0}>Tous scores</option>
+            <option value={70}>Score ≥ 70</option>
+            <option value={50}>Score ≥ 50</option>
+            <option value={30}>Score ≥ 30</option>
           </select>
-          {(filterCategory || filterSearch || filterMinScore > 0) && (
+          {(filterCategory || filterStatus || filterSearch || filterMinScore > 0) && (
             <button
-              onClick={() => { setFilterCategory(''); setFilterSearch(''); setFilterMinScore(0) }}
+              onClick={() => { setFilterCategory(''); setFilterStatus(''); setFilterSearch(''); setFilterMinScore(0) }}
               className="text-[11px] text-accent hover:underline"
             >
               Réinitialiser
@@ -547,42 +402,56 @@ export default function IdeasPipelinePage() {
           )}
         </div>
 
-        {/* Action error banner */}
+        {/* Batch actions */}
+        {selectedIdeas.size > 0 && (
+          <div className="mb-3 flex items-center gap-2 rounded-[10px] bg-accent/5 px-3 py-2 shrink-0">
+            <span className="text-[12px] font-medium text-secondary">{selectedIdeas.size} sélectionnée(s)</span>
+            <div className="flex gap-1.5 ml-2">
+              <Button size="sm" variant="secondary" className="text-[11px] h-7 px-2" onClick={() => handleBatchAction('prioritize')}>
+                <Star size={11} /> Prioriser
+              </Button>
+              <Button size="sm" variant="secondary" className="text-[11px] h-7 px-2" onClick={() => handleBatchAction('reject')}>
+                <X size={11} /> Rejeter
+              </Button>
+            </div>
+            <button
+              onClick={() => setSelectedIdeas(new Set())}
+              className="ml-auto text-[11px] text-tertiary hover:text-primary transition-colors"
+            >
+              Annuler
+            </button>
+          </div>
+        )}
+
+        {/* Action error */}
         {actionError && (
-          <div className="mb-4 flex items-center justify-between rounded-[10px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[13px] text-danger shrink-0">
+          <div className="mb-3 flex items-center justify-between rounded-[10px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[13px] text-danger shrink-0">
             <span>{actionError}</span>
             <button onClick={() => setActionError('')} className="ml-3 shrink-0 text-danger/60 hover:text-danger transition-colors">✕</button>
           </div>
         )}
 
         {/* Content */}
-        {status === 'loading' && (
-          <div className="flex gap-3">
-            {PIPELINE_COLUMNS.map((col) => (
-              <div key={col.key} className="flex-1 min-w-[200px]">
-                <Skeleton className="h-8 w-full rounded-[10px] mb-2" />
-                <Skeleton className="h-24 w-full rounded-[12px] mb-2" />
-                <Skeleton className="h-24 w-full rounded-[12px]" />
-              </div>
+        {loadStatus === 'loading' && (
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full rounded-[10px]" />
             ))}
           </div>
         )}
 
-        {status === 'error' && (
-          <ErrorState
-            message="Impossible de charger le pipeline d'idées."
-            onRetry={() => setTick((t) => t + 1)}
-          />
+        {loadStatus === 'error' && (
+          <ErrorState message="Impossible de charger les idées." onRetry={() => setTick((t) => t + 1)} />
         )}
 
-        {status === 'success' && allIdeas.length === 0 && (
+        {loadStatus === 'success' && allIdeas.length === 0 && (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-[#f0f0f2] text-tertiary">
               <Lightbulb size={22} />
             </div>
             <p className="text-[15px] font-medium text-primary">Aucune idée pour l'instant</p>
             <p className="max-w-xs text-[13px] text-secondary">
-              Générez votre première idée d'article avec l'IA.
+              Lancez une génération pour proposer des idées d'articles via l'IA.
             </p>
             <Button size="sm" icon={<Plus size={14} />} onClick={() => setGenerateOpen(true)}>
               Générer une idée
@@ -590,20 +459,312 @@ export default function IdeasPipelinePage() {
           </div>
         )}
 
-        {status === 'success' && allIdeas.length > 0 && (
-          <div className="flex gap-3 overflow-x-auto pb-4">
-            {PIPELINE_COLUMNS.map((col) => (
-              <KanbanColumn
-                key={col.key}
-                column={col}
-                articles={getColumn(col)}
-                categories={categories}
-                onAction={handleAction}
-              />
-            ))}
+        {loadStatus === 'success' && allIdeas.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="w-8 px-2 py-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedIdeas.size === filtered.length && filtered.length > 0}
+                      onChange={toggleSelectAll}
+                      className="rounded-[4px] border-border"
+                    />
+                  </th>
+                  <th className="px-2 py-2 text-left"><button onClick={() => toggleSort('opportunity_score')} className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-tertiary hover:text-secondary transition-colors">Score{sortField === 'opportunity_score' && <span className="text-accent">{sortDir === 'desc' ? '↓' : '↑'}</span>}</button></th>
+                  <th className="px-2 py-2 text-left"><button onClick={() => toggleSort('priority')} className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-tertiary hover:text-secondary transition-colors">Prio{sortField === 'priority' && <span className="text-accent">{sortDir === 'desc' ? '↓' : '↑'}</span>}</button></th>
+                  <th className="px-2 py-2 text-left"><button onClick={() => toggleSort('title')} className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-tertiary hover:text-secondary transition-colors">Titre / Brief{sortField === 'title' && <span className="text-accent">{sortDir === 'desc' ? '↓' : '↑'}</span>}</button></th>
+                  <th className="px-2 py-2 text-left hidden md:table-cell">Catégorie</th>
+                  <th className="px-2 py-2 text-left hidden lg:table-cell">Mot-clé</th>
+                  <th className="px-2 py-2 text-left hidden lg:table-cell">Statut</th>
+                  <th className="px-2 py-2 text-left hidden xl:table-cell">Dernier agent</th>
+                  <th className="px-2 py-2 text-left hidden xl:table-cell">Prochain agent</th>
+                  <th className="px-2 py-2 text-left"><button onClick={() => toggleSort('created_at')} className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-tertiary hover:text-secondary transition-colors">Date{sortField === 'created_at' && <span className="text-accent">{sortDir === 'desc' ? '↓' : '↑'}</span>}</button></th>
+                  <th className="w-28 px-2 py-2 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((article) => {
+                  const cat = catMap.get(article.category_id ?? '')
+                  const lastAgent = getLastCompletedAgent(article)
+                  const nextAgent = getNextAgent(article)
+                  const isRejected = article.status === 'idea_rejected'
+                  const isIdea = ['idea_proposed', 'idea_priority'].includes(article.status)
+                  return (
+                    <tr
+                      key={article.id}
+                      className={`border-b border-border/50 hover:bg-[#f9f9fb] transition-colors ${isRejected ? 'opacity-60' : ''}`}
+                    >
+                      <td className="px-2 py-2.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedIdeas.has(article.id)}
+                          onChange={() => toggleSelect(article.id)}
+                          className="rounded-[4px] border-border"
+                        />
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <OpportunityBadge score={article.opportunity_score} />
+                      </td>
+                      <td className="px-2 py-2.5">
+                        {article.priority > 0 ? (
+                          <Star size={13} className="text-orange-500 fill-orange-500" />
+                        ) : (
+                          <span className="text-tertiary text-[11px]">—</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-2.5 max-w-[280px]">
+                        <button
+                          onClick={() => setPreviewIdea(article)}
+                          className="text-[13px] font-medium text-primary hover:text-accent transition-colors text-left line-clamp-1"
+                        >
+                          {article.title}
+                        </button>
+                        {article.angle && (
+                          <p className="text-[11px] text-tertiary line-clamp-1 mt-0.5">{article.angle}</p>
+                        )}
+                      </td>
+                      <td className="px-2 py-2.5 hidden md:table-cell">
+                        {cat ? (
+                          <span className="text-[12px] text-secondary">{cat.name}</span>
+                        ) : (
+                          <span className="text-[12px] text-tertiary">—</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-2.5 hidden lg:table-cell">
+                        {article.keyword ? (
+                          <span className="rounded-full bg-accent/8 px-2 py-0.5 text-[10px] text-accent">{article.keyword}</span>
+                        ) : (
+                          <span className="text-[12px] text-tertiary">—</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-2.5 hidden lg:table-cell">
+                        <StatusBadgeSmall status={article.status} />
+                      </td>
+                      <td className="px-2 py-2.5 hidden xl:table-cell">
+                        <span className="text-[11px] text-tertiary">{lastAgent ?? '—'}</span>
+                      </td>
+                      <td className="px-2 py-2.5 hidden xl:table-cell">
+                        <span className="text-[11px] font-medium text-accent">{nextAgent ?? '—'}</span>
+                      </td>
+                      <td className="px-2 py-2.5 whitespace-nowrap">
+                        <span className="text-[11px] text-tertiary">{formatDate(article.created_at)}</span>
+                      </td>
+                      <td className="px-2 py-2.5 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {isIdea && !isRejected && (
+                            <>
+                              {article.status === 'idea_proposed' && (
+                                <button
+                                  onClick={() => handleAction('prioritize', article)}
+                                  className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                                  title="Prioriser"
+                                >
+                                  <Star size={12} />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleAction('start-writing', article)}
+                                className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-purple-50 hover:text-purple-600 transition-colors"
+                                title="Lancer la rédaction"
+                              >
+                                <Pencil size={12} />
+                              </button>
+                              <button
+                                onClick={() => handleAction('send-to-production', article)}
+                                className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-accent/10 hover:text-accent transition-colors"
+                                title="Envoyer en production"
+                              >
+                                <Send size={12} />
+                              </button>
+                              <button
+                                onClick={() => handleAction('reject', article)}
+                                className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-danger/10 hover:text-danger transition-colors"
+                                title="Rejeter"
+                              >
+                                <X size={12} />
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => setPreviewIdea(article)}
+                            className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors"
+                            title="Voir le brief"
+                          >
+                            <Eye size={12} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+
+            {filtered.length === 0 && (
+              <div className="flex flex-col items-center gap-2 py-12 text-center">
+                <p className="text-[13px] text-secondary">Aucune idée ne correspond aux filtres.</p>
+                <button
+                  onClick={() => { setFilterCategory(''); setFilterStatus(''); setFilterSearch(''); setFilterMinScore(0) }}
+                  className="text-[12px] text-accent hover:underline"
+                >
+                  Réinitialiser les filtres
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* Preview / Brief modal */}
+      <Modal
+        open={!!previewIdea}
+        onClose={() => setPreviewIdea(null)}
+        title={previewIdea?.title ?? 'Brief'}
+        size="lg"
+      >
+        {previewIdea && (
+          <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
+            {/* Meta row */}
+            <div className="flex flex-wrap items-center gap-2">
+              <OpportunityBadge score={previewIdea.opportunity_score} />
+              <StatusBadgeSmall status={previewIdea.status} />
+              {previewIdea.priority > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-orange-700">
+                  <Star size={10} className="fill-orange-500" /> Prioritaire
+                </span>
+              )}
+              <span className="text-[11px] text-tertiary">Créé le {formatDate(previewIdea.created_at)}</span>
+            </div>
+
+            {/* Brief fields */}
+            <div className="grid grid-cols-2 gap-3">
+              {previewIdea.keyword && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Mot-clé principal</p>
+                  <p className="text-[13px] text-primary">{previewIdea.keyword}</p>
+                </div>
+              )}
+              {previewIdea.recommended_format && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Format recommandé</p>
+                  <p className="text-[13px] text-primary capitalize">{previewIdea.recommended_format}</p>
+                </div>
+              )}
+              {previewIdea.search_intent && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Intention de recherche</p>
+                  <p className="text-[13px] text-primary">{previewIdea.search_intent}</p>
+                </div>
+              )}
+              {previewIdea.audience && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Audience cible</p>
+                  <p className="text-[13px] text-primary">{previewIdea.audience}</p>
+                </div>
+              )}
+              {previewIdea.estimated_difficulty && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Difficulté estimée</p>
+                  <p className="text-[13px] text-primary capitalize">{previewIdea.estimated_difficulty}</p>
+                </div>
+              )}
+              {previewIdea.target_word_count && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Longueur cible</p>
+                  <p className="text-[13px] text-primary">{previewIdea.target_word_count} mots</p>
+                </div>
+              )}
+              {previewIdea.needs_faq !== null && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">FAQ prévue</p>
+                  <p className="text-[13px] text-primary">{previewIdea.needs_faq ? 'Oui' : 'Non'}</p>
+                </div>
+              )}
+              {previewIdea.needs_images !== null && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Images nécessaires</p>
+                  <p className="text-[13px] text-primary">{previewIdea.needs_images ? 'Oui' : 'Non'}</p>
+                </div>
+              )}
+              {previewIdea.target_write_at && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Date rédaction cible</p>
+                  <p className="text-[13px] text-primary">{formatDate(previewIdea.target_write_at)}</p>
+                </div>
+              )}
+              {previewIdea.target_review_at && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Date relecture cible</p>
+                  <p className="text-[13px] text-primary">{formatDate(previewIdea.target_review_at)}</p>
+                </div>
+              )}
+              {previewIdea.scheduled_at && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Date publication cible</p>
+                  <p className="text-[13px] text-primary">{formatDate(previewIdea.scheduled_at)}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Dernier agent terminé</p>
+                <p className="text-[13px] text-primary">{getLastCompletedAgent(previewIdea) ?? 'Aucun'}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Prochain agent</p>
+                <p className="text-[13px] font-medium text-accent">{getNextAgent(previewIdea) ?? 'Aucun'}</p>
+              </div>
+              {previewIdea.workflow_status && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Phase workflow</p>
+                  <p className="text-[13px] text-primary capitalize">{previewIdea.workflow_status}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Opportunity justification */}
+            {previewIdea.opportunity_justification && (
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Justification du score</p>
+                <p className="text-[13px] text-secondary leading-relaxed">{previewIdea.opportunity_justification}</p>
+              </div>
+            )}
+
+            {/* Main answer summary */}
+            {previewIdea.main_answer_summary && (
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Réponse principale attendue</p>
+                <p className="text-[13px] text-secondary leading-relaxed">{previewIdea.main_answer_summary}</p>
+              </div>
+            )}
+
+            {/* Angle */}
+            {previewIdea.angle && (
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Angle éditorial</p>
+                <p className="text-[13px] text-secondary leading-relaxed">{previewIdea.angle}</p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-2 border-t border-border">
+              {['idea_proposed', 'idea_priority'].includes(previewIdea.status) && (
+                <>
+                  <Button size="sm" icon={<Send size={12} />} onClick={() => { handleAction('send-to-production', previewIdea); setPreviewIdea(null) }}>
+                    Envoyer en production
+                  </Button>
+                  <Button size="sm" icon={<Pencil size={12} />} variant="secondary" onClick={() => { handleAction('start-writing', previewIdea); setPreviewIdea(null) }}>
+                    Lancer la rédaction
+                  </Button>
+                </>
+              )}
+              <Button size="sm" variant="secondary" icon={<ExternalLink size={12} />} onClick={() => { navigate(`/projects/${projectId}/articles/${previewIdea.id}/edit`); setPreviewIdea(null) }}>
+                Ouvrir l'article
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Generate idea modal */}
       <Modal
@@ -633,13 +794,7 @@ export default function IdeasPipelinePage() {
             hint="Précisions supplémentaires pour l'IA."
           />
           <div className="flex gap-2 pt-1">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="flex-1 justify-center"
-              onClick={() => setGenerateOpen(false)}
-            >
+            <Button type="button" variant="secondary" size="sm" className="flex-1 justify-center" onClick={() => setGenerateOpen(false)}>
               Annuler
             </Button>
             <Button type="submit" size="sm" loading={generating} className="flex-1 justify-center">
@@ -649,11 +804,11 @@ export default function IdeasPipelinePage() {
         </form>
       </Modal>
 
-      {/* Auto-generate ideas modal */}
+      {/* Auto-generate modal */}
       <Modal
         open={autoOpen}
         onClose={() => { setAutoOpen(false); setAutoResult(null); setAutoError('') }}
-        title="Mode automatique : proposer des idées"
+        title="Génération automatique d'idées"
         size="md"
       >
         <div className="flex flex-col gap-4">
@@ -662,10 +817,9 @@ export default function IdeasPipelinePage() {
               {autoError}
             </div>
           )}
-
           {autoResult ? (
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-2 text-[#1a7a3a]">
+              <div className="flex items-center gap-2 text-success">
                 <CheckCircle size={15} />
                 <p className="text-[13px] font-semibold">{autoResult.generated} idée(s) proposée(s)</p>
               </div>
@@ -674,35 +828,20 @@ export default function IdeasPipelinePage() {
                   <div key={idea.id} className="rounded-[10px] border border-border bg-[#f9f9fb] p-3">
                     <p className="text-[13px] font-medium text-primary">{idea.title}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                      {idea.keyword && (
-                        <span className="rounded-full bg-accent/8 px-2 py-0.5 text-[10px] text-accent">
-                          {idea.keyword}
-                        </span>
-                      )}
+                      {idea.keyword && <span className="rounded-full bg-accent/8 px-2 py-0.5 text-[10px] text-accent">{idea.keyword}</span>}
                       {idea.opportunity_score !== null && (
-                        <span className="text-[10px] text-tertiary">
-                          Score: {Math.round(idea.opportunity_score * 100)}%
-                        </span>
+                        <span className="text-[10px] text-tertiary">Score: {Math.round(idea.opportunity_score * 100)}%</span>
                       )}
                     </div>
                   </div>
                 ))}
               </div>
               <div className="flex gap-2 pt-1">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="flex-1 justify-center"
-                  onClick={() => { setAutoOpen(false); setAutoResult(null) }}
-                >
+                <Button variant="secondary" size="sm" className="flex-1 justify-center" onClick={() => { setAutoOpen(false); setAutoResult(null) }}>
                   Fermer
                 </Button>
-                <Button
-                  size="sm"
-                  className="flex-1 justify-center"
-                  onClick={() => { setAutoOpen(false); setAutoResult(null); navigate(`/projects/${projectId}/ideas`) }}
-                >
-                  Voir dans le pipeline
+                <Button size="sm" className="flex-1 justify-center" onClick={() => { setAutoOpen(false); setAutoResult(null); setTick((t) => t + 1) }}>
+                  Voir dans la liste
                 </Button>
               </div>
             </div>
@@ -713,7 +852,7 @@ export default function IdeasPipelinePage() {
                 <div>
                   <p className="text-[13px] font-medium text-primary">Génération automatique</p>
                   <p className="mt-0.5 text-[12px] text-secondary leading-snug">
-                    L'IA va proposer plusieurs idées d'articles basées sur le contexte de votre projet. Les idées seront ajoutées directement dans le pipeline.
+                    L'IA va proposer plusieurs idées d'articles basées sur le contexte de votre projet.
                   </p>
                 </div>
               </div>
@@ -731,20 +870,10 @@ export default function IdeasPipelinePage() {
                 </select>
               </div>
               <div className="flex gap-2 pt-1">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="flex-1 justify-center"
-                  onClick={() => { setAutoOpen(false); setAutoResult(null) }}
-                >
+                <Button variant="secondary" size="sm" className="flex-1 justify-center" onClick={() => { setAutoOpen(false); setAutoResult(null) }}>
                   Annuler
                 </Button>
-                <Button
-                  size="sm"
-                  loading={autoGenerating}
-                  className="flex-1 justify-center"
-                  onClick={handleAutoGenerate}
-                >
+                <Button size="sm" loading={autoGenerating} className="flex-1 justify-center" onClick={handleAutoGenerate}>
                   Proposer des idées
                 </Button>
               </div>
@@ -783,22 +912,10 @@ export default function IdeasPipelinePage() {
             placeholder="Explications supplémentaires..."
           />
           <div className="flex gap-2 pt-1">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="flex-1 justify-center"
-              onClick={() => { setRejectTarget(null); setRejectError('') }}
-            >
+            <Button type="button" variant="secondary" size="sm" className="flex-1 justify-center" onClick={() => { setRejectTarget(null); setRejectError('') }}>
               Annuler
             </Button>
-            <Button
-              type="submit"
-              variant="danger"
-              size="sm"
-              loading={rejecting}
-              className="flex-1 justify-center"
-            >
+            <Button type="submit" variant="danger" size="sm" loading={rejecting} className="flex-1 justify-center">
               Rejeter
             </Button>
           </div>

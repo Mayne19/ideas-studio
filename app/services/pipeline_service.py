@@ -116,9 +116,11 @@ def _is_paused(pipe: ProjectPipeline) -> bool:
 
 
 def run_pipeline(db: Session, project_id: str) -> dict:
+    from app.core.config import settings
     from app.services.providers.llm_provider import get_llm_provider
     from app.services.providers.search_provider import get_search_provider
     from app.services.idea_engine import generate_idea
+    from app.services.agents.agent_router import get_agent_router
     from app.models.project import Project
 
     pipe = get_or_create_pipeline(db, project_id)
@@ -135,6 +137,7 @@ def run_pipeline(db: Session, project_id: str) -> dict:
     errors = []
     ideas_generated = 0
     articles_created = 0
+    pipeline_mode = settings.PIPELINE_MODE
 
     try:
         if _is_paused(pipe):
@@ -149,6 +152,7 @@ def run_pipeline(db: Session, project_id: str) -> dict:
             else:
                 llm = get_llm_provider()
                 search = get_search_provider()
+                agent_router = get_agent_router(db=db)
 
                 active_days = []
                 if pipe.active_days:
@@ -162,6 +166,7 @@ def run_pipeline(db: Session, project_id: str) -> dict:
                 project_audience = project.audience if project else None
                 project_language = project.language if project else "fr"
 
+                # Phase 1: Generate ideas (always)
                 for i in range(daily_target):
                     try:
                         idea = generate_idea(
@@ -171,12 +176,51 @@ def run_pipeline(db: Session, project_id: str) -> dict:
                             project_language=project_language,
                             llm=llm,
                             search=search,
+                            agent_router=agent_router,
                         )
                         if idea:
                             ideas_generated += 1
                     except Exception as exc:
                         logger.exception("Pipeline idea generation failed")
                         errors.append(f"Idea {i + 1}: {exc}")
+
+                # Phase 2: Generate briefs / full drafts based on pipeline mode
+                if pipeline_mode in ("brief_only", "draft_generation") and ideas_generated > 0:
+                    from app.services.seo.seo_generation_orchestrator import generate_full_article
+
+                    pending_ideas = (
+                        db.query(Article)
+                        .filter(
+                            Article.project_id == project_id,
+                            Article.status == "idea_proposed",
+                        )
+                        .order_by(Article.opportunity_score.desc().nullslast())
+                        .limit(daily_target)
+                        .all()
+                    )
+                    for idea in pending_ideas:
+                        try:
+                            article = generate_full_article(
+                                db=db,
+                                project_id=project_id,
+                                llm=llm,
+                                search=search,
+                                preferred_title=idea.title,
+                                keyword=idea.keyword,
+                                category_id=idea.category_id,
+                                audience=idea.audience,
+                                angle=idea.angle,
+                                search_intent=idea.search_intent,
+                                agent_router=agent_router,
+                            )
+                            if pipeline_mode == "brief_only":
+                                article.status = "draft"
+                            else:
+                                article.status = "draft_ready"
+                            articles_created += 1
+                        except Exception as exc:
+                            logger.exception("Pipeline article generation failed")
+                            errors.append(f"Article from idea {idea.id}: {exc}")
 
                 log_entry.status = "completed" if not errors else "completed_with_errors"
     except Exception as exc:
@@ -195,6 +239,7 @@ def run_pipeline(db: Session, project_id: str) -> dict:
         "status": log_entry.status,
         "ideas_generated": ideas_generated,
         "articles_created": articles_created,
+        "pipeline_mode": pipeline_mode,
     }
 
 

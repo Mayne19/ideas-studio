@@ -31,8 +31,10 @@ const ProjectStrategyPage = lazy(() => import('@/pages/projects/settings/Project
 const ProjectProvidersPage = lazy(() => import('@/pages/projects/settings/ProjectProvidersPage'))
 const ProjectCalloutsPage = lazy(() => import('@/pages/projects/settings/ProjectCalloutsPage'))
 const ProjectPipelinePage = lazy(() => import('@/pages/projects/settings/ProjectPipelinePage'))
+const ProjectAgentsPage = lazy(() => import('@/pages/projects/settings/ProjectAgentsPage'))
 const MediaPage = lazy(() => import('@/pages/projects/media/MediaPage'))
 const AccountPage = lazy(() => import('@/pages/account/AccountPage'))
+const DocumentationPage = lazy(() => import('@/pages/DocumentationPage'))
 
 function RouteErrorFallback() {
   const error = useRouteError()
@@ -84,6 +86,19 @@ export const router = createBrowserRouter([
   {
     path: '/register',
     element: <RegisterPage />,
+  },
+  {
+    path: '/documentation',
+    element: (
+      <Suspense fallback={<LoadingState />}>
+        <DocumentationPage />
+      </Suspense>
+    ),
+    errorElement: <RouteErrorFallback />,
+  },
+  {
+    path: '/docs',
+    element: <Navigate to="/documentation" replace />,
   },
   {
     path: '/',
@@ -163,6 +178,14 @@ export const router = createBrowserRouter([
               </Suspense>
             ),
           },
+          {
+            path: 'agents',
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <ProjectAgentsPage />
+              </Suspense>
+            ),
+          },
         ],
       },
       /* Convenience alias for integration */
@@ -205,6 +228,10 @@ export const router = createBrowserRouter([
             <KanbanPage />
           </Suspense>
         ),
+      },
+      {
+        path: 'projects/:projectId/production',
+        element: <Navigate to="../kanban" replace />,
       },
       {
         path: 'projects/:projectId/performance',

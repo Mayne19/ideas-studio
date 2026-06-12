@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
 } from 'recharts'
@@ -22,6 +22,7 @@ import { Card } from '@/components/ui/Card'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import Button from '@/components/ui/Button'
+import PeriodFilter, { type PeriodOption } from '@/components/ui/PeriodFilter'
 import {
   formatAxisTick,
   formatMetric,
@@ -54,7 +55,7 @@ type SourceRow = {
   share: number
 }
 
-const PERIODS: { value: Period; label: string }[] = [
+const PERIODS: PeriodOption<Period>[] = [
   { value: '1d', label: '1 jour' },
   { value: '7d', label: '7 jours' },
   { value: '30d', label: '30 jours' },
@@ -126,6 +127,7 @@ function SourceMark({ referrer }: { referrer: string }) {
 }
 
 function buildSourceRows(data: PerformanceSummary): SourceRow[] {
+  if (data.total_views === 0) return []
   const rows = data.referrers.length ? data.referrers : [{ referrer: '', views: data.total_views }]
   const totalVisits = Math.max(1, rows.reduce((sum, item) => sum + item.views, 0))
   return rows.map((item) => {
@@ -143,23 +145,8 @@ function buildSourceRows(data: PerformanceSummary): SourceRow[] {
   }).sort((a, b) => b.visits - a.visits)
 }
 
-function buildChannelTrend(data: PerformanceSummary, sources: SourceRow[]): ChannelTrendPoint[] {
-  const trend = data.trend_by_day
-  const totals = sources.reduce<Record<string, number>>((acc, source) => {
-    const key = source.channel === 'Organic Search' ? 'organic' : source.channel.toLowerCase()
-    acc[key] = (acc[key] ?? 0) + source.visits
-    return acc
-  }, {})
-  const total = Math.max(1, Object.values(totals).reduce((sum, value) => sum + value, 0))
-  return trend.map((point) => {
-    return {
-      date: point.date,
-      direct: Math.round(point.views * ((totals.direct ?? 0) / total)),
-      organic: Math.round(point.views * ((totals.organic ?? 0) / total)),
-      social: Math.round(point.views * ((totals.social ?? 0) / total)),
-      referral: Math.round(point.views * ((totals.referral ?? 0) / total)),
-    }
-  })
+function buildChannelTrend(data: PerformanceSummary): ChannelTrendPoint[] {
+  return data.channel_trend_by_day ?? []
 }
 
 function trafficTick(period: Period, value: unknown) {
@@ -184,6 +171,27 @@ function entryPageLabel(path: string) {
 
 function entryPageHref(path: string) {
   return path.startsWith('http') ? path : path
+}
+
+function trackingStatusMessage(status: PerformanceSummary['tracking_status'] | undefined) {
+  if (status === 'not_configured') return 'Snippet non configuré.'
+  if (status === 'configured_no_data') return 'Snippet connecté, aucune donnée reçue pour cette période.'
+  if (status === 'error') return 'Impossible de lire l’état du tracking.'
+  return 'Aucune donnée pour cette période.'
+}
+
+function ChartEmpty({ message }: { message: string }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      <span className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[12px] text-secondary">
+        {message}
+      </span>
+    </div>
+  )
+}
+
+function InlineEmpty({ children }: { children: React.ReactNode }) {
+  return <p className="rounded-[12px] bg-[#f9f9fb] px-3 py-3 text-[13px] text-secondary">{children}</p>
 }
 
 function VisualRow({
@@ -233,8 +241,7 @@ function VisualRow({
 
 export default function TrafficPage() {
   const { projectId } = useParams<{ projectId: string }>()
-  const navigate = useNavigate()
-  const [period, setPeriod] = useState<Period>('1d')
+  const [period, setPeriod] = useState<Period>('30d')
   const [data, setData] = useState<PerformanceSummary | null>(null)
   const [loadStatus, setLoadStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [tick, setTick] = useState(0)
@@ -249,23 +256,28 @@ export default function TrafficPage() {
     return () => { cancelled = true }
   }, [projectId, period, tick])
 
-  const hasRealData = Boolean(data && data.total_views > 0)
   const displayData = data
-  const hasData = Boolean(hasRealData)
   const sources = useMemo(() => displayData ? buildSourceRows(displayData) : [], [displayData])
   const totalVisits = sources.reduce((sum, source) => sum + source.visits, 0)
-  const channelTrend = useMemo(() => displayData ? buildChannelTrend(displayData, sources) : [], [displayData, sources])
+  const channelTrend = useMemo(() => displayData ? buildChannelTrend(displayData) : [], [displayData])
   const topSource = sources[0]
   const topCountry = displayData ? [...displayData.countries].sort((a, b) => b.views - a.views)[0] : undefined
   const mobileViews = displayData?.devices.find((device) => device.device === 'mobile')?.views ?? 0
   const mobileShare = totalVisits ? percentOf(mobileViews, totalVisits) : 0
-  const uniqueVisitors = displayData?.unique_pages ?? null
+  const uniquePages = displayData?.unique_pages ?? null
   const visits = totalVisits || null
-  const pagesPerSession = visits && displayData ? (displayData.total_views / visits).toFixed(1).replace('.', ',') : null
   const channels = ['Organic Search', 'Direct', 'Social', 'Referral'].map((channel) => ({
     channel,
     visits: sources.filter((source) => source.channel === channel).reduce((sum, source) => sum + source.visits, 0),
   })).filter((channel) => channel.visits > 0)
+
+  if (loadStatus === 'loading') return <LoadingState />
+  if (loadStatus === 'error') return <ErrorState onRetry={() => setTick((t) => t + 1)} />
+  if (!displayData) return <ErrorState onRetry={() => setTick((t) => t + 1)} />
+
+  const trackingMessage = trackingStatusMessage(displayData.tracking_status)
+  const showPeriodEmpty = displayData.tracking_status !== 'connected_with_data'
+  const hasChannelTrend = channelTrend.length > 0
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -275,61 +287,33 @@ export default function TrafficPage() {
           <p className="mt-0.5 text-[13px] text-secondary">Comprenez d’où viennent les visiteurs et quelles sources apportent le meilleur trafic.</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex overflow-hidden rounded-[10px] border border-border bg-surface">
-            {PERIODS.map((p) => (
-              <button
-                key={p.value}
-                onClick={() => setPeriod(p.value)}
-                className={`px-3 py-1.5 text-[12px] font-medium transition-colors ${
-                  period === p.value ? 'bg-accent text-white' : 'text-secondary hover:bg-[#f0f0f2] hover:text-primary'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+          <PeriodFilter options={PERIODS} value={period} onChange={setPeriod} />
           <Button size="sm" variant="secondary" icon={<RefreshCw size={13} />} onClick={() => setTick((t) => t + 1)}>
             Rafraîchir
           </Button>
         </div>
       </div>
 
-      {loadStatus === 'loading' && <LoadingState />}
-      {loadStatus === 'error' && <ErrorState onRetry={() => setTick((t) => t + 1)} />}
-
-      {loadStatus === 'success' && !hasData && (
-        <div className="flex flex-col items-center gap-4 py-20 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-[#f0f0f2] text-tertiary">
-            <TrendingUp size={22} />
-          </div>
-          <div>
-            <p className="text-[15px] font-medium text-primary">Aucune donnée disponible pour le moment</p>
-            <p className="mt-1 max-w-xs text-[13px] text-secondary">
-              Connectez votre site pour commencer à collecter les statistiques.
-            </p>
-          </div>
-          <button onClick={() => navigate(`/projects/${projectId}/settings/integration`)} className="flex items-center gap-1.5 rounded-[10px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent/90">
-            <ExternalLink size={13} />
-            Voir le snippet
-          </button>
-        </div>
-      )}
-
-      {loadStatus === 'success' && hasData && displayData && (
         <div className="flex flex-col gap-6">
+          {showPeriodEmpty && (
+            <div className="rounded-[14px] border border-border bg-surface px-4 py-3 text-[13px] text-secondary">
+              {trackingMessage}
+            </div>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <StatCard icon={<Users size={18} />} value={uniqueVisitors !== null ? formatMetric(uniqueVisitors) : '—'} label="Visiteurs uniques" variation={null} tone="accent" />
-            <StatCard icon={<TrendingUp size={18} />} value={visits !== null ? formatMetric(visits) : '—'} label="Visites" variation={null} tone="success" />
+            <StatCard icon={<Users size={18} />} value={uniquePages !== null ? formatMetric(uniquePages) : '—'} label="Pages uniques" variation={null} tone="accent" />
+            <StatCard icon={<TrendingUp size={18} />} value={visits !== null ? formatMetric(visits) : '—'} label="Sources comptées" variation={null} tone="success" />
             <StatCard icon={<EyeIcon />} value={formatMetric(displayData.total_views)} label="Pages vues" variation={null} tone="violet" />
-            <StatCard icon={<Users size={18} />} value="—" label="Nouveaux visiteurs" variation={null} tone="warning" />
-            <StatCard icon={<RefreshCw size={18} />} value="—" label="Taux de retour" variation={null} tone="danger" />
+            <StatCard icon={<Globe size={18} />} value={topCountry ? getCountryDisplay(topCountry.country).label : '—'} label="Pays principal" variation={null} tone="warning" />
+            <StatCard icon={<Smartphone size={18} />} value={<SplitMetric value={mobileShare} suffix="%" />} label="Part mobile" variation={null} tone="danger" />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] lg:items-stretch">
             <Card className="h-[360px]">
               <SectionTitle>Évolution du trafic par canal</SectionTitle>
-              <div className="h-[245px]">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="relative h-[245px]" style={{ minHeight: 0 }}>
+                <ResponsiveContainer width="100%" height="100%" debounce={100}>
                   <LineChart data={channelTrend} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
                     <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} tickFormatter={(v) => trafficTick(period, v)} interval="preserveStartEnd" />
@@ -342,6 +326,7 @@ export default function TrafficPage() {
                     <Line type="monotone" dataKey="referral" name="Referral" stroke="#ff9500" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
                   </LineChart>
                 </ResponsiveContainer>
+                {!hasChannelTrend && <ChartEmpty message="Aucune évolution par canal disponible pour cette période." />}
               </div>
               <div className="mt-2 grid gap-1 text-[11px] text-tertiary sm:grid-cols-2">
                 <span><strong className="text-secondary">Google</strong> : recherche organique</span>
@@ -359,8 +344,7 @@ export default function TrafficPage() {
                 variation={null}
                 tone="accent"
               />
-              <StatCard icon={<Smartphone size={18} />} value={<SplitMetric value={mobileShare} suffix="%" />} label="Part mobile" variation={null} tone="violet" />
-              <StatCard icon={<BarSmallIcon />} value={pagesPerSession ? <SplitMetric value={pagesPerSession} suffix="pages/session" /> : '—'} label="Pages/session" variation={null} tone="warning" />
+              <StatCard icon={<BarSmallIcon />} value={formatMetric(displayData.top_pages.length)} label="Pages d’entrée" variation={null} tone="warning" />
             </div>
           </div>
 
@@ -368,7 +352,7 @@ export default function TrafficPage() {
             <Card>
               <SectionTitle>Sources de trafic</SectionTitle>
               <div className="grid gap-1">
-                {sources.slice(0, 8).map((source, index) => (
+                {sources.length ? sources.slice(0, 8).map((source, index) => (
                   <VisualRow
                     key={source.key}
                     rank={index + 1}
@@ -376,16 +360,16 @@ export default function TrafficPage() {
                     value={source.visits}
                     total={totalVisits}
                     leading={<SourceMark referrer={source.raw} />}
-                    meta={<span>{source.channel} · visiteurs {source.visitors !== null ? formatMetric(source.visitors) : '—'} · évolution <VariationBadge value={source.variation} /></span>}
+                    meta={<span>{source.channel} · {source.share}% du trafic attribué</span>}
                   />
-                ))}
+                )) : <InlineEmpty>Aucune source disponible pour cette période.</InlineEmpty>}
               </div>
             </Card>
 
             <Card>
               <SectionTitle>Canaux</SectionTitle>
               <div className="flex flex-col gap-1">
-                {channels.map((channel) => (
+                {channels.length ? channels.map((channel) => (
                   <VisualRow
                     key={channel.channel}
                     label={channel.channel}
@@ -393,7 +377,7 @@ export default function TrafficPage() {
                     total={totalVisits}
                     leading={channel.channel === 'Organic Search' ? <Globe size={15} /> : channel.channel === 'Direct' ? <MousePointer2 size={15} /> : channel.channel === 'Social' ? <Users size={15} /> : <ExternalLink size={15} />}
                   />
-                ))}
+                )) : <InlineEmpty>Aucun canal disponible pour cette période.</InlineEmpty>}
               </div>
             </Card>
           </div>
@@ -401,15 +385,15 @@ export default function TrafficPage() {
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <Card>
               <SectionTitle>Appareils</SectionTitle>
-              {displayData.devices.map((device, index) => (
+              {displayData.devices.length ? displayData.devices.map((device, index) => (
                 <VisualRow key={device.device} rank={index + 1} label={getDeviceLabel(device.device)} value={device.views} total={totalVisits} leading={<DeviceIcon device={device.device} />} />
-              ))}
+              )) : <InlineEmpty>Aucun appareil disponible pour cette période.</InlineEmpty>}
             </Card>
             <Card>
               <SectionTitle>Pays</SectionTitle>
-              {displayData.countries.slice(0, 8).map((country, index) => (
+              {displayData.countries.length ? displayData.countries.slice(0, 8).map((country, index) => (
                 <VisualRow key={country.country} rank={index + 1} label={getCountryDisplay(country.country).label} value={country.views} total={totalVisits} leading={<span className="text-[15px] leading-none">{getCountryDisplay(country.country).flag}</span>} />
-              ))}
+              )) : <InlineEmpty>Aucun pays disponible pour cette période.</InlineEmpty>}
             </Card>
             <Card>
               <SectionTitle>Trafic organique / mots-clés</SectionTitle>
@@ -422,7 +406,7 @@ export default function TrafficPage() {
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
               <SectionTitle>Pages d’entrée</SectionTitle>
-              {displayData.top_pages.slice(0, 8).map((page, index) => (
+              {displayData.top_pages.length ? displayData.top_pages.slice(0, 8).map((page, index) => (
                 <VisualRow
                   key={page.path}
                   rank={index + 1}
@@ -433,7 +417,7 @@ export default function TrafficPage() {
                   href={entryPageHref(page.path)}
                   meta={<span>{topSource?.label ?? '—'}</span>}
                 />
-              ))}
+              )) : <InlineEmpty>Aucune page d’entrée disponible pour cette période.</InlineEmpty>}
             </Card>
             <Card>
               <SectionTitle>Référents</SectionTitle>
@@ -458,27 +442,25 @@ export default function TrafficPage() {
             <SectionTitle>Qualité des sources</SectionTitle>
             <div className="overflow-x-auto">
               <div className="min-w-[860px]">
-                <div className="grid grid-cols-[1.1fr_1fr_0.8fr_0.8fr_0.9fr_0.9fr_0.8fr_1.4fr_0.8fr] gap-3 border-b border-border px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-tertiary">
-                  <span>Source</span><span>Canal</span><span>Visiteurs</span><span>Pages vues</span><span>Temps moyen</span><span>Pages/session</span><span>Retour</span><span>Meilleure entrée</span><span>Évolution</span>
+                <div className="grid grid-cols-[1.4fr_1fr_0.8fr_0.8fr] gap-3 border-b border-border px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-tertiary">
+                  <span>Source</span><span>Canal</span><span>Pages vues</span><span>Part</span>
                 </div>
-                {sources.slice(0, 8).map((source, index) => (
-                  <div key={source.key} className="grid grid-cols-[1.1fr_1fr_0.8fr_0.8fr_0.9fr_0.9fr_0.8fr_1.4fr_0.8fr] gap-3 border-b border-border px-2 py-3 text-[12px] last:border-0">
+                {sources.length ? sources.slice(0, 8).map((source) => (
+                  <div key={source.key} className="grid grid-cols-[1.4fr_1fr_0.8fr_0.8fr] gap-3 border-b border-border px-2 py-3 text-[12px] last:border-0">
                     <span className="flex min-w-0 items-center gap-2 font-medium text-primary"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[8px] bg-[#f0f0f2]"><SourceMark referrer={source.raw} /></span><span className="truncate">{source.label}</span></span>
                     <span className="text-secondary">{source.channel}</span>
-                    <span>{source.visitors !== null ? formatMetric(source.visitors) : '—'}</span>
                     <span>{formatMetric(source.visits)}</span>
-                    <span>—</span>
-                    <span>—</span>
-                    <span>—</span>
-                    <span className="truncate text-secondary">{displayData.top_pages[index % Math.max(1, displayData.top_pages.length)] ? entryPageLabel(displayData.top_pages[index % displayData.top_pages.length].path) : '—'}</span>
-                    <VariationBadge value={source.variation} />
+                    <span>{source.share}%</span>
                   </div>
-                ))}
+                )) : (
+                  <div className="px-2 py-3">
+                    <InlineEmpty>Aucune source disponible pour cette période.</InlineEmpty>
+                  </div>
+                )}
               </div>
             </div>
           </Card>
         </div>
-      )}
     </div>
   )
 }

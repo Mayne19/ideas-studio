@@ -15,6 +15,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import EmptyState from '@/components/ui/EmptyState'
 import ErrorState from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
+import ToggleSwitch from '@/components/ui/ToggleSwitch'
 
 const PAGE_SIZE = 20
 
@@ -649,25 +650,17 @@ export default function ArticlesPage() {
               onChange={(e) => setGenerateForm((f) => ({ ...f, angle: e.target.value || null }))}
               placeholder="Guide pratique avec exemples"
             />
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={generateForm.include_faq ?? true}
-                  onChange={(e) => setGenerateForm((f) => ({ ...f, include_faq: e.target.checked }))}
-                  className="rounded"
-                />
-                <span className="text-[12px] text-secondary">Inclure FAQ</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={generateForm.include_callouts ?? false}
-                  onChange={(e) => setGenerateForm((f) => ({ ...f, include_callouts: e.target.checked }))}
-                  className="rounded"
-                />
-                <span className="text-[12px] text-secondary">Inclure callouts</span>
-              </label>
+            <div className="flex flex-wrap items-center gap-4">
+              <ToggleSwitch
+                checked={generateForm.include_faq ?? true}
+                onChange={(checked) => setGenerateForm((f) => ({ ...f, include_faq: checked }))}
+                label="Inclure FAQ"
+              />
+              <ToggleSwitch
+                checked={generateForm.include_callouts ?? false}
+                onChange={(checked) => setGenerateForm((f) => ({ ...f, include_callouts: checked }))}
+                label="Inclure callouts"
+              />
             </div>
             <div className="flex gap-2 pt-1">
               <Button

@@ -1,11 +1,13 @@
 import { useState, useRef } from 'react'
-import { User, Mail, Camera, Check, Loader2, AtSign, Moon, Lock } from 'lucide-react'
+import { User, Mail, Camera, Check, Loader2, AtSign, Moon, Lock, ArrowLeft, FolderOpen } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { useTheme } from '@/context/ThemeContext'
 import { api } from '@/api/client'
 import { checkUsername } from '@/api/auth'
 import Button from '@/components/ui/Button'
 import CopyButton from '@/components/ui/CopyButton'
+import ToggleSwitch from '@/components/ui/ToggleSwitch'
 
 export default function AccountPage() {
   const { user, refreshUser } = useAuth()
@@ -106,6 +108,16 @@ export default function AccountPage() {
   return (
     <div className="mx-auto max-w-xl">
       <div className="mb-6">
+        <div className="flex items-center gap-4 mb-4">
+          <Link to="/projects" className="flex items-center gap-1.5 text-[13px] text-secondary hover:text-primary transition-colors">
+            <ArrowLeft size={15} />
+            Mes projets
+          </Link>
+          <Link to="/projects" className="flex items-center gap-1.5 text-[13px] text-accent hover:underline">
+            <FolderOpen size={15} />
+            Ouvrir le studio
+          </Link>
+        </div>
         <h1 className="text-[20px] font-semibold text-primary tracking-tight">Mon profil</h1>
         <p className="mt-0.5 text-[13px] text-secondary">
           Gérez vos informations personnelles.
@@ -202,19 +214,7 @@ export default function AccountPage() {
               <p className="text-[11px] text-tertiary">Choix sauvegardé sur cet appareil.</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className={`relative h-7 w-12 rounded-full transition-colors ${isDark ? 'bg-accent' : 'bg-[#d8d8dc]'}`}
-            aria-pressed={isDark}
-            aria-label="Mode sombre"
-          >
-            <span
-              className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${
-                isDark ? 'translate-x-6' : 'translate-x-1'
-              }`}
-            />
-          </button>
+          <ToggleSwitch checked={isDark} onChange={() => toggleTheme()} ariaLabel="Activer le mode sombre" />
         </div>
 
         {error && (
@@ -228,7 +228,7 @@ export default function AccountPage() {
             Sauvegarder
           </Button>
           {saved && (
-            <span className="flex items-center gap-1 text-[13px] text-[#1a7a3a]">
+            <span className="flex items-center gap-1 text-[13px] text-success">
               <Check size={14} />
               Sauvegardé
             </span>
@@ -279,7 +279,7 @@ export default function AccountPage() {
               Changer le mot de passe
             </Button>
             {passwordSaved && (
-              <span className="flex items-center gap-1 text-[13px] text-[#1a7a3a]">
+              <span className="flex items-center gap-1 text-[13px] text-success">
                 <Check size={14} />
                 Mot de passe modifié
               </span>

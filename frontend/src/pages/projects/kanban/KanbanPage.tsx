@@ -534,9 +534,9 @@ export default function KanbanPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-4 shrink-0">
           <div>
-            <h1 className="text-[20px] font-semibold text-primary tracking-tight">Kanban éditorial</h1>
+            <h1 className="text-[20px] font-semibold text-primary tracking-tight">Production</h1>
             <p className="mt-0.5 text-[13px] text-secondary">
-              {articles.length} article{articles.length !== 1 ? 's' : ''} — glissez pour déplacer entre colonnes
+              Suivi de la production éditoriale — {articles.length} article{articles.length !== 1 ? 's' : ''} dans le workflow
             </p>
           </div>
           <div className="flex items-center gap-2">
