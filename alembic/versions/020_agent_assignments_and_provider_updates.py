@@ -29,10 +29,10 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('project_id', 'agent_id', name='uq_project_agent_assignment'),
     )
     op.create_index(op.f('ix_agent_assignments_project_id'), 'agent_assignments', ['project_id'], unique=False)
     op.create_index(op.f('ix_agent_assignments_agent_id'), 'agent_assignments', ['agent_id'], unique=False)
-    op.create_unique_constraint('uq_project_agent_assignment', 'agent_assignments', ['project_id', 'agent_id'])
 
     # ── ai_usage_logs table ────────────────────────────────────────────
     op.create_table(
@@ -65,12 +65,14 @@ def upgrade() -> None:
     op.drop_index('ix_ai_provider_configs_provider', table_name='ai_provider_configs')
     op.create_index(op.f('ix_ai_provider_configs_provider'), 'ai_provider_configs', ['provider'], unique=False)
 
-    # Add unique constraint on (project_id, provider)
-    op.create_unique_constraint('uq_project_provider', 'ai_provider_configs', ['project_id', 'provider'])
+    # Add unique constraint on (project_id, provider). Batch mode keeps SQLite fresh installs working.
+    with op.batch_alter_table('ai_provider_configs') as batch_op:
+        batch_op.create_unique_constraint('uq_project_provider', ['project_id', 'provider'])
 
 
 def downgrade() -> None:
-    op.drop_constraint('uq_project_provider', 'ai_provider_configs', type_='unique')
+    with op.batch_alter_table('ai_provider_configs') as batch_op:
+        batch_op.drop_constraint('uq_project_provider', type_='unique')
     op.drop_index(op.f('ix_ai_provider_configs_provider'), table_name='ai_provider_configs')
     op.create_index('ix_ai_provider_configs_provider', 'ai_provider_configs', ['provider'], unique=True)
     op.drop_index(op.f('ix_ai_provider_configs_project_id'), table_name='ai_provider_configs')
@@ -79,7 +81,6 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_ai_usage_logs_project_id'), table_name='ai_usage_logs')
     op.drop_index(op.f('ix_ai_usage_logs_agent_id'), table_name='ai_usage_logs')
     op.drop_table('ai_usage_logs')
-    op.drop_constraint('uq_project_agent_assignment', 'agent_assignments', type_='unique')
     op.drop_index(op.f('ix_agent_assignments_agent_id'), table_name='agent_assignments')
     op.drop_index(op.f('ix_agent_assignments_project_id'), table_name='agent_assignments')
     op.drop_table('agent_assignments')
