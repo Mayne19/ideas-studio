@@ -64,9 +64,14 @@ function getNextAgent(article: Article): string | null {
   return null
 }
 
-function OpportunityBadge({ score, reason }: { score: number | null; reason?: string | null }) {
-  if (score === null) return <span className="text-[12px] text-tertiary">—</span>
-  const pct = Math.round(score * 100)
+function normalizeOpportunityScore(score: number | null | undefined): number | null {
+  if (typeof score !== 'number' || !Number.isFinite(score)) return null
+  return Math.max(0, Math.min(100, Math.round(score * 100)))
+}
+
+function OpportunityBadge({ score, reason }: { score: number | null | undefined; reason?: string | null }) {
+  const pct = normalizeOpportunityScore(score)
+  if (pct === null) return <span className="text-[12px] text-tertiary">—</span>
   const color = pct >= 70 ? 'bg-success/10 text-success' : pct >= 40 ? 'bg-warning/10 text-warning' : 'bg-danger/10 text-danger'
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${color}`} title={reason ?? ''}>
@@ -158,13 +163,12 @@ export default function IdeasPipelinePage() {
     }
     if (filterMinScore > 0) {
       items = items.filter((a) => {
-        const score = a.opportunity_score !== null ? Math.round(a.opportunity_score * 100) : 0
-        return score >= filterMinScore
+        return (normalizeOpportunityScore(a.opportunity_score) ?? 0) >= filterMinScore
       })
     }
     items.sort((a, b) => {
       const cmp = sortField === 'opportunity_score'
-        ? (a.opportunity_score ?? 0) - (b.opportunity_score ?? 0)
+        ? (normalizeOpportunityScore(a.opportunity_score) ?? 0) - (normalizeOpportunityScore(b.opportunity_score) ?? 0)
         : sortField === 'priority'
         ? a.priority - b.priority
         : sortField === 'created_at'
@@ -829,8 +833,8 @@ export default function IdeasPipelinePage() {
                     <p className="text-[13px] font-medium text-primary">{idea.title}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
                       {idea.keyword && <span className="rounded-full bg-accent/8 px-2 py-0.5 text-[10px] text-accent">{idea.keyword}</span>}
-                      {idea.opportunity_score !== null && (
-                        <span className="text-[10px] text-tertiary">Score: {Math.round(idea.opportunity_score * 100)}%</span>
+                      {normalizeOpportunityScore(idea.opportunity_score) !== null && (
+                        <span className="text-[10px] text-tertiary">Score: {normalizeOpportunityScore(idea.opportunity_score)}%</span>
                       )}
                     </div>
                   </div>

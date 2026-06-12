@@ -322,7 +322,7 @@ export default function ProjectMembersPage() {
       {invitations.filter((inv) => !inv.accepted_at).length > 0 && (
         <FormCard
           title="Invitations en attente"
-          description="Les invitations envoyées aux nouveaux collaborateurs qui n'ont pas encore rejoint le projet."
+          description="Les invitations créées pour les nouveaux collaborateurs. Copiez le lien si l'envoi email n'est pas configuré."
         >
           <div className="flex flex-col gap-2">
             {invitations.map((invitation) => {
@@ -529,7 +529,7 @@ export default function ProjectMembersPage() {
               value={addEmail}
               onChange={(e) => setAddEmail(e.target.value)}
               placeholder="collaborateur@example.com"
-              hint="Une invitation lui sera envoyée par email."
+              hint="Une invitation sera créée. Copiez ensuite le lien d'invitation si l'email transactionnel n'est pas configuré."
             />
           )}
 

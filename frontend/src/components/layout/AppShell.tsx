@@ -7,8 +7,8 @@ import Topbar from './Topbar'
 function AppShellInner() {
   const location = useLocation()
   const isEditor = /\/articles\/[^/]+\/edit/.test(location.pathname)
-  const isKanban = location.pathname.endsWith('/kanban')
-  const fullHeight = isEditor || isKanban
+  const isProduction = location.pathname.endsWith('/production') || location.pathname.endsWith('/kanban')
+  const fullHeight = isEditor || isProduction
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 

@@ -176,8 +176,8 @@ def invite_by_email(
     db.add(inv)
     create_notification(
         db, project_id,
-        title="Invitation envoyée",
-        message=f"Une invitation a été envoyée à {data.email} avec le rôle {data.role}.",
+        title="Invitation créée",
+        message=f"Une invitation a été créée pour {data.email} avec le rôle {data.role}. Copiez le lien si l'envoi email n'est pas configuré.",
         level="info",
         type="invitation",
     )
@@ -249,6 +249,5 @@ def remove_member(
     db.delete(target)
     db.commit()
     return {"message": "Member removed from project"}
-
 
 

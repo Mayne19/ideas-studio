@@ -270,6 +270,7 @@ export default function TrafficPage() {
     channel,
     visits: sources.filter((source) => source.channel === channel).reduce((sum, source) => sum + source.visits, 0),
   })).filter((channel) => channel.visits > 0)
+  const topChannel = channels[0]
 
   if (loadStatus === 'loading') return <LoadingState />
   if (loadStatus === 'error') return <ErrorState onRetry={() => setTick((t) => t + 1)} />
@@ -345,6 +346,7 @@ export default function TrafficPage() {
                 tone="accent"
               />
               <StatCard icon={<BarSmallIcon />} value={formatMetric(displayData.top_pages.length)} label="Pages d’entrée" variation={null} tone="warning" />
+              <StatCard icon={<ExternalLink size={18} />} value={topChannel?.channel ?? '—'} label="Canal principal" variation={null} tone="violet" />
             </div>
           </div>
 

@@ -534,7 +534,7 @@ export default function KanbanPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-4 shrink-0">
           <div>
-            <h1 className="text-[20px] font-semibold text-primary tracking-tight">Production</h1>
+            <h1 className="text-[20px] font-semibold text-primary tracking-tight">Production éditoriale</h1>
             <p className="mt-0.5 text-[13px] text-secondary">
               Suivi de la production éditoriale — {articles.length} article{articles.length !== 1 ? 's' : ''} dans le workflow
             </p>

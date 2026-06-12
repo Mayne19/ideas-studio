@@ -15,6 +15,14 @@ import AppShell from '@/components/layout/AppShell'
 import SettingsLayout from '@/components/layout/SettingsLayout'
 import ProtectedRoute from '@/components/shared/ProtectedRoute'
 import LoadingState from '@/components/ui/LoadingState'
+import {
+  ContactPage,
+  FeaturesPage,
+  LandingPage,
+  LegalPage,
+  PricingPage,
+  SupportPage,
+} from '@/pages/public/PublicPages'
 
 const ArticleEditorPage = lazy(() => import('@/pages/projects/editor/ArticleEditorPage'))
 const IdeasPipelinePage = lazy(() => import('@/pages/projects/ideas/IdeasPipelinePage'))
@@ -88,6 +96,46 @@ export const router = createBrowserRouter([
     element: <RegisterPage />,
   },
   {
+    path: '/',
+    element: <LandingPage />,
+    errorElement: <RouteErrorFallback />,
+  },
+  {
+    path: '/features',
+    element: <FeaturesPage />,
+    errorElement: <RouteErrorFallback />,
+  },
+  {
+    path: '/pricing',
+    element: <PricingPage />,
+    errorElement: <RouteErrorFallback />,
+  },
+  {
+    path: '/support',
+    element: <SupportPage />,
+    errorElement: <RouteErrorFallback />,
+  },
+  {
+    path: '/contact',
+    element: <ContactPage />,
+    errorElement: <RouteErrorFallback />,
+  },
+  {
+    path: '/privacy',
+    element: <LegalPage kind="privacy" />,
+    errorElement: <RouteErrorFallback />,
+  },
+  {
+    path: '/terms',
+    element: <LegalPage kind="terms" />,
+    errorElement: <RouteErrorFallback />,
+  },
+  {
+    path: '/security',
+    element: <LegalPage kind="security" />,
+    errorElement: <RouteErrorFallback />,
+  },
+  {
     path: '/documentation',
     element: (
       <Suspense fallback={<LoadingState />}>
@@ -101,7 +149,6 @@ export const router = createBrowserRouter([
     element: <Navigate to="/documentation" replace />,
   },
   {
-    path: '/',
     element: (
       <ProtectedRoute>
         <AppShell />
@@ -109,10 +156,6 @@ export const router = createBrowserRouter([
     ),
     errorElement: <RouteErrorFallback />,
     children: [
-      {
-        index: true,
-        element: <Navigate to="/projects" replace />,
-      },
       {
         path: 'projects',
         element: <ProjectsPage />,
@@ -223,15 +266,15 @@ export const router = createBrowserRouter([
       },
       {
         path: 'projects/:projectId/kanban',
+        element: <Navigate to="../production" replace />,
+      },
+      {
+        path: 'projects/:projectId/production',
         element: (
           <Suspense fallback={<LoadingState />}>
             <KanbanPage />
           </Suspense>
         ),
-      },
-      {
-        path: 'projects/:projectId/production',
-        element: <Navigate to="../kanban" replace />,
       },
       {
         path: 'projects/:projectId/performance',
