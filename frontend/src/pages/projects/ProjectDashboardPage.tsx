@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   FileText, Lightbulb, BarChart2, Sparkles, Globe,
   WifiOff, ArrowRight, AlertCircle, Clock, CheckCircle, PenLine,
-  Edit3, Eye, Send, Star, BookOpen,
+  Edit3, Eye, Send, Star, BookOpen, Cpu, Zap, DollarSign,
 } from 'lucide-react'
 import { useProject } from '@/context/ProjectContext'
 import { useAuth } from '@/context/AuthContext'
@@ -11,7 +11,11 @@ import { listArticles } from '@/api/articles'
 import { listCategories } from '@/api/categories'
 import { getPerformanceSummary } from '@/api/performance'
 import { listRecommendations } from '@/api/recommendations'
+import { getPipelineSettings } from '@/api/pipeline'
+import { listAIProviders } from '@/api/aiProviders'
 import type { Article, Category, OptimizationRecommendation } from '@/types'
+import type { PipelineSettings } from '@/api/pipeline'
+import type { AIProviderPublic } from '@/api/aiProviders'
 import { Card } from '@/components/ui/Card'
 import StatusBadge from '@/components/ui/StatusBadge'
 import LoadingState from '@/components/ui/LoadingState'
@@ -229,6 +233,8 @@ export default function ProjectDashboardPage() {
   const { user } = useAuth()
   const [data, setData] = useState<DashboardData | null>(null)
   const [activityModalOpen, setActivityModalOpen] = useState(false)
+  const [pipeline, setPipeline] = useState<PipelineSettings | null>(null)
+  const [providers, setProviders] = useState<AIProviderPublic[]>([])
 
   useEffect(() => {
     if (!projectId) return
@@ -237,7 +243,11 @@ export default function ProjectDashboardPage() {
       listRecommendations(projectId),
       getPerformanceSummary(projectId, '30d'),
       listCategories(projectId),
-    ]).then(([articles, recs, perf, cats]) => {
+      getPipelineSettings(projectId).catch(() => null),
+      listAIProviders(projectId).catch(() => []),
+    ]).then(([articles, recs, perf, cats, pipelineResult, providersResult]) => {
+      if (pipelineResult.status === 'fulfilled') setPipeline(pipelineResult.value)
+      if (providersResult.status === 'fulfilled') setProviders(providersResult.value)
       const allArticles =
         articles.status === 'fulfilled'
           ? [...articles.value].sort((a, b) => getArticleDate(b).localeCompare(getArticleDate(a)))
@@ -458,6 +468,71 @@ export default function ProjectDashboardPage() {
           onClick={() => navigate(`/projects/${projectId}/articles`)}
         />
       </div>
+
+      {/* Providers / Pipeline / Coûts */}
+      {(providers.length > 0 || pipeline) && (
+        <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Pipeline */}
+          {pipeline && (
+            <Card padding="sm" className="flex items-start gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-accent/10 text-accent">
+                <Cpu size={15} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] font-medium text-primary">Pipeline</p>
+                <p className="mt-0.5 text-[11px] text-tertiary">
+                  {pipeline.enabled
+                    ? `Actif — ${pipeline.articles_per_week} art./sem., ${pipeline.active_days.length}j/sem.`
+                    : 'Inactif'}
+                </p>
+                {pipeline.cost_limit_per_article_eur != null && (
+                  <p className="text-[11px] text-tertiary">
+                    Limite coût/article : {pipeline.cost_limit_per_article_eur.toFixed(4)} €
+                  </p>
+                )}
+              </div>
+            </Card>
+          )}
+          {/* Providers */}
+          {providers.length > 0 && (
+            <Card padding="sm" className="flex items-start gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-violet-500/10 text-violet-600">
+                <Zap size={15} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] font-medium text-primary">Fournisseurs IA</p>
+                <div className="mt-0.5 flex flex-wrap gap-1">
+                  {providers.filter((p) => p.enabled).map((p) => (
+                    <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-[#f0f0f2] px-1.5 py-0.5 text-[10px] text-secondary">
+                      <span className={`h-1.5 w-1.5 rounded-full ${p.last_test_status === 'success' ? 'bg-success' : p.last_test_status === 'error' ? 'bg-danger' : 'bg-tertiary'}`} />
+                      {p.display_name || p.provider}{p.model ? ` (${p.model})` : ''}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          )}
+          {/* Coûts estimés */}
+          {data && (
+            <Card padding="sm" className="flex items-start gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-warning/10 text-[#c07000]">
+                <DollarSign size={15} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] font-medium text-primary">Coûts IA (est.)</p>
+                <p className="mt-0.5 text-[11px] text-tertiary">
+                  {data.publishedCount > 0
+                    ? `${(data.publishedCount * 0.05).toFixed(2)} € ce mois`
+                    : 'Aucun coût ce mois'}
+                </p>
+                <p className="text-[11px] text-tertiary">
+                  {data.inProgressCount} article{data.inProgressCount > 1 ? 's' : ''} en cours
+                </p>
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
 
       {!hasTrackingData && (
         <Card className="mb-6">

@@ -13,5 +13,6 @@ class NotificationPublic(BaseModel):
     title: str
     message: str
     level: str
+    link: Optional[str]
     read_at: Optional[datetime]
     created_at: datetime

@@ -64,5 +64,6 @@ class ArticlePerformanceBrief(BaseModel):
     title: str
     slug: str
     views: int
+    variation: Optional[float] = None
     seo_score: Optional[float]
     published_at: Optional[str]

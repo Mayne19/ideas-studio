@@ -17,6 +17,7 @@ class Notification(Base):
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     level: Mapped[str] = mapped_column(String(20), nullable=False, default="info")
+    link: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False

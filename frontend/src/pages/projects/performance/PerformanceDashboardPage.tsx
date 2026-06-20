@@ -220,7 +220,7 @@ function buildArticleMetrics(
   return articles.map((article) => {
     const performance = perfById.get(article.id)
     const views = performance?.views ?? 0
-    const variation = null
+    const variation = performance?.variation ?? null
     const engagement = null
     const averageTime = null
     const category = categories.find((cat) => cat.id === article.category_id) ?? null

@@ -203,26 +203,15 @@ export default function CalendarPage() {
     if (!projectId) return
     let cancelled = false
     Promise.resolve().then(() => { if (!cancelled) setLoadStatus('loading') })
-    Promise.all([
-      listArticles(projectId, { status: 'scheduled', limit: 200 }),
-      listArticles(projectId, { status: 'published', limit: 200 }),
-      listArticles(projectId, { status: 'idea_proposed', limit: 100 }),
-      listArticles(projectId, { status: 'idea_priority', limit: 100 }),
-      listArticles(projectId, { status: 'writing_requested', limit: 100 }),
-      listArticles(projectId, { status: 'writing_in_progress', limit: 100 }),
-      listArticles(projectId, { status: 'draft_ready', limit: 100 }),
-      listArticles(projectId, { status: 'review_needed', limit: 100 }),
-      listArticles(projectId, { status: 'ready_to_publish', limit: 100 }),
-    ])
-      .then(([scheduled, published, ...workflow]) => {
+    listArticles(projectId, { limit: 500 })
+      .then((all) => {
         if (!cancelled) {
-          const all = [...scheduled, ...published, ...workflow.flat()]
-            .sort((a, b) => {
-              const dateA = getCalendarDate(a) ?? ''
-              const dateB = getCalendarDate(b) ?? ''
-              return dateA.localeCompare(dateB)
-            })
-          setArticles(all)
+          const sorted = [...all].sort((a, b) => {
+            const dateA = getCalendarDate(a) ?? ''
+            const dateB = getCalendarDate(b) ?? ''
+            return dateA.localeCompare(dateB)
+          })
+          setArticles(sorted)
           setLoadStatus('success')
         }
       })

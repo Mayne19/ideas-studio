@@ -20,7 +20,6 @@ import {
   FeaturesPage,
   LandingPage,
   LegalPage,
-  PricingPage,
   SupportPage,
 } from '@/pages/public/PublicPages'
 
@@ -105,11 +104,12 @@ export const router = createBrowserRouter([
     element: <FeaturesPage />,
     errorElement: <RouteErrorFallback />,
   },
-  {
-    path: '/pricing',
-    element: <PricingPage />,
-    errorElement: <RouteErrorFallback />,
-  },
+  // Pricing temporairement désactivé
+  // {
+  //   path: '/pricing',
+  //   element: <PricingPage />,
+  //   errorElement: <RouteErrorFallback />,
+  // },
   {
     path: '/support',
     element: <SupportPage />,

@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
 @theme {
-  /* Colors */
-  --color-bg: #f5f5f7;
-  --color-app: #f5f5f7;
-  --color-surface: #ffffff;
-  --color-primary: #1d1d1f;
-  --color-secondary: #6e6e73;
-  --color-tertiary: #86868b;
-  --color-border: rgba(0, 0, 0, 0.045);
-  --color-border-strong: rgba(0, 0, 0, 0.08);
+  /* Colors — warm light theme */
+  --color-bg: #F8F5EF;
+  --color-app: #F8F5EF;
+  --color-surface: #FFFFFF;
+  --color-primary: #1F1A17;
+  --color-secondary: #6F665C;
+  --color-tertiary: #8C8379;
+  --color-border: rgba(0, 0, 0, 0.06);
+  --color-border-strong: rgba(0, 0, 0, 0.10);
   --color-accent: #007aff;
   --color-accent-dark: #0066d6;
-  --color-success: #34c759;
-  --color-warning: #ff9500;
-  --color-danger: #ff3b30;
+  --color-success: #4A7C59;
+  --color-warning: #C4943A;
+  --color-danger: #B03A3A;
 
   /* Radius */
   --radius-sm: 10px;
@@ -55,161 +55,7 @@ body {
   line-height: 1.6;
 }
 
-/* ── Dark mode: truly black (Vercel/ChatGPT style) ──────────── */
-html[data-theme="dark"] {
-  --color-bg: #000000;
-  --color-app: #000000;
-  --color-surface: #111111;
-  --color-primary: #ffffff;
-  --color-secondary: #d4d4d8;
-  --color-tertiary: #a1a1aa;
-  --color-border: #262626;
-  --color-border-strong: #3f3f46;
-  --color-accent: #2997ff;
-  --color-accent-dark: #007aff;
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-}
-
-html[data-theme="dark"] body {
-  background-color: var(--color-bg);
-  color: var(--color-primary);
-}
-
-html[data-theme="dark"] input,
-html[data-theme="dark"] textarea,
-html[data-theme="dark"] select {
-  color-scheme: dark;
-}
-
-/* Hardcoded light surfaces → dark equivalents */
-html[data-theme="dark"] .bg-white,
-html[data-theme="dark"] .bg-\[\#fff\] {
-  background-color: var(--color-surface) !important;
-}
-
-html[data-theme="dark"] .bg-\[\#f0f0f2\],
-html[data-theme="dark"] .bg-\[\#f5f5f7\],
-html[data-theme="dark"] .bg-\[\#f9f9fb\],
-html[data-theme="dark"] .bg-\[\#e5e5e7\],
-html[data-theme="dark"] .bg-\[\#dcdce0\],
-html[data-theme="dark"] .bg-\[\#c8c8cc\],
-html[data-theme="dark"] .bg-\[\#eeeeef\],
-html[data-theme="dark"] .bg-\[\#ebebed\],
-html[data-theme="dark"] .bg-\[\#f8f9fc\] {
-  background-color: #181818 !important;
-}
-
-html[data-theme="dark"] .hover\:bg-\[\#f0f0f2\]:hover,
-html[data-theme="dark"] .hover\:bg-\[\#f5f5f7\]:hover,
-html[data-theme="dark"] .hover\:bg-\[\#f9f9fb\]:hover,
-html[data-theme="dark"] .hover\:bg-\[\#e5e5e7\]:hover,
-html[data-theme="dark"] .hover\:bg-white:hover {
-  background-color: #262626 !important;
-}
-
-/* Status background colors: keep success/danger semantics in dark mode */
-html[data-theme="dark"] .bg-\[\#e8f5e9\] {
-  background-color: rgba(34, 197, 94, 0.15) !important;
-}
-
-html[data-theme="dark"] .bg-\[\#fce4ec\] {
-  background-color: rgba(239, 68, 68, 0.15) !important;
-}
-
-html[data-theme="dark"] .bg-\[\#eef2ff\],
-html[data-theme="dark"] .bg-\[\#f0f9ff\],
-html[data-theme="dark"] .bg-amber-50,
-html[data-theme="dark"] .bg-orange-50,
-html[data-theme="dark"] .bg-purple-50 {
-  background-color: rgba(41, 151, 255, 0.12) !important;
-}
-
-/* Status text colors: map hardcoded greens/oranges/purples to semantic tokens */
-html[data-theme="dark"] .text-\[\#1a7a3a\],
-html[data-theme="dark"] .text-\[\#16723a\],
-html[data-theme="dark"] .text-\[\#166534\] {
-  color: var(--color-success) !important;
-}
-
-html[data-theme="dark"] .text-\[\#b46a00\],
-html[data-theme="dark"] .text-\[\#a35b00\],
-html[data-theme="dark"] .text-\[\#c07000\],
-html[data-theme="dark"] .text-\[\#a16207\] {
-  color: var(--color-warning) !important;
-}
-
-html[data-theme="dark"] .text-\[\#4f46e5\],
-html[data-theme="dark"] .text-\[\#6f3cc2\] {
-  color: #818cf8 !important;
-}
-
-html[data-theme="dark"] .text-\[\#b83270\] {
-  color: #f472b6 !important;
-}
-
-html[data-theme="dark"] .text-\[\#c0291f\] {
-  color: var(--color-danger) !important;
-}
-
-html[data-theme="dark"] .text-\[\#0369a1\] {
-  color: var(--color-accent) !important;
-}
-
-html[data-theme="dark"] .text-\[\#1d1d1f\] {
-  color: var(--color-primary) !important;
-}
-
-html[data-theme="dark"] .text-amber-700 {
-  color: var(--color-warning) !important;
-}
-
-html[data-theme="dark"] .text-amber-600 {
-  color: var(--color-warning) !important;
-}
-
-html[data-theme="dark"] .text-green-600 {
-  color: var(--color-success) !important;
-}
-
-/* Form elements */
-html[data-theme="dark"] input,
-html[data-theme="dark"] textarea,
-html[data-theme="dark"] select,
-html[data-theme="dark"] pre,
-html[data-theme="dark"] code {
-  border-color: var(--color-border);
-}
-
-/* Selection */
-html[data-theme="dark"] ::selection {
-  background: rgba(41, 151, 255, 0.35);
-}
-
-/* Remove shadows in dark mode */
-html[data-theme="dark"] .shadow-sm,
-html[data-theme="dark"] .shadow-card,
-html[data-theme="dark"] .shadow-float {
-  box-shadow: none !important;
-}
-
-/* Pre/code blocks in dark mode */
-html[data-theme="dark"] .bg-\[\#1d1d1f\],
-html[data-theme="dark"] .bg-\[\#111318\] {
-  background-color: #0a0a0a !important;
-}
-
-html[data-theme="dark"] .text-\[\#e5e5e7\] {
-  color: var(--color-secondary) !important;
-}
-
-/* Modal overlay */
-html[data-theme="dark"] .bg-black\/25,
-html[data-theme="dark"] .bg-black\/55,
-html[data-theme="dark"] .bg-black\/75 {
-  background-color: rgba(0, 0, 0, 0.7) !important;
-}
+/* ── Light warm theme only ──────────────────────────────── */
 
 /* ── TipTap editor content ──────────────────────────── */
 .tiptap-content {

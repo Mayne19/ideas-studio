@@ -66,7 +66,9 @@ function getNextAgent(article: Article): string | null {
 
 function normalizeOpportunityScore(score: number | null | undefined): number | null {
   if (typeof score !== 'number' || !Number.isFinite(score)) return null
-  return Math.max(0, Math.min(100, Math.round(score * 100)))
+  const pct = Math.round(score * 100)
+  if (pct <= 0) return null
+  return Math.min(100, pct)
 }
 
 function OpportunityBadge({ score, reason }: { score: number | null | undefined; reason?: string | null }) {
@@ -725,6 +727,68 @@ export default function IdeasPipelinePage() {
                 </div>
               )}
             </div>
+
+            {/* Estimated cost */}
+            {previewIdea.estimated_cost_json && typeof previewIdea.estimated_cost_json === 'object' && (
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Coût estimé</p>
+                <p className="text-[13px] text-primary">
+                  {(previewIdea.estimated_cost_json as Record<string, unknown>).estimated_cost_eur != null
+                    ? `${((previewIdea.estimated_cost_json as Record<string, unknown>).estimated_cost_eur as number).toFixed(4)} €`
+                    : 'Non disponible'}
+                </p>
+              </div>
+            )}
+
+            {/* Secondary keywords */}
+            {(() => {
+              let sk: string[] | null = null
+              try {
+                if (typeof previewIdea.secondary_keywords_json === 'string') sk = JSON.parse(previewIdea.secondary_keywords_json)
+                else if (Array.isArray(previewIdea.secondary_keywords_json)) sk = previewIdea.secondary_keywords_json as string[]
+              } catch { console.error('Failed to parse secondary_keywords_json') }
+              return sk && sk.length > 0
+            })() && (
+              <div className="col-span-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Mots-clés secondaires</p>
+                <div className="flex flex-wrap gap-1">
+                  {(() => {
+                    let sk: string[] = []
+                    try {
+                      if (typeof previewIdea.secondary_keywords_json === 'string') sk = JSON.parse(previewIdea.secondary_keywords_json)
+                      else if (Array.isArray(previewIdea.secondary_keywords_json)) sk = previewIdea.secondary_keywords_json as string[]
+              } catch { console.error('Failed to parse secondary_keywords_json') }
+                    return sk
+                  })().map((kw, i) => (
+                    <span key={i} className="rounded-full bg-accent/8 px-2 py-0.5 text-[10px] text-accent">{kw}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Agent outputs JSON */}
+            {previewIdea.agent_outputs_json && (
+              <details className="group">
+                <summary className="cursor-pointer text-[11px] text-secondary hover:text-primary transition-colors">
+                  Sorties des agents
+                </summary>
+                <pre className="mt-1 max-h-40 overflow-auto rounded-[6px] bg-[#f0f0f2] p-2 text-[10px] leading-relaxed text-primary">
+                  {JSON.stringify(previewIdea.agent_outputs_json, null, 2)}
+                </pre>
+              </details>
+            )}
+
+            {/* Planning brief JSON */}
+            {previewIdea.planning_brief_json && (
+              <details className="group">
+                <summary className="cursor-pointer text-[11px] text-secondary hover:text-primary transition-colors">
+                  Brief planning
+                </summary>
+                <pre className="mt-1 max-h-40 overflow-auto rounded-[6px] bg-[#f0f0f2] p-2 text-[10px] leading-relaxed text-primary">
+                  {JSON.stringify(previewIdea.planning_brief_json, null, 2)}
+                </pre>
+              </details>
+            )}
 
             {/* Opportunity justification */}
             {previewIdea.opportunity_justification && (

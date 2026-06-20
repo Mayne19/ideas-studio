@@ -4,6 +4,11 @@ import { analyzeArticle, readyCheck, runSeoExpertReview } from '@/api/seo'
 import { ApiError } from '@/api/client'
 import type { SeoAnalysis, SeoIssue, ReadyCheck, EditorArticle, SeoExpertIssue, SeoExpertReview } from '@/types'
 import Button from '@/components/ui/Button'
+import BriefPanel from './BriefPanel'
+import GenerationReportPanel from './GenerationReportPanel'
+import QualityPanel from './QualityPanel'
+import { ReportSection } from './ReportSection'
+import { tryParseJson } from './reportUtils'
 
 function translateSeoError(err: unknown): string {
   if (err instanceof ApiError) {
@@ -425,138 +430,23 @@ export default function SeoPanel({
         </p>
       )}
 
-      {/* ── Rapports de génération et briefs ─────────────────────────── */}
-      {(article.generation_report_json || article.research_brief_json) && (
+      {/* ── Rapports externalisés ─────────────────────────── */}
+      {(article.generation_report_json || article.research_brief_json || article.language_quality_report_json) && (
         <div className="flex flex-col gap-3">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary">
             Rapports
           </p>
-
-          {article.generation_report_json && (
-            <ReportSection title="Rapport de génération" data={article.generation_report_json} />
-          )}
-
-          {article.research_brief_json && (
-            <ReportSection title="Brief Recherche" data={article.research_brief_json} />
-          )}
-
-          {article.keyword_brief_json && (
-            <ReportSection title="Brief Mots-clés" data={article.keyword_brief_json} />
-          )}
-
-          {article.editorial_angle_json && (
-            <ReportSection title="Angle éditorial" data={article.editorial_angle_json} />
-          )}
-
-          {article.intent_analysis_json && (
-            <ReportSection title="Analyse d&apos;intention" data={article.intent_analysis_json} />
-          )}
-
-          {article.language_quality_report_json && (
-            <ReportSection title="Qualité linguistique" data={article.language_quality_report_json} />
-          )}
-
-          {article.originality_report_json && (
-            <ReportSection title="Originalité" data={article.originality_report_json} />
-          )}
-
-          {article.humanization_report_json && (
-            <ReportSection title="Humanisation" data={article.humanization_report_json} />
-          )}
-
-          {article.eeat_checklist_json && (
-            <ReportSection title="EEAT" data={article.eeat_checklist_json} />
-          )}
-
-          {article.editorial_quality_report_json && (
-            <ReportSection title="Qualité éditoriale" data={article.editorial_quality_report_json} />
-          )}
-
-          {article.seo_final_checklist_json && (
-            <ReportSection title="Checklist SEO finale" data={article.seo_final_checklist_json} />
-          )}
+          <BriefPanel article={article} />
+          <GenerationReportPanel article={article} />
+          <QualityPanel article={article} />
 
           {typeof article.outline_json === 'string' && (
             <ReportSection title="Plan" data={tryParseJson(article.outline_json)} />
           )}
-
-          {article.image_plan_json && (
-            <ReportSection title="Plan images" data={article.image_plan_json} />
-          )}
-
-          {article.callout_plan_json && (
-            <ReportSection title="Plan callouts" data={article.callout_plan_json} />
-          )}
-
-          {article.cannibalization_check_json && (
-            <ReportSection title="Check cannibalisation" data={article.cannibalization_check_json} />
-          )}
+          {!!article.image_plan_json && <ReportSection title="Plan images" data={article.image_plan_json} />}
+          {!!article.callout_plan_json && <ReportSection title="Plan callouts" data={article.callout_plan_json} />}
         </div>
       )}
     </div>
   )
-}
-
-function tryParseJson(val: unknown): Record<string, unknown> {
-  if (typeof val === 'string') {
-    try { return JSON.parse(val) } catch { return { raw: val } }
-  }
-  if (val && typeof val === 'object') return val as Record<string, unknown>
-  return {}
-}
-
-function ReportSection({ title, data }: { title: string; data: unknown }) {
-  const parsed = tryParseJson(data)
-  const entries = Object.entries(parsed).filter(([k]) => !k.startsWith('_'))
-
-  return (
-    <details className="group rounded-[10px] border border-border bg-surface">
-      <summary className="flex cursor-pointer items-center justify-between px-3 py-2 text-[11px] font-medium text-secondary hover:text-primary">
-        <span>{title}</span>
-        <span className="text-[10px] text-tertiary">{entries.length} champs</span>
-      </summary>
-      <div className="max-h-[300px] overflow-y-auto border-t border-border px-3 py-2">
-        {entries.length === 0 ? (
-          <p className="text-[10px] text-tertiary">Aucune donnée structurée</p>
-        ) : (
-          <div className="flex flex-col gap-1.5">
-            {entries.map(([key, value]) => (
-              <ReportField key={key} label={key} value={value} />
-            ))}
-          </div>
-        )}
-      </div>
-    </details>
-  )
-}
-
-function ReportField({ label, value }: { label: string; value: unknown }) {
-  const display = formatReportValue(value)
-  return (
-    <div className="text-[10px] leading-snug">
-      <span className="font-medium text-secondary">{label}: </span>
-      <span className="text-primary">{display}</span>
-    </div>
-  )
-}
-
-function formatReportValue(value: unknown): string {
-  if (value === null || value === undefined) return '—'
-  if (typeof value === 'boolean') return value ? 'Oui' : 'Non'
-  if (typeof value === 'number') return String(value)
-  if (typeof value === 'string') {
-    if (value.length > 120) return value.slice(0, 120) + '…'
-    return value
-  }
-  if (Array.isArray(value)) {
-    if (value.length === 0) return '[]'
-    if (value.length <= 3) return value.map((v) => formatReportValue(v)).join(', ')
-    return `${value.length} éléments`
-  }
-  if (typeof value === 'object') {
-    const keys = Object.keys(value as Record<string, unknown>)
-    if (keys.length === 0) return '{}'
-    return `{${keys.slice(0, 4).join(', ')}${keys.length > 4 ? ', …' : ''}}`
-  }
-  return String(value)
 }

@@ -7,6 +7,7 @@ export type ArticleFilters = {
   search?: string
   skip?: number
   limit?: number
+  blocked_cost_limit?: number
 }
 
 export type CreateArticlePayload = {
@@ -23,6 +24,7 @@ export function listArticles(projectId: string, filters: ArticleFilters = {}): P
   if (filters.search) params.set('search', filters.search)
   if (filters.skip !== undefined) params.set('skip', String(filters.skip))
   if (filters.limit !== undefined) params.set('limit', String(filters.limit))
+  if (filters.blocked_cost_limit !== undefined) params.set('blocked_cost_limit', String(filters.blocked_cost_limit))
   const qs = params.toString()
   return api.get<Article[]>(`/projects/${projectId}/articles${qs ? `?${qs}` : ''}`)
 }

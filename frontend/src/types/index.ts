@@ -142,6 +142,7 @@ export type Article = {
   suggested_external_links: string | null
   estimated_difficulty: string | null
   proposal_source: string | null
+  secondary_keywords_json: string | null
   // Monitoring / improvement
   improvement_proposal_json: Record<string, unknown> | null
   performance_diagnosis_json: Record<string, unknown> | null
@@ -153,6 +154,10 @@ export type Article = {
   next_review_at: string | null
   created_at: string
   updated_at: string
+  // Extended fields
+  estimated_cost_json: Record<string, unknown> | null
+  actual_cost_json: Record<string, unknown> | null
+  geo_optimization_json: Record<string, unknown> | null
 }
 
 export type IdeaStatus = 'idea_proposed' | 'idea_priority' | 'idea_rejected'
@@ -484,6 +489,7 @@ export type ArticlePerformanceBrief = {
   title: string
   slug: string
   views: number
+  variation: number | null
   seo_score: number | null
   published_at: string | null
 }
@@ -540,6 +546,7 @@ export type Notification = {
   title: string
   message: string
   level: string
+  link: string | null
   read_at: string | null
   created_at: string
 }

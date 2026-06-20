@@ -39,8 +39,6 @@ type ColumnDef = {
 }
 
 const COLUMNS: ColumnDef[] = [
-  { status: 'idea_proposed',       label: 'Idées',          color: '#8e8e93' },
-  { status: 'idea_priority',       label: 'Prioritaires',   color: '#ff9500' },
   { status: 'writing_requested',   label: 'Rédaction dem.', color: '#007aff' },
   { status: 'writing_in_progress', label: 'En rédaction',   color: '#007aff' },
   { status: 'draft_ready',         label: 'Brouillons',     color: '#5856d6' },

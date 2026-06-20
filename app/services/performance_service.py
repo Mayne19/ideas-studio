@@ -151,6 +151,9 @@ def get_article_performance(db: Session, article_id: str, period: str = "30d") -
 
 def get_all_articles_performance(db: Session, project_id: str, period: str = "30d") -> list[dict]:
     since = _parse_period(period)
+    # Previous period for variation calculation
+    period_days = int(period.replace("d", "")) if period.endswith("d") else 30
+    prev_since = since - timedelta(days=period_days)
 
     articles = (
         db.query(Article)
@@ -158,11 +161,11 @@ def get_all_articles_performance(db: Session, project_id: str, period: str = "30
         .all()
     )
 
-    events = (
+    all_events = (
         db.query(TrafficEvent)
         .filter(
             TrafficEvent.project_id == project_id,
-            TrafficEvent.created_at >= since,
+            TrafficEvent.created_at >= prev_since,
         )
         .all()
     )
@@ -170,12 +173,21 @@ def get_all_articles_performance(db: Session, project_id: str, period: str = "30
     results = []
     for article in articles:
         slug = article.slug or ""
-        matching = [e for e in events if slug and (slug in (e.path or e.url))]
+        current_matching = [e for e in all_events if slug and (slug in (e.path or e.url)) and e.created_at >= since]
+        prev_matching = [e for e in all_events if slug and (slug in (e.path or e.url)) and e.created_at < since]
+        current_views = len(current_matching)
+        prev_views = len(prev_matching)
+        variation = None
+        if prev_views > 0:
+            variation = round((current_views - prev_views) / prev_views * 100, 1)
+        elif current_views > 0:
+            variation = 100.0
         results.append({
             "article_id": article.id,
             "title": article.title,
             "slug": article.slug,
-            "views": len(matching),
+            "views": current_views,
+            "variation": variation,
             "seo_score": article.seo_score,
             "published_at": article.published_at.isoformat() if article.published_at else None,
         })

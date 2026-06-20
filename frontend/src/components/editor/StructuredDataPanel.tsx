@@ -53,7 +53,7 @@ export default function StructuredDataPanel({ article }: { article: EditorArticl
           <summary className="cursor-pointer text-[11px] text-secondary hover:text-primary transition-colors">
             Voir le JSON ({schemas.length} schéma{schemas.length > 1 ? 's' : ''})
           </summary>
-          <pre className="mt-2 max-h-48 overflow-auto rounded-[6px] bg-[#1e1e2e] p-2 text-[10px] leading-relaxed text-[#cdd6f4]">
+          <pre className="mt-2 max-h-48 overflow-auto rounded-[6px] bg-[#1d1d1f] p-2 text-[10px] leading-relaxed text-[#f0f0f2]">
             {JSON.stringify(sd, null, 2)}
           </pre>
         </details>

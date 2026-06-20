@@ -42,13 +42,15 @@ def list_articles_route(
     category_id: Optional[str] = None,
     search: Optional[str] = None,
     published_only: bool = False,
+    blocked_cost_limit: Optional[float] = None,
     limit: int = 20,
     offset: int = 0,
     member: ProjectMember = Depends(get_project_member),
     db: Session = Depends(get_db),
 ):
     return list_articles(db, project_id, status=status, category_id=category_id, search=search,
-                         published_only=published_only, limit=limit, offset=offset)
+                         published_only=published_only, blocked_cost_limit=blocked_cost_limit,
+                         limit=limit, offset=offset)
 
 
 @router.post("/projects/{project_id}/articles", response_model=ArticlePublic, status_code=201)

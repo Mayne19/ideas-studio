@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Bell, CheckCheck, Loader2 } from 'lucide-react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { listNotifications, markNotificationRead, markAllNotificationsRead } from '@/api/notifications'
 import type { Notification } from '@/types'
 import Button from '@/components/ui/Button'
@@ -25,6 +25,7 @@ function levelColor(level: string): string {
 
 export default function NotificationsPage() {
   const { projectId } = useParams<{ projectId: string }>()
+  const navigate = useNavigate()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [markingAll, setMarkingAll] = useState(false)
@@ -106,7 +107,10 @@ export default function NotificationsPage() {
             return (
               <div
                 key={n.id}
+                onClick={() => { if (n.link) navigate(n.link); if (!n.read_at) handleRead(n.id) }}
                 className={`flex items-start gap-3 rounded-[14px] border px-4 py-3 transition-colors ${
+                  n.link ? 'cursor-pointer hover:bg-[#f7f7f9]' : ''
+                } ${
                   isUnread
                     ? 'border-border bg-surface'
                     : 'border-border bg-surface opacity-60'

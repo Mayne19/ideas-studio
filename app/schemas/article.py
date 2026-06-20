@@ -113,6 +113,11 @@ class ArticlePublic(BaseModel):
     reading_time_minutes: Optional[int] = None
     updated_at: datetime
 
+    # Extended fields
+    estimated_cost_json: Optional[dict] = None
+    actual_cost_json: Optional[dict] = None
+    geo_optimization_json: Optional[dict] = None
+
 
 # Response schema for the public blog API
 class CategoryBrief(BaseModel):

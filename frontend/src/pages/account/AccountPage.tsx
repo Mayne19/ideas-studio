@@ -1,17 +1,14 @@
 import { useState, useRef } from 'react'
-import { User, Mail, Camera, Check, Loader2, AtSign, Moon, Lock, ArrowLeft, FolderOpen } from 'lucide-react'
+import { User, Mail, Camera, Check, Loader2, AtSign, Lock, ArrowLeft, FolderOpen } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
-import { useTheme } from '@/context/ThemeContext'
 import { api } from '@/api/client'
 import { checkUsername } from '@/api/auth'
 import Button from '@/components/ui/Button'
 import CopyButton from '@/components/ui/CopyButton'
-import ToggleSwitch from '@/components/ui/ToggleSwitch'
 
 export default function AccountPage() {
   const { user, refreshUser } = useAuth()
-  const { isDark, toggleTheme } = useTheme()
   const [name, setName] = useState(user?.name ?? '')
   const [username, setUsername] = useState(user?.username ?? '')
   const [saving, setSaving] = useState(false)
@@ -202,19 +199,6 @@ export default function AccountPage() {
           <p className="text-[11px] text-tertiary">
             Les autres membres peuvent vous ajouter avec @{username || 'votre-pseudo'}.
           </p>
-        </div>
-
-        <div className="flex items-center justify-between gap-4 rounded-[14px] border border-border bg-surface px-4 py-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-accent/10 text-accent">
-              <Moon size={15} />
-            </span>
-            <div>
-              <p className="text-[13px] font-medium text-primary">Mode sombre</p>
-              <p className="text-[11px] text-tertiary">Choix sauvegardé sur cet appareil.</p>
-            </div>
-          </div>
-          <ToggleSwitch checked={isDark} onChange={() => toggleTheme()} ariaLabel="Activer le mode sombre" />
         </div>
 
         {error && (

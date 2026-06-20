@@ -25,7 +25,7 @@ const ALL_STATUSES: ArticleStatus[] = [
   'ready_to_publish', 'scheduled', 'published', 'unpublished', 'archived', 'failed',
 ]
 
-const ARTICLE_TABLE_GRID = 'lg:grid-cols-[minmax(380px,1fr)_72px_98px_86px_74px_106px_168px]'
+const ARTICLE_TABLE_GRID = 'lg:grid-cols-[minmax(360px,1fr)_72px_98px_86px_74px_68px_58px_80px_106px_168px]'
 
 function scoreTone(value: number | null) {
   if (value === null) return 'bg-[#f0f0f2] text-tertiary'
@@ -61,6 +61,8 @@ function ArticleRow({
 }) {
   const category = categories.find((c) => c.id === article.category_id)
   const actions = getAvailableActions(article.status)
+  const geoScore = article.geo_optimization_json ? ((article.geo_optimization_json as Record<string, unknown>).score as number | null ?? null) : null
+  const estCost = article.estimated_cost_json ? ((article.estimated_cost_json as Record<string, unknown>).estimated_cost_eur as number | null ?? null) : null
 
   const allActions = [
     ...actions,
@@ -108,6 +110,16 @@ function ArticleRow({
       <div className="flex flex-wrap items-center gap-1.5 lg:block">
         {article.eeat_score !== null ? <ScorePill label="EEAT" value={article.eeat_score} /> : <EmptyScore />}
       </div>
+      <div className="flex flex-wrap items-center gap-1.5 lg:block">
+        <ScorePill label="GEO" value={geoScore} />
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5 lg:block">
+        {estCost !== null ? (
+          <span className="inline-flex w-fit items-center justify-center rounded-full bg-[#eef2ff] px-1.5 py-0.5 text-[10px] font-medium text-[#4f46e5] lg:w-full">
+            {estCost.toFixed(4)} €
+          </span>
+        ) : <EmptyScore />}
+      </div>
       <div className="flex items-center lg:justify-start">
         <StatusBadge status={article.status} />
       </div>
@@ -152,6 +164,7 @@ export default function ArticlesPage() {
   const [filterStatus, setFilterStatus] = useState('')
   const [filterCategory, setFilterCategory] = useState('')
   const [filterSearch, setFilterSearch] = useState('')
+  const [filterBlockedCost, setFilterBlockedCost] = useState('')
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
@@ -189,6 +202,7 @@ export default function ArticlesPage() {
       status: filterStatus || undefined,
       category_id: filterCategory || undefined,
       search: debouncedSearch || undefined,
+      blocked_cost_limit: filterBlockedCost ? Number(filterBlockedCost) : undefined,
       skip: 0,
       limit: PAGE_SIZE,
     })
@@ -201,7 +215,7 @@ export default function ArticlesPage() {
       })
       .catch(() => { if (!cancelled) setStatus('error') })
     return () => { cancelled = true }
-  }, [projectId, filterStatus, filterCategory, debouncedSearch, tick])
+  }, [projectId, filterStatus, filterCategory, debouncedSearch, filterBlockedCost, tick])
 
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
     setFilterSearch(e.target.value)
@@ -216,6 +230,7 @@ export default function ArticlesPage() {
       status: filterStatus || undefined,
       category_id: filterCategory || undefined,
       search: debouncedSearch || undefined,
+      blocked_cost_limit: filterBlockedCost ? Number(filterBlockedCost) : undefined,
       skip: articles.length,
       limit: PAGE_SIZE,
     })
@@ -388,6 +403,16 @@ export default function ArticlesPage() {
               className="w-56"
             />
           )}
+          <Input
+            placeholder="Coût max (€)"
+            type="number"
+            min="0"
+            step="0.0001"
+            value={filterBlockedCost}
+            onChange={(e) => setFilterBlockedCost(e.target.value)}
+            className="w-28"
+            title="Filtrer les articles dont le coût estimé dépasse ce montant"
+          />
         </div>
 
         {/* Content */}
@@ -417,6 +442,8 @@ export default function ArticlesPage() {
               <div className="text-center">Lisibilité</div>
               <div className="text-center">Qualité</div>
               <div className="text-center">EEAT</div>
+              <div className="text-center">GEO</div>
+              <div className="text-center">Coût</div>
               <div>Statut</div>
               <div className="text-right">Actions</div>
             </div>

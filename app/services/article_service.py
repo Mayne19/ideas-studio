@@ -87,6 +87,7 @@ def list_articles(
     category_id: str | None = None,
     search: str | None = None,
     published_only: bool = False,
+    blocked_cost_limit: float | None = None,
     limit: int = 20,
     offset: int = 0,
 ) -> list[Article]:
@@ -100,6 +101,11 @@ def list_articles(
     if search:
         term = f"%{search}%"
         q = q.filter(Article.title.ilike(term))
+    if blocked_cost_limit is not None:
+        from sqlalchemy import cast, Float, text
+        q = q.filter(
+            cast(Article.estimated_cost_json["estimated_cost_eur"].astext, Float) > blocked_cost_limit
+        )
     return q.order_by(Article.created_at.desc()).limit(limit).offset(offset).all()
 
 

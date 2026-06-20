@@ -1,22 +1,22 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronRight, LogOut, User, Bell, Search, FileText, FolderOpen, Loader2, Moon, Sun } from 'lucide-react'
+import { ChevronRight, LogOut, User, Bell, BellDot, Search, FileText, FolderOpen, Loader2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useProject } from '@/context/ProjectContext'
-import { useTheme } from '@/context/ThemeContext'
 import { globalSearch, type SearchResult } from '@/api/search'
+import { listNotifications } from '@/api/notifications'
+import type { Notification } from '@/types'
 import { cn } from '@/utils/cn'
 import ConfirmModal from '@/components/ui/ConfirmModal'
-import ToggleSwitch from '@/components/ui/ToggleSwitch'
 
 export default function Topbar() {
   const { user, logout } = useAuth()
   const { project } = useProject()
-  const { isDark, toggleTheme } = useTheme()
   const { projectId } = useParams<{ projectId?: string }>()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [searchFocused, setSearchFocused] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
@@ -47,8 +47,12 @@ export default function Topbar() {
       }
     }
     document.addEventListener('mousedown', handler)
+    // Fetch notifications when dropdown opens
+    if (projectId) {
+      listNotifications(projectId).then(setNotifications).catch(() => setNotifications([]))
+    }
     return () => document.removeEventListener('mousedown', handler)
-  }, [notifOpen])
+  }, [notifOpen, projectId])
 
   useEffect(() => {
     if (!searchFocused) {
@@ -180,16 +184,21 @@ export default function Topbar() {
           <div className="relative" ref={notifRef}>
             <button
               onClick={() => setNotifOpen((v) => !v)}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-tertiary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
+              className="relative flex h-8 w-8 items-center justify-center rounded-full text-tertiary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
               title="Notifications"
               aria-label="Notifications"
             >
-              <Bell size={16} />
+              {notifications.filter((n) => !n.read_at).length > 0 ? <BellDot size={16} /> : <Bell size={16} />}
+              {notifications.filter((n) => !n.read_at).length > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-danger px-1 text-[8px] font-bold text-white leading-none">
+                  {notifications.filter((n) => !n.read_at).length > 9 ? '9+' : notifications.filter((n) => !n.read_at).length}
+                </span>
+              )}
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 top-10 z-50 w-72 rounded-[16px] border border-border bg-surface p-3 shadow-float">
-                <div className="flex items-center justify-between mb-2">
+              <div className="absolute right-0 top-10 z-50 w-80 rounded-[16px] border border-border bg-surface p-2 shadow-float">
+                <div className="flex items-center justify-between mb-1 px-1">
                   <p className="text-[13px] font-semibold text-primary">Notifications</p>
                   <button
                     onClick={() => { setNotifOpen(false); navigate(`/projects/${projectId}/notifications`) }}
@@ -198,24 +207,47 @@ export default function Topbar() {
                     Voir tout →
                   </button>
                 </div>
-                <div className="flex flex-col items-center gap-2 py-4 text-center">
-                  <Bell size={18} className="text-tertiary opacity-40" />
-                  <p className="text-[12px] text-secondary">
-                    Consultez vos notifications dans la page dédiée.
-                  </p>
+                <div className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
+                  {notifications.filter((n) => !n.read_at).slice(0, 5).length === 0 ? (
+                    <div className="flex flex-col items-center gap-2 py-6 text-center">
+                      <Bell size={16} className="text-tertiary opacity-40" />
+                      <p className="text-[12px] text-secondary">Aucune notification non lue.</p>
+                      {notifications.length > 0 && (
+                        <button
+                          onClick={() => { setNotifOpen(false); navigate(`/projects/${projectId}/notifications`) }}
+                          className="text-[11px] text-accent hover:underline"
+                        >
+                          Voir l'historique →
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    notifications.filter((n) => !n.read_at).slice(0, 5).map((n) => (
+                      <button
+                        key={n.id}
+                        onClick={() => { setNotifOpen(false); if (n.link) navigate(n.link) }}
+                        className={`flex w-full items-start gap-2 rounded-[10px] px-2.5 py-2 text-left transition-colors ${n.link ? 'hover:bg-[#f0f0f2]' : ''}`}
+                      >
+                        <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[8px] ${
+                          n.level === 'error' ? 'bg-danger/10 text-danger' :
+                          n.level === 'warning' ? 'bg-warning/10 text-[#c07000]' :
+                          n.level === 'success' ? 'bg-success/10 text-[#1a7a3a]' :
+                          'bg-accent/10 text-accent'
+                        }`}>
+                          <Bell size={11} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[12px] font-medium text-primary truncate">{n.title}</p>
+                          <p className="text-[11px] text-tertiary truncate">{n.message}</p>
+                        </div>
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
             )}
           </div>
         )}
-
-        <div
-          className="flex h-8 items-center gap-1.5 rounded-full border border-border bg-surface px-2"
-          title={isDark ? 'Mode sombre actif' : 'Mode clair actif'}
-        >
-          {isDark ? <Moon size={13} className="text-tertiary" /> : <Sun size={13} className="text-tertiary" />}
-          <ToggleSwitch checked={isDark} onChange={() => toggleTheme()} ariaLabel="Changer le thème" />
-        </div>
 
         {/* User menu */}
         <div className="relative" ref={menuRef}>

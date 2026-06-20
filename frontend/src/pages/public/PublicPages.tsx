@@ -31,7 +31,6 @@ function PublicNav() {
       </Link>
       <nav className="hidden items-center gap-6 text-[13px] font-medium text-[#5f6368] md:flex">
         <Link to="/features" className="hover:text-[#101114]">{t.nav.features}</Link>
-        <Link to="/pricing" className="hover:text-[#101114]">{t.nav.pricing}</Link>
         <Link to="/documentation" className="hover:text-[#101114]">{t.nav.documentation}</Link>
         <Link to="/support" className="hover:text-[#101114]">{t.nav.support}</Link>
       </nav>
@@ -65,7 +64,6 @@ function PublicFooter() {
           <div className="grid gap-2">
             <p className="font-semibold text-[#101114]">Product</p>
             <Link to="/features" className="text-[#6b7280] hover:text-[#101114]">Features</Link>
-            <Link to="/pricing" className="text-[#6b7280] hover:text-[#101114]">Pricing</Link>
             <Link to="/documentation" className="text-[#6b7280] hover:text-[#101114]">Documentation</Link>
           </div>
           <div className="grid gap-2">
@@ -195,9 +193,6 @@ export function LandingPage() {
               <Link to="/register" className="inline-flex h-11 items-center gap-2 rounded-[8px] bg-[#2563ff] px-5 text-[14px] font-semibold text-white hover:bg-[#1f54d8]">
                 {t.hero.primary}
                 <ArrowRight size={16} />
-              </Link>
-              <Link to="/pricing" className="inline-flex h-11 items-center gap-2 rounded-[8px] border border-[#d7dce3] bg-white px-5 text-[14px] font-semibold text-[#111827] hover:bg-[#f1f3f6]">
-                {t.hero.secondary}
               </Link>
             </div>
             <div className="mt-12 w-full translate-y-10">
