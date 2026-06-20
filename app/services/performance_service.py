@@ -7,14 +7,70 @@ from app.models.project import Project
 from app.models.traffic_event import TrafficEvent
 
 
-def _parse_period(period: str) -> datetime:
+def _period_window(period: str) -> tuple[datetime, datetime, str]:
+    now = datetime.now(timezone.utc)
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    if period == "today" or period == "1d":
+        return today, now, "hour"
+    if period == "yesterday":
+        start = today - timedelta(days=1)
+        return start, today, "hour"
     days = 30
     if period.endswith("d"):
         try:
             days = int(period[:-1])
         except ValueError:
             pass
-    return datetime.now(timezone.utc) - timedelta(days=days)
+    start = today - timedelta(days=max(days - 1, 0))
+    if days <= 30:
+        return start, now, "day"
+    if days <= 180:
+        return start, now, "week"
+    return start, now, "month"
+
+
+def _parse_period(period: str) -> datetime:
+    return _period_window(period)[0]
+
+
+def _bucket_key(value: datetime, granularity: str) -> str:
+    if granularity == "hour":
+        return value.strftime("%H:00")
+    if granularity == "week":
+        year, week, _ = value.isocalendar()
+        return f"{year}-S{week:02d}"
+    if granularity == "month":
+        return value.strftime("%Y-%m")
+    return value.strftime("%Y-%m-%d")
+
+
+def _empty_buckets(start: datetime, end: datetime, granularity: str) -> list[str]:
+    keys: list[str] = []
+    cursor = start
+    if granularity == "hour":
+        while cursor < end:
+            keys.append(cursor.strftime("%H:00"))
+            cursor += timedelta(hours=1)
+        return keys or [start.strftime("%H:00")]
+    if granularity == "week":
+        cursor = cursor - timedelta(days=cursor.weekday())
+        while cursor <= end:
+            year, week, _ = cursor.isocalendar()
+            keys.append(f"{year}-S{week:02d}")
+            cursor += timedelta(days=7)
+        return keys
+    if granularity == "month":
+        cursor = cursor.replace(day=1)
+        while cursor <= end:
+            keys.append(cursor.strftime("%Y-%m"))
+            next_month = 1 if cursor.month == 12 else cursor.month + 1
+            next_year = cursor.year + 1 if cursor.month == 12 else cursor.year
+            cursor = cursor.replace(year=next_year, month=next_month)
+        return keys
+    while cursor.date() <= end.date():
+        keys.append(cursor.strftime("%Y-%m-%d"))
+        cursor += timedelta(days=1)
+    return keys
 
 
 def _source_channel(referrer: str | None) -> str:
@@ -29,7 +85,7 @@ def _source_channel(referrer: str | None) -> str:
 
 
 def get_project_traffic_summary(db: Session, project_id: str, period: str = "30d") -> dict:
-    since = _parse_period(period)
+    since, until, granularity = _period_window(period)
     project = db.query(Project).filter(Project.id == project_id).first()
 
     events = (
@@ -37,6 +93,7 @@ def get_project_traffic_summary(db: Session, project_id: str, period: str = "30d
         .filter(
             TrafficEvent.project_id == project_id,
             TrafficEvent.created_at >= since,
+            TrafficEvent.created_at < until,
         )
         .all()
     )
@@ -66,17 +123,20 @@ def get_project_traffic_summary(db: Session, project_id: str, period: str = "30d
     device_counts = Counter(e.device for e in events if e.device)
     devices = [{"device": d, "views": c} for d, c in device_counts.most_common(5)]
 
-    trend: dict[str, int] = defaultdict(int)
+    bucket_keys = _empty_buckets(since, until, granularity) if events else []
+    trend: dict[str, int] = {key: 0 for key in bucket_keys}
     channel_trend: dict[str, dict[str, int]] = defaultdict(lambda: {
         "direct": 0,
         "organic": 0,
         "social": 0,
         "referral": 0,
     })
+    for key in bucket_keys:
+        channel_trend[key]
     for e in events:
-        day = e.created_at.strftime("%Y-%m-%d")
-        trend[day] += 1
-        channel_trend[day][_source_channel(e.referrer)] += 1
+        bucket = _bucket_key(e.created_at, granularity)
+        trend[bucket] = trend.get(bucket, 0) + 1
+        channel_trend[bucket][_source_channel(e.referrer)] += 1
     trend_by_day = [{"date": d, "views": v} for d, v in sorted(trend.items())]
     channel_trend_by_day = [
         {
@@ -108,13 +168,14 @@ def get_article_performance(db: Session, article_id: str, period: str = "30d") -
     if not article:
         return {"views": 0, "referrers": [], "countries": [], "daily_views": [], "last_seen_at": None}
 
-    since = _parse_period(period)
+    since, until, granularity = _period_window(period)
 
     events = (
         db.query(TrafficEvent)
         .filter(
             TrafficEvent.project_id == article.project_id,
             TrafficEvent.created_at >= since,
+            TrafficEvent.created_at < until,
         )
         .all()
     )
@@ -130,10 +191,10 @@ def get_article_performance(db: Session, article_id: str, period: str = "30d") -
     country_counts = Counter(e.country for e in matching if e.country)
     countries = [{"country": c, "views": v} for c, v in country_counts.most_common(10)]
 
-    daily: dict[str, int] = defaultdict(int)
+    daily: dict[str, int] = {key: 0 for key in _empty_buckets(since, until, granularity)} if matching else {}
     for e in matching:
-        day = e.created_at.strftime("%Y-%m-%d")
-        daily[day] += 1
+        day = _bucket_key(e.created_at, granularity)
+        daily[day] = daily.get(day, 0) + 1
     daily_views = [{"date": d, "views": v} for d, v in sorted(daily.items())]
 
     last_event = max((e.created_at for e in matching), default=None)
@@ -152,7 +213,10 @@ def get_article_performance(db: Session, article_id: str, period: str = "30d") -
 def get_all_articles_performance(db: Session, project_id: str, period: str = "30d") -> list[dict]:
     since = _parse_period(period)
     # Previous period for variation calculation
-    period_days = int(period.replace("d", "")) if period.endswith("d") else 30
+    if period in {"today", "yesterday", "1d"}:
+        period_days = 1
+    else:
+        period_days = int(period.replace("d", "")) if period.endswith("d") else 30
     prev_since = since - timedelta(days=period_days)
 
     articles = (

@@ -18,6 +18,8 @@ SUPPORTED_PROVIDERS = {
     "gemini": {"label": "Google Gemini", "default_model": "gemini-2.5-flash", "default_base_url": "https://generativelanguage.googleapis.com/v1beta/openai/"},
     "openai": {"label": "OpenAI", "default_model": "gpt-4o-mini", "default_base_url": "https://api.openai.com/v1"},
     "openrouter": {"label": "OpenRouter", "default_model": "deepseek/deepseek-v4-flash", "default_base_url": "https://openrouter.ai/api/v1"},
+    "anthropic": {"label": "Claude / Anthropic", "default_model": "claude-3-5-sonnet-latest", "default_base_url": "https://api.anthropic.com/v1"},
+    "mistral": {"label": "Mistral", "default_model": "mistral-large-latest", "default_base_url": "https://api.mistral.ai/v1"},
     "ollama": {"label": "Ollama (local)", "default_model": "qwen3:14b", "default_base_url": "http://127.0.0.1:11434/v1"},
     "custom": {"label": "Custom OpenAI-compatible", "default_model": "", "default_base_url": ""},
 }
@@ -202,10 +204,11 @@ def test_provider(
                 timeout_seconds=30,
             )
         else:
+            defaults = SUPPORTED_PROVIDERS.get(config.provider, SUPPORTED_PROVIDERS["openai"])
             test_prov = OpenAILLMProvider(
                 api_key=api_key,
-                model=config.model or "gpt-4o-mini",
-                base_url=config.base_url or "https://api.openai.com/v1",
+                model=config.model or defaults["default_model"],
+                base_url=config.base_url or defaults["default_base_url"],
                 timeout_seconds=30,
             )
             test_prov.provider_name = config.provider

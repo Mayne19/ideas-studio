@@ -34,7 +34,7 @@ import {
   percentOf,
 } from '@/utils/trafficDisplay'
 
-type Period = '1d' | '7d' | '30d' | '90d' | '180d' | '365d'
+type Period = 'today' | 'yesterday' | '7d' | '30d' | '90d' | '180d' | '365d'
 
 type ChannelTrendPoint = {
   date: string
@@ -56,7 +56,8 @@ type SourceRow = {
 }
 
 const PERIODS: PeriodOption<Period>[] = [
-  { value: '1d', label: '1 jour' },
+  { value: 'today', label: 'Aujourd’hui' },
+  { value: 'yesterday', label: 'Hier' },
   { value: '7d', label: '7 jours' },
   { value: '30d', label: '30 jours' },
   { value: '90d', label: '90 jours' },
@@ -151,7 +152,9 @@ function buildChannelTrend(data: PerformanceSummary): ChannelTrendPoint[] {
 
 function trafficTick(period: Period, value: unknown) {
   const label = String(value)
-  if (period === '1d' || period === '90d' || period === '180d' || period === '365d') return label
+  if (period === 'today' || period === 'yesterday') return label
+  if (period === '365d') return label.slice(0, 7)
+  if (period === '90d' || period === '180d') return label
   return label.includes('-') ? label.slice(5) : label
 }
 
@@ -241,7 +244,7 @@ function VisualRow({
 
 export default function TrafficPage() {
   const { projectId } = useParams<{ projectId: string }>()
-  const [period, setPeriod] = useState<Period>('1d')
+  const [period, setPeriod] = useState<Period>('today')
   const [data, setData] = useState<PerformanceSummary | null>(null)
   const [loadStatus, setLoadStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [tick, setTick] = useState(0)
@@ -282,8 +285,8 @@ export default function TrafficPage() {
   const hasChannelTrend = hasRealTraffic && channelTrend.length > 0
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <div className="project-page project-page--wide">
+      <div className="project-page-header">
         <div>
           <h1 className="text-[20px] font-semibold tracking-tight text-primary">Trafic</h1>
           <p className="mt-0.5 text-[13px] text-secondary">Comprenez d’où viennent les visiteurs et quelles sources apportent le meilleur trafic.</p>
@@ -315,7 +318,7 @@ export default function TrafficPage() {
             <Card className="h-[360px]">
               <SectionTitle>Évolution du trafic par canal</SectionTitle>
               <div className="relative h-[245px]" style={{ minHeight: 0 }}>
-                <ResponsiveContainer width="100%" height="100%" debounce={100}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1} debounce={100}>
                   <LineChart data={channelTrend} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
                     <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} tickFormatter={(v) => trafficTick(period, v)} interval="preserveStartEnd" />

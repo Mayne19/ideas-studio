@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronRight, LogOut, User, Bell, BellDot, Search, FileText, FolderOpen, Loader2 } from 'lucide-react'
+import { ChevronRight, LogOut, User, Bell, BellDot, Search, FileText, FolderOpen, Loader2, Image, Settings } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useProject } from '@/context/ProjectContext'
 import { globalSearch, type SearchResult } from '@/api/search'
@@ -106,6 +106,13 @@ export default function Topbar() {
         .slice(0, 2)
     : '?'
 
+  function resultIcon(type: SearchResult['type']) {
+    if (type === 'article') return <FileText size={13} />
+    if (type === 'media') return <Image size={13} />
+    if (type === 'page') return <Settings size={13} />
+    return <FolderOpen size={13} />
+  }
+
   return (
     <>
     <header className="flex h-[64px] shrink-0 items-center justify-between border-b border-border bg-surface px-6">
@@ -162,7 +169,7 @@ export default function Topbar() {
                         onClick={() => setSearchFocused(false)}
                       >
                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] bg-accent/10 text-accent">
-                          {result.type === 'article' ? <FileText size={13} /> : <FolderOpen size={13} />}
+                          {resultIcon(result.type)}
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="text-[13px] font-medium text-primary truncate">{result.title}</p>

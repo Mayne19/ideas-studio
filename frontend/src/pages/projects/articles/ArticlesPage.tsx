@@ -402,9 +402,9 @@ export default function ArticlesPage() {
 
   return (
     <>
-      <div className="mx-auto max-w-5xl">
+      <div className="project-page project-page--wide">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="project-page-header">
           <div>
             <h1 className="text-[20px] font-semibold text-primary tracking-tight">Articles</h1>
             <p className="mt-0.5 text-[13px] text-secondary">
@@ -435,31 +435,31 @@ export default function ArticlesPage() {
         )}
 
         {/* Filters */}
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="mb-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(220px,1.25fr)_220px_190px_220px_140px_auto]">
           <Input
             placeholder="Rechercher..."
             value={filterSearch}
             onChange={handleSearchChange}
-            className="w-48"
+            className="w-full"
           />
           <Select
             options={scoreOptions}
             value={filterScore}
             onChange={(e) => setFilterScore(e.target.value as ScoreFilter)}
-            className="w-56"
+            className="w-full"
           />
           <Select
             options={statusOptions}
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="w-44"
+            className="w-full"
           />
           {categories.length > 0 && (
             <Select
               options={categoryOptions}
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="w-56"
+              className="w-full"
             />
           )}
           <Input
@@ -469,10 +469,10 @@ export default function ArticlesPage() {
             step="0.0001"
             value={filterBlockedCost}
             onChange={(e) => setFilterBlockedCost(e.target.value)}
-            className="w-28"
+            className="w-full"
             title="Filtrer les articles dont le coût estimé dépasse ce montant"
           />
-          <Button size="sm" variant="secondary" onClick={() => navigate(`/projects/${projectId}/validation`)}>
+          <Button size="sm" variant="secondary" className="justify-center" onClick={() => navigate(`/projects/${projectId}/validation`)}>
             Validation
           </Button>
         </div>

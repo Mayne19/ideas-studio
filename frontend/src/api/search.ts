@@ -1,7 +1,7 @@
 import { api } from './client'
 
 export type SearchResult = {
-  type: 'article' | 'category' | 'project'
+  type: 'article' | 'category' | 'project' | 'page' | 'media'
   id: string
   title: string
   subtitle: string | null

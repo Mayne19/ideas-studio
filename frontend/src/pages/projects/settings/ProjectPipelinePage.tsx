@@ -32,6 +32,7 @@ export default function ProjectPipelinePage() {
   const [running, setRunning] = useState(false)
   const [runStatus, setRunStatus] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
+  const [loadError, setLoadError] = useState('')
 
   // Editable local state
   const [enabled, setEnabled] = useState(false)
@@ -47,7 +48,7 @@ export default function ProjectPipelinePage() {
     let cancelled = false
     Promise.all([
       getPipelineSettings(projectId),
-      getPipelineLogs(projectId, 10),
+      getPipelineLogs(projectId, 10).catch(() => []),
     ])
       .then(([s, l]) => {
         if (cancelled) return
@@ -59,10 +60,14 @@ export default function ProjectPipelinePage() {
         setCostLimitPerArticle(s.cost_limit_per_article_eur == null ? '' : String(s.cost_limit_per_article_eur))
         setLogs(l)
         setLoadStatus('success')
+        setLoadError('')
         setDirty(false)
       })
-      .catch(() => {
-        if (!cancelled) setLoadStatus('error')
+      .catch((err) => {
+        if (!cancelled) {
+          setLoadError(err instanceof Error && err.message === 'Not Found' ? "L’API Pipeline n’est pas disponible sur ce déploiement." : err instanceof Error ? err.message : '')
+          setLoadStatus('error')
+        }
       })
     return () => { cancelled = true }
   }, [projectId, loadTrigger])
@@ -118,7 +123,16 @@ export default function ProjectPipelinePage() {
     setLoadTrigger((n) => n + 1)
   }
 
-  if (loadStatus === 'error') return <ErrorState onRetry={handleRetry} />
+  if (loadStatus === 'error') {
+    return (
+      <div className="flex flex-col gap-4">
+        <ErrorState message={loadError || 'Impossible de charger le pipeline.'} onRetry={handleRetry} />
+        <div className="rounded-[14px] border border-border bg-surface p-4 text-[13px] text-secondary">
+          Les owners/admins doivent pouvoir accéder à cette page. Si ce message apparaît en production, le backend déployé n’inclut pas encore les endpoints Pipeline.
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -312,8 +326,30 @@ export default function ProjectPipelinePage() {
       {!enabled && (
         <div className="rounded-[14px] border border-border bg-surface px-4 py-3">
           <p className="text-[12px] text-tertiary">
-            Activez le pipeline automatique pour configurer la planification et voir l'historique.
+            Activez le pipeline automatique puis enregistrez pour configurer la planification et voir l'historique.
           </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || !dirty}
+              className="flex items-center gap-1.5 rounded-[10px] bg-accent px-4 py-2 text-[12px] font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+            >
+              {saving ? <Loader2 size={13} className="animate-spin" /> : <RotateCw size={13} />}
+              {saveStatus === 'saved' ? 'Enregistré' : 'Enregistrer'}
+            </button>
+            <button
+              type="button"
+              onClick={handleRun}
+              disabled={running}
+              className="flex items-center gap-1.5 rounded-[10px] border border-border bg-surface px-4 py-2 text-[12px] font-medium text-secondary transition-colors hover:bg-[#f0f0f2] disabled:opacity-50"
+            >
+              {running ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
+              Exécuter maintenant
+            </button>
+            {saveStatus === 'error' && <p className="text-[12px] text-danger">Erreur</p>}
+          </div>
+          {runStatus && <p className="mt-2 text-[12px] text-secondary">{runStatus}</p>}
         </div>
       )}
     </div>

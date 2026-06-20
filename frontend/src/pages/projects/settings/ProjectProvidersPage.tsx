@@ -31,6 +31,8 @@ const SUPPORTED_PROVIDERS: ProviderDef[] = [
   { key: 'gemini', label: 'Google Gemini', default_model: 'gemini-2.5-flash', default_base_url: 'https://generativelanguage.googleapis.com/v1beta/openai/' },
   { key: 'openai', label: 'OpenAI', default_model: 'gpt-4o-mini', default_base_url: 'https://api.openai.com/v1' },
   { key: 'openrouter', label: 'OpenRouter', default_model: 'deepseek/deepseek-v4-flash', default_base_url: 'https://openrouter.ai/api/v1' },
+  { key: 'anthropic', label: 'Claude / Anthropic', default_model: 'claude-3-5-sonnet-latest', default_base_url: 'https://api.anthropic.com/v1' },
+  { key: 'mistral', label: 'Mistral', default_model: 'mistral-large-latest', default_base_url: 'https://api.mistral.ai/v1' },
   { key: 'ollama', label: 'Ollama (local)', default_model: 'qwen3:14b', default_base_url: 'http://127.0.0.1:11434/v1' },
   { key: 'custom', label: 'Custom OpenAI-compatible', default_model: '', default_base_url: '' },
 ]
@@ -75,7 +77,7 @@ export default function ProjectProvidersPage() {
 
   const loadConfigs = useCallback(async () => {
     setLoading(true)
-      setError(null)
+    setError(null)
     try {
       const data = await api.get<AIProviderConfig[]>(projectId ? `/settings/ai-providers?project_id=${projectId}` : '/settings/ai-providers')
       setConfigs(data)
@@ -201,23 +203,28 @@ export default function ProjectProvidersPage() {
     )
   }
 
-  if (error && configs.length === 0) {
-    return (
-      <div className="flex flex-col items-center gap-3 py-16">
-        <XCircle size={24} className="text-danger" />
-        <p className="text-[13px] text-secondary">{error}</p>
-        <button onClick={loadConfigs} className="rounded-[10px] bg-accent px-4 py-2 text-[12px] font-medium text-white hover:opacity-90 transition-opacity">
-          Réessayer
-        </button>
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h2 className="text-[15px] font-semibold text-primary">Configuration des providers IA</h2>
       </div>
+
+      {error && (
+        <div className="rounded-[12px] border border-danger/20 bg-danger/5 px-4 py-3">
+          <div className="flex items-start gap-2 text-[13px] text-danger">
+            <XCircle size={15} className="mt-0.5 shrink-0" />
+            <div>
+              <p className="font-medium">Configuration IA indisponible</p>
+              <p className="mt-0.5 text-[12px] text-secondary">
+                {error === 'Not Found' ? "L’API Providers n’est pas disponible sur ce déploiement. Déployez le backend à jour pour connecter Gemini." : error}
+              </p>
+            </div>
+          </div>
+          <button onClick={loadConfigs} className="mt-3 rounded-[10px] bg-accent px-4 py-2 text-[12px] font-medium text-white transition-opacity hover:opacity-90">
+            Réessayer
+          </button>
+        </div>
+      )}
 
       {configs.length === 0 && !showForm && (
         <div className="rounded-[14px] border border-border bg-surface p-6 text-center">
@@ -227,7 +234,8 @@ export default function ProjectProvidersPage() {
               <button
                 key={p.key}
                 onClick={() => openCreate(p.key)}
-                className="flex items-center gap-1.5 rounded-[10px] border border-border px-3 py-2 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
+                disabled={!!error}
+                className="flex items-center gap-1.5 rounded-[10px] border border-border px-3 py-2 text-[12px] font-medium text-secondary transition-colors hover:bg-[#f0f0f2] hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Plus size={13} />
                 {p.label}
@@ -317,7 +325,8 @@ export default function ProjectProvidersPage() {
               <button
                 key={p.key}
                 onClick={() => openCreate(p.key)}
-                className="flex items-center gap-1.5 rounded-[10px] border border-border px-3 py-2 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
+                disabled={!!error}
+                className="flex items-center gap-1.5 rounded-[10px] border border-border px-3 py-2 text-[12px] font-medium text-secondary transition-colors hover:bg-[#f0f0f2] hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Plus size={13} />
                 {p.label}

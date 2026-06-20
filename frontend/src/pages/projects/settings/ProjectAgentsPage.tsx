@@ -33,9 +33,12 @@ export default function ProjectAgentsPage() {
     setError(null)
     try {
       const [agentsData, assignmentsData, providersData] = await Promise.all([
-        api.get<AgentInfo[]>(projectId ? `/settings/ai-agents?project_id=${projectId}` : '/settings/ai-agents'),
+        api.get<AgentInfo[]>(projectId ? `/settings/ai-agents?project_id=${projectId}` : '/settings/ai-agents').catch((err) => {
+          setError(err instanceof Error && err.message === 'Not Found' ? "L’API Agents n’est pas disponible sur ce déploiement." : err instanceof Error ? err.message : 'Failed to load agents')
+          return [] as AgentInfo[]
+        }),
         api.get<AgentAssignment[]>(projectId ? `/settings/ai-agents/assignments?project_id=${projectId}` : '/settings/ai-agents/assignments').catch(() => [] as AgentAssignment[]),
-        api.get<AIProviderConfig[]>(projectId ? `/settings/ai-providers?project_id=${projectId}` : '/settings/ai-providers'),
+        api.get<AIProviderConfig[]>(projectId ? `/settings/ai-providers?project_id=${projectId}` : '/settings/ai-providers').catch(() => [] as AIProviderConfig[]),
       ])
       setAgents(agentsData)
       setAssignments(assignmentsData)
@@ -107,7 +110,16 @@ export default function ProjectAgentsPage() {
   }
 
   if (loading) return <LoadingState />
-  if (error) return <ErrorState message={error} onRetry={fetchAll} />
+  if (error && agents.length === 0) {
+    return (
+      <div className="flex flex-col gap-4">
+        <ErrorState message={error} onRetry={fetchAll} />
+        <div className="rounded-[14px] border border-border bg-surface p-4 text-[13px] text-secondary">
+          La page reste accessible aux owners/admins. Déployez le backend à jour si le registry agents n’est pas exposé.
+        </div>
+      </div>
+    )
+  }
 
   const enabledProviders = providers.filter((p) => p.enabled && p.api_key_configured)
 
@@ -139,6 +151,12 @@ export default function ProjectAgentsPage() {
           </Button>
         </div>
       </div>
+
+      {error && (
+        <div className="rounded-[12px] border border-warning/20 bg-warning/5 px-4 py-3 text-[13px] text-secondary">
+          {error}
+        </div>
+      )}
 
       <div className="rounded-[14px] border border-border bg-[#f8f9fc] px-4 py-3 text-[13px] text-secondary leading-relaxed">
         <strong className="text-primary">Ordre de résolution :</strong>{' '}

@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { updateProject } from '@/api/projects'
 import type { UpdateProjectPayload } from '@/api/projects'
 import { useProject } from '@/context/ProjectContext'
+import { useAuth } from '@/context/AuthContext'
 import FormCard from '@/components/ui/FormCard'
 import Input from '@/components/ui/Input'
 import Textarea from '@/components/ui/Textarea'
@@ -33,6 +34,10 @@ type FormState = {
   domain: string
   language: string
   country_target: string
+  timezone: string
+  public_site_url: string
+  description: string
+  industry: string
   audience: string
   tone: string
 }
@@ -42,11 +47,16 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 export default function ProjectSettingsPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const { project, loading, refetch } = useProject()
+  const { user } = useAuth()
   const [form, setForm] = useState<FormState>({
     name: '',
     domain: '',
     language: 'fr',
     country_target: '',
+    timezone: 'Europe/Paris',
+    public_site_url: '',
+    description: '',
+    industry: '',
     audience: '',
     tone: '',
   })
@@ -60,6 +70,10 @@ export default function ProjectSettingsPage() {
       domain: project.domain ?? '',
       language: project.language ?? 'fr',
       country_target: project.country_target ?? '',
+      timezone: project.timezone ?? 'Europe/Paris',
+      public_site_url: project.public_site_url ?? '',
+      description: project.description ?? '',
+      industry: project.industry ?? '',
       audience: project.audience ?? '',
       tone: project.tone ?? '',
     }
@@ -84,6 +98,10 @@ export default function ProjectSettingsPage() {
         domain: form.domain.trim() || undefined,
         language: form.language || undefined,
         country_target: form.country_target.trim() || undefined,
+        timezone: form.timezone.trim() || undefined,
+        public_site_url: form.public_site_url.trim() || null,
+        description: form.description.trim() || undefined,
+        industry: form.industry.trim() || undefined,
         audience: form.audience.trim() || undefined,
         tone: form.tone || undefined,
       }
@@ -98,6 +116,10 @@ export default function ProjectSettingsPage() {
   }
 
   if (loading) return <LoadingState />
+
+  const ownerLabel = project?.owner_id === user?.id && user
+    ? `${user.name} · ${user.email}`
+    : project?.owner_id ?? ''
 
   return (
     <form onSubmit={handleSave} className="flex flex-col gap-5">
@@ -138,12 +160,46 @@ export default function ProjectSettingsPage() {
             value={form.language}
             onChange={set('language')}
           />
+          <div className="grid gap-4 md:grid-cols-2">
+            <Input
+              label="Pays cible"
+              value={form.country_target}
+              onChange={set('country_target')}
+              placeholder="France"
+              hint="Pays principal visé pour le SEO"
+            />
+            <Input
+              label="Fuseau horaire"
+              value={form.timezone}
+              onChange={set('timezone')}
+              placeholder="Europe/Paris"
+            />
+          </div>
           <Input
-            label="Pays cible"
-            value={form.country_target}
-            onChange={set('country_target')}
-            placeholder="France"
-            hint="Pays principal visé pour le SEO"
+            label="URL publique du site"
+            value={form.public_site_url}
+            onChange={set('public_site_url')}
+            placeholder="https://www.exemple.fr"
+            hint={`Connexion site : ${project?.status === 'connected' ? 'connecté' : 'non connecté'}`}
+          />
+          <Input
+            label="Secteur / niche"
+            value={form.industry}
+            onChange={set('industry')}
+            placeholder="SaaS B2B, média tech, e-commerce..."
+          />
+          <Textarea
+            label="Description courte du projet"
+            value={form.description}
+            onChange={set('description')}
+            placeholder="Décrivez ce que publie le site, pour qui, et pourquoi."
+            rows={3}
+          />
+          <Input
+            label="Propriétaire du projet"
+            value={ownerLabel}
+            readOnly
+            className="text-tertiary"
           />
         </div>
       </FormCard>

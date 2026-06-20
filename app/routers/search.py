@@ -8,6 +8,7 @@ from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.models.article import Article
 from app.models.category import Category
+from app.models.media_asset import MediaAsset
 
 router = APIRouter(tags=["search"])
 
@@ -33,6 +34,34 @@ def global_search(
         return []
 
     results = []
+
+    settings_entries = [
+        ("settings", "Paramètres", "Général", "settings"),
+        ("strategy", "Stratégie", "Audience, ton éditorial et consignes IA", "settings/strategy"),
+        ("providers", "Providers", "Connecter Gemini, OpenAI, OpenRouter, Anthropic, Mistral", "settings/providers"),
+        ("agents", "Agents", "Assigner providers et modèles aux agents IA", "settings/agents"),
+        ("pipeline", "Pipeline", "Automatisations éditoriales et génération planifiée", "settings/pipeline"),
+        ("integration", "Intégration", "Site connecté, API et revalidation", "settings/integration"),
+        ("media", "Médias", "Médiathèque du projet", "media"),
+        ("articles", "Articles", "Bibliothèque CMS", "articles"),
+        ("ideas", "Idées", "Backlog intelligent", "ideas"),
+        ("production", "Production", "Workflow de fabrication", "production"),
+        ("validation", "Validation", "Contrôle humain", "validation"),
+        ("generate", "Génération IA", "Exécution et diagnostic IA", "generate"),
+    ]
+    normalized_query = query.lower()
+    for project_id in member_project_ids:
+        for key, title, subtitle, path in settings_entries:
+            haystack = f"{key} {title} {subtitle}".lower()
+            if normalized_query in haystack:
+                results.append({
+                    "type": "page",
+                    "id": f"{project_id}:{key}",
+                    "title": title,
+                    "subtitle": subtitle,
+                    "url": f"/projects/{project_id}/{path}",
+                    "project_id": project_id,
+                })
 
     # Search articles
     articles = (
@@ -92,6 +121,32 @@ def global_search(
             "project_id": c.project_id,
             "project_name": project.name if project else None,
             "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+        })
+
+    media_items = (
+        db.query(MediaAsset)
+        .filter(
+            MediaAsset.project_id.in_(member_project_ids),
+            or_(
+                MediaAsset.filename.ilike(f"%{query}%"),
+                MediaAsset.alt_text.ilike(f"%{query}%"),
+                MediaAsset.caption.ilike(f"%{query}%"),
+            ),
+        )
+        .limit(limit)
+        .all()
+    )
+    for media in media_items:
+        project = db.query(Project).filter(Project.id == media.project_id).first()
+        results.append({
+            "type": "media",
+            "id": media.id,
+            "title": media.filename or media.url,
+            "subtitle": project.name if project else "Média",
+            "url": f"/projects/{media.project_id}/media",
+            "project_id": media.project_id,
+            "project_name": project.name if project else None,
+            "updated_at": media.updated_at.isoformat() if media.updated_at else None,
         })
 
     # Search projects

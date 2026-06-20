@@ -28,7 +28,7 @@ import ErrorState from '@/components/ui/ErrorState'
 import PeriodFilter, { type PeriodOption } from '@/components/ui/PeriodFilter'
 import { formatAxisTick, formatMetric, percentOf } from '@/utils/trafficDisplay'
 
-type Period = '1d' | '7d' | '30d' | '90d' | '180d' | '365d'
+type Period = 'today' | 'yesterday' | '7d' | '30d' | '90d' | '180d' | '365d'
 
 type ArticleMetric = {
   article: Article
@@ -41,7 +41,8 @@ type ArticleMetric = {
 }
 
 const PERIODS: PeriodOption<Period>[] = [
-  { value: '1d', label: '1 jour' },
+  { value: 'today', label: 'Aujourd’hui' },
+  { value: 'yesterday', label: 'Hier' },
   { value: '7d', label: '7 jours' },
   { value: '30d', label: '30 jours' },
   { value: '90d', label: '90 jours' },
@@ -71,7 +72,9 @@ function categoryColor(category: Category | null | undefined, fallbackIndex = 0)
 
 function trendTick(period: Period, value: unknown) {
   const label = String(value)
-  if (period === '1d' || period === '90d' || period === '180d' || period === '365d') return label
+  if (period === 'today' || period === 'yesterday') return label
+  if (period === '365d') return label.slice(0, 7)
+  if (period === '90d' || period === '180d') return label
   return label.includes('-') ? label.slice(5) : label
 }
 
@@ -299,7 +302,7 @@ function KeywordOpportunities() {
 export default function PerformanceDashboardPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
-  const [period, setPeriod] = useState<Period>('1d')
+  const [period, setPeriod] = useState<Period>('today')
   const [data, setData] = useState<PerformanceSummary | null>(null)
   const [articles, setArticles] = useState<Article[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -380,8 +383,8 @@ export default function PerformanceDashboardPage() {
   const hasTopArticleViews = topArticleRows.some((item) => item.views > 0)
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <div className="project-page project-page--wide">
+      <div className="project-page-header">
         <div className="flex items-center gap-3">
           <div>
             <h1 className="text-[20px] font-semibold tracking-tight text-primary">Performance</h1>
@@ -415,7 +418,7 @@ export default function PerformanceDashboardPage() {
             <Card className="h-[320px]">
               <SectionTitle>Évolution des vues contenus</SectionTitle>
               <div className="relative h-[255px]">
-                <ResponsiveContainer width="100%" height="100%" debounce={100}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1} debounce={100}>
                   <LineChart data={trendData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
                     <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} tickFormatter={(v) => trendTick(period, v)} interval="preserveStartEnd" />
@@ -445,7 +448,7 @@ export default function PerformanceDashboardPage() {
             <Card>
               <SectionTitle>Top articles par vues</SectionTitle>
               <div className="relative mb-4 h-[190px]">
-                <ResponsiveContainer width="100%" height="100%" debounce={100}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1} debounce={100}>
                   <BarChart data={topArticleRows} layout="vertical" margin={{ top: 0, right: 12, bottom: 0, left: 0 }}>
                     <XAxis type="number" tick={{ fontSize: 10, fill: '#86868b' }} tickLine={false} axisLine={false} allowDecimals={false} domain={[0, 'dataMax']} tickFormatter={formatAxisTick} />
                     <YAxis type="category" dataKey="title" tick={{ fontSize: 10, fill: '#86868b' }} tickLine={false} axisLine={false} width={128} tickFormatter={(v: string) => v.length > 22 ? `${v.slice(0, 21)}…` : v} />

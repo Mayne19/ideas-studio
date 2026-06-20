@@ -179,6 +179,10 @@ export const router = createBrowserRouter([
             element: <ProjectSettingsPage />,
           },
           {
+            path: 'general',
+            element: <ProjectSettingsPage />,
+          },
+          {
             path: 'strategy',
             element: (
               <Suspense fallback={<LoadingState />}>

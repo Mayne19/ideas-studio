@@ -1,374 +1,282 @@
-import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { Lightbulb, Zap, PenLine, Loader2, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react'
-import { generateIdea, launchIdeas } from '@/api/ideas'
-import { listCategories } from '@/api/categories'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { AlertTriangle, Bot, CheckCircle, Euro, History, Loader2, Play, RefreshCw, RotateCw, Settings, TestTube2, XCircle } from 'lucide-react'
 import { listAIProviders } from '@/api/aiProviders'
-import { useEffect } from 'react'
-import type { Category, IdeaGenerateResponse } from '@/types'
-import { ApiError } from '@/api/client'
+import { getPipelineLogs, getPipelineSettings, triggerPipelineRun } from '@/api/pipeline'
+import { listArticles } from '@/api/articles'
+import { api } from '@/api/client'
+import type { AIProviderPublic } from '@/api/aiProviders'
+import type { PipelineLog, PipelineSettings } from '@/api/pipeline'
+import type { AgentAssignment, AgentInfo, Article } from '@/types'
 import Button from '@/components/ui/Button'
-import Input from '@/components/ui/Input'
-import Select from '@/components/ui/Select'
-import ToggleSwitch from '@/components/ui/ToggleSwitch'
+import LoadingState from '@/components/ui/LoadingState'
+import ErrorState from '@/components/ui/ErrorState'
 
-type Mode = 'idea' | 'full_article' | 'manual'
+type LoadState = 'loading' | 'success' | 'error'
 
-const MODES: { key: Mode; icon: React.ReactNode; label: string; desc: string }[] = [
-  {
-    key: 'idea',
-    icon: <Lightbulb size={20} />,
-    label: 'Générer une idée',
-    desc: "L'IA propose un sujet structuré avec keyword, angle et plan.",
-  },
-  {
-    key: 'full_article',
-    icon: <Zap size={20} />,
-    label: 'Article complet',
-    desc: "L'IA génère un brouillon complet prêt à réviser.",
-  },
-  {
-    key: 'manual',
-    icon: <PenLine size={20} />,
-    label: 'Brouillon manuel',
-    desc: 'Créez un brouillon vide et commencez à écrire.',
-  },
-]
+function StatusPill({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${ok ? 'bg-success/10 text-success' : 'bg-warning/12 text-[#a35b00]'}`}>
+      {ok ? <CheckCircle size={11} /> : <AlertTriangle size={11} />}
+      {label}
+    </span>
+  )
+}
 
-function translateError(err: unknown): string {
-  if (err instanceof ApiError) {
-    switch (err.status) {
-      case 409: return 'Une génération est déjà en cours. Attendez quelques instants.'
-      case 403: return 'Vous n\'avez pas la permission de lancer cette action.'
-      case 422: return 'Données invalides. Vérifiez les informations saisies.'
-      case 503: return err.message || 'Provider IA indisponible, génération réelle impossible.'
-      default: return err.message || `Erreur ${err.status}`
-    }
-  }
-  return 'Une erreur inattendue est survenue.'
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <p className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-secondary">{children}</p>
+}
+
+function MetricCard({ icon, label, value, tone = 'accent' }: { icon: React.ReactNode; label: string; value: React.ReactNode; tone?: 'accent' | 'success' | 'warning' | 'danger' }) {
+  const toneClass = {
+    accent: 'bg-accent/10 text-accent',
+    success: 'bg-success/10 text-success',
+    warning: 'bg-warning/12 text-[#a35b00]',
+    danger: 'bg-danger/10 text-danger',
+  }[tone]
+  return (
+    <div className="rounded-[14px] border border-border bg-surface p-4">
+      <span className={`mb-3 flex h-8 w-8 items-center justify-center rounded-[10px] ${toneClass}`}>{icon}</span>
+      <p className="text-[20px] font-semibold tracking-tight text-primary">{value}</p>
+      <p className="mt-0.5 text-[12px] text-tertiary">{label}</p>
+    </div>
+  )
+}
+
+function articleCost(article: Article) {
+  const actual = article.actual_cost_json?.actual_cost_eur
+  const estimated = article.estimated_cost_json?.estimated_cost_eur
+  const value = typeof actual === 'number' ? actual : typeof estimated === 'number' ? estimated : null
+  return value
+}
+
+function workflowStatus(article: Article) {
+  if (article.workflow_status) return article.workflow_status
+  if (article.status === 'failed') return 'failed'
+  if (article.next_agent_key) return 'running'
+  if (article.completed_agent_keys) return 'completed'
+  return 'not_started'
 }
 
 export default function GeneratePage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
-
-  const [mode, setMode] = useState<Mode>('idea')
-  const [preferredTitle, setPreferredTitle] = useState('')
-  const [keyword, setKeyword] = useState('')
-  const [secondaryKeywords, setSecondaryKeywords] = useState('')
-  const [category, setCategory] = useState('')
-  const [audience, setAudience] = useState('')
-  const [angle, setAngle] = useState('')
-  const [articleType, setArticleType] = useState('')
-  const [targetLength, setTargetLength] = useState('')
-  const [withFaq, setWithFaq] = useState(false)
-  const [withCallouts, setWithCallouts] = useState(false)
-  const [categories, setCategories] = useState<Category[]>([])
-  const [hasActiveProvider, setHasActiveProvider] = useState<boolean | null>(null)
-
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [result, setResult] = useState<IdeaGenerateResponse | null>(null)
+  const [providers, setProviders] = useState<AIProviderPublic[]>([])
+  const [agents, setAgents] = useState<AgentInfo[]>([])
+  const [assignments, setAssignments] = useState<AgentAssignment[]>([])
+  const [pipeline, setPipeline] = useState<PipelineSettings | null>(null)
+  const [logs, setLogs] = useState<PipelineLog[]>([])
+  const [articles, setArticles] = useState<Article[]>([])
+  const [loadState, setLoadState] = useState<LoadState>('loading')
+  const [runState, setRunState] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
+  const [tick, setTick] = useState(0)
 
   useEffect(() => {
     if (!projectId) return
-    listCategories(projectId).then(setCategories).catch(() => {})
-    listAIProviders(projectId)
-      .then((providers) => setHasActiveProvider(providers.some((provider) => provider.enabled && provider.api_key_configured)))
-      .catch(() => setHasActiveProvider(false))
-  }, [projectId])
+    let cancelled = false
+    Promise.resolve().then(() => { if (!cancelled) setLoadState('loading') })
+    Promise.all([
+      listAIProviders(projectId).catch(() => []),
+      api.get<AgentInfo[]>(`/settings/ai-agents?project_id=${projectId}`).catch(() => []),
+      api.get<AgentAssignment[]>(`/settings/ai-agents/assignments?project_id=${projectId}`).catch(() => []),
+      getPipelineSettings(projectId).catch(() => null),
+      getPipelineLogs(projectId, 12).catch(() => []),
+      listArticles(projectId, { limit: 80 }).catch(() => []),
+    ])
+      .then(([providerData, agentData, assignmentData, pipelineData, logData, articleData]) => {
+        if (cancelled) return
+        setProviders(providerData)
+        setAgents(agentData)
+        setAssignments(assignmentData)
+        setPipeline(pipelineData)
+        setLogs(logData)
+        setArticles(articleData)
+        setLoadState('success')
+      })
+      .catch(() => {
+        if (!cancelled) setLoadState('error')
+      })
+    return () => { cancelled = true }
+  }, [projectId, tick])
 
-  function buildContextHint(): string {
-    const parts: string[] = []
-    if (keyword) parts.push(`Keyword : ${keyword}`)
-    if (secondaryKeywords) parts.push(`Keywords secondaires : ${secondaryKeywords}`)
-    if (audience) parts.push(`Audience : ${audience}`)
-    if (angle) parts.push(`Angle : ${angle}`)
-    if (articleType) parts.push(`Type d'article : ${articleType}`)
-    if (targetLength) parts.push(`Longueur cible : ${targetLength}`)
-    if (withFaq) parts.push('Inclure une FAQ')
-    if (withCallouts) parts.push('Inclure des encadrés callout')
-    return parts.join(' — ')
-  }
+  const activeProviders = providers.filter((provider) => provider.enabled && provider.api_key_configured)
+  const assignedAgentIds = new Set(assignments.filter((item) => item.enabled).map((item) => item.agent_id))
+  const workflowArticles = articles.filter((article) => article.workflow_run_id || article.next_agent_key || article.completed_agent_keys || article.workflow_status)
+  const failedWorkflows = workflowArticles.filter((article) => workflowStatus(article) === 'failed' || article.status === 'failed')
+  const runningWorkflows = workflowArticles.filter((article) => ['running', 'in_progress', 'queued'].includes(workflowStatus(article)) || article.next_agent_key)
+  const completedWorkflows = workflowArticles.filter((article) => workflowStatus(article) === 'completed')
+  const recentGenerations = useMemo(
+    () => [...workflowArticles].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()).slice(0, 8),
+    [workflowArticles],
+  )
+  const recentCost = articles.reduce((sum, article) => sum + (articleCost(article) ?? 0), 0)
 
-  const generationPayload = {
-    context_hint: buildContextHint() || undefined,
-    preferred_title: preferredTitle.trim() || undefined,
-    keyword: keyword.trim() || undefined,
-    category_id: category || undefined,
-    audience: audience.trim() || undefined,
-    angle: angle.trim() || undefined,
-    search_intent: articleType.trim() || undefined,
-    include_faq: withFaq,
-    include_callouts: withCallouts,
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleRunPipeline() {
     if (!projectId) return
-    setLoading(true)
-    setError('')
-    setResult(null)
-
+    setRunState('running')
     try {
-      if (mode !== 'manual' && hasActiveProvider === false) {
-        setError('Aucun provider IA actif n’est configuré pour ce projet. Configurez Gemini, OpenAI ou OpenRouter avant de générer.')
-        return
-      }
-      if (mode === 'idea') {
-        const res = await generateIdea(projectId, generationPayload)
-        setResult(res)
-      } else if (mode === 'full_article') {
-        const res = await launchIdeas(projectId, {
-          mode: 'full_article',
-          ...generationPayload,
-        })
-        if (res.article_ids.length > 0) {
-          navigate(`/projects/${projectId}/articles/${res.article_ids[0]}/edit`)
-        } else {
-          setError('Aucun article créé. Réessayez dans quelques instants.')
-        }
-      } else {
-        // manual — we need an articleId, create from the ideas pipeline
-        // createManualDraft needs an article_id (from an existing idea)
-        // Instead, navigate to articles list to create manually
-        navigate(`/projects/${projectId}/articles`)
-      }
-    } catch (err) {
-      setError(translateError(err))
-    } finally {
-      setLoading(false)
+      await triggerPipelineRun(projectId)
+      setRunState('done')
+      setTick((value) => value + 1)
+    } catch {
+      setRunState('error')
     }
   }
 
-  const categoryOptions = [
-    { value: '', label: 'Aucune catégorie' },
-    ...categories.map((c) => ({ value: c.id, label: c.name })),
-  ]
+  if (loadState === 'loading') return <LoadingState />
+  if (loadState === 'error') return <ErrorState message="Impossible de charger le centre IA." onRetry={() => setTick((value) => value + 1)} />
 
   return (
-    <div className="mx-auto max-w-2xl">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-[20px] font-semibold text-primary tracking-tight">Générer</h1>
-        <p className="mt-0.5 text-[13px] text-secondary">
-          Lancez une production manuelle : idée, article complet ou brouillon vide.
-        </p>
+    <div className="project-page project-page--wide">
+      <div className="project-page-header">
+        <div>
+          <h1 className="text-[20px] font-semibold tracking-tight text-primary">Génération IA</h1>
+          <p className="mt-0.5 text-[13px] text-secondary">Surveillez les workflows IA, les agents, les coûts et les erreurs d’exécution.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="secondary" icon={<Settings size={13} />} onClick={() => navigate(`/projects/${projectId}/settings/providers`)}>
+            Providers
+          </Button>
+          <Button size="sm" variant="secondary" icon={<Bot size={13} />} onClick={() => navigate(`/projects/${projectId}/settings/agents`)}>
+            Agents
+          </Button>
+          <Button size="sm" icon={runState === 'running' ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />} loading={runState === 'running'} onClick={handleRunPipeline}>
+            Tester le pipeline
+          </Button>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-        {/* Mode selector */}
-        <div className="grid grid-cols-3 gap-3">
-          {MODES.map((m) => (
-            <button
-              key={m.key}
-              type="button"
-              onClick={() => setMode(m.key)}
-              className={`flex flex-col gap-3 rounded-[16px] border p-4 text-left transition-all ${
-                mode === m.key
-                  ? 'border-accent bg-accent/5 shadow-sm'
-                  : 'border-border bg-surface hover:border-accent/40 hover:bg-[#f9f9fb]'
-              }`}
-            >
-              <span className={mode === m.key ? 'text-accent' : 'text-tertiary'}>
-                {m.icon}
-              </span>
-              <div>
-                <p className={`text-[13px] font-semibold ${mode === m.key ? 'text-accent' : 'text-primary'}`}>
-                  {m.label}
-                </p>
-                <p className="mt-0.5 text-[11px] text-secondary leading-snug">{m.desc}</p>
-              </div>
-            </button>
-          ))}
+      {runState === 'error' && (
+        <div className="mb-4 rounded-[12px] border border-danger/20 bg-danger/5 px-4 py-3 text-[13px] text-danger">Le lancement manuel a échoué. Consultez l’historique ou les providers.</div>
+      )}
+      {runState === 'done' && (
+        <div className="mb-4 rounded-[12px] border border-success/20 bg-success/5 px-4 py-3 text-[13px] text-success">Pipeline lancé. L’historique a été rafraîchi.</div>
+      )}
+
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <MetricCard icon={<Settings size={18} />} label="Provider actif" value={activeProviders[0]?.label ?? '—'} tone={activeProviders.length ? 'success' : 'warning'} />
+        <MetricCard icon={<Bot size={18} />} label="Agents assignés" value={`${assignedAgentIds.size}/${agents.length || '—'}`} tone={assignedAgentIds.size ? 'success' : 'warning'} />
+        <MetricCard icon={<RefreshCw size={18} />} label="Pipeline" value={pipeline?.enabled ? 'Actif' : 'Inactif'} tone={pipeline?.enabled ? 'success' : 'warning'} />
+        <MetricCard icon={<Euro size={18} />} label="Coût IA suivi" value={recentCost ? `${recentCost.toFixed(4)} €` : '—'} />
+        <MetricCard icon={<XCircle size={18} />} label="Workflows échoués" value={failedWorkflows.length} tone={failedWorkflows.length ? 'danger' : 'success'} />
+      </div>
+
+      <div className="mb-6 grid gap-4 lg:grid-cols-3">
+        <div className="rounded-[14px] border border-border bg-surface p-4">
+          <SectionTitle>État du système IA</SectionTitle>
+          <div className="flex flex-col gap-2">
+            <StatusPill ok={activeProviders.length > 0} label={activeProviders.length ? `${activeProviders.length} provider(s) configuré(s)` : 'Aucun provider actif'} />
+            <StatusPill ok={assignedAgentIds.size > 0} label={assignedAgentIds.size ? `${assignedAgentIds.size} agent(s) assigné(s)` : 'Aucun agent assigné'} />
+            <StatusPill ok={Boolean(pipeline?.enabled)} label={pipeline?.enabled ? 'Pipeline automatique actif' : 'Pipeline automatique inactif'} />
+          </div>
+          {activeProviders.length === 0 && (
+            <Link to={`/projects/${projectId}/settings/providers`} className="mt-4 inline-flex text-[12px] font-medium text-accent hover:underline">Configurer Gemini ou OpenAI</Link>
+          )}
+          {assignedAgentIds.size === 0 && (
+            <Link to={`/projects/${projectId}/settings/agents`} className="ml-0 mt-2 block text-[12px] font-medium text-accent hover:underline">Assigner les agents IA</Link>
+          )}
         </div>
 
-        {/* Context fields — shown for idea + full_article */}
-        {mode !== 'manual' && (
-          <div className="rounded-[16px] border border-border bg-surface p-5 flex flex-col gap-4">
-            <p className="text-[12px] font-semibold text-secondary uppercase tracking-wide">
-              Contexte {mode === 'full_article' ? '(optionnel)' : ''}
-            </p>
-            <Input
-              label="Titre souhaité"
-              placeholder="Ex. Comment améliorer le SEO d’un site vitrine"
-              value={preferredTitle}
-              onChange={(e) => setPreferredTitle(e.target.value)}
-              hint="Si renseigné, ce titre est prioritaire pour l'idée générée."
-            />
-            <Input
-              label="Keyword principal"
-              placeholder="optimisation seo pour blogs"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              hint="Mot-clé cible de l'idée ou de l'article"
-            />
-            <Input
-              label="Keywords secondaires"
-              placeholder="seo technique, core web vitals, indexation"
-              value={secondaryKeywords}
-              onChange={(e) => setSecondaryKeywords(e.target.value)}
-              hint="Séparés par des virgules"
-            />
-            {categories.length > 0 && (
-              <Select
-                label="Catégorie"
-                options={categoryOptions}
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-              />
-            )}
-            <Input
-              label="Audience cible"
-              placeholder="Développeurs web indépendants"
-              value={audience}
-              onChange={(e) => setAudience(e.target.value)}
-            />
-            <Input
-              label="Angle éditorial"
-              placeholder="Guide pratique avec exemples concrets"
-              value={angle}
-              onChange={(e) => setAngle(e.target.value)}
-              hint="Perspective unique à adopter"
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <Select
-                label="Type d'article"
-                options={[
-                  { value: '', label: 'Automatique' },
-                  { value: 'guide complet', label: 'Guide complet' },
-                  { value: 'listicle', label: 'Listicle' },
-                  { value: 'how-to', label: 'Tutoriel How-To' },
-                  { value: 'comparatif', label: 'Comparatif' },
-                  { value: 'analyse', label: 'Analyse approfondie' },
-                  { value: 'actualité', label: 'Actualité / News' },
-                ]}
-                value={articleType}
-                onChange={(e) => setArticleType(e.target.value)}
-              />
-              <Select
-                label="Longueur cible"
-                options={[
-                  { value: '', label: 'Automatique' },
-                  { value: 'court (500-800 mots)', label: 'Court (500-800 mots)' },
-                  { value: 'moyen (1000-1500 mots)', label: 'Moyen (1000-1500 mots)' },
-                  { value: 'long (2000-3000 mots)', label: 'Long (2000-3000 mots)' },
-                  { value: 'très long (4000+ mots)', label: 'Très long (4000+ mots)' },
-                ]}
-                value={targetLength}
-                onChange={(e) => setTargetLength(e.target.value)}
-              />
+        <div className="rounded-[14px] border border-border bg-surface p-4 lg:col-span-2">
+          <SectionTitle>Workflows IA</SectionTitle>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-[12px] bg-surface-soft px-3 py-3">
+              <p className="text-[18px] font-semibold text-primary">{runningWorkflows.length}</p>
+              <p className="text-[12px] text-tertiary">En cours / bloqués</p>
             </div>
-            <div className="flex flex-wrap items-center gap-4">
-              <ToggleSwitch checked={withFaq} onChange={setWithFaq} label="Inclure une FAQ" />
-              <ToggleSwitch checked={withCallouts} onChange={setWithCallouts} label="Inclure des callouts" />
+            <div className="rounded-[12px] bg-surface-soft px-3 py-3">
+              <p className="text-[18px] font-semibold text-primary">{completedWorkflows.length}</p>
+              <p className="text-[12px] text-tertiary">Terminés</p>
             </div>
+            <div className="rounded-[12px] bg-surface-soft px-3 py-3">
+              <p className="text-[18px] font-semibold text-primary">{failedWorkflows.length}</p>
+              <p className="text-[12px] text-tertiary">Échoués</p>
+            </div>
+          </div>
+          <p className="mt-3 text-[12px] text-tertiary">Reprise depuis l’étape échouée : non disponible en V1 côté API.</p>
+        </div>
+      </div>
 
-            {mode === 'full_article' && (
-              <div className="flex items-start gap-2 rounded-[10px] border border-warning/20 bg-warning/5 px-3 py-2.5">
-                <AlertCircle size={13} className="mt-0.5 shrink-0 text-[#c07000]" />
-                <p className="text-[12px] text-secondary leading-snug">
-                  L'article complet utilise les paramètres du projet (audience, ton). Les champs ci-dessus servent de contexte additionnel.
-                </p>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.75fr)]">
+        <div className="rounded-[14px] border border-border bg-surface p-4">
+          <SectionTitle>Dernières générations</SectionTitle>
+          {recentGenerations.length === 0 ? (
+            <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">Aucune génération IA tracée pour le moment.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <div className="min-w-[860px]">
+                <div className="grid grid-cols-[1.5fr_0.7fr_0.7fr_0.9fr_0.6fr_0.7fr_0.7fr] gap-3 border-b border-border px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-tertiary">
+                  <span>Contenu</span><span>Type</span><span>Statut</span><span>Dernier agent</span><span>Coût</span><span>Modèle</span><span>MAJ</span>
+                </div>
+                {recentGenerations.map((article) => (
+                  <div key={article.id} className="grid grid-cols-[1.5fr_0.7fr_0.7fr_0.9fr_0.6fr_0.7fr_0.7fr] gap-3 border-b border-border px-2 py-3 text-[12px] last:border-0">
+                    <button className="truncate text-left font-medium text-primary hover:text-accent" onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}>{article.title}</button>
+                    <span className="text-secondary">{article.status.includes('idea') ? 'Idée' : 'Article'}</span>
+                    <span className="text-secondary">{workflowStatus(article)}</span>
+                    <span className="truncate text-secondary">{article.next_agent_key || article.completed_agent_keys?.split(',').at(-1) || '—'}</span>
+                    <span className="text-secondary">{articleCost(article) ? `${articleCost(article)?.toFixed(4)} €` : '—'}</span>
+                    <span className="text-tertiary">V1 —</span>
+                    <span className="text-tertiary">{new Date(article.updated_at).toLocaleDateString('fr-FR')}</span>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-[14px] border border-border bg-surface p-4">
+          <SectionTitle>Logs agents</SectionTitle>
+          {logs.length === 0 ? (
+            <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">Aucun log pipeline disponible.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {logs.map((log) => (
+                <div key={log.id} className="rounded-[12px] bg-surface-soft px-3 py-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-1.5 text-[12px] font-medium text-primary">
+                      <History size={13} />
+                      {log.status === 'completed' ? 'Terminé' : 'Échec'}
+                    </span>
+                    <span className="text-[11px] text-tertiary">{new Date(log.started_at).toLocaleString('fr-FR')}</span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-tertiary">{log.ideas_generated} idée(s) · {log.articles_created} article(s)</p>
+                  {log.errors && <p className="mt-1 text-[11px] text-danger">{log.errors}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="mt-4 rounded-[12px] border border-border bg-surface px-3 py-3 text-[12px] text-secondary">
+            <p className="font-medium text-primary">Actions techniques</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button size="sm" variant="secondary" icon={<TestTube2 size={13} />} onClick={handleRunPipeline}>Tester pipeline</Button>
+              <Button size="sm" variant="secondary" icon={<RotateCw size={13} />} onClick={() => setTick((value) => value + 1)}>Rafraîchir</Button>
+            </div>
+            <p className="mt-2 text-[11px] text-tertiary">Relance agent bloqué et reprise d’étape : non disponible en V1.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-[14px] border border-border bg-surface p-4">
+        <SectionTitle>Registre agents</SectionTitle>
+        {agents.length === 0 ? (
+          <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">Registry agents indisponible ou non exposé par l’API.</p>
+        ) : (
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+            {agents.slice(0, 12).map((agent) => (
+              <div key={agent.agent_id} className="rounded-[12px] bg-surface-soft px-3 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] font-semibold text-primary">{agent.name}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-tertiary">{agent.agent_id}</p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-[11px] text-secondary">{agent.phase || agent.category}</span>
+                </div>
+                <p className="mt-2 line-clamp-2 text-[12px] leading-snug text-secondary">{agent.description}</p>
+              </div>
+            ))}
           </div>
         )}
-
-        {/* Manual mode info */}
-        {mode === 'manual' && (
-          <div className="rounded-[16px] border border-border bg-[#f9f9fb] p-5 flex items-start gap-3">
-            <PenLine size={16} className="mt-0.5 shrink-0 text-tertiary" />
-            <div>
-              <p className="text-[13px] font-medium text-primary">Brouillon manuel</p>
-              <p className="mt-0.5 text-[12px] text-secondary leading-snug">
-                Vous serez redirigé vers la liste d'articles pour créer un brouillon vide et commencer à écrire directement dans l'éditeur.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Error */}
-        {error && (
-          <div className="flex items-start gap-2 rounded-[10px] border border-danger/20 bg-danger/5 px-3 py-2.5 text-[13px] text-danger">
-            <AlertCircle size={13} className="mt-0.5 shrink-0" />
-            <span className="leading-snug">
-              {error}
-              {hasActiveProvider === false && mode !== 'manual' && (
-                <button type="button" onClick={() => navigate(`/projects/${projectId}/settings/providers`)} className="ml-2 font-semibold underline underline-offset-2">
-                  Configurer un provider IA
-                </button>
-              )}
-            </span>
-          </div>
-        )}
-
-        {/* Success result */}
-        {result && (
-          <div className="rounded-[16px] border border-success/20 bg-success/5 p-4 flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-[#1a7a3a]">
-              <CheckCircle size={15} />
-              <p className="text-[13px] font-semibold">Idée générée avec succès</p>
-            </div>
-            <div>
-              <p className="text-[14px] font-medium text-primary">{result.title}</p>
-              {result.keyword && (
-                <p className="mt-0.5 text-[12px] text-tertiary">🔑 {result.keyword}</p>
-              )}
-              {result.angle && (
-              <p className="mt-1 text-[12px] text-secondary leading-snug">{result.angle}</p>
-              )}
-              {result.provider_name && (
-                <p className="mt-1 text-[11px] text-tertiary">
-                  Provider : {result.provider_name}{result.model_name ? ` · ${result.model_name}` : ''}
-                </p>
-              )}
-            </div>
-            <div className="flex gap-2 pt-1">
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => navigate(`/projects/${projectId}/ideas`)}
-              >
-                Voir les idées
-              </Button>
-              <Button
-                size="sm"
-                icon={<ArrowRight size={13} />}
-                onClick={() => {
-                  if (result.id) navigate(`/projects/${projectId}/articles/${result.id}/edit`)
-                  else navigate(`/projects/${projectId}/ideas`)
-                }}
-              >
-                Ouvrir dans l'éditeur
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Submit */}
-        {!result && (
-          <Button
-            type="submit"
-            loading={loading}
-            disabled={mode !== 'manual' && hasActiveProvider === false}
-            icon={loading ? <Loader2 size={14} className="animate-spin" /> : mode === 'manual' ? <PenLine size={14} /> : <Zap size={14} />}
-            className="w-full justify-center"
-          >
-            {mode === 'idea' ? 'Générer une idée' : mode === 'full_article' ? 'Générer l\'article' : 'Créer un brouillon'}
-          </Button>
-        )}
-
-        {result && (
-          <button
-            type="button"
-            onClick={() => { setResult(null); setKeyword(''); setSecondaryKeywords(''); setAngle(''); setAudience(''); setArticleType(''); setTargetLength(''); setWithFaq(false); setWithCallouts(false) }}
-            className="text-center text-[12px] text-accent hover:underline"
-          >
-            Générer une autre idée
-          </button>
-        )}
-      </form>
+      </div>
     </div>
   )
 }

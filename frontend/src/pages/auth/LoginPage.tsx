@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import AuthLayout from '@/components/layout/AuthLayout'
@@ -13,10 +13,11 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  if (user) {
-    navigate('/projects', { replace: true })
-    return null
-  }
+  useEffect(() => {
+    if (user) navigate('/projects', { replace: true })
+  }, [navigate, user])
+
+  if (user) return null
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

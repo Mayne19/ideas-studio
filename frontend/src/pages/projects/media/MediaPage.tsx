@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Image, Upload, Trash2, Copy, Check, Loader2 } from 'lucide-react'
+import { ExternalLink, Image, Upload, Trash2, Copy, Check, Loader2 } from 'lucide-react'
 import { listMedia, uploadMedia, deleteMedia } from '@/api/media'
 import type { MediaAsset } from '@/api/media'
 import LoadingState from '@/components/ui/LoadingState'
@@ -15,30 +15,50 @@ function formatBytes(n: number | null) {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`
 }
 
+const API_BASE_URL = (import.meta.env['VITE_API_URL'] as string | undefined) ?? 'http://localhost:8000'
+
+function mediaUrl(asset: MediaAsset) {
+  const publicUrl = asset.public_url || ''
+  const raw = publicUrl.includes('localhost') || publicUrl.includes('127.0.0.1') ? asset.url : (asset.public_url || asset.url)
+  if (!raw) return ''
+  if (raw.startsWith('/')) return `${API_BASE_URL}${raw}`
+  return raw
+}
+
 function MediaCard({ asset, onDelete }: { asset: MediaAsset; onDelete: () => void }) {
   const [copied, setCopied] = useState(false)
   const [imageFailed, setImageFailed] = useState(false)
+  const [imageLoaded, setImageLoaded] = useState(false)
+  const src = mediaUrl(asset)
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(asset.public_url ?? asset.url)
+    await navigator.clipboard.writeText(src)
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
   }
 
   return (
-    <div className="group flex flex-col rounded-[16px] bg-surface overflow-hidden">
-      <div className="relative flex h-36 items-center justify-center bg-surface-soft">
-        {asset.mime_type?.startsWith('image/') && !imageFailed ? (
+    <div className="group flex flex-col overflow-hidden rounded-[14px] border border-border bg-surface">
+      <div className="relative flex aspect-[4/3] items-center justify-center bg-surface-soft">
+        {asset.mime_type?.startsWith('image/') && src && !imageFailed ? (
+          <>
+          {!imageLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center bg-surface-soft text-tertiary">
+              <Loader2 size={18} className="animate-spin" />
+            </div>
+          )}
           <img
-            src={asset.public_url ?? asset.url}
+            src={src}
             alt={asset.alt_text ?? ''}
             className="h-full w-full object-cover"
+            onLoad={() => setImageLoaded(true)}
             onError={() => setImageFailed(true)}
           />
+          </>
         ) : (
           <div className="flex flex-col items-center gap-2 text-tertiary">
             <Image size={28} />
-            <span className="text-[11px]">{asset.mime_type?.split('/')[1]?.toUpperCase() ?? 'FICHIER'}</span>
+            <span className="text-[11px]">{imageFailed ? 'Aperçu indisponible' : asset.mime_type?.split('/')[1]?.toUpperCase() ?? 'FICHIER'}</span>
           </div>
         )}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
@@ -49,6 +69,17 @@ function MediaCard({ asset, onDelete }: { asset: MediaAsset; onDelete: () => voi
           >
             {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
           </button>
+          {src && (
+            <a
+              href={src}
+              target="_blank"
+              rel="noreferrer"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-primary transition-colors hover:bg-white"
+              title="Ouvrir"
+            >
+              <ExternalLink size={14} />
+            </a>
+          )}
           <button
             onClick={onDelete}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-danger hover:bg-white transition-colors"
@@ -60,10 +91,13 @@ function MediaCard({ asset, onDelete }: { asset: MediaAsset; onDelete: () => voi
       </div>
       <div className="px-3 py-2">
         <p className="text-[12px] font-medium text-primary truncate" title={asset.filename ?? asset.url}>
-          {asset.filename ?? (asset.public_url ?? asset.url).split('/').pop() ?? 'Image'}
+          {asset.filename ?? src.split('/').pop() ?? 'Image'}
         </p>
         <p className="mt-0.5 truncate text-[11px] text-tertiary">
           {[formatBytes(asset.size), asset.mime_type ?? 'type inconnu', asset.article_id ? 'lié article' : 'non lié'].filter(Boolean).join(' · ')}
+        </p>
+        <p className="mt-0.5 text-[11px] text-tertiary">
+          {new Date(asset.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
         </p>
       </div>
     </div>
@@ -118,8 +152,8 @@ export default function MediaPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <div className="mb-6 flex items-start justify-between">
+    <div className="project-page project-page--wide">
+      <div className="project-page-header">
         <div>
           <h1 className="text-[20px] font-semibold text-primary tracking-tight">Médiathèque</h1>
           <p className="mt-0.5 text-[13px] text-secondary">Images et fichiers associés à ce projet.</p>
@@ -160,7 +194,7 @@ export default function MediaPage() {
       )}
 
       {loadStatus === 'success' && assets.length > 0 && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {assets.map((asset) => (
             <MediaCard
               key={asset.id}

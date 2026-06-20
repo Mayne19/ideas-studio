@@ -7,8 +7,8 @@ export default function SettingsLayout() {
   const tabs = getSettingsSections(projectId)
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <div className="grid items-start gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+    <div className="project-page project-page--wide">
+      <div className="grid items-start gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="sticky top-0 z-10 bg-app pb-4 pt-1">
           <div className="mb-5 px-1">
             <h1 className="text-[20px] font-semibold text-primary tracking-tight">Paramètres</h1>

@@ -123,7 +123,7 @@ export default function ArticlePerformancePage() {
           {data.daily_views.length > 0 && (
             <Card>
               <SectionTitle>Vues par jour</SectionTitle>
-              <ResponsiveContainer width="100%" height={180}>
+              <ResponsiveContainer width="100%" height={180} minWidth={1} minHeight={1}>
                 <LineChart data={data.daily_views} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
                   <XAxis

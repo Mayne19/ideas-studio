@@ -43,6 +43,33 @@ def build_project_context(db: Session, project_id: str) -> ProjectContext:
             "articles_per_week": pipeline.articles_per_week,
         }
 
+    strategy_parts = [
+        ("description", project.description),
+        ("industry", project.industry),
+        ("tone", project.tone),
+        ("reader_level", project.reader_level),
+        ("writing_style", project.writing_style),
+        ("editorial_goal", project.editorial_goal),
+        ("value_proposition", project.value_proposition),
+        ("allowed_topics", project.allowed_topics),
+        ("forbidden_topics", project.forbidden_topics),
+        ("words_to_avoid", project.words_to_avoid),
+        ("average_target_length", project.average_target_length),
+        ("preferred_formats", project.preferred_formats),
+        ("technical_level", project.technical_level),
+        ("seo_rules", project.seo_rules),
+        ("geo_rules", project.geo_rules),
+        ("source_guidelines", project.source_guidelines),
+        ("internal_linking_guidelines", project.internal_linking_guidelines),
+        ("external_linking_guidelines", project.external_linking_guidelines),
+        ("style_examples", project.style_examples),
+    ]
+    editorial_notes = "\n".join(
+        f"{key}: {value}"
+        for key, value in strategy_parts
+        if value
+    ) or None
+
     return ProjectContext(
         project_id=project_id,
         site_url=project.domain or "",
@@ -53,7 +80,7 @@ def build_project_context(db: Session, project_id: str) -> ProjectContext:
         draft_articles_count=len(drafts),
         recent_topics=recent_topics,
         known_keywords=known_keywords,
-        editorial_notes=None,
+        editorial_notes=editorial_notes,
         target_audience=project.audience,
         pipeline_settings=pipeline_settings,
         limitations=[],

@@ -14,8 +14,27 @@ export type Project = {
   domain: string | null
   language: string | null
   country_target: string | null
+  timezone: string | null
+  description: string | null
+  industry: string | null
   audience: string | null
   tone: string | null
+  reader_level: string | null
+  writing_style: string | null
+  editorial_goal: string | null
+  value_proposition: string | null
+  allowed_topics: string | null
+  forbidden_topics: string | null
+  words_to_avoid: string | null
+  average_target_length: string | null
+  preferred_formats: string | null
+  technical_level: string | null
+  seo_rules: string | null
+  geo_rules: string | null
+  source_guidelines: string | null
+  internal_linking_guidelines: string | null
+  external_linking_guidelines: string | null
+  style_examples: string | null
   status: string
   public_tracking_key: string
   connected_at: string | null

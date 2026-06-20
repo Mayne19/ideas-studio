@@ -57,6 +57,33 @@ body {
   line-height: 1.6;
 }
 
+.project-page {
+  width: min(100%, 1280px);
+  margin-inline: auto;
+}
+
+.project-page--wide {
+  width: min(100%, 1480px);
+}
+
+.project-page--full {
+  width: 100%;
+}
+
+.project-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 760px) {
+  .project-page-header {
+    flex-direction: column;
+  }
+}
+
 /* ── Light warm theme only ──────────────────────────────── */
 
 /* ── TipTap editor content ──────────────────────────── */

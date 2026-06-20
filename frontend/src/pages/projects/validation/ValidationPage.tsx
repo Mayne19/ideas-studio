@@ -201,7 +201,7 @@ export default function ValidationPage() {
 
   if (status === 'loading') {
     return (
-      <div className="mx-auto max-w-6xl">
+      <div className="project-page project-page--wide">
         <Skeleton className="mb-4 h-10 w-72 rounded-[14px]" />
         <div className="flex flex-col gap-2">
           {Array.from({ length: 8 }).map((_, index) => <Skeleton key={index} className="h-16 rounded-[14px]" />)}
@@ -214,8 +214,8 @@ export default function ValidationPage() {
 
   return (
     <>
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-5 flex items-center justify-between gap-4">
+      <div className="project-page project-page--wide">
+        <div className="project-page-header">
           <div>
             <h1 className="text-[20px] font-semibold tracking-tight text-primary">Validation</h1>
             <p className="mt-0.5 text-[13px] text-secondary">

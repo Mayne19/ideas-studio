@@ -19,7 +19,7 @@ router = APIRouter(tags=["performance"])
 @router.get("/projects/{project_id}/performance/summary", response_model=ProjectTrafficSummary)
 def project_performance_summary(
     project_id: str,
-    period: str = Query(default="30d", pattern=r"^\d+d$"),
+    period: str = Query(default="30d", pattern=r"^(\d+d|today|yesterday)$"),
     db: Session = Depends(get_db),
     member: ProjectMember = Depends(get_project_member),
 ):
@@ -29,7 +29,7 @@ def project_performance_summary(
 @router.get("/projects/{project_id}/performance/articles", response_model=list[ArticlePerformanceBrief])
 def project_articles_performance(
     project_id: str,
-    period: str = Query(default="30d", pattern=r"^\d+d$"),
+    period: str = Query(default="30d", pattern=r"^(\d+d|today|yesterday)$"),
     db: Session = Depends(get_db),
     member: ProjectMember = Depends(get_project_member),
 ):
@@ -39,7 +39,7 @@ def project_articles_performance(
 @router.get("/articles/{article_id}/performance", response_model=ArticlePerformance)
 def article_performance(
     article_id: str,
-    period: str = Query(default="30d", pattern=r"^\d+d$"),
+    period: str = Query(default="30d", pattern=r"^(\d+d|today|yesterday)$"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
