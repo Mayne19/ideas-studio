@@ -79,8 +79,8 @@ function CategoryColumn({
             >
               {category.color ? category.color.toUpperCase() : 'Couleur auto'}
             </span>
-            {category.target_frequency !== null && (
-              <span>{category.target_frequency} art./mois</span>
+            {(category.monthly_frequency ?? category.target_frequency) !== null && (
+              <span>{category.monthly_frequency ?? category.target_frequency} art./mois</span>
             )}
             <span>Priorité {category.priority}</span>
           </div>
@@ -289,7 +289,7 @@ export default function CategoriesPage() {
       description: c.description ?? '',
       color: categoryColor(c),
       priority: String(c.priority),
-      target_frequency: c.target_frequency !== null ? String(c.target_frequency) : '',
+      target_frequency: (c.monthly_frequency ?? c.target_frequency) !== null ? String(c.monthly_frequency ?? c.target_frequency) : '',
     })
     setFormError('')
     setModalOpen(true)
@@ -313,6 +313,8 @@ export default function CategoriesPage() {
           color: normalizeColor(form.color),
           priority: parseInt(form.priority) || 0,
           target_frequency: freq,
+          monthly_frequency: freq,
+          pipeline_enabled: true,
         }
         await updateCategory(projectId, editTarget.id, payload)
       } else {
@@ -322,6 +324,8 @@ export default function CategoriesPage() {
           color: normalizeColor(form.color),
           priority: parseInt(form.priority) || 0,
           target_frequency: freq ?? undefined,
+          monthly_frequency: freq ?? undefined,
+          pipeline_enabled: true,
         }
         await createCategory(projectId, payload)
       }
@@ -553,7 +557,7 @@ export default function CategoriesPage() {
               placeholder="0"
             />
             <Input
-              label="Fréquence cible (art./mois)"
+              label="Fréquence mensuelle (art./mois)"
               type="number"
               value={form.target_frequency}
               onChange={(e) => setForm((f) => ({ ...f, target_frequency: e.target.value }))}

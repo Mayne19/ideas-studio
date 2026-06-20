@@ -1,7 +1,7 @@
 """Day 5 tests: Performance, Recommendations, Notifications, Scheduler, Public API."""
 from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
-from tests.conftest import register_and_login, TestingSessionLocal
+from tests.conftest import force_publish_article, register_and_login, TestingSessionLocal
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -23,7 +23,8 @@ def _create_article(client, headers, project_id, title="Test Article", status="d
 
 
 def _publish_article(client, headers, article_id) -> dict:
-    resp = client.post(f"/articles/{article_id}/publish", headers=headers)
+    force_publish_article(article_id)
+    resp = client.get(f"/articles/{article_id}", headers=headers)
     assert resp.status_code == 200
     return resp.json()
 

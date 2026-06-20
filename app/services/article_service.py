@@ -77,7 +77,26 @@ def create_article(db: Session, data: ArticleCreate, project_id: str) -> Article
 
 
 def get_article_by_id(db: Session, article_id: str) -> Article | None:
-    return db.query(Article).filter(Article.id == article_id).first()
+    article = db.query(Article).filter(Article.id == article_id).first()
+    if article:
+        _attach_validation_summary(article)
+    return article
+
+
+def _attach_validation_summary(article: Article) -> Article:
+    try:
+        from app.services.validation_service import check_validation_thresholds
+        result = check_validation_thresholds(article)
+        article.global_score = result["global_score"]
+        article.global_score_valid = 1 if result["global_score_valid"] else 0
+        article.is_validable = result["valid"]
+        article.validation_reasons = result["reasons"]
+        article.critical_warnings = result["critical_warnings"]
+    except Exception:
+        article.is_validable = None
+        article.validation_reasons = []
+        article.critical_warnings = []
+    return article
 
 
 def list_articles(
@@ -102,11 +121,18 @@ def list_articles(
         term = f"%{search}%"
         q = q.filter(Article.title.ilike(term))
     if blocked_cost_limit is not None:
-        from sqlalchemy import cast, Float, text
-        q = q.filter(
-            cast(Article.estimated_cost_json["estimated_cost_eur"].astext, Float) > blocked_cost_limit
-        )
-    return q.order_by(Article.created_at.desc()).limit(limit).offset(offset).all()
+        rows = q.order_by(Article.created_at.desc()).all()
+        filtered: list[Article] = []
+        for article in rows:
+            cost_data = article.estimated_cost_json if isinstance(article.estimated_cost_json, dict) else None
+            try:
+                cost = float(cost_data.get("estimated_cost_eur")) if cost_data else None
+            except (TypeError, ValueError):
+                cost = None
+            if cost is not None and cost > blocked_cost_limit:
+                filtered.append(article)
+        return [_attach_validation_summary(a) for a in filtered[offset:offset + limit]]
+    return [_attach_validation_summary(a) for a in q.order_by(Article.created_at.desc()).limit(limit).offset(offset).all()]
 
 
 def update_article(db: Session, article: Article, data: ArticleUpdate) -> Article:
@@ -131,6 +157,7 @@ def update_article(db: Session, article: Article, data: ArticleUpdate) -> Articl
 
 
 def publish_article(db: Session, article: Article) -> Article:
+    from app.services.scoring_service import compute_global_score
     # Create a publication snapshot before publishing
     from app.services.version_service import create_version
     create_version(db, article, "publish_snapshot")
@@ -140,6 +167,36 @@ def publish_article(db: Session, article: Article) -> Article:
     if article.published_at is None:
         article.published_at = now
     article.updated_at = now
+    article.human_validated_at = now
+    # Compute and store global score
+    scoring = compute_global_score(article)
+    article.global_score = scoring["global_score"]
+    article.global_score_valid = 1 if scoring["global_score_valid"] else 0
+    db.commit()
+    db.refresh(article)
+    return article
+
+
+def schedule_article_with_validation(db: Session, article: Article, scheduled_at: datetime) -> Article:
+    from app.services.validation_service import check_validation_thresholds
+    from app.services.scoring_service import compute_global_score
+
+    result = check_validation_thresholds(article, planned_publish_at=scheduled_at)
+    if not result["valid"]:
+        reasons = "; ".join(result["reasons"])
+        raise HTTPException(
+            status_code=400,
+            detail=f"Article non validable pour la programmation : {reasons}",
+        )
+
+    # Compute and store global score
+    scoring = compute_global_score(article)
+    article.global_score = scoring["global_score"]
+    article.global_score_valid = 1 if scoring["global_score_valid"] else 0
+
+    article.status = "scheduled"
+    article.scheduled_at = scheduled_at
+    article.human_validated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(article)
     return article
@@ -197,11 +254,7 @@ def promote_article(db: Session, article: Article) -> Article:
 
 
 def schedule_article(db: Session, article: Article, scheduled_at: datetime) -> Article:
-    article.status = "scheduled"
-    article.scheduled_at = scheduled_at
-    db.commit()
-    db.refresh(article)
-    return article
+    return schedule_article_with_validation(db, article, scheduled_at)
 
 
 def unpublish_article(db: Session, article: Article) -> Article:

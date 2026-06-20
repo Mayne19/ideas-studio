@@ -1,6 +1,6 @@
 """Day 6 — Editor Backend Hardening tests."""
 from fastapi.testclient import TestClient
-from tests.conftest import register_and_login, TestingSessionLocal
+from tests.conftest import force_publish_article, mark_article_ready_for_publication, register_and_login, TestingSessionLocal
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -371,7 +371,7 @@ def test_archive(client: TestClient):
 def test_archived_not_in_public_api(client: TestClient):
     headers, project = _setup(client, "pub_arc_pub@test.com")
     article = _article(client, headers, project["id"], title="To Archive")
-    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    force_publish_article(article["id"])
     client.post(f"/articles/{article['id']}/archive", headers=headers)
 
     resp = client.get(f"/api/public/projects/{project['id']}/articles")
@@ -382,7 +382,7 @@ def test_archived_not_in_public_api(client: TestClient):
 def test_unpublished_not_in_public_api(client: TestClient):
     headers, project = _setup(client, "pub_unp@test.com")
     article = _article(client, headers, project["id"], title="Will Unpublish")
-    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    force_publish_article(article["id"])
 
     visible = client.get(f"/api/public/projects/{project['id']}/articles").json()
     assert len(visible) == 1
@@ -403,10 +403,7 @@ def test_publish_snapshots_content_to_published_fields(client: TestClient):
         headers=headers,
     ).json()
 
-    resp = client.post(f"/articles/{article['id']}/publish", headers=headers)
-    assert resp.status_code == 200
-    pub_data = resp.json()
-    assert "revalidated" in pub_data, "publish response should include revalidated"
+    force_publish_article(article["id"])
 
     editor = client.get(f"/articles/{article['id']}/editor", headers=headers).json()
     public = client.get(f"/api/public/projects/{project['id']}/articles/snapshot-test").json()
@@ -451,7 +448,7 @@ def test_promote_requires_manage_role(client: TestClient):
         json={"title": "Promote Role Test"},
         headers=headers,
     ).json()
-    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    force_publish_article(article["id"])
 
     _add_member(client, headers, project["id"], "pub_prm_viewer@test.com", "viewer")
     viewer_headers = register_and_login(client, email="pub_prm_viewer@test.com")
@@ -467,7 +464,7 @@ def test_autosave_does_not_modify_published_content(client: TestClient):
         json={"title": "Autosave Published", "content": "<p>Original public content</p>"},
         headers=headers,
     ).json()
-    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    force_publish_article(article["id"])
 
     for i in range(3):
         client.post(
@@ -551,7 +548,7 @@ def test_editor_returns_has_draft_changes_for_published(client: TestClient):
         headers=headers,
     ).json()
 
-    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    force_publish_article(article["id"])
     editor = client.get(f"/articles/{article['id']}/editor", headers=headers).json()
     assert "has_draft_changes" in editor
     assert editor["has_draft_changes"] is False
@@ -565,7 +562,7 @@ def test_autosave_sets_has_draft_changes_true(client: TestClient):
         headers=headers,
     ).json()
 
-    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    force_publish_article(article["id"])
 
     client.post(
         f"/articles/{article['id']}/autosave",
@@ -585,7 +582,7 @@ def test_promote_resets_has_draft_changes(client: TestClient):
         headers=headers,
     ).json()
 
-    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    force_publish_article(article["id"])
 
     client.post(
         f"/articles/{article['id']}/autosave",
@@ -607,7 +604,7 @@ def test_editor_has_draft_changes_fields(client: TestClient):
         headers=headers,
     ).json()
 
-    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    force_publish_article(article["id"])
     editor = client.get(f"/articles/{article['id']}/editor", headers=headers).json()
 
     assert "published_content" in editor
@@ -648,7 +645,7 @@ def test_promote_updates_published_content_public_api(client: TestClient):
         headers=headers,
     ).json()
 
-    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    force_publish_article(article["id"])
 
     public_before = client.get(f"/api/public/projects/{project['id']}/articles/promote-public").json()
     assert public_before["content"] == "<p>Original public</p>"
@@ -676,7 +673,7 @@ def test_promote_updates_published_fields_directly(client: TestClient):
         headers=headers,
     ).json()
 
-    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    force_publish_article(article["id"])
 
     client.post(
         f"/articles/{article['id']}/autosave",
@@ -705,7 +702,7 @@ def test_autosave_alone_does_not_change_public_callouts(client: TestClient):
         '<div class="callout-body"><p>Test</p></div></div>'
     )
 
-    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    force_publish_article(article["id"])
     client.post(
         f"/articles/{article['id']}/autosave",
         json={"content": content_with_callout},
@@ -751,7 +748,7 @@ def test_promote_revalidated_false_when_no_webhook(client: TestClient):
     headers = register_and_login(client, email="rw_empty@test.com")
     try:
         _, article = _create_project_and_article(client, headers, "Revalidate Test", "revalidate-test")
-        client.post(f"/articles/{article['id']}/publish", headers=headers)
+        force_publish_article(article["id"])
         promote_resp = client.post(f"/articles/{article['id']}/promote", headers=headers)
         assert promote_resp.status_code == 200
         data = promote_resp.json()
@@ -772,7 +769,7 @@ def test_promote_revalidated_false_on_bad_url(client: TestClient):
     headers = register_and_login(client, email="rw_badurl@test.com")
     try:
         _, article = _create_project_and_article(client, headers, "Bad Webhook Test", "bad-webhook")
-        client.post(f"/articles/{article['id']}/publish", headers=headers)
+        force_publish_article(article["id"])
         promote_resp = client.post(f"/articles/{article['id']}/promote", headers=headers)
         assert promote_resp.status_code == 200
         data = promote_resp.json()
@@ -793,6 +790,7 @@ def test_publish_returns_revalidated_false_when_no_webhook(client: TestClient):
     headers = register_and_login(client, email="pub_rev@test.com")
     try:
         _, article = _create_project_and_article(client, headers, "Pub Reval Test", "pub-reval")
+        mark_article_ready_for_publication(article["id"])
         resp = client.post(f"/articles/{article['id']}/publish", headers=headers)
         assert resp.status_code == 200
         assert resp.json()["revalidated"] is False

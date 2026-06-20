@@ -109,6 +109,11 @@ export type Article = {
   quality_score: number | null
   eeat_score: number | null
   readiness_status: string | null
+  global_score: number | null
+  global_score_valid: boolean | null
+  is_validable: boolean | null
+  validation_reasons: string[]
+  critical_warnings: Array<{ type: string; severity: string; message: string }>
   author_name: string | null
   reading_time_minutes: number | null
   scheduled_at: string | null
@@ -158,6 +163,7 @@ export type Article = {
   estimated_cost_json: Record<string, unknown> | null
   actual_cost_json: Record<string, unknown> | null
   geo_optimization_json: Record<string, unknown> | null
+  originality_report_json: Record<string, unknown> | null
 }
 
 export type IdeaStatus = 'idea_proposed' | 'idea_priority' | 'idea_rejected'
@@ -234,6 +240,12 @@ export type Category = {
   color: string | null
   priority: number
   target_frequency: number | null
+  monthly_frequency: number | null
+  pipeline_enabled: boolean | null
+  priority_score: number | null
+  editorial_goal: string | null
+  target_audience: string | null
+  internal_notes: string | null
   created_at: string
   updated_at: string
 }
@@ -327,7 +339,10 @@ export type ReadyCheck = {
   readability_score: number | null
   quality_score: number | null
   eeat_score: number | null
+  global_score: number | null
+  global_score_valid: boolean | null
   blocking_issues: SeoIssue[]
+  critical_warnings: Array<{ type: string; severity: string; message: string }>
   can_publish: boolean
 }
 

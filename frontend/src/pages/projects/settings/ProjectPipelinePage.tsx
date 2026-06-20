@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Play, RotateCw, History, Loader2 } from 'lucide-react'
 import { getPipelineSettings, updatePipelineSettings, triggerPipelineRun, getPipelineLogs } from '@/api/pipeline'
-import type { PipelineLog } from '@/api/pipeline'
+import type { PipelineLog, PipelineSettings } from '@/api/pipeline'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import ToggleSwitch from '@/components/ui/ToggleSwitch'
@@ -25,6 +25,7 @@ const ARTICLES_OPTIONS = [1, 2, 3, 5, 7, 10, 15, 20]
 export default function ProjectPipelinePage() {
   const { projectId } = useParams<{ projectId: string }>()
   const [logs, setLogs] = useState<PipelineLog[]>([])
+  const [settings, setSettings] = useState<PipelineSettings | null>(null)
   const [loadStatus, setLoadStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle')
@@ -51,6 +52,7 @@ export default function ProjectPipelinePage() {
       .then(([s, l]) => {
         if (cancelled) return
         setEnabled(s.enabled)
+        setSettings(s)
         setActiveDays(s.active_days)
         setLaunchHour(s.launch_hour)
         setArticlesPerWeek(s.articles_per_week)
@@ -77,13 +79,14 @@ export default function ProjectPipelinePage() {
     setSaving(true)
     setSaveStatus('idle')
     try {
-      await updatePipelineSettings(projectId, {
+      const updated = await updatePipelineSettings(projectId, {
         enabled,
         active_days: activeDays,
         launch_hour: launchHour,
         articles_per_week: articlesPerWeek,
         cost_limit_per_article_eur: costLimitPerArticle.trim() === '' ? null : Number(costLimitPerArticle),
       })
+      setSettings(updated)
       setDirty(false)
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus('idle'), 3000)
@@ -121,6 +124,25 @@ export default function ProjectPipelinePage() {
     <div className="flex flex-col gap-6">
       {/* Enable toggle */}
       <div className="rounded-[16px] bg-surface p-4">
+        <p className="text-[13px] font-medium text-primary">Volume éditorial</p>
+        <p className="mt-0.5 text-[12px] text-tertiary">
+          {settings?.total_monthly_from_categories ?? 0} article(s)/mois calculé(s) depuis les catégories actives.
+        </p>
+        {settings?.categories_frequencies && settings.categories_frequencies.length > 0 && (
+          <div className="mt-3 flex flex-col gap-1.5 border-t border-border pt-3">
+            {settings.categories_frequencies.map((category) => (
+              <div key={category.id} className="flex items-center justify-between rounded-[8px] bg-[#f9f9fb] px-2.5 py-1.5 text-[12px]">
+                <span className="text-primary">{category.name}</span>
+                <span className={category.pipeline_enabled === false ? 'text-tertiary' : 'text-secondary'}>
+                  {category.pipeline_enabled === false ? 'désactivée' : `${category.monthly_frequency ?? 0}/mois`}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-[16px] bg-surface p-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[13px] font-medium text-primary">Pipeline automatique</p>
@@ -142,6 +164,12 @@ export default function ProjectPipelinePage() {
             Le pipeline prépare le contenu dans Ideas Studio. La publication reste toujours une action humaine.
           </p>
         )}
+      </div>
+
+      <div className="rounded-[14px] border border-border bg-surface px-4 py-3">
+        <p className="text-[12px] text-secondary">
+          {settings?.automation_notes || 'Automatisation non confirmée. Le lancement manuel reste disponible.'}
+        </p>
       </div>
 
       {enabled && (
@@ -191,7 +219,7 @@ export default function ProjectPipelinePage() {
             </div>
 
             <div>
-              <label className="mb-1 block text-[12px] text-secondary">Articles par semaine</label>
+              <label className="mb-1 block text-[12px] text-secondary">Cadence de sécurité hebdomadaire</label>
               <select
                 value={articlesPerWeek}
                 onChange={(e) => { setArticlesPerWeek(Number(e.target.value)); setDirty(true) }}
@@ -201,6 +229,9 @@ export default function ProjectPipelinePage() {
                   <option key={n} value={n}>{n}</option>
                 ))}
               </select>
+              <p className="mt-1 text-[11px] text-tertiary">
+                Le volume éditorial vient des catégories. Cette valeur limite l'exécution hebdomadaire du pipeline.
+              </p>
             </div>
 
             <div className="mt-3">

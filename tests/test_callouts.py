@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 
-from tests.conftest import register_and_login
+from tests.conftest import force_publish_article, register_and_login
 
 
 def _create_project(client, headers, name="Callout Blog"):
@@ -132,8 +132,7 @@ def test_public_article_exposes_callouts_json(client):
     )
     assert autosave.status_code == 200, autosave.text
 
-    published = client.post(f"/articles/{article['id']}/publish", headers=headers)
-    assert published.status_code == 200
+    force_publish_article(article["id"])
 
     public = client.get(f"/api/public/projects/{project['id']}/articles/article-avec-callout")
     assert public.status_code == 200, public.text

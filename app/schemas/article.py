@@ -73,6 +73,8 @@ class PromoteResponse(BaseModel):
     quality_score: Optional[float]
     eeat_score: Optional[float]
     readiness_status: Optional[str]
+    global_score: Optional[float] = None
+    global_score_valid: Optional[bool] = None
     published_at: Optional[datetime]
     scheduled_at: Optional[datetime]
     created_at: datetime
@@ -106,6 +108,12 @@ class ArticlePublic(BaseModel):
     readiness_status: Optional[str]
     seo_review_json: Optional[dict] = None
     generation_report_json: Optional[dict] = None
+    originality_report_json: Optional[dict] = None
+    global_score: Optional[float] = None
+    global_score_valid: Optional[bool] = None
+    is_validable: Optional[bool] = None
+    validation_reasons: list[str] = []
+    critical_warnings: list[dict] = []
     published_at: Optional[datetime]
     scheduled_at: Optional[datetime]
     created_at: datetime
@@ -113,10 +121,36 @@ class ArticlePublic(BaseModel):
     reading_time_minutes: Optional[int] = None
     updated_at: datetime
 
+    # Editorial dates
+    target_write_at: Optional[datetime] = None
+    target_review_at: Optional[datetime] = None
+    idea_generated_at: Optional[datetime] = None
+    idea_validated_at: Optional[datetime] = None
+    human_validated_at: Optional[datetime] = None
+
     # Extended fields
     estimated_cost_json: Optional[dict] = None
     actual_cost_json: Optional[dict] = None
     geo_optimization_json: Optional[dict] = None
+
+
+class BulkValidateRequest(BaseModel):
+    article_ids: list[str]
+
+
+class BlockedArticleInfo(BaseModel):
+    article_id: str
+    title: str
+    reasons: list[str]
+
+
+class BulkValidateResponse(BaseModel):
+    validated_count: int
+    blocked_count: int
+    scheduled_count: int
+    not_found_count: int = 0
+    not_found_ids: list[str] = []
+    blocked_articles: list[BlockedArticleInfo] = []
 
 
 # Response schema for the public blog API

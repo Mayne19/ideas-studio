@@ -33,6 +33,14 @@ class PipelineSettingsUpdate(BaseModel):
     cost_limit_per_article_eur: Optional[float] = None
 
 
+class CategoryFrequencyInfo(BaseModel):
+    id: str
+    name: str
+    monthly_frequency: Optional[int] = None
+    pipeline_enabled: Optional[bool] = None
+    priority: int = 0
+
+
 class PipelineSettingsPublic(BaseModel):
     model_config = {"from_attributes": True}
 
@@ -50,6 +58,9 @@ class PipelineSettingsPublic(BaseModel):
     default_quality_mode: Optional[str] = None
     launch_hours: Optional[list[str]] = None
     cost_limit_per_article_eur: Optional[float] = None
+    total_monthly_from_categories: Optional[int] = None
+    categories_frequencies: list[CategoryFrequencyInfo] = []
+    automation_notes: str = ""
     created_at: datetime
     updated_at: datetime
 

@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 from typing import Optional
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,7 +10,7 @@ from app.dependencies.auth import get_current_user, get_project_member, require_
 from app.models.user import User
 from app.models.project_member import ProjectMember
 from app.models.article import WRITER_EDITABLE_STATUSES
-from app.schemas.article import ArticleCreate, ArticleUpdate, ArticlePublic, ArticleScheduleRequest, PromoteResponse
+from app.schemas.article import ArticleCreate, ArticleUpdate, ArticlePublic, ArticleScheduleRequest, PromoteResponse, BulkValidateRequest, BulkValidateResponse
 
 logger = logging.getLogger(__name__)
 from app.services.article_service import (
@@ -43,14 +44,16 @@ def list_articles_route(
     search: Optional[str] = None,
     published_only: bool = False,
     blocked_cost_limit: Optional[float] = None,
+    skip: Optional[int] = None,
     limit: int = 20,
     offset: int = 0,
     member: ProjectMember = Depends(get_project_member),
     db: Session = Depends(get_db),
 ):
+    effective_offset = skip if skip is not None else offset
     return list_articles(db, project_id, status=status, category_id=category_id, search=search,
                          published_only=published_only, blocked_cost_limit=blocked_cost_limit,
-                         limit=limit, offset=offset)
+                         limit=limit, offset=effective_offset)
 
 
 @router.post("/projects/{project_id}/articles", response_model=ArticlePublic, status_code=201)
@@ -202,6 +205,27 @@ def publish_article_route(
     member = get_member_for_project(db, current_user.id, article.project_id)
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions to publish")
+
+    # Backend publish guard: must be ready_to_publish or scheduled
+    if article.status not in ("ready_to_publish", "scheduled", "published"):
+        raise HTTPException(
+            status_code=400,
+            detail="Seuls les articles marques prets (ready_to_publish), programmes (scheduled) ou deja publies peuvent etre publies.",
+        )
+
+    # Backend readiness check: verify validation thresholds and critical warnings.
+    from app.services.validation_service import check_validation_thresholds
+    publish_at = article.scheduled_at or datetime.now(timezone.utc)
+    validation = check_validation_thresholds(article, planned_publish_at=publish_at)
+    if not validation["valid"]:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "L'article contient des problemes bloquants.",
+                "reasons": validation["reasons"],
+            },
+        )
+
     article = publish_article(db, article)
 
     revalidated = False
@@ -242,6 +266,8 @@ def publish_article_route(
         quality_score=article.quality_score,
         eeat_score=article.eeat_score,
         readiness_status=article.readiness_status,
+        global_score=article.global_score,
+        global_score_valid=bool(article.global_score_valid) if article.global_score_valid is not None else None,
         published_at=article.published_at,
         scheduled_at=article.scheduled_at,
         created_at=article.created_at,
@@ -306,8 +332,16 @@ def mark_ready_route(
         raise HTTPException(status_code=403, detail="Viewers cannot change article status")
     if member.role == "writer" and article.status == "published":
         raise HTTPException(status_code=403, detail="Writers cannot change published articles")
-    article.status = "ready_to_publish"
+
+    # Compute and store global score
+    from app.services.scoring_service import compute_global_score
+    scoring = compute_global_score(article)
+    article.global_score = scoring["global_score"]
+    article.global_score_valid = 1 if scoring["global_score_valid"] else 0
     from datetime import datetime, timezone
+    article.human_validated_at = datetime.now(timezone.utc)
+
+    article.status = "ready_to_publish"
     article.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(article)
@@ -364,6 +398,17 @@ def unpublish_article_route(
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions to unpublish")
     return unpublish_article(db, article)
+
+
+@router.post("/projects/{project_id}/articles/bulk/validate", response_model=BulkValidateResponse)
+def bulk_validate_articles_route(
+    project_id: str,
+    data: BulkValidateRequest,
+    member: ProjectMember = Depends(require_project_role(*_MANAGE_ROLES)),
+    db: Session = Depends(get_db),
+):
+    from app.services.validation_service import validate_bulk_articles
+    return validate_bulk_articles(db, project_id, data.article_ids)
 
 
 @router.delete("/articles/{article_id}", status_code=204)

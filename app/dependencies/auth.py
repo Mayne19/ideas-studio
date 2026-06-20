@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -51,6 +53,15 @@ def get_project_member(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ProjectMember:
+    if current_user.is_platform_admin:
+        return ProjectMember(
+            id=f"platform-admin:{current_user.id}:{project_id}",
+            project_id=project_id,
+            user_id=current_user.id,
+            role="owner",
+            status="active",
+            created_at=datetime.now(timezone.utc),
+        )
     member = (
         db.query(ProjectMember)
         .filter(

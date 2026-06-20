@@ -1,4 +1,4 @@
-from tests.conftest import register_and_login
+from tests.conftest import force_publish_article, mark_article_ready_for_publication, register_and_login
 
 
 def _setup(client):
@@ -47,11 +47,23 @@ def test_publish_article(client):
         json={"title": "To Publish"},
         headers=headers,
     ).json()
+    mark_article_ready_for_publication(article["id"])
     resp = client.post(f"/articles/{article['id']}/publish", headers=headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "published"
     assert data["published_at"] is not None
+
+
+def test_publish_article_blocks_unready_article(client):
+    headers, project = _setup(client)
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Not Ready"},
+        headers=headers,
+    ).json()
+    resp = client.post(f"/articles/{article['id']}/publish", headers=headers)
+    assert resp.status_code == 400
 
 
 def test_unpublish_article(client):
@@ -61,7 +73,7 @@ def test_unpublish_article(client):
         json={"title": "Unpublish Me"},
         headers=headers,
     ).json()
-    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    force_publish_article(article["id"])
     resp = client.post(f"/articles/{article['id']}/unpublish", headers=headers)
     assert resp.status_code == 200
     assert resp.json()["status"] == "draft"
@@ -74,7 +86,7 @@ def test_public_api_returns_published_only(client):
         json={"title": "Public Post", "content": "Hello world"},
         headers=headers,
     ).json()
-    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    force_publish_article(article["id"])
     # Also create a draft
     client.post(f"/projects/{project['id']}/articles", json={"title": "Draft"}, headers=headers)
 
@@ -100,7 +112,7 @@ def test_public_api_get_by_slug(client):
         json={"title": "Slug Post"},
         headers=headers,
     ).json()
-    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    force_publish_article(article["id"])
     resp = client.get(f"/api/public/projects/{project['id']}/articles/slug-post")
     assert resp.status_code == 200
     assert resp.json()["slug"] == "slug-post"
@@ -114,6 +126,7 @@ def test_publish_preserves_published_at_on_republish(client):
         headers=headers,
     ).json()
 
+    mark_article_ready_for_publication(article["id"])
     first = client.post(f"/articles/{article['id']}/publish", headers=headers)
     assert first.status_code == 200
     first_published_at = first.json()["published_at"]
@@ -153,7 +166,7 @@ def test_published_article_empty_autosave_is_blocked(client):
         json={"title": "Protected Publish", "content": "<p>Contenu public</p>"},
         headers=headers,
     ).json()
-    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    force_publish_article(article["id"])
 
     autosave = client.post(
         f"/articles/{article['id']}/autosave",
@@ -178,7 +191,7 @@ def test_published_article_empty_patch_is_blocked(client):
         json={"title": "Protected Patch", "content": "<p>Contenu public</p>"},
         headers=headers,
     ).json()
-    client.post(f"/articles/{article['id']}/publish", headers=headers)
+    force_publish_article(article["id"])
 
     patch = client.patch(
         f"/articles/{article['id']}",

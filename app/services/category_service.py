@@ -27,6 +27,7 @@ def get_category_by_id(db: Session, category_id: str) -> Category | None:
 
 def create_category(db: Session, data: CategoryCreate, project_id: str) -> Category:
     slug = data.slug or _unique_slug(db, project_id, data.name)
+    monthly_frequency = data.monthly_frequency if data.monthly_frequency is not None else data.target_frequency
     category = Category(
         project_id=project_id,
         name=data.name,
@@ -35,6 +36,12 @@ def create_category(db: Session, data: CategoryCreate, project_id: str) -> Categ
         color=data.color,
         priority=data.priority,
         target_frequency=data.target_frequency,
+        priority_score=data.priority_score,
+        monthly_frequency=monthly_frequency,
+        pipeline_enabled=data.pipeline_enabled,
+        editorial_goal=data.editorial_goal,
+        target_audience=data.target_audience,
+        internal_notes=data.internal_notes,
     )
     db.add(category)
     db.commit()
@@ -46,6 +53,8 @@ def update_category(db: Session, category: Category, data: CategoryUpdate) -> Ca
     update_dict = data.model_dump(exclude_unset=True)
     if "name" in update_dict and "slug" not in update_dict:
         update_dict["slug"] = _unique_slug(db, category.project_id, update_dict["name"], exclude_id=category.id)
+    if "target_frequency" in update_dict and "monthly_frequency" not in update_dict:
+        update_dict["monthly_frequency"] = update_dict["target_frequency"]
     for field, value in update_dict.items():
         setattr(category, field, value)
     db.commit()

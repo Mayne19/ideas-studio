@@ -43,6 +43,12 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     let message: string
     if (typeof detail === 'string') {
       message = detail
+    } else if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
+      const structured = detail as { message?: string; reasons?: string[] }
+      const reasons = Array.isArray(structured.reasons) && structured.reasons.length > 0
+        ? ` ${structured.reasons.join(' ')}`
+        : ''
+      message = `${structured.message ?? `Erreur ${res.status}`}${reasons}`
     } else if (Array.isArray(detail) && detail.length > 0) {
       const first = detail[0] as { msg?: string }
       message = first.msg ?? `Erreur ${res.status}`

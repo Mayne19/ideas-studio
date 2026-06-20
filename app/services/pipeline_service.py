@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.models.pipeline import ProjectPipeline
 from app.models.pipeline_log import PipelineLog
 from app.models.article import Article
+from app.models.category import Category
 from app.schemas.pipeline import PipelineSettingsUpdate, PipelineSettingsPublic, PipelineLogPublic
 
 logger = logging.getLogger(__name__)
@@ -20,12 +21,41 @@ def _parse_json_field(value: str | None, default):
         return default
 
 
-def _model_to_settings(pipe: ProjectPipeline) -> PipelineSettingsPublic:
+def _category_frequency_summary(db: Session, project_id: str) -> tuple[int, list[dict]]:
+    categories = (
+        db.query(Category)
+        .filter(Category.project_id == project_id)
+        .order_by(Category.priority.desc(), Category.name.asc())
+        .all()
+    )
+    rows = []
+    total = 0
+    for category in categories:
+        enabled = category.pipeline_enabled is not False
+        frequency = category.monthly_frequency if category.monthly_frequency is not None else category.target_frequency
+        if enabled and frequency:
+            total += max(0, int(frequency))
+        rows.append({
+            "id": category.id,
+            "name": category.name,
+            "monthly_frequency": frequency,
+            "pipeline_enabled": enabled,
+            "priority": category.priority,
+        })
+    return total, rows
+
+
+def _model_to_settings(pipe: ProjectPipeline, db: Session | None = None) -> PipelineSettingsPublic:
     launch_hours = _parse_json_field(pipe.launch_hours, None) if pipe.launch_hours else None
     if isinstance(launch_hours, list) and all(isinstance(h, str) for h in launch_hours):
         pass
     else:
         launch_hours = None
+
+    total_monthly = None
+    categories_frequencies = []
+    if db is not None:
+        total_monthly, categories_frequencies = _category_frequency_summary(db, pipe.project_id)
 
     return PipelineSettingsPublic(
         id=pipe.id,
@@ -42,6 +72,9 @@ def _model_to_settings(pipe: ProjectPipeline) -> PipelineSettingsPublic:
         default_quality_mode=pipe.default_quality_mode,
         launch_hours=launch_hours,
         cost_limit_per_article_eur=pipe.cost_limit_per_article_eur,
+        total_monthly_from_categories=total_monthly,
+        categories_frequencies=categories_frequencies,
+        automation_notes="Worker automatique APScheduler disponible seulement si le processus worker est lance. Le lancement manuel reste disponible.",
         created_at=pipe.created_at,
         updated_at=pipe.updated_at,
     )
@@ -76,10 +109,13 @@ def get_pipeline(db: Session, project_id: str) -> PipelineSettingsPublic | None:
             default_quality_mode="quality",
             launch_hours=None,
             cost_limit_per_article_eur=None,
+            total_monthly_from_categories=_category_frequency_summary(db, project_id)[0],
+            categories_frequencies=_category_frequency_summary(db, project_id)[1],
+            automation_notes="Pipeline non cree. Configurez-le avant automatisation; lancement manuel disponible apres creation.",
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
-    return _model_to_settings(pipe)
+    return _model_to_settings(pipe, db=db)
 
 
 def update_pipeline(db: Session, project_id: str, data: PipelineSettingsUpdate) -> PipelineSettingsPublic:
@@ -99,7 +135,7 @@ def update_pipeline(db: Session, project_id: str, data: PipelineSettingsUpdate) 
     pipe.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(pipe)
-    return _model_to_settings(pipe)
+    return _model_to_settings(pipe, db=db)
 
 
 def _count_pending_drafts(db: Session, project_id: str) -> int:

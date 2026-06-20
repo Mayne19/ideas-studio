@@ -10,6 +10,7 @@ from app.models.seo_analysis import SeoAnalysis
 from app.models.user import User
 from app.schemas.seo import (
     ArticleEditorUpdate,
+    CriticalWarningSchema,
     ReadyCheckResponse,
     SeoAnalysisResponse,
     SeoIssueSchema,
@@ -157,6 +158,12 @@ def ready_check(
     blocking = [i for i in all_issues if i.severity == "critical"]
     can_publish = len(blocking) == 0
 
+    from app.services.scoring_service import compute_global_score
+    from app.services.validation_service import check_validation_thresholds, compute_critical_warnings
+    scoring = compute_global_score(article)
+    warnings = compute_critical_warnings(article)
+    validation = check_validation_thresholds(article)
+
     return ReadyCheckResponse(
         article_id=article_id,
         readiness_status=analysis.readiness_status,
@@ -164,6 +171,9 @@ def ready_check(
         readability_score=analysis.readability_score,
         quality_score=analysis.quality_score,
         eeat_score=analysis.eeat_score,
+        global_score=scoring["global_score"],
+        global_score_valid=scoring["global_score_valid"],
         blocking_issues=blocking,
-        can_publish=can_publish,
+        critical_warnings=[CriticalWarningSchema(**w) for w in warnings],
+        can_publish=can_publish and validation["valid"],
     )

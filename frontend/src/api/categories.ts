@@ -7,6 +7,8 @@ export type CreateCategoryPayload = {
   color?: string | null
   priority?: number
   target_frequency?: number | null
+  monthly_frequency?: number | null
+  pipeline_enabled?: boolean
 }
 
 export type UpdateCategoryPayload = {
@@ -15,6 +17,8 @@ export type UpdateCategoryPayload = {
   color?: string | null
   priority?: number
   target_frequency?: number | null
+  monthly_frequency?: number | null
+  pipeline_enabled?: boolean
 }
 
 export function listCategories(projectId: string): Promise<Category[]> {

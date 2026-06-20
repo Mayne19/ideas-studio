@@ -17,6 +17,19 @@ export type CreateArticlePayload = {
   status?: string
 }
 
+export type BulkValidateResponse = {
+  validated_count: number
+  blocked_count: number
+  scheduled_count: number
+  not_found_count: number
+  not_found_ids: string[]
+  blocked_articles: Array<{
+    article_id: string
+    title: string
+    reasons: string[]
+  }>
+}
+
 export function listArticles(projectId: string, filters: ArticleFilters = {}): Promise<Article[]> {
   const params = new URLSearchParams()
   if (filters.status) params.set('status', filters.status)
@@ -80,6 +93,10 @@ export function deleteArticle(_projectId: string, articleId: string): Promise<vo
   return api.delete(`/articles/${articleId}`)
 }
 
+export function bulkValidateArticles(projectId: string, articleIds: string[]): Promise<BulkValidateResponse> {
+  return api.post<BulkValidateResponse>(`/projects/${projectId}/articles/bulk/validate`, { article_ids: articleIds })
+}
+
 export type GenerateArticleRequest = {
   preferred_title?: string | null
   keyword?: string | null
@@ -105,5 +122,4 @@ export type GenerateArticleResponse = {
 export function generateArticle(projectId: string, payload: GenerateArticleRequest = {}): Promise<GenerateArticleResponse> {
   return api.post<GenerateArticleResponse>(`/projects/${projectId}/articles/generate`, payload)
 }
-
 

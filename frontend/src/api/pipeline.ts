@@ -9,6 +9,15 @@ export type PipelineSettings = {
   articles_per_week: number
   category_priorities: Record<string, number>
   cost_limit_per_article_eur: number | null
+  total_monthly_from_categories: number | null
+  categories_frequencies: Array<{
+    id: string
+    name: string
+    monthly_frequency: number | null
+    pipeline_enabled: boolean | null
+    priority: number
+  }>
+  automation_notes: string
   created_at: string
   updated_at: string
 }

@@ -129,7 +129,8 @@ function ReadinessBlock({ check, hasTitleH1 }: { check: ReadyCheck; hasTitleH1: 
   const blockingIssues = hasTitleH1
     ? check.blocking_issues.filter((issue) => !isMissingH1Issue(issue))
     : check.blocking_issues
-  const hasBlocking = blockingIssues.length > 0
+  const criticalWarnings = check.critical_warnings ?? []
+  const hasBlocking = blockingIssues.length > 0 || criticalWarnings.length > 0 || check.global_score_valid === false
   const config = check.can_publish || !hasBlocking
     ? { icon: <CheckCircle size={13} />, label: 'Publication readiness: pret ou a verifier', cls: 'bg-success/10 text-success' }
     : { icon: <XCircle size={13} />, label: 'Publication readiness: bloque', cls: 'bg-danger/8 text-danger' }
@@ -142,8 +143,14 @@ function ReadinessBlock({ check, hasTitleH1 }: { check: ReadyCheck; hasTitleH1: 
       </p>
       {hasBlocking && (
         <ul className="mt-2 flex flex-col gap-1">
+          {check.global_score !== null && check.global_score !== undefined && (
+            <li className="text-[11px] leading-snug">- Score global V1 : {Math.round(check.global_score)}/100{check.global_score_valid === false ? ' (incomplet/non validable)' : ''}</li>
+          )}
           {blockingIssues.map((issue, i) => (
             <li key={i} className="text-[11px] leading-snug">- {issue.message}</li>
+          ))}
+          {criticalWarnings.map((warning, i) => (
+            <li key={`warning-${i}`} className="text-[11px] leading-snug">- {warning.message}</li>
           ))}
         </ul>
       )}

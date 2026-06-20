@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["pipeline"])
 
-_MANAGE_ROLES = frozenset({"owner", "admin", "editor"})
+_MANAGE_ROLES = frozenset({"owner", "admin"})
 
 
 @router.get("/projects/{project_id}/pipeline", response_model=PipelineSettingsPublic)

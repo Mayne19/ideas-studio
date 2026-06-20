@@ -121,6 +121,8 @@ function CardContent({
   const category = categories.find((c) => c.id === article.category_id)
   const wordCount = getWordCount(article)
   const usefulDate = getUsefulDate(article)
+  const geoScore = article.geo_optimization_json ? (((article.geo_optimization_json as Record<string, unknown>).geo_score ?? (article.geo_optimization_json as Record<string, unknown>).score) as number | null ?? null) : null
+  const originalityScore = article.originality_report_json ? ((article.originality_report_json as Record<string, unknown>).heuristic_score as number | null ?? null) : null
 
   return (
     <div className={`rounded-[16px] bg-surface p-3 ${isDragging ? 'opacity-50' : 'hover:bg-white'} transition-colors`}>
@@ -152,11 +154,18 @@ function CardContent({
       </div>
 
       <div className="mb-2 flex items-center gap-1">
+        <ScorePill label="Glob." value={article.global_score} />
         <ScorePill label="SEO" value={article.seo_score} />
-        <ScorePill label="Lis." value={article.readability_score} />
         <ScorePill label="Qual." value={article.quality_score} />
-        <ScorePill label="EEAT" value={article.eeat_score} />
+        <ScorePill label="GEO" value={geoScore} />
+        <ScorePill label="Orig." value={originalityScore} />
       </div>
+
+      {article.is_validable === false && article.validation_reasons.length > 0 && (
+        <p className="mb-2 rounded-[8px] bg-danger/5 px-2 py-1 text-[10px] text-danger" title={article.validation_reasons.join('\n')}>
+          {article.validation_reasons.length} blocage{article.validation_reasons.length > 1 ? 's' : ''} de validation
+        </p>
+      )}
 
       <div className="flex items-center justify-between gap-2 text-[10px] text-tertiary">
         {wordCount !== null ? (

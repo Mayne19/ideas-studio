@@ -113,6 +113,15 @@ class Article(Base):
     author_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     reading_time_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    # --- Global score ---
+    global_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    global_score_valid: Mapped[bool | None] = mapped_column(Integer, nullable=True)
+
+    # --- Editorial dates ---
+    idea_generated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    idea_validated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    human_validated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     # --- Workflow tracking ---
     workflow_run_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     completed_agent_keys: Mapped[str | None] = mapped_column(Text, nullable=True)

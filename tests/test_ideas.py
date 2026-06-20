@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from tests.conftest import register_and_login, TestingSessionLocal
+from tests.conftest import force_publish_article, register_and_login, TestingSessionLocal
 
 _REQUIRES_OPENROUTER = pytest.mark.skipif(
     "not __import__('os').environ.get('OPENROUTER_API_KEY') and not __import__('app.core.config', fromlist=['settings']).settings.OPENROUTER_API_KEY",
@@ -347,7 +347,7 @@ def test_start_writing_invalid_status(client: TestClient):
         headers=headers,
     )
     article_id = article_resp.json()["id"]
-    client.post(f"/articles/{article_id}/publish", headers=headers)
+    force_publish_article(article_id)
 
     resp = client.post(f"/articles/{article_id}/start-writing", headers=headers)
     assert resp.status_code == 400

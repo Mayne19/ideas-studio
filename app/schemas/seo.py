@@ -26,6 +26,12 @@ class SeoAnalysisResponse(BaseModel):
     created_at: datetime
 
 
+class CriticalWarningSchema(BaseModel):
+    type: str
+    severity: str
+    message: str
+
+
 class ReadyCheckResponse(BaseModel):
     article_id: str
     readiness_status: str
@@ -33,7 +39,10 @@ class ReadyCheckResponse(BaseModel):
     readability_score: float
     quality_score: float
     eeat_score: float
+    global_score: float | None = None
+    global_score_valid: bool | None = None
     blocking_issues: list[SeoIssueSchema]
+    critical_warnings: list[CriticalWarningSchema] = []
     can_publish: bool
 
 
