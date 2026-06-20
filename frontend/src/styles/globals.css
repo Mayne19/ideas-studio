@@ -4,14 +4,16 @@
   /* Colors — warm light theme */
   --color-bg: #F8F5EF;
   --color-app: #F8F5EF;
-  --color-surface: #FFFFFF;
+  --color-surface: #FCFAF7;
+  --color-surface-soft: #F4EFE6;
+  --color-surface-muted: #EFE7DA;
   --color-primary: #1F1A17;
   --color-secondary: #6F665C;
   --color-tertiary: #8C8379;
-  --color-border: rgba(0, 0, 0, 0.06);
-  --color-border-strong: rgba(0, 0, 0, 0.10);
-  --color-accent: #007aff;
-  --color-accent-dark: #0066d6;
+  --color-border: #E7DCC8;
+  --color-border-strong: #D8C7AD;
+  --color-accent: #A8643A;
+  --color-accent-dark: #8F4F2B;
   --color-success: #4A7C59;
   --color-warning: #C4943A;
   --color-danger: #B03A3A;
@@ -167,12 +169,12 @@ body {
 }
 
 .tiptap-content blockquote {
-  border-left: 3px solid #007aff;
+  border-left: 3px solid var(--color-accent);
   border-radius: 0 10px 10px 0;
   padding: 0.7em 1em;
   margin: 1em 0;
   color: var(--color-secondary);
-  background: rgba(0, 122, 255, 0.06);
+  background: #F1E3D7;
   font-style: italic;
 }
 
@@ -208,7 +210,7 @@ body {
 }
 
 .tiptap-content a {
-  color: #007aff;
+  color: var(--color-accent);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -221,7 +223,7 @@ body {
 }
 
 .tiptap-content img.ProseMirror-selectednode {
-  outline: 2px solid rgba(0, 122, 255, 0.7);
+  outline: 2px solid rgba(168, 100, 58, 0.7);
   outline-offset: 3px;
 }
 
@@ -256,8 +258,8 @@ body {
 
 .tiptap-content .comment-mark {
   cursor: pointer;
-  border-bottom: 2px solid rgba(0, 122, 255, 0.45);
-  background: rgba(0, 122, 255, 0.12);
+  border-bottom: 2px solid rgba(168, 100, 58, 0.45);
+  background: rgba(168, 100, 58, 0.12);
   border-radius: 3px;
   padding: 0 2px;
 }

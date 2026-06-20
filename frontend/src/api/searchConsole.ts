@@ -24,7 +24,9 @@ export function getKeywordOpportunities(projectId: string): Promise<KeywordOppor
 
 export type SearchConsoleStatus = {
   connected: boolean
+  provider?: string
   message: string | null
+  docs_url?: string
 }
 
 export type SearchConsolePage = {
@@ -36,21 +38,29 @@ export type SearchConsolePage = {
 }
 
 export type SearchConsolePerformance = {
+  connected?: boolean
   clicks: number
   impressions: number
   ctr: number
   position: number
-  date: string
+  date?: string
+  message?: string | null
+}
+
+export type SearchConsolePagesResponse = {
+  connected: boolean
+  pages: SearchConsolePage[]
+  message: string | null
 }
 
 export function getSearchConsoleStatus(projectId: string): Promise<SearchConsoleStatus> {
   return api.get<SearchConsoleStatus>(`/projects/${projectId}/search-console/status`)
 }
 
-export function getSearchConsolePages(projectId: string): Promise<SearchConsolePage[]> {
-  return api.get<SearchConsolePage[]>(`/projects/${projectId}/search-console/pages`)
+export function getSearchConsolePages(projectId: string): Promise<SearchConsolePagesResponse> {
+  return api.get<SearchConsolePagesResponse>(`/projects/${projectId}/search-console/pages`)
 }
 
-export function getSearchConsolePerformance(projectId: string): Promise<SearchConsolePerformance[]> {
-  return api.get<SearchConsolePerformance[]>(`/projects/${projectId}/search-console/performance`)
+export function getSearchConsolePerformance(projectId: string): Promise<SearchConsolePerformance> {
+  return api.get<SearchConsolePerformance>(`/projects/${projectId}/search-console/performance`)
 }

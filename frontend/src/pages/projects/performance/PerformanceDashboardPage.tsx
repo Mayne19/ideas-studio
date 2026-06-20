@@ -299,7 +299,7 @@ function KeywordOpportunities() {
 export default function PerformanceDashboardPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
-  const [period, setPeriod] = useState<Period>('30d')
+  const [period, setPeriod] = useState<Period>('1d')
   const [data, setData] = useState<PerformanceSummary | null>(null)
   const [articles, setArticles] = useState<Article[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -347,7 +347,8 @@ export default function PerformanceDashboardPage() {
 
   const publishedCount = articles.filter((article) => article.status === 'published').length
   const topArticle = articleMetrics[0]
-  const optimizeItems = articleMetrics
+  const hasRealTraffic = displayData.total_views > 0
+  const optimizeItems = (hasRealTraffic ? articleMetrics : [])
     .filter((item) => item.recommendation !== 'Surveiller' || ((item.article.seo_score ?? 100) < 70 && item.views > 0))
     .slice(0, 6)
   const risingItems = articleMetrics.filter((item) => (item.variation ?? 0) > 0).slice(0, 5)
@@ -359,7 +360,7 @@ export default function PerformanceDashboardPage() {
   const averageEngagement = articleMetrics.some((item) => item.engagement !== null)
     ? Math.round(articleMetrics.reduce((sum, item) => sum + (item.engagement ?? 0), 0) / articleMetrics.filter((item) => item.engagement !== null).length)
     : null
-  const categoryRows = displayCategories
+  const categoryRows = (hasRealTraffic ? displayCategories : [])
     .map((category) => {
       const related = articleMetrics.filter((item) => item.article.category_id === category.id)
       const views = related.reduce((sum, item) => sum + item.views, 0)
@@ -373,9 +374,9 @@ export default function PerformanceDashboardPage() {
   const leaderCategory = categoryRows[0]
   const averageScore = scoreAverage(articleMetrics)
   const trackingMessage = trackingStatusMessage(displayData.tracking_status)
-  const showPeriodEmpty = displayData.tracking_status !== 'connected_with_data'
-  const hasTrendData = trendData.length > 0
-  const topArticleRows = articleMetrics.slice(0, 6).map((item) => ({ title: item.article.title, views: item.views }))
+  const showPeriodEmpty = !hasRealTraffic
+  const hasTrendData = hasRealTraffic && trendData.length > 0
+  const topArticleRows = hasRealTraffic ? articleMetrics.slice(0, 6).map((item) => ({ title: item.article.title, views: item.views })) : []
   const hasTopArticleViews = topArticleRows.some((item) => item.views > 0)
 
   return (

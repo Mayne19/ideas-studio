@@ -29,6 +29,6 @@ export function getSettingsSections(projectId: string | undefined): SettingsSect
     { key: 'providers', label: 'Providers', description: 'Services IA connectés', path: `${projectBase}/providers` },
     { key: 'agents', label: 'Agents', description: 'Routage des agents IA', path: `${projectBase}/agents` },
     { key: 'pipeline', label: 'Pipeline', description: 'Automatisations éditoriales', path: `${projectBase}/pipeline` },
-    { key: 'profile', label: 'Profil', description: 'Compte utilisateur', path: '/account' },
+    { key: 'profile', label: 'Profil', description: 'Compte utilisateur', path: `${projectBase}/profile` },
   ]
 }

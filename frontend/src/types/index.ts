@@ -20,6 +20,12 @@ export type Project = {
   public_tracking_key: string
   connected_at: string | null
   last_seen_at: string | null
+  public_site_url: string | null
+  revalidate_url: string | null
+  revalidate_secret_configured: boolean
+  last_revalidated_at: string | null
+  last_revalidate_status: string | null
+  last_revalidate_error: string | null
   created_at: string
   updated_at: string
 }
@@ -60,6 +66,12 @@ export type ConnectInfo = {
   last_seen_at: string | null
   snippet: string
   public_api_endpoints: Record<string, string>
+  public_site_url: string | null
+  revalidate_url: string | null
+  revalidate_secret_configured: boolean
+  last_revalidated_at: string | null
+  last_revalidate_status: string | null
+  last_revalidate_error: string | null
 }
 
 export type LoginResponse = {

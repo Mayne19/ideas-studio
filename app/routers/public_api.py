@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.schemas.article import ArticlePublicApiResponse
@@ -12,10 +12,12 @@ router = APIRouter(prefix="/api/public", tags=["public"])
 @router.get("/projects/{project_id}/articles", response_model=list[ArticlePublicApiResponse])
 def list_public_articles(
     project_id: str,
+    response: Response,
     limit: int = 20,
     offset: int = 0,
     db: Session = Depends(get_db),
 ):
+    response.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
     return get_public_articles(db, project_id, limit=limit, offset=offset)
 
 
@@ -23,8 +25,10 @@ def list_public_articles(
 def get_public_article(
     project_id: str,
     slug: str,
+    response: Response,
     db: Session = Depends(get_db),
 ):
+    response.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
     article = get_public_article_by_slug(db, project_id, slug)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found or not published")

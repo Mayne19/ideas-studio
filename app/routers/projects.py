@@ -7,6 +7,7 @@ from app.models.user import User
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectPublic, ProjectConnectInfo
+from app.services.publication_revalidation_service import trigger_project_revalidation
 from app.services.project_service import (
     create_project,
     delete_project,
@@ -87,7 +88,25 @@ def connect_info(
             "articles": f"{settings.APP_URL}/api/public/projects/{project.id}/articles",
             "article_by_slug": f"{settings.APP_URL}/api/public/projects/{project.id}/articles/{{slug}}",
         },
+        public_site_url=project.public_site_url,
+        revalidate_url=project.revalidate_url,
+        revalidate_secret_configured=bool(project.revalidate_secret_encrypted),
+        last_revalidated_at=project.last_revalidated_at,
+        last_revalidate_status=project.last_revalidate_status,
+        last_revalidate_error=project.last_revalidate_error,
     )
+
+
+@router.post("/{project_id}/revalidate")
+def revalidate_project(
+    project_id: str,
+    member: ProjectMember = Depends(require_project_role("owner", "admin")),
+    db: Session = Depends(get_db),
+):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return trigger_project_revalidation(db, project, event_type="manual")
 
 
 @router.delete("/{project_id}", status_code=204)

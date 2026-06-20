@@ -19,6 +19,7 @@ import {
   PanelLeftOpen,
   Check,
   ClipboardList,
+  ListChecks,
 } from 'lucide-react'
 import { useProject } from '@/context/ProjectContext'
 import { useAuth } from '@/context/AuthContext'
@@ -223,6 +224,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
               <SidebarLink to={`/projects/${projectId}/categories`} icon={<FolderOpen size={16} />} label="Catégories" collapsed={collapsed} />
               <SidebarLink to={`/projects/${projectId}/ideas`} icon={<Lightbulb size={16} />} label="Idées" collapsed={collapsed} />
               <SidebarLink to={`/projects/${projectId}/production`} icon={<ClipboardList size={16} />} label="Production" collapsed={collapsed} />
+              <SidebarLink to={`/projects/${projectId}/validation`} icon={<ListChecks size={16} />} label="Validation" collapsed={collapsed} />
               <SidebarLink to={`/projects/${projectId}/media`} icon={<ImageIcon size={16} />} label="Médias" collapsed={collapsed} />
               <SidebarLink to={`/projects/${projectId}/calendar`} icon={<CalendarDays size={16} />} label="Calendrier" collapsed={collapsed} />
             </SidebarSection>

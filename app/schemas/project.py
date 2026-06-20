@@ -19,6 +19,9 @@ class ProjectUpdate(BaseModel):
     country_target: Optional[str] = None
     audience: Optional[str] = None
     tone: Optional[str] = None
+    public_site_url: Optional[str] = None
+    revalidate_url: Optional[str] = None
+    revalidate_secret: Optional[str] = None
 
 
 class ProjectPublic(BaseModel):
@@ -36,6 +39,12 @@ class ProjectPublic(BaseModel):
     public_tracking_key: str
     connected_at: Optional[datetime]
     last_seen_at: Optional[datetime]
+    public_site_url: Optional[str] = None
+    revalidate_url: Optional[str] = None
+    revalidate_secret_configured: bool = False
+    last_revalidated_at: Optional[datetime] = None
+    last_revalidate_status: Optional[str] = None
+    last_revalidate_error: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -50,3 +59,9 @@ class ProjectConnectInfo(BaseModel):
     last_seen_at: Optional[datetime] = None
     snippet: str
     public_api_endpoints: dict
+    public_site_url: Optional[str] = None
+    revalidate_url: Optional[str] = None
+    revalidate_secret_configured: bool = False
+    last_revalidated_at: Optional[datetime] = None
+    last_revalidate_status: Optional[str] = None
+    last_revalidate_error: Optional[str] = None

@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.schemas.project import ProjectCreate, ProjectUpdate
+from app.core.security import encrypt_secret
 
 
 def _generate_key() -> str:
@@ -51,7 +52,11 @@ def get_project_by_id(db: Session, project_id: str) -> Project | None:
 
 
 def update_project(db: Session, project: Project, data: ProjectUpdate) -> Project:
-    for field, value in data.model_dump(exclude_unset=True).items():
+    update_data = data.model_dump(exclude_unset=True)
+    revalidate_secret = update_data.pop("revalidate_secret", None)
+    if revalidate_secret is not None:
+        project.revalidate_secret_encrypted = encrypt_secret(revalidate_secret) if revalidate_secret else None
+    for field, value in update_data.items():
         setattr(project, field, value)
     db.commit()
     db.refresh(project)

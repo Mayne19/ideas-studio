@@ -30,6 +30,7 @@ const PerformanceDashboardPage = lazy(() => import('@/pages/projects/performance
 const PerformanceArticlesPage = lazy(() => import('@/pages/projects/performance/PerformanceArticlesPage'))
 const ArticlePerformancePage = lazy(() => import('@/pages/projects/performance/ArticlePerformancePage'))
 const RecommendationsPage = lazy(() => import('@/pages/projects/recommendations/RecommendationsPage'))
+const ValidationPage = lazy(() => import('@/pages/projects/validation/ValidationPage'))
 const GeneratePage = lazy(() => import('@/pages/projects/generate/GeneratePage'))
 const CalendarPage = lazy(() => import('@/pages/projects/calendar/CalendarPage'))
 const TrafficPage = lazy(() => import('@/pages/projects/traffic/TrafficPage'))
@@ -229,6 +230,14 @@ export const router = createBrowserRouter([
               </Suspense>
             ),
           },
+          {
+            path: 'profile',
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <AccountPage />
+              </Suspense>
+            ),
+          },
         ],
       },
       /* Convenience alias for integration */
@@ -277,6 +286,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'projects/:projectId/validation',
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <ValidationPage />
+          </Suspense>
+        ),
+      },
+      {
         path: 'projects/:projectId/performance',
         element: (
           <Suspense fallback={<LoadingState />}>
@@ -307,6 +324,10 @@ export const router = createBrowserRouter([
             <RecommendationsPage />
           </Suspense>
         ),
+      },
+      {
+        path: 'projects/:projectId/optimizations',
+        element: <Navigate to="../recommendations" replace />,
       },
       {
         path: 'projects/:projectId/generate',

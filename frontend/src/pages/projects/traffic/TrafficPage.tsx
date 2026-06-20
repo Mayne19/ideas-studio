@@ -241,7 +241,7 @@ function VisualRow({
 
 export default function TrafficPage() {
   const { projectId } = useParams<{ projectId: string }>()
-  const [period, setPeriod] = useState<Period>('30d')
+  const [period, setPeriod] = useState<Period>('1d')
   const [data, setData] = useState<PerformanceSummary | null>(null)
   const [loadStatus, setLoadStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [tick, setTick] = useState(0)
@@ -277,8 +277,9 @@ export default function TrafficPage() {
   if (!displayData) return <ErrorState onRetry={() => setTick((t) => t + 1)} />
 
   const trackingMessage = trackingStatusMessage(displayData.tracking_status)
-  const showPeriodEmpty = displayData.tracking_status !== 'connected_with_data'
-  const hasChannelTrend = channelTrend.length > 0
+  const hasRealTraffic = displayData.total_views > 0
+  const showPeriodEmpty = !hasRealTraffic
+  const hasChannelTrend = hasRealTraffic && channelTrend.length > 0
 
   return (
     <div className="mx-auto max-w-6xl">

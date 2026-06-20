@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Plus, FileText, Pencil, Calendar, Trash2, Sparkles, Zap, Loader2, CheckCircle, AlertTriangle } from 'lucide-react'
-import { listArticles, createArticle, publishArticle, unpublishArticle, markReadyArticle, archiveArticle, scheduleArticle, analyzeSeoArticle, deleteArticle, generateArticle, bulkValidateArticles } from '@/api/articles'
-import type { BulkValidateResponse, CreateArticlePayload, GenerateArticleRequest } from '@/api/articles'
+import { listArticles, createArticle, publishArticle, unpublishArticle, markReadyArticle, archiveArticle, scheduleArticle, analyzeSeoArticle, deleteArticle, generateArticle } from '@/api/articles'
+import type { CreateArticlePayload, GenerateArticleRequest } from '@/api/articles'
 import { listCategories } from '@/api/categories'
 import type { Article, ArticleStatus, Category } from '@/types'
 import { STATUS_LABELS, getAvailableActions } from '@/utils/articleActions'
@@ -25,10 +25,26 @@ const ALL_STATUSES: ArticleStatus[] = [
   'ready_to_publish', 'scheduled', 'published', 'unpublished', 'archived', 'failed',
 ]
 
-const ARTICLE_TABLE_GRID = 'lg:grid-cols-[28px_minmax(320px,1fr)_70px_70px_70px_70px_70px_72px_86px_150px]'
+const ARTICLE_TABLE_GRID = 'lg:grid-cols-[minmax(320px,1fr)_86px_70px_70px_70px_82px_72px_86px_150px]'
 
-function scoreTone(value: number | null) {
+type ScoreFilter =
+  | ''
+  | 'global_gte_90'
+  | 'global_lt_90'
+  | 'seo_lt_85'
+  | 'quality_lt_85'
+  | 'geo_lt_80'
+  | 'originality_lt_85'
+  | 'critical'
+
+function finiteScore(value: unknown): number | null {
+  if (typeof value !== 'number') return null
+  return Number.isFinite(value) ? value : null
+}
+
+function scoreTone(value: number | null, valid?: boolean | null) {
   if (value === null) return 'bg-[#f0f0f2] text-tertiary'
+  if (valid === false) return 'bg-warning/10 text-[#9B6B19]'
   return value >= 70
     ? 'bg-success/10 text-[#1a7a3a]'
     : value >= 40
@@ -36,10 +52,10 @@ function scoreTone(value: number | null) {
     : 'bg-danger/10 text-danger'
 }
 
-function ScorePill({ label, value }: { label: string; value: number | null }) {
+function ScorePill({ label, value, valid }: { label: string; value: number | null; valid?: boolean | null }) {
   return (
-    <span className={`inline-flex w-fit items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-medium lg:w-full ${scoreTone(value)}`}>
-      {label} {value === null ? '—' : Math.round(value)}
+    <span className={`inline-flex w-fit items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-medium lg:w-full ${scoreTone(value, valid)}`}>
+      {label} {value === null ? '—' : valid === false ? `${Math.round(value)} incomplet` : Math.round(value)}
     </span>
   )
 }
@@ -51,23 +67,19 @@ function EmptyScore() {
 function ArticleRow({
   article,
   categories,
-  selected,
-  onToggleSelected,
   onEdit,
   onAction,
 }: {
   article: Article
   categories: Category[]
-  selected: boolean
-  onToggleSelected: (id: string, checked: boolean) => void
   onEdit: (a: Article) => void
   onAction: (key: string, a: Article) => void
 }) {
   const category = categories.find((c) => c.id === article.category_id)
   const actions = getAvailableActions(article.status)
-  const geoScore = article.geo_optimization_json ? (((article.geo_optimization_json as Record<string, unknown>).geo_score ?? (article.geo_optimization_json as Record<string, unknown>).score) as number | null ?? null) : null
-  const originalityScore = article.originality_report_json ? ((article.originality_report_json as Record<string, unknown>).heuristic_score as number | null ?? null) : null
-  const estCost = article.estimated_cost_json ? ((article.estimated_cost_json as Record<string, unknown>).estimated_cost_eur as number | null ?? null) : null
+  const geoScore = article.geo_optimization_json ? finiteScore((article.geo_optimization_json as Record<string, unknown>).geo_score ?? (article.geo_optimization_json as Record<string, unknown>).score) : null
+  const originalityScore = article.originality_report_json ? finiteScore((article.originality_report_json as Record<string, unknown>).heuristic_score) : null
+  const estCost = article.estimated_cost_json ? finiteScore((article.estimated_cost_json as Record<string, unknown>).estimated_cost_eur) : null
 
   const allActions = [
     ...actions,
@@ -79,16 +91,7 @@ function ArticleRow({
   ]
 
   return (
-    <div className={`grid gap-3 rounded-[14px] bg-[#f9f9fb] px-4 py-3 transition-colors hover:bg-[#f0f0f2] lg:items-center ${ARTICLE_TABLE_GRID}`}>
-      <label className="flex items-center">
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={(e) => onToggleSelected(article.id, e.target.checked)}
-          className="h-4 w-4 rounded border-border"
-          aria-label={`Sélectionner ${article.title}`}
-        />
-      </label>
+    <div className={`grid gap-3 rounded-[14px] border border-border bg-surface px-4 py-3 transition-colors hover:bg-surface-soft lg:items-center ${ARTICLE_TABLE_GRID}`}>
       <div className="min-w-0">
         <button
           type="button"
@@ -119,13 +122,13 @@ function ArticleRow({
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-1.5 lg:block">
-        <ScorePill label="Global" value={article.global_score} />
+        <ScorePill label="Global" value={finiteScore(article.global_score)} valid={article.global_score_valid} />
       </div>
       <div className="flex flex-wrap items-center gap-1.5 lg:block">
-        {article.seo_score !== null ? <ScorePill label="SEO" value={article.seo_score} /> : <EmptyScore />}
+        {article.seo_score !== null ? <ScorePill label="SEO" value={finiteScore(article.seo_score)} /> : <EmptyScore />}
       </div>
       <div className="flex flex-wrap items-center gap-1.5 lg:block">
-        {article.quality_score !== null ? <ScorePill label="Qualité" value={article.quality_score} /> : <EmptyScore />}
+        {article.quality_score !== null ? <ScorePill label="Qualité" value={finiteScore(article.quality_score)} /> : <EmptyScore />}
       </div>
       <div className="flex flex-wrap items-center gap-1.5 lg:block">
         <ScorePill label="GEO" value={geoScore} />
@@ -185,15 +188,12 @@ export default function ArticlesPage() {
   const [filterCategory, setFilterCategory] = useState('')
   const [filterSearch, setFilterSearch] = useState('')
   const [filterBlockedCost, setFilterBlockedCost] = useState('')
+  const [filterScore, setFilterScore] = useState<ScoreFilter>('')
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
   const [tick, setTick] = useState(0)
   const [actionError, setActionError] = useState('')
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [bulkOpen, setBulkOpen] = useState(false)
-  const [bulkRunning, setBulkRunning] = useState(false)
-  const [bulkResult, setBulkResult] = useState<BulkValidateResponse | null>(null)
 
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState({ title: '', keyword: '', category_id: '' })
@@ -233,7 +233,6 @@ export default function ArticlesPage() {
       .then((data) => {
         if (!cancelled) {
           setArticles(data)
-          setSelectedIds(new Set())
           setHasMore(data.length === PAGE_SIZE)
           setStatus('success')
         }
@@ -362,31 +361,6 @@ export default function ArticlesPage() {
     }
   }
 
-  function toggleSelected(id: string, checked: boolean) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (checked) next.add(id)
-      else next.delete(id)
-      return next
-    })
-  }
-
-  async function handleBulkValidate() {
-    if (!projectId || selectedIds.size === 0) return
-    setBulkRunning(true)
-    setBulkResult(null)
-    try {
-      const result = await bulkValidateArticles(projectId, Array.from(selectedIds))
-      setBulkResult(result)
-      setTick((t) => t + 1)
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Erreur lors de la validation en masse.')
-      setBulkOpen(false)
-    } finally {
-      setBulkRunning(false)
-    }
-  }
-
   const statusOptions = [
     { value: '', label: 'Tous les statuts' },
     ...ALL_STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] })),
@@ -396,6 +370,35 @@ export default function ArticlesPage() {
     { value: '', label: 'Toutes les catégories' },
     ...categories.map((c) => ({ value: c.id, label: c.name })),
   ]
+
+  const scoreOptions = [
+    { value: '', label: 'Tous les scores' },
+    { value: 'global_gte_90', label: 'Global ≥ 90' },
+    { value: 'global_lt_90', label: 'Global < 90 ou incomplet' },
+    { value: 'seo_lt_85', label: 'SEO < 85' },
+    { value: 'quality_lt_85', label: 'Qualité < 85' },
+    { value: 'geo_lt_80', label: 'GEO < 80' },
+    { value: 'originality_lt_85', label: 'Originalité < 85' },
+    { value: 'critical', label: 'Warnings critiques' },
+  ]
+
+  function matchesScoreFilter(article: Article) {
+    const global = finiteScore(article.global_score)
+    const seo = finiteScore(article.seo_score)
+    const quality = finiteScore(article.quality_score)
+    const geo = article.geo_optimization_json ? finiteScore((article.geo_optimization_json as Record<string, unknown>).geo_score ?? (article.geo_optimization_json as Record<string, unknown>).score) : null
+    const originality = article.originality_report_json ? finiteScore((article.originality_report_json as Record<string, unknown>).heuristic_score) : null
+    if (filterScore === 'global_gte_90') return global !== null && global >= 90 && article.global_score_valid !== false
+    if (filterScore === 'global_lt_90') return global === null || global < 90 || article.global_score_valid === false
+    if (filterScore === 'seo_lt_85') return seo === null || seo < 85
+    if (filterScore === 'quality_lt_85') return quality === null || quality < 85
+    if (filterScore === 'geo_lt_80') return geo === null || geo < 80
+    if (filterScore === 'originality_lt_85') return originality === null || originality < 85
+    if (filterScore === 'critical') return article.critical_warnings.length > 0
+    return true
+  }
+
+  const visibleArticles = articles.filter(matchesScoreFilter)
 
   return (
     <>
@@ -440,6 +443,12 @@ export default function ArticlesPage() {
             className="w-48"
           />
           <Select
+            options={scoreOptions}
+            value={filterScore}
+            onChange={(e) => setFilterScore(e.target.value as ScoreFilter)}
+            className="w-56"
+          />
+          <Select
             options={statusOptions}
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
@@ -463,11 +472,9 @@ export default function ArticlesPage() {
             className="w-28"
             title="Filtrer les articles dont le coût estimé dépasse ce montant"
           />
-          {selectedIds.size > 0 && (
-            <Button size="sm" variant="secondary" onClick={() => { setBulkOpen(true); setBulkResult(null) }}>
-              Valider et programmer ({selectedIds.size})
-            </Button>
-          )}
+          <Button size="sm" variant="secondary" onClick={() => navigate(`/projects/${projectId}/validation`)}>
+            Validation
+          </Button>
         </div>
 
         {/* Content */}
@@ -481,7 +488,7 @@ export default function ArticlesPage() {
         {status === 'error' && (
           <ErrorState message="Impossible de charger les articles." onRetry={() => setTick((t) => t + 1)} />
         )}
-        {status === 'success' && articles.length === 0 && (
+        {status === 'success' && visibleArticles.length === 0 && (
           <EmptyState
             icon={<FileText size={22} />}
             title="Aucun article"
@@ -489,10 +496,9 @@ export default function ArticlesPage() {
             action={{ label: 'Créer un article', onClick: () => setCreateOpen(true) }}
           />
         )}
-        {status === 'success' && articles.length > 0 && (
+        {status === 'success' && visibleArticles.length > 0 && (
           <>
             <div className={`hidden gap-3 px-4 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-tertiary lg:grid ${ARTICLE_TABLE_GRID}`}>
-              <div />
               <div>Titre / Catégorie</div>
               <div className="text-center">Global</div>
               <div className="text-center">SEO</div>
@@ -504,13 +510,11 @@ export default function ArticlesPage() {
               <div className="text-right">Actions</div>
             </div>
             <div className="flex flex-col gap-1.5">
-              {articles.map((article) => (
+              {visibleArticles.map((article) => (
                 <ArticleRow
                   key={article.id}
                   article={article}
                   categories={categories}
-                  selected={selectedIds.has(article.id)}
-                  onToggleSelected={toggleSelected}
                   onEdit={(a) => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
                   onAction={handleAction}
                 />
@@ -566,52 +570,6 @@ export default function ArticlesPage() {
               Programmer
             </Button>
           </div>
-        </div>
-      </Modal>
-
-      <Modal
-        open={bulkOpen}
-        onClose={() => { if (!bulkRunning) setBulkOpen(false) }}
-        title="Valider et programmer"
-        size="md"
-      >
-        <div className="flex flex-col gap-4">
-          {!bulkResult ? (
-            <>
-              <p className="text-[13px] text-secondary">
-                {selectedIds.size} article(s) sélectionné(s). Les articles sans date prévue ou avec warnings critiques seront exclus.
-              </p>
-              <div className="flex gap-2">
-                <Button variant="secondary" size="sm" className="flex-1 justify-center" onClick={() => setBulkOpen(false)}>
-                  Annuler
-                </Button>
-                <Button size="sm" loading={bulkRunning} className="flex-1 justify-center" onClick={handleBulkValidate}>
-                  Confirmer
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="rounded-[12px] bg-[#f9f9fb] p-3 text-[13px] text-secondary">
-                {bulkResult.scheduled_count} programmé(s), {bulkResult.blocked_count} bloqué(s).
-              </div>
-              {bulkResult.blocked_articles.length > 0 && (
-                <div className="max-h-64 overflow-auto rounded-[10px] border border-border">
-                  {bulkResult.blocked_articles.map((item) => (
-                    <div key={item.article_id} className="border-b border-border px-3 py-2 last:border-b-0">
-                      <p className="text-[12px] font-medium text-primary">{item.title}</p>
-                      <ul className="mt-1 list-disc pl-4 text-[11px] text-danger">
-                        {item.reasons.map((reason, i) => <li key={i}>{reason}</li>)}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <Button size="sm" className="justify-center" onClick={() => setBulkOpen(false)}>
-                Fermer
-              </Button>
-            </>
-          )}
         </div>
       </Modal>
 

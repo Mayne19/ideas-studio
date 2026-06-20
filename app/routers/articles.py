@@ -1,15 +1,14 @@
 import logging
 from datetime import datetime, timezone
 from typing import Optional
-import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.core.config import settings
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user, get_project_member, require_project_role, get_member_for_project
 from app.models.user import User
 from app.models.project_member import ProjectMember
 from app.models.article import WRITER_EDITABLE_STATUSES
+from app.models.project import Project
 from app.schemas.article import ArticleCreate, ArticleUpdate, ArticlePublic, ArticleScheduleRequest, PromoteResponse, BulkValidateRequest, BulkValidateResponse
 
 logger = logging.getLogger(__name__)
@@ -29,6 +28,7 @@ from app.services.seo.seo_review_service import (
     build_review_error_report,
     run_and_store_seo_review,
 )
+from app.services.publication_revalidation_service import trigger_project_revalidation
 
 router = APIRouter(tags=["articles"])
 
@@ -145,23 +145,9 @@ def promote_article_route(
         raise HTTPException(status_code=400, detail="Only published articles can be promoted")
     article = promote_article(db, article)
 
-    revalidated = False
-    if settings.BLOG_REVALIDATE_URL and settings.BLOG_REVALIDATE_SECRET:
-        try:
-            with httpx.Client(timeout=10) as client:
-                resp = client.post(
-                    settings.BLOG_REVALIDATE_URL,
-                    json={
-                        "secret": settings.BLOG_REVALIDATE_SECRET,
-                        "slug": article.slug,
-                        "projectId": article.project_id,
-                        "type": "article.updated",
-                    },
-                )
-                resp.raise_for_status()
-                revalidated = True
-        except Exception as exc:
-            logger.error("Blog revalidation failed for article %s: %s", article.id, exc)
+    project = db.query(Project).filter(Project.id == article.project_id).first()
+    revalidation = trigger_project_revalidation(db, project, article=article, event_type="article.updated") if project else {"revalidated": False}
+    revalidated = bool(revalidation.get("revalidated"))
 
     return PromoteResponse(
         id=article.id,
@@ -228,23 +214,9 @@ def publish_article_route(
 
     article = publish_article(db, article)
 
-    revalidated = False
-    if settings.BLOG_REVALIDATE_URL and settings.BLOG_REVALIDATE_SECRET:
-        try:
-            with httpx.Client(timeout=10) as client:
-                resp = client.post(
-                    settings.BLOG_REVALIDATE_URL,
-                    json={
-                        "secret": settings.BLOG_REVALIDATE_SECRET,
-                        "slug": article.slug,
-                        "projectId": article.project_id,
-                        "type": "article.created",
-                    },
-                )
-                resp.raise_for_status()
-                revalidated = True
-        except Exception as exc:
-            logger.error("Blog revalidation failed on publish for article %s: %s", article.id, exc)
+    project = db.query(Project).filter(Project.id == article.project_id).first()
+    revalidation = trigger_project_revalidation(db, project, article=article, event_type="article.published") if project else {"revalidated": False}
+    revalidated = bool(revalidation.get("revalidated"))
 
     return PromoteResponse(
         id=article.id,

@@ -17,6 +17,7 @@ function formatBytes(n: number | null) {
 
 function MediaCard({ asset, onDelete }: { asset: MediaAsset; onDelete: () => void }) {
   const [copied, setCopied] = useState(false)
+  const [imageFailed, setImageFailed] = useState(false)
 
   async function handleCopy() {
     await navigator.clipboard.writeText(asset.public_url ?? asset.url)
@@ -26,11 +27,19 @@ function MediaCard({ asset, onDelete }: { asset: MediaAsset; onDelete: () => voi
 
   return (
     <div className="group flex flex-col rounded-[16px] bg-surface overflow-hidden">
-      <div className="relative bg-[#f5f5f7] h-36 flex items-center justify-center">
-        {asset.mime_type?.startsWith('image/') ? (
-          <img src={asset.public_url ?? asset.url} alt={asset.alt_text ?? ''} className="w-full h-full object-cover" />
+      <div className="relative flex h-36 items-center justify-center bg-surface-soft">
+        {asset.mime_type?.startsWith('image/') && !imageFailed ? (
+          <img
+            src={asset.public_url ?? asset.url}
+            alt={asset.alt_text ?? ''}
+            className="h-full w-full object-cover"
+            onError={() => setImageFailed(true)}
+          />
         ) : (
-          <Image size={28} className="text-tertiary" />
+          <div className="flex flex-col items-center gap-2 text-tertiary">
+            <Image size={28} />
+            <span className="text-[11px]">{asset.mime_type?.split('/')[1]?.toUpperCase() ?? 'FICHIER'}</span>
+          </div>
         )}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
           <button
@@ -53,9 +62,9 @@ function MediaCard({ asset, onDelete }: { asset: MediaAsset; onDelete: () => voi
         <p className="text-[12px] font-medium text-primary truncate" title={asset.filename ?? asset.url}>
           {asset.filename ?? (asset.public_url ?? asset.url).split('/').pop() ?? 'Image'}
         </p>
-        {asset.size && (
-          <p className="text-[11px] text-tertiary">{formatBytes(asset.size)}</p>
-        )}
+        <p className="mt-0.5 truncate text-[11px] text-tertiary">
+          {[formatBytes(asset.size), asset.mime_type ?? 'type inconnu', asset.article_id ? 'lié article' : 'non lié'].filter(Boolean).join(' · ')}
+        </p>
       </div>
     </div>
   )

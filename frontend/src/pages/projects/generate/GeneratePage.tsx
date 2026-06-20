@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Lightbulb, Zap, PenLine, Loader2, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react'
 import { generateIdea, launchIdeas } from '@/api/ideas'
 import { listCategories } from '@/api/categories'
+import { listAIProviders } from '@/api/aiProviders'
 import { useEffect } from 'react'
 import type { Category, IdeaGenerateResponse } from '@/types'
 import { ApiError } from '@/api/client'
@@ -63,6 +64,7 @@ export default function GeneratePage() {
   const [withFaq, setWithFaq] = useState(false)
   const [withCallouts, setWithCallouts] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
+  const [hasActiveProvider, setHasActiveProvider] = useState<boolean | null>(null)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -71,6 +73,9 @@ export default function GeneratePage() {
   useEffect(() => {
     if (!projectId) return
     listCategories(projectId).then(setCategories).catch(() => {})
+    listAIProviders(projectId)
+      .then((providers) => setHasActiveProvider(providers.some((provider) => provider.enabled && provider.api_key_configured)))
+      .catch(() => setHasActiveProvider(false))
   }, [projectId])
 
   function buildContextHint(): string {
@@ -106,6 +111,10 @@ export default function GeneratePage() {
     setResult(null)
 
     try {
+      if (mode !== 'manual' && hasActiveProvider === false) {
+        setError('Aucun provider IA actif n’est configuré pour ce projet. Configurez Gemini, OpenAI ou OpenRouter avant de générer.')
+        return
+      }
       if (mode === 'idea') {
         const res = await generateIdea(projectId, generationPayload)
         setResult(res)
@@ -283,7 +292,14 @@ export default function GeneratePage() {
         {error && (
           <div className="flex items-start gap-2 rounded-[10px] border border-danger/20 bg-danger/5 px-3 py-2.5 text-[13px] text-danger">
             <AlertCircle size={13} className="mt-0.5 shrink-0" />
-            <span className="leading-snug">{error}</span>
+            <span className="leading-snug">
+              {error}
+              {hasActiveProvider === false && mode !== 'manual' && (
+                <button type="button" onClick={() => navigate(`/projects/${projectId}/settings/providers`)} className="ml-2 font-semibold underline underline-offset-2">
+                  Configurer un provider IA
+                </button>
+              )}
+            </span>
           </div>
         )}
 
@@ -335,6 +351,7 @@ export default function GeneratePage() {
           <Button
             type="submit"
             loading={loading}
+            disabled={mode !== 'manual' && hasActiveProvider === false}
             icon={loading ? <Loader2 size={14} className="animate-spin" /> : mode === 'manual' ? <PenLine size={14} /> : <Zap size={14} />}
             className="w-full justify-center"
           >

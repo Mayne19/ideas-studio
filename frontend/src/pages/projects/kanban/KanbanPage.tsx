@@ -39,26 +39,24 @@ type ColumnDef = {
 }
 
 const COLUMNS: ColumnDef[] = [
-  { status: 'writing_requested',   label: 'Rédaction dem.', color: '#007aff' },
-  { status: 'writing_in_progress', label: 'En rédaction',   color: '#007aff' },
-  { status: 'draft_ready',         label: 'Brouillons',     color: '#5856d6' },
-  { status: 'review_needed',       label: 'À relire',       color: '#ff9500' },
-  { status: 'correction_needed',   label: 'À corriger',     color: '#ff3b30' },
-  { status: 'ready_to_publish',    label: 'Prêts',          color: '#34c759' },
-  { status: 'scheduled',           label: 'Programmés',     color: '#5856d6' },
-  { status: 'published',           label: 'Publiés',        color: '#34c759' },
-  { status: 'failed',              label: 'Échecs',         color: '#ff3b30' },
-  { status: 'archived',            label: 'Archivés',       color: '#8e8e93' },
+  { status: 'outline_ready',       label: 'Brief à préparer', color: '#A8643A' },
+  { status: 'writing_requested',   label: 'Brief prêt',       color: '#A8643A' },
+  { status: 'draft_ready',         label: 'Brouillon IA',     color: '#7C6F5F' },
+  { status: 'writing_in_progress', label: 'En rédaction',     color: '#7C6F5F' },
+  { status: 'review_needed',       label: 'En relecture',     color: '#C4943A' },
+  { status: 'correction_needed',   label: 'SEO à corriger',   color: '#B03A3A' },
+  { status: 'ready_to_publish',    label: 'Prêt validation',  color: '#4A7C59' },
+  { status: 'failed',              label: 'Échecs',           color: '#B03A3A' },
 ]
 
 const QUICK_ACTIONS: Partial<Record<ArticleStatus, { key: string; label: string }[]>> = {
   draft_ready:       [{ key: 'mark-ready', label: 'Marquer prêt' }],
   review_needed:     [{ key: 'mark-ready', label: 'Marquer prêt' }],
   correction_needed: [{ key: 'mark-ready', label: 'Marquer prêt' }],
-  ready_to_publish:  [{ key: 'publish',    label: 'Publier' }],
-  published:         [{ key: 'unpublish',  label: 'Dépublier' }],
-  scheduled:         [{ key: 'publish',    label: 'Publier' }],
+  ready_to_publish:  [{ key: 'validation', label: 'Valider' }],
 }
+
+const FINAL_STATUSES = new Set<ArticleStatus>(['scheduled', 'published', 'unpublished', 'archived'])
 
 function scoreTone(value: number | null) {
   if (value === null) return 'bg-[#f0f0f2] text-tertiary'
@@ -361,7 +359,12 @@ export default function KanbanPage() {
     let cancelled = false
     Promise.resolve().then(() => { if (!cancelled) setLoadStatus('loading') })
     listArticles(projectId, { limit: 500 })
-      .then((data) => { if (!cancelled) { setArticles(data); setLoadStatus('success') } })
+      .then((data) => {
+        if (!cancelled) {
+          setArticles(data.filter((article) => !FINAL_STATUSES.has(article.status)))
+          setLoadStatus('success')
+        }
+      })
       .catch(() => { if (!cancelled) setLoadStatus('error') })
     return () => { cancelled = true }
   }, [projectId, tick])
@@ -381,6 +384,7 @@ export default function KanbanPage() {
       else if (key === 'unpublish') updated = await unpublishArticle(projectId, article.id)
       else if (key === 'mark-ready') updated = await markReadyArticle(projectId, article.id)
       else if (key === 'archive') updated = await archiveArticle(projectId, article.id)
+      else if (key === 'validation') { navigate(`/projects/${projectId}/validation`); return }
       if (updated) {
         setArticles((prev) => prev.map((a) => a.id === updated!.id ? updated! : a))
       }
@@ -543,7 +547,7 @@ export default function KanbanPage() {
           <div>
             <h1 className="text-[20px] font-semibold text-primary tracking-tight">Production éditoriale</h1>
             <p className="mt-0.5 text-[13px] text-secondary">
-              Suivi de la production éditoriale — {articles.length} article{articles.length !== 1 ? 's' : ''} dans le workflow
+              Contenus en fabrication. Les articles validés, programmés ou publiés sont dans Articles.
             </p>
           </div>
           <div className="flex items-center gap-2">

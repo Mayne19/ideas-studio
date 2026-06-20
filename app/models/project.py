@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, DateTime, ForeignKey
+from sqlalchemy import String, DateTime, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
@@ -21,6 +21,12 @@ class Project(Base):
     secret_api_key: Mapped[str] = mapped_column(String(86), unique=True, nullable=False)
     connected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    public_site_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    revalidate_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    revalidate_secret_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_revalidated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_revalidate_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    last_revalidate_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
@@ -30,3 +36,7 @@ class Project(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
+    @property
+    def revalidate_secret_configured(self) -> bool:
+        return bool(self.revalidate_secret_encrypted)

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { Code2, Globe, Key, Power, RefreshCw, Wifi, WifiOff } from 'lucide-react'
-import { getConnectInfo, disconnectProject } from '@/api/projects'
+import { getConnectInfo, disconnectProject, revalidateProject, updateProject } from '@/api/projects'
 import type { ConnectInfo } from '@/types'
 import FormCard from '@/components/ui/FormCard'
 import CopyButton from '@/components/ui/CopyButton'
@@ -51,6 +51,10 @@ export default function ProjectIntegrationPage() {
   const [showInstructions, setShowInstructions] = useState(false)
   const [disconnectOpen, setDisconnectOpen] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
+  const [revalidateForm, setRevalidateForm] = useState({ public_site_url: '', revalidate_url: '', revalidate_secret: '' })
+  const [savingRevalidate, setSavingRevalidate] = useState(false)
+  const [manualRevalidating, setManualRevalidating] = useState(false)
+  const [revalidateMessage, setRevalidateMessage] = useState('')
 
   async function handleDisconnect() {
     if (!projectId) return
@@ -74,6 +78,11 @@ export default function ProjectIntegrationPage() {
     getConnectInfo(projectId)
       .then((data) => {
         setInfo(data)
+        setRevalidateForm({
+          public_site_url: data.public_site_url ?? '',
+          revalidate_url: data.revalidate_url ?? '',
+          revalidate_secret: '',
+        })
         setStatus('success')
         if (quiet) {
           setRefreshState('success')
@@ -94,7 +103,15 @@ export default function ProjectIntegrationPage() {
   useEffect(() => {
     if (!projectId) return
     getConnectInfo(projectId)
-      .then((data) => { setInfo(data); setStatus('success') })
+      .then((data) => {
+        setInfo(data)
+        setRevalidateForm({
+          public_site_url: data.public_site_url ?? '',
+          revalidate_url: data.revalidate_url ?? '',
+          revalidate_secret: '',
+        })
+        setStatus('success')
+      })
       .catch(() => setStatus('error'))
   }, [projectId])
 
@@ -103,6 +120,48 @@ export default function ProjectIntegrationPage() {
 
   const isConnected = info?.status === 'connected'
   const hasInstructionsVisible = !isConnected || showInstructions
+
+  async function handleSaveRevalidation(event: React.FormEvent) {
+    event.preventDefault()
+    if (!projectId) return
+    setSavingRevalidate(true)
+    setRevalidateMessage('')
+    try {
+      await updateProject(projectId, {
+        public_site_url: revalidateForm.public_site_url || null,
+        revalidate_url: revalidateForm.revalidate_url || null,
+        revalidate_secret: revalidateForm.revalidate_secret || undefined,
+      })
+      const data = await getConnectInfo(projectId)
+      setInfo(data)
+      setRevalidateForm({
+        public_site_url: data.public_site_url ?? '',
+        revalidate_url: data.revalidate_url ?? '',
+        revalidate_secret: '',
+      })
+      setRevalidateMessage('Configuration sauvegardée.')
+    } catch (err) {
+      setRevalidateMessage(err instanceof Error ? err.message : 'Sauvegarde impossible.')
+    } finally {
+      setSavingRevalidate(false)
+    }
+  }
+
+  async function handleManualRevalidate() {
+    if (!projectId) return
+    setManualRevalidating(true)
+    setRevalidateMessage('')
+    try {
+      const result = await revalidateProject(projectId)
+      const data = await getConnectInfo(projectId)
+      setInfo(data)
+      setRevalidateMessage(result.revalidated ? 'Revalidation envoyée.' : result.message ?? 'Revalidation non configurée.')
+    } catch (err) {
+      setRevalidateMessage(err instanceof Error ? err.message : 'Revalidation impossible.')
+    } finally {
+      setManualRevalidating(false)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -276,6 +335,74 @@ export default function ProjectIntegrationPage() {
           </div>
         </FormCard>
       )}
+
+      <FormCard
+        title="Publication rapide"
+        description="Configurez l'appel de revalidation du site public pour rendre les articles publiés visibles en quelques minutes."
+      >
+        <form onSubmit={handleSaveRevalidation} className="flex flex-col gap-3">
+          <div className="grid gap-3 lg:grid-cols-2">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[12px] font-medium text-secondary">URL du site public</span>
+              <input
+                value={revalidateForm.public_site_url}
+                onChange={(event) => setRevalidateForm((form) => ({ ...form, public_site_url: event.target.value }))}
+                placeholder="https://www.votresite.com"
+                className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[12px] font-medium text-secondary">Endpoint revalidate</span>
+              <input
+                value={revalidateForm.revalidate_url}
+                onChange={(event) => setRevalidateForm((form) => ({ ...form, revalidate_url: event.target.value }))}
+                placeholder="https://www.votresite.com/api/ideas-studio/revalidate"
+                className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+              />
+            </label>
+          </div>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[12px] font-medium text-secondary">
+              Secret de revalidation {info?.revalidate_secret_configured ? '(déjà configuré)' : ''}
+            </span>
+            <input
+              value={revalidateForm.revalidate_secret}
+              onChange={(event) => setRevalidateForm((form) => ({ ...form, revalidate_secret: event.target.value }))}
+              placeholder={info?.revalidate_secret_configured ? 'Laisser vide pour conserver le secret actuel' : 'Secret partagé avec le site public'}
+              type="password"
+              className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+            />
+          </label>
+          <div className="grid gap-2 lg:grid-cols-3">
+            <InfoRow label="Dernière revalidation" value={info?.last_revalidated_at ? formatDateTime(info.last_revalidated_at) : 'Jamais'} mono={false} />
+            <InfoRow label="Statut" value={info?.last_revalidate_status ?? 'Non configuré'} mono={false} />
+            <InfoRow label="Dernière erreur" value={info?.last_revalidate_error ?? 'Aucune'} mono={false} />
+          </div>
+          {revalidateMessage && (
+            <p className={`text-[12px] ${revalidateMessage.includes('impossible') || revalidateMessage.includes('non configur') ? 'text-danger' : 'text-success'}`}>
+              {revalidateMessage}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="submit"
+              disabled={savingRevalidate}
+              className="inline-flex items-center gap-2 rounded-[10px] bg-accent px-4 py-2 text-[12px] font-semibold text-white hover:bg-accent/90 disabled:opacity-50"
+            >
+              {savingRevalidate ? 'Sauvegarde...' : 'Sauvegarder la revalidation'}
+            </button>
+            <button
+              type="button"
+              disabled={manualRevalidating}
+              onClick={handleManualRevalidate}
+              className="inline-flex items-center gap-2 rounded-[10px] bg-surface-soft px-4 py-2 text-[12px] font-semibold text-secondary hover:text-primary disabled:opacity-50"
+            >
+              <RefreshCw size={13} className={manualRevalidating ? 'animate-spin' : ''} />
+              Relancer la revalidation
+            </button>
+          </div>
+        </form>
+      </FormCard>
 
       {/* Key notice */}
       <div className="flex items-start gap-2.5 rounded-[16px] bg-[#f9f9fb] px-4 py-3">

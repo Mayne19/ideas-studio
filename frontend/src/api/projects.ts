@@ -29,6 +29,9 @@ export type UpdateProjectPayload = {
   country_target?: string
   audience?: string
   tone?: string
+  public_site_url?: string | null
+  revalidate_url?: string | null
+  revalidate_secret?: string | null
 }
 
 export function createProject(payload: CreateProjectPayload): Promise<Project> {
@@ -45,6 +48,10 @@ export function deleteProject(id: string): Promise<void> {
 
 export function disconnectProject(id: string): Promise<Project> {
   return api.post<Project>(`/projects/${id}/disconnect`)
+}
+
+export function revalidateProject(id: string): Promise<{ revalidated: boolean; status: string; message?: string }> {
+  return api.post(`/projects/${id}/revalidate`)
 }
 
 export type EditorialSuggestion = {
