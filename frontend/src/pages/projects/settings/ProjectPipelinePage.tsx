@@ -37,6 +37,7 @@ export default function ProjectPipelinePage() {
   const [activeDays, setActiveDays] = useState<string[]>([])
   const [launchHour, setLaunchHour] = useState(8)
   const [articlesPerWeek, setArticlesPerWeek] = useState(5)
+  const [costLimitPerArticle, setCostLimitPerArticle] = useState('')
 
   const [loadTrigger, setLoadTrigger] = useState(0)
 
@@ -53,6 +54,7 @@ export default function ProjectPipelinePage() {
         setActiveDays(s.active_days)
         setLaunchHour(s.launch_hour)
         setArticlesPerWeek(s.articles_per_week)
+        setCostLimitPerArticle(s.cost_limit_per_article_eur == null ? '' : String(s.cost_limit_per_article_eur))
         setLogs(l)
         setLoadStatus('success')
         setDirty(false)
@@ -80,6 +82,7 @@ export default function ProjectPipelinePage() {
         active_days: activeDays,
         launch_hour: launchHour,
         articles_per_week: articlesPerWeek,
+        cost_limit_per_article_eur: costLimitPerArticle.trim() === '' ? null : Number(costLimitPerArticle),
       })
       setDirty(false)
       setSaveStatus('saved')
@@ -198,6 +201,19 @@ export default function ProjectPipelinePage() {
                   <option key={n} value={n}>{n}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="mt-3">
+              <label className="mb-1 block text-[12px] text-secondary">Limite coût IA par article (€)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={costLimitPerArticle}
+                onChange={(e) => { setCostLimitPerArticle(e.target.value); setDirty(true) }}
+                placeholder="Ex. 1.50"
+                className="w-full rounded-[8px] border border-border bg-[#f5f5f7] px-2.5 py-1.5 text-[12px] text-primary"
+              />
             </div>
           </div>
 

@@ -57,6 +57,18 @@ class EditorData(BaseModel):
     seo_final_checklist_json: Optional[dict] = None
     generation_report_json: Optional[dict] = None
     sources_json: Optional[dict] = None
+    serp_analysis_json: Optional[dict] = None
+    extracted_sources_json: Optional[dict] = None
+    content_gap_json: Optional[dict] = None
+    source_quality_report_json: Optional[dict] = None
+    evidence_pack_json: Optional[dict] = None
+    style_guide_json: Optional[dict] = None
+    cannibalization_outline_json: Optional[dict] = None
+    claims_json: Optional[dict] = None
+    fact_check_report_json: Optional[dict] = None
+    estimated_cost_json: Optional[dict] = None
+    geo_optimization_json: Optional[dict] = None
+    structured_data_json: Optional[dict] = None
     author_name: Optional[str] = None
     reading_time_minutes: Optional[int] = None
     latest_analysis: Optional[AnalysisBrief]

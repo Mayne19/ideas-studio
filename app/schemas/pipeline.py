@@ -15,6 +15,7 @@ class PipelineSettings(BaseModel):
     paused_indefinitely: bool = False
     default_quality_mode: str = "quality"
     launch_hours: Optional[list[str]] = None
+    cost_limit_per_article_eur: Optional[float] = None
 
 
 class PipelineSettingsUpdate(BaseModel):
@@ -29,6 +30,7 @@ class PipelineSettingsUpdate(BaseModel):
     paused_indefinitely: Optional[bool] = None
     default_quality_mode: Optional[str] = None
     launch_hours: Optional[list[str]] = None
+    cost_limit_per_article_eur: Optional[float] = None
 
 
 class PipelineSettingsPublic(BaseModel):
@@ -47,6 +49,7 @@ class PipelineSettingsPublic(BaseModel):
     paused_indefinitely: Optional[bool] = None
     default_quality_mode: Optional[str] = None
     launch_hours: Optional[list[str]] = None
+    cost_limit_per_article_eur: Optional[float] = None
     created_at: datetime
     updated_at: datetime
 

@@ -41,6 +41,7 @@ def _model_to_settings(pipe: ProjectPipeline) -> PipelineSettingsPublic:
         paused_indefinitely=pipe.paused_indefinitely,
         default_quality_mode=pipe.default_quality_mode,
         launch_hours=launch_hours,
+        cost_limit_per_article_eur=pipe.cost_limit_per_article_eur,
         created_at=pipe.created_at,
         updated_at=pipe.updated_at,
     )
@@ -74,6 +75,7 @@ def get_pipeline(db: Session, project_id: str) -> PipelineSettingsPublic | None:
             paused_indefinitely=False,
             default_quality_mode="quality",
             launch_hours=None,
+            cost_limit_per_article_eur=None,
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )

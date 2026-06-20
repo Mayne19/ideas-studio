@@ -8,6 +8,7 @@ export type PipelineSettings = {
   launch_hour: number
   articles_per_week: number
   category_priorities: Record<string, number>
+  cost_limit_per_article_eur: number | null
   created_at: string
   updated_at: string
 }
@@ -18,6 +19,7 @@ export type PipelineSettingsUpdate = {
   launch_hour?: number
   articles_per_week?: number
   category_priorities?: Record<string, number>
+  cost_limit_per_article_eur?: number | null
 }
 
 export type PipelineLog = {

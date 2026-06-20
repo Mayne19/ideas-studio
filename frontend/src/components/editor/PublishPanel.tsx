@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AlertCircle, Calendar } from 'lucide-react'
-import { publishArticle, unpublishArticle, markReadyArticle, archiveArticle, scheduleArticle } from '@/api/articles'
+import { publishArticle, unpublishArticle, markReadyArticle, archiveArticle, scheduleArticle, rollbackArticle } from '@/api/articles'
 import { ApiError } from '@/api/client'
 import type { EditorArticle } from '@/types'
 import { formatDate } from '@/utils/format'
@@ -113,16 +113,42 @@ export default function PublishPanel({
           </Button>
         )}
         {article.status === 'published' && (
-          <Button
-            size="sm"
-            variant="secondary"
-            className="w-full justify-center"
-            loading={loadingAction === 'unpublish'}
-            disabled={busy}
-            onClick={() => doAction('unpublish')}
-          >
-            Dépublier
-          </Button>
+          <>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="w-full justify-center"
+              loading={loadingAction === 'unpublish'}
+              disabled={busy}
+              onClick={() => doAction('unpublish')}
+            >
+              Dépublier
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="w-full justify-center"
+              loading={loadingAction === 'rollback'}
+              disabled={busy}
+              onClick={async () => {
+                if (!window.confirm('Revenir à la version précédente publiée ?')) return
+                setLoadingAction('rollback')
+                setError('')
+                try {
+                  const updated = await rollbackArticle(projectId, article.id)
+                  onUpdate({ ...article, ...updated })
+                } catch (err) {
+                  setError(err instanceof ApiError && err.status === 404
+                    ? 'Aucun snapshot de publication disponible.'
+                    : translatePublishError(err))
+                } finally {
+                  setLoadingAction(null)
+                }
+              }}
+            >
+              Revenir à la version précédente
+            </Button>
+          </>
         )}
         {!['published', 'ready_to_publish', 'archived'].includes(article.status) && (
           <Button

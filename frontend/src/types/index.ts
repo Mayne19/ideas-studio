@@ -365,6 +365,18 @@ export type EditorArticle = Article & {
   editorial_quality_report_json: Record<string, unknown> | null
   seo_final_checklist_json: Record<string, unknown> | null
   sources_json: Record<string, unknown> | null
+  serp_analysis_json: Record<string, unknown> | null
+  extracted_sources_json: Record<string, unknown> | null
+  content_gap_json: Record<string, unknown> | null
+  source_quality_report_json: Record<string, unknown> | null
+  evidence_pack_json: Record<string, unknown> | null
+  style_guide_json: Record<string, unknown> | null
+  cannibalization_outline_json: Record<string, unknown> | null
+  claims_json: Record<string, unknown> | null
+  fact_check_report_json: Record<string, unknown> | null
+  estimated_cost_json: Record<string, unknown> | null
+  geo_optimization_json: Record<string, unknown> | null
+  structured_data_json: Record<string, unknown> | null
   latest_analysis: AnalysisBrief | null
   published_content: string | null
   published_title: string | null
@@ -539,10 +551,15 @@ export type AgentInfo = {
   name: string
   description: string
   category: 'research' | 'strategy' | 'creation' | 'review'
+  phase: string
   requires_llm: boolean
   requires_search: boolean
+  requires_external_api: boolean
   icon: string
   has_implementation: boolean
+  status: string
+  output_json_field: string | null
+  visible_in_frontend: boolean
 }
 
 export type AgentAssignment = {

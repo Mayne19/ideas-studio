@@ -20,6 +20,7 @@ from app.services.article_service import (
     update_article,
     publish_article,
     promote_article,
+    rollback_article,
     schedule_article,
     unpublish_article,
 )
@@ -329,6 +330,23 @@ def archive_article_route(
     db.commit()
     db.refresh(article)
     return article
+
+
+@router.post("/articles/{article_id}/rollback", response_model=ArticlePublic)
+def rollback_article_route(
+    article_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    article = get_article_by_id(db, article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    member = get_member_for_project(db, current_user.id, article.project_id)
+    if not member or member.role not in _MANAGE_ROLES:
+        raise HTTPException(status_code=403, detail="Insufficient permissions to rollback")
+    if article.status != "published":
+        raise HTTPException(status_code=400, detail="Seuls les articles publiés peuvent être restaurés.")
+    return rollback_article(db, article)
 
 
 @router.post("/articles/{article_id}/unpublish", response_model=ArticlePublic)

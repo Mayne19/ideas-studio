@@ -32,6 +32,13 @@ def build_generation_report(
     errors: list[str] | None = None,
     limitations: list[str] | None = None,
     final_status: str = "draft_ready",
+    # Cost tracking
+    estimated_cost_eur: float | None = None,
+    actual_cost_eur: float | None = None,
+    cost_limit_eur: float | None = None,
+    cost_status: str = "not_tracked",
+    cost_breakdown_json: list[dict] | None = None,
+    cost_warnings: list[str] | None = None,
 ) -> GenerationReport:
     report = GenerationReport(
         provider=provider,
@@ -63,6 +70,12 @@ def build_generation_report(
         errors=errors or [],
         limitations=limitations or [],
         final_status=final_status,
+        estimated_cost_eur=estimated_cost_eur,
+        actual_cost_eur=actual_cost_eur,
+        cost_limit_eur=cost_limit_eur,
+        cost_status=cost_status,
+        cost_breakdown_json=cost_breakdown_json or [],
+        cost_warnings=cost_warnings or [],
     )
     return report
 

@@ -39,6 +39,9 @@ import type { EditorArticle, Category, ProjectMember, SeoAnalysis, ReadyCheck, C
 import EditorToolbar from '@/components/editor/EditorToolbar'
 import AutosaveIndicator from '@/components/editor/AutosaveIndicator'
 import SeoPanel from '@/components/editor/SeoPanel'
+import CostPanel from '@/components/editor/CostPanel'
+import StructuredDataPanel from '@/components/editor/StructuredDataPanel'
+import GeoPanel from '@/components/editor/GeoPanel'
 import MediaPanel from '@/components/editor/MediaPanel'
 import VersionsPanel from '@/components/editor/VersionsPanel'
 import CommentsPanel from '@/components/editor/CommentsPanel'
@@ -1673,7 +1676,7 @@ export default function ArticleEditorPage() {
 
               {/* ── Analyse tab ── */}
               {activeRightTab === 'analyse' && (
-                <div className="p-3">
+                <div className="flex flex-col gap-3 p-3">
                   <SeoPanel
                     article={{ ...article, title: metaFields.title }}
                     projectId={projectId!}
@@ -1707,6 +1710,18 @@ export default function ArticleEditorPage() {
                       } : prev)
                     }}
                   />
+
+                  <div className="border-t border-border pt-3">
+                    <CostPanel article={article} />
+                  </div>
+
+                  <div className="border-t border-border pt-3">
+                    <StructuredDataPanel article={article} />
+                  </div>
+
+                  <div className="border-t border-border pt-3">
+                    <GeoPanel article={article} />
+                  </div>
                 </div>
               )}
 

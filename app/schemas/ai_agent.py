@@ -7,10 +7,15 @@ class AgentInfo(BaseModel):
     name: str
     description: str
     category: str
+    phase: str = "unknown"
     requires_llm: bool = True
     requires_search: bool = False
+    requires_external_api: bool = False
     icon: str = "robot"
     has_implementation: bool = False
+    status: str = "planned"
+    output_json_field: str | None = None
+    visible_in_frontend: bool = True
 
 
 class AgentAssignmentCreate(BaseModel):

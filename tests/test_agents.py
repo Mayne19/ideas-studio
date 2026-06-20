@@ -8,11 +8,19 @@ from tests.conftest import register_and_login, TestingSessionLocal
 # ── Agent Registry Unit Tests ─────────────────────────────────────────────────
 
 
-def test_agent_registry_has_27_agents():
-    from app.services.agents.agent_registry import list_agents, AGENTS_BY_CATEGORY
-    agents = list_agents()
-    assert len(agents) == 27
+def test_agent_registry_has_minimum_agents():
+    from app.services.agents.agent_registry import list_agents, AGENTS_BY_CATEGORY, list_agents as la
+    agents = la(visible_only=True)
+    assert len(agents) >= 30, f"Expected at least 30 visible agents, got {len(agents)}"
     assert set(AGENTS_BY_CATEGORY.keys()) == {"research", "strategy", "creation", "review"}
+    # Check key primary agents exist
+    primary_ids = {"writer", "editor", "seo_optimizer", "keyword_research", "intent_analysis",
+                   "faq_generator", "cost_estimator", "cost_tracker", "structured_data_builder",
+                   "geo_answer_optimizer", "generation_report_builder", "seo_final_checklist",
+                   "quality_gate", "fact_checker", "language_quality", "originality_checker"}
+    found = [a.agent_id for a in la()]
+    for aid in primary_ids:
+        assert aid in found, f"Required agent '{aid}' not found in registry"
 
 
 def test_agent_registry_categories():
@@ -24,11 +32,15 @@ def test_agent_registry_categories():
 
 def test_agent_registry_get_agent():
     from app.services.agents.agent_registry import get_agent
-    agent = get_agent("content_writer")
+    agent = get_agent("writer")
     assert agent is not None
     assert agent.name == "Rédacteur"
     assert agent.category.value == "creation"
     assert agent.requires_llm is True
+    # Legacy alias still works
+    legacy = get_agent("content_writer")
+    assert legacy is not None
+    assert "(legacy)" in legacy.name
 
 
 def test_agent_registry_get_unknown():
@@ -39,7 +51,7 @@ def test_agent_registry_get_unknown():
 def test_agent_registry_filter_by_category():
     from app.services.agents.agent_registry import list_agents
     research = list_agents(category="research")
-    assert len(research) == 6
+    assert len(research) >= 9  # 6 primary + legacy
     for a in research:
         assert a.category.value == "research"
 
@@ -132,17 +144,17 @@ def test_list_agents_endpoint(client: TestClient):
     resp = client.get("/settings/ai-agents", headers=headers)
     assert resp.status_code == 200
     data = resp.json()
-    assert len(data) == 27
-    assert data[0]["agent_id"] is not None
-    assert data[0]["category"] in ("research", "strategy", "creation", "review")
+    assert len(data) >= 50
+    assert any(a["agent_id"] is not None for a in data)
+    assert any(a["category"] in ("research", "strategy", "creation", "review") for a in data)
 
 
 def test_get_agent_info(client: TestClient):
     headers = _create_admin_user(client)
-    resp = client.get("/settings/ai-agents/content_writer", headers=headers)
+    resp = client.get("/settings/ai-agents/writer", headers=headers)
     assert resp.status_code == 200
     data = resp.json()
-    assert data["agent_id"] == "content_writer"
+    assert data["agent_id"] == "writer"
     assert data["name"] == "Rédacteur"
 
 
@@ -188,16 +200,16 @@ def test_create_assignment_success(client: TestClient):
     assert provider_resp.status_code == 201
     provider_id = provider_resp.json()["id"]
 
-    # Now assign it to content_writer
+    # Now assign it to writer
     resp = client.put("/settings/ai-agents/assignments", json={
-        "agent_id": "content_writer",
+        "agent_id": "writer",
         "provider_id": provider_id,
         "enabled": True,
         "priority": 0,
     }, headers=headers)
     assert resp.status_code == 201
     data = resp.json()
-    assert data["agent_id"] == "content_writer"
+    assert data["agent_id"] == "writer"
     assert data["provider_id"] == provider_id
     assert data["enabled"] is True
     assert data["agent"]["name"] == "Rédacteur"

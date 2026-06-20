@@ -111,11 +111,13 @@ def generate_article_route(
 
     if body.use_orchestrator:
         try:
+            from app.services.agents.agent_router import get_agent_router
             article = generate_full_article(
                 db=db,
                 project_id=project_id,
                 llm=llm,
                 search=search,
+                agent_router=get_agent_router(db=db),
                 preferred_title=body.preferred_title,
                 keyword=body.keyword,
                 category_id=body.category_id,

@@ -356,6 +356,42 @@ class SEOGenerationOrchestrator:
 
         # 21. SEOFinalChecklist
         try:
+            try:
+                from app.services.structured_data_builder import build_structured_data
+                structured_data = build_structured_data(
+                    title=article.title,
+                    slug=article.slug,
+                    meta_title=article.meta_title,
+                    meta_description=article.meta_description,
+                    excerpt=article.excerpt,
+                    author=article.author_name,
+                    published_at=article.published_at,
+                    updated_at=article.updated_at,
+                    category=category_name,
+                    content=article.content,
+                    faq_json=article.faq_json,
+                    cover_image_url=article.cover_image_url,
+                    site_name=self.project.name if self.project else None,
+                    organization_name=self.project.name if self.project else None,
+                )
+                article.structured_data_json = structured_data
+                self._step("StructuredDataBuilder")
+            except Exception as exc:
+                self._error("StructuredDataBuilder", str(exc))
+
+            try:
+                from app.services.geo_optimizer import analyze_geo_readiness
+                article.geo_optimization_json = analyze_geo_readiness(
+                    content=article.content,
+                    title=article.title,
+                    keyword=article.keyword,
+                    faq_json=article.faq_json,
+                    sources_json=article.sources_json,
+                )
+                self._step("GEOOptimizer")
+            except Exception as exc:
+                self._error("GEOOptimizer", str(exc))
+
             faq_count = 0
             if article.faq_json:
                 try:
@@ -368,6 +404,7 @@ class SEOGenerationOrchestrator:
             external_links_list = safe_json_load(article.external_links_json, [])
             images_list = safe_json_load(article.image_sources_json, [])
 
+            has_sd = bool(article.structured_data_json)
             seo_final = check_seo_final_dict(
                 content=article.content,
                 title=article.title,
@@ -379,6 +416,7 @@ class SEOGenerationOrchestrator:
                 internal_links=internal_links_list if isinstance(internal_links_list, list) else [],
                 external_links=external_links_list if isinstance(external_links_list, list) else [],
                 images=images_list if isinstance(images_list, list) else [],
+                has_structured_data=has_sd,
             )
             article.seo_final_checklist_json = seo_final
             self._step("SEOFinalChecklist")
@@ -527,7 +565,22 @@ class SEOGenerationOrchestrator:
         prompt_parts.append("La FAQ sera générée séparément — ne l'inclus pas dans le contenu principal.")
         prompt_parts.append("Sois précis, original et utile.")
 
-        content = writer_llm.generate_text("\n".join(prompt_parts), temperature=0.7)
+        content_prompt = "\n".join(prompt_parts)
+        if self.agent_router is not None:
+            from app.services.agents.agent_router import call_agent
+            content, result = call_agent(
+                "writer",
+                "generate_text",
+                content_prompt,
+                db=self.db,
+                project_id=self.project_id,
+                article_id=article.id,
+                temperature=0.7,
+            )
+            if result.status != "success":
+                raise GenerationFailedError(result.error or "La rédaction par agent a échoué.")
+        else:
+            content = writer_llm.generate_text(content_prompt, temperature=0.7)
 
         if not content or not content.strip():
             raise GenerationFailedError("Le provider IA n'a pas retourné de contenu exploitable pour la rédaction.")
@@ -539,13 +592,39 @@ class SEOGenerationOrchestrator:
 
         if not article.meta_title:
             meta_prompt = f"Écris un meta title SEO (max 60 car.) pour : {article.title}. Mot-clé : {article.keyword}"
-            title_llm = self._get_agent_provider("title_generator", writer_llm)
-            article.meta_title = (title_llm.generate_text(meta_prompt, temperature=0.3) or article.title)[:255]
+            if self.agent_router is not None:
+                from app.services.agents.agent_router import call_agent
+                meta_title, result = call_agent(
+                    "meta_writer",
+                    "generate_text",
+                    meta_prompt,
+                    db=self.db,
+                    project_id=self.project_id,
+                    article_id=article.id,
+                    temperature=0.3,
+                )
+                article.meta_title = ((meta_title if result.status == "success" else article.title) or article.title)[:255]
+            else:
+                title_llm = self._get_agent_provider("title_generator", writer_llm)
+                article.meta_title = (title_llm.generate_text(meta_prompt, temperature=0.3) or article.title)[:255]
 
         if not article.meta_description:
             desc_prompt = f"Écris une meta description SEO (140-160 car.) pour : {article.title}. Mot-clé : {article.keyword}"
-            desc_llm = self._get_agent_provider("meta_description_writer", writer_llm)
-            article.meta_description = (desc_llm.generate_text(desc_prompt, temperature=0.3) or "")[:500]
+            if self.agent_router is not None:
+                from app.services.agents.agent_router import call_agent
+                meta_description, result = call_agent(
+                    "meta_writer",
+                    "generate_text",
+                    desc_prompt,
+                    db=self.db,
+                    project_id=self.project_id,
+                    article_id=article.id,
+                    temperature=0.3,
+                )
+                article.meta_description = (meta_description if result.status == "success" else "")[:500]
+            else:
+                desc_llm = self._get_agent_provider("meta_description_writer", writer_llm)
+                article.meta_description = (desc_llm.generate_text(desc_prompt, temperature=0.3) or "")[:500]
 
         article.excerpt = self._extract_excerpt(content)
 
@@ -595,6 +674,98 @@ class SEOGenerationOrchestrator:
             text = __import__("re").sub(r"\s+", " ", text).strip()
         return text[:max_length]
 
+    def _get_article_cost_data(self, article_id: str) -> dict:
+        """Aggregate cost data from AiUsageLog for this article."""
+        try:
+            from app.models.ai_usage_log import AiUsageLog
+            logs = (
+                self.db.query(AiUsageLog)
+                .filter(AiUsageLog.article_id == article_id)
+                .all()
+            )
+        except Exception:
+            return {
+                "estimated_cost_eur": None,
+                "actual_cost_eur": None,
+                "cost_status": "not_tracked",
+                "cost_breakdown_json": [],
+                "cost_warnings": [],
+            }
+
+        if not logs:
+            return {
+                "estimated_cost_eur": None,
+                "actual_cost_eur": None,
+                "cost_status": "not_tracked",
+                "cost_breakdown_json": [],
+                "cost_warnings": [],
+            }
+
+        total_estimated = 0.0
+        total_actual = 0.0
+        has_unknown = False
+        breakdown = []
+        warnings = []
+
+        for log in logs:
+            est = log.estimated_cost
+            act = log.actual_cost
+            if est is not None:
+                total_estimated += est
+            else:
+                has_unknown = True
+            if act is not None:
+                total_actual += act
+            else:
+                has_unknown = True
+
+            breakdown.append({
+                "agent_key": log.agent_id,
+                "provider": log.provider_name or "",
+                "model": log.model_name or "",
+                "input_tokens": log.prompt_tokens or 0,
+                "output_tokens": log.completion_tokens or 0,
+                "estimated_cost_eur": est,
+                "actual_cost_eur": act,
+                "cost_status": "tracked" if est is not None else "unknown_price",
+            })
+
+        if has_unknown:
+            warnings.append("Certains modèles n'ont pas de prix configuré.")
+
+        cost_limit_eur = None
+        try:
+            from app.models.pipeline import ProjectPipeline
+            pipeline = (
+                self.db.query(ProjectPipeline)
+                .filter(ProjectPipeline.project_id == self.project_id)
+                .first()
+            )
+            if pipeline and hasattr(pipeline, "cost_limit_per_article_eur") and pipeline.cost_limit_per_article_eur:
+                cost_limit_eur = float(pipeline.cost_limit_per_article_eur)
+        except Exception:
+            pass
+
+        total_estimated = round(total_estimated, 6) if not has_unknown else None
+        total_actual = round(total_actual, 6) if not has_unknown else None
+
+        if cost_limit_eur is not None and total_estimated is not None and total_estimated > cost_limit_eur:
+            cost_status = "over_limit"
+            warnings.append(f"Coût ({total_estimated} EUR) dépasse la limite ({cost_limit_eur} EUR)")
+        elif has_unknown:
+            cost_status = "partial_unknown"
+        else:
+            cost_status = "within_limit"
+
+        return {
+            "estimated_cost_eur": total_estimated,
+            "actual_cost_eur": total_actual,
+            "cost_limit_eur": cost_limit_eur,
+            "cost_status": cost_status,
+            "cost_breakdown_json": breakdown,
+            "cost_warnings": warnings,
+        }
+
     def _finalize_report(
         self,
         article: Article,
@@ -616,6 +787,8 @@ class SEOGenerationOrchestrator:
                 adapters_status[adapter.provider_name] = adapter.get_status()
             except Exception:
                 adapters_status[adapter.provider_name] = {"error": "status_unavailable"}
+
+        cost_data = self._get_article_cost_data(article.id)
 
         try:
             report = build_generation_report_dict(
@@ -647,6 +820,7 @@ class SEOGenerationOrchestrator:
                 errors=self.errors,
                 limitations=self.limitations,
                 final_status=article.status,
+                **cost_data,
             )
             article.generation_report_json = report
         except Exception as exc:

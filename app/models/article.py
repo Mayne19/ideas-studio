@@ -18,6 +18,7 @@ ARTICLE_STATUSES = frozenset({
     "scheduled",
     "published",
     "failed",
+    "blocked_cost_limit",
     "update_recommended",
     "ready_to_publish",
     "unpublished",
@@ -83,6 +84,18 @@ class Article(Base):
     seo_final_checklist_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     generation_report_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     sources_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    serp_analysis_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    extracted_sources_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    content_gap_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    source_quality_report_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    evidence_pack_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    style_guide_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    cannibalization_outline_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    claims_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    fact_check_report_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    estimated_cost_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    geo_optimization_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    structured_data_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     faq_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     callouts_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     internal_links_json: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -21,6 +21,7 @@ def check_seo_final(
     internal_links: list | None = None,
     external_links: list | None = None,
     images: list | None = None,
+    has_structured_data: bool = False,
 ) -> SEOFinalChecklist:
     report = SEOFinalChecklist()
     text = strip_html(content) if content else ""
@@ -41,6 +42,7 @@ def check_seo_final(
         {"name": "internal_links", "label": "Liens internes", "pass": bool(internal_links)},
         {"name": "external_links", "label": "Liens externes", "pass": bool(external_links)},
         {"name": "images_alt", "label": "Images avec alt", "pass": images is None or len(images) == 0 or all(i.get("alt_text") for i in images if i.get("image_url"))},
+        {"name": "structured_data", "label": "Données structurées", "pass": has_structured_data},
     ]
 
     for c in checks:
@@ -72,8 +74,10 @@ def check_seo_final_dict(
     internal_links: list | None = None,
     external_links: list | None = None,
     images: list | None = None,
+    has_structured_data: bool = False,
 ) -> dict:
     return asdict(check_seo_final(
         content, title, slug, meta_title, meta_description,
         keyword, faq_count, internal_links, external_links, images,
+        has_structured_data=has_structured_data,
     ))

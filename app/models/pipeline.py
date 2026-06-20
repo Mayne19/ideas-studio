@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Integer, Boolean, DateTime, ForeignKey, Text
+from sqlalchemy import String, Integer, Float, Boolean, DateTime, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.sqlite import JSON
 from app.core.database import Base
@@ -21,6 +21,7 @@ class ProjectPipeline(Base):
     paused_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     paused_indefinitely: Mapped[bool | None] = mapped_column(Boolean, default=False, nullable=True)
     default_quality_mode: Mapped[str | None] = mapped_column(String(20), default="quality", nullable=True)
+    cost_limit_per_article_eur: Mapped[float | None] = mapped_column(Float, nullable=True)
     category_strategy_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     launch_hours: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

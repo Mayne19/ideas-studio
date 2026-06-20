@@ -25,6 +25,11 @@ class AgentCallResult:
     model_name: str | None = None
     duration_ms: int = 0
     tokens: int = 0
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    estimated_cost: float | None = None
+    actual_cost: float | None = None
+    cost_status: str = "not_tracked"
     status: str = "success"
     error: str | None = None
 
@@ -216,6 +221,11 @@ def get_agent_router(db: Session | None = None) -> AgentRouter:
     return _default_router
 
 
+def _estimate_tokens(text: str) -> int:
+    """Rough token estimation: ~4 chars per token."""
+    return max(1, len(text) // 4)
+
+
 def call_agent(
     agent_id: str,
     method: str,
@@ -256,16 +266,47 @@ def call_agent(
 
     duration_ms = int((time.perf_counter() - start) * 1000)
 
+    # Estimate tokens from prompt/response length
+    input_tokens = _estimate_tokens(prompt)
+    if system:
+        input_tokens += _estimate_tokens(system)
+    output_tokens = _estimate_tokens(response)
+
+    # Estimate cost
+    estimated_cost: float | None = None
+    actual_cost: float | None = None
+    cost_status = "not_tracked"
+
+    if status == "success":
+        from app.services.cost_estimator import estimate_call_cost
+        est = estimate_call_cost(
+            provider=provider.provider_name,
+            model=provider.model_name,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+        estimated_cost = est["estimated_cost_eur"]
+        cost_status = est["cost_status"]
+        actual_cost = estimated_cost  # V1: estimated = actual
+        if estimated_cost is not None:
+            estimated_cost = round(estimated_cost, 6)
+            actual_cost = round(estimated_cost, 6)
+
     call_result = AgentCallResult(
         agent_id=agent_id,
         provider_name=provider.provider_name,
         model_name=provider.model_name,
         duration_ms=duration_ms,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        estimated_cost=estimated_cost,
+        actual_cost=actual_cost,
+        cost_status=cost_status,
         status=status,
         error=error,
     )
 
-    if db is not None and status == "success":
+    if db is not None:
         try:
             from app.models.ai_usage_log import AiUsageLog
             log_entry = AiUsageLog(
@@ -274,9 +315,14 @@ def call_agent(
                 model_name=provider.model_name,
                 project_id=project_id,
                 article_id=article_id,
+                prompt_tokens=input_tokens,
+                completion_tokens=output_tokens,
+                total_tokens=input_tokens + output_tokens,
                 duration_ms=duration_ms,
+                estimated_cost=estimated_cost,
+                actual_cost=actual_cost,
                 status=status,
-                error_message=error,
+                error_message=error if status != "success" else None,
             )
             db.add(log_entry)
             db.commit()

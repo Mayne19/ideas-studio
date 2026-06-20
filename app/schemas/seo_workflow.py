@@ -274,6 +274,13 @@ class GenerationReport:
     errors: list[str] = field(default_factory=list)
     limitations: list[str] = field(default_factory=list)
     final_status: str = "draft_ready"
+    # Cost tracking
+    estimated_cost_eur: float | None = None
+    actual_cost_eur: float | None = None
+    cost_limit_eur: float | None = None
+    cost_status: str = "not_tracked"
+    cost_breakdown_json: list[dict] = field(default_factory=list)
+    cost_warnings: list[str] = field(default_factory=list)
 
 
 def asdict(obj: Any) -> dict:

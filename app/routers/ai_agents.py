@@ -61,9 +61,13 @@ def list_all_agents(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Return the canonical list of all 27 agents."""
+    """Return the canonical agent list.
+
+    Project settings consume the frontend-visible list. The global admin view
+    keeps the full registry available for diagnostics and tests.
+    """
     _ensure_project_admin(project_id, current_user, db)
-    return [serialize_agent(a) for a in list_agents()]
+    return [serialize_agent(a) for a in list_agents(visible_only=bool(project_id))]
 
 
 @router.get("/assignments", response_model=list[AgentAssignmentWithDetails])

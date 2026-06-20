@@ -125,12 +125,58 @@ def update_article(db: Session, article: Article, data: ArticleUpdate) -> Articl
 
 
 def publish_article(db: Session, article: Article) -> Article:
+    # Create a publication snapshot before publishing
+    from app.services.version_service import create_version
+    create_version(db, article, "publish_snapshot")
     _snapshot_published_fields(article)
     article.status = "published"
     now = datetime.now(timezone.utc)
     if article.published_at is None:
         article.published_at = now
     article.updated_at = now
+    db.commit()
+    db.refresh(article)
+    return article
+
+
+def rollback_article(db: Session, article: Article) -> Article:
+    """Rollback to the last publish_snapshot version."""
+    from app.models.article_version import ArticleVersion
+    last_snapshot = (
+        db.query(ArticleVersion)
+        .filter(
+            ArticleVersion.article_id == article.id,
+            ArticleVersion.version_type == "publish_snapshot",
+        )
+        .order_by(ArticleVersion.created_at.desc())
+        .first()
+    )
+    if not last_snapshot:
+        raise HTTPException(status_code=404, detail="Aucun snapshot de publication disponible pour le rollback.")
+
+    # Save current state before rolling back
+    from app.services.version_service import create_version
+    create_version(db, article, "restore", article.author_name)
+
+    article.title = last_snapshot.title
+    article.slug = last_snapshot.slug
+    article.content = last_snapshot.content
+    article.excerpt = last_snapshot.excerpt
+    article.meta_title = last_snapshot.meta_title
+    article.meta_description = last_snapshot.meta_description
+    article.cover_image_url = last_snapshot.cover_image_url
+    article.faq_json = last_snapshot.faq_json
+    article.callouts_json = last_snapshot.callouts_json
+    article.internal_links_json = last_snapshot.internal_links_json
+    article.external_links_json = last_snapshot.external_links_json
+    if last_snapshot.content:
+        article.word_count = calculate_word_count(last_snapshot.content)
+    article.status = "published"
+    article.updated_at = datetime.now(timezone.utc)
+
+    # Restore published fields too
+    _snapshot_published_fields(article)
+
     db.commit()
     db.refresh(article)
     return article
