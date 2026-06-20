@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import create_engine, text
 from alembic.config import Config
 from alembic import command
 from app.core.config import settings
@@ -23,6 +24,21 @@ app = FastAPI(
 )
 
 
+def _read_alembic_revision() -> str:
+    engine = None
+    try:
+        engine = create_engine(settings.database_url)
+        with engine.connect() as connection:
+            result = connection.execute(text("select version_num from alembic_version"))
+            versions = [row[0] for row in result]
+        return ",".join(versions) if versions else "<empty>"
+    except Exception as exc:
+        return f"<unavailable: {exc.__class__.__name__}>"
+    finally:
+        if engine is not None:
+            engine.dispose()
+
+
 @app.on_event("startup")
 def run_migrations():
     if settings.APP_ENV == "test":
@@ -35,17 +51,20 @@ def run_migrations():
         settings.APP_ENV,
         settings.safe_database_url,
     )
+    logger.info("Alembic current revision before startup upgrade: %s", _read_alembic_revision())
     try:
         command.upgrade(alembic_cfg, "head")
-    except Exception:
+    except BaseException as exc:
         logger.exception(
-            "Alembic migration failed during startup. env=%s database=%s action=%s",
+            "Alembic migration failed during startup. exception=%s env=%s database=%s current_revision=%s action=%s",
+            repr(exc),
             settings.APP_ENV,
             settings.safe_database_url,
+            _read_alembic_revision(),
             "Check the failing revision in Render logs, then run `python -m alembic upgrade head` against a PostgreSQL test database.",
         )
         raise
-    logger.info("Alembic migrations completed successfully.")
+    logger.info("Alembic migrations completed successfully. current_revision=%s", _read_alembic_revision())
 
 app.add_middleware(
     CORSMiddleware,

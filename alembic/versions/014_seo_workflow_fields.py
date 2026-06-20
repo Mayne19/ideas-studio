@@ -16,11 +16,26 @@ branch_labels = None
 depends_on = None
 
 
-def column_exists(table, column):
-    conn = op.get_bind()
-    inspector = inspect(conn)
-    columns = [c["name"] for c in inspector.get_columns(table)]
-    return column in columns
+def table_exists(table_name: str) -> bool:
+    inspector = inspect(op.get_bind())
+    return table_name in inspector.get_table_names()
+
+
+def column_exists(table_name: str, column_name: str) -> bool:
+    if not table_exists(table_name):
+        return False
+    inspector = inspect(op.get_bind())
+    return any(column["name"] == column_name for column in inspector.get_columns(table_name))
+
+
+def add_column_if_missing(table_name: str, column: sa.Column) -> None:
+    if table_exists(table_name) and not column_exists(table_name, column.name):
+        op.add_column(table_name, column)
+
+
+def drop_column_if_exists(table_name: str, column_name: str) -> None:
+    if table_exists(table_name) and column_exists(table_name, column_name):
+        op.drop_column(table_name, column_name)
 
 
 def upgrade() -> None:
@@ -34,38 +49,24 @@ def upgrade() -> None:
         "editorial_quality_report_json", "seo_final_checklist_json",
         "generation_report_json", "sources_json",
     ):
-        if not column_exists("articles", col):
-            op.add_column("articles", sa.Column(col, sa.JSON(), nullable=True))
+        add_column_if_missing("articles", sa.Column(col, sa.JSON(), nullable=True))
 
     # Category extra fields
-    if not column_exists("categories", "priority_score"):
-        op.add_column("categories", sa.Column("priority_score", sa.Float(), nullable=True))
-    if not column_exists("categories", "monthly_frequency"):
-        op.add_column("categories", sa.Column("monthly_frequency", sa.Integer(), nullable=True))
-    if not column_exists("categories", "pipeline_enabled"):
-        op.add_column("categories", sa.Column("pipeline_enabled", sa.Boolean(), nullable=True, server_default=sa.text("1")))
-    if not column_exists("categories", "editorial_goal"):
-        op.add_column("categories", sa.Column("editorial_goal", sa.Text(), nullable=True))
-    if not column_exists("categories", "target_audience"):
-        op.add_column("categories", sa.Column("target_audience", sa.Text(), nullable=True))
-    if not column_exists("categories", "internal_notes"):
-        op.add_column("categories", sa.Column("internal_notes", sa.Text(), nullable=True))
+    add_column_if_missing("categories", sa.Column("priority_score", sa.Float(), nullable=True))
+    add_column_if_missing("categories", sa.Column("monthly_frequency", sa.Integer(), nullable=True))
+    add_column_if_missing("categories", sa.Column("pipeline_enabled", sa.Boolean(), nullable=True, server_default=sa.true()))
+    add_column_if_missing("categories", sa.Column("editorial_goal", sa.Text(), nullable=True))
+    add_column_if_missing("categories", sa.Column("target_audience", sa.Text(), nullable=True))
+    add_column_if_missing("categories", sa.Column("internal_notes", sa.Text(), nullable=True))
 
     # Pipeline extra fields
-    if not column_exists("project_pipelines", "ideas_per_week"):
-        op.add_column("project_pipelines", sa.Column("ideas_per_week", sa.Integer(), nullable=True, server_default=sa.text("5")))
-    if not column_exists("project_pipelines", "max_pending_drafts"):
-        op.add_column("project_pipelines", sa.Column("max_pending_drafts", sa.Integer(), nullable=True, server_default=sa.text("10")))
-    if not column_exists("project_pipelines", "paused_until"):
-        op.add_column("project_pipelines", sa.Column("paused_until", sa.DateTime(timezone=True), nullable=True))
-    if not column_exists("project_pipelines", "paused_indefinitely"):
-        op.add_column("project_pipelines", sa.Column("paused_indefinitely", sa.Boolean(), nullable=True, server_default=sa.text("0")))
-    if not column_exists("project_pipelines", "default_quality_mode"):
-        op.add_column("project_pipelines", sa.Column("default_quality_mode", sa.String(20), nullable=True, server_default=sa.text("'quality'")))
-    if not column_exists("project_pipelines", "category_strategy_json"):
-        op.add_column("project_pipelines", sa.Column("category_strategy_json", sa.JSON(), nullable=True))
-    if not column_exists("project_pipelines", "launch_hours"):
-        op.add_column("project_pipelines", sa.Column("launch_hours", sa.Text(), nullable=True))
+    add_column_if_missing("project_pipelines", sa.Column("ideas_per_week", sa.Integer(), nullable=True, server_default="5"))
+    add_column_if_missing("project_pipelines", sa.Column("max_pending_drafts", sa.Integer(), nullable=True, server_default="10"))
+    add_column_if_missing("project_pipelines", sa.Column("paused_until", sa.DateTime(timezone=True), nullable=True))
+    add_column_if_missing("project_pipelines", sa.Column("paused_indefinitely", sa.Boolean(), nullable=True, server_default=sa.false()))
+    add_column_if_missing("project_pipelines", sa.Column("default_quality_mode", sa.String(20), nullable=True, server_default="quality"))
+    add_column_if_missing("project_pipelines", sa.Column("category_strategy_json", sa.JSON(), nullable=True))
+    add_column_if_missing("project_pipelines", sa.Column("launch_hours", sa.Text(), nullable=True))
 
 
 def downgrade() -> None:
@@ -78,13 +79,10 @@ def downgrade() -> None:
         "editorial_quality_report_json", "seo_final_checklist_json",
         "generation_report_json", "sources_json",
     ):
-        if column_exists("articles", col):
-            op.drop_column("articles", col)
+        drop_column_if_exists("articles", col)
 
     for col in ("priority_score", "monthly_frequency", "pipeline_enabled", "editorial_goal", "target_audience", "internal_notes"):
-        if column_exists("categories", col):
-            op.drop_column("categories", col)
+        drop_column_if_exists("categories", col)
 
     for col in ("ideas_per_week", "max_pending_drafts", "paused_until", "paused_indefinitely", "default_quality_mode", "category_strategy_json", "launch_hours"):
-        if column_exists("project_pipelines", col):
-            op.drop_column("project_pipelines", col)
+        drop_column_if_exists("project_pipelines", col)
