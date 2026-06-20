@@ -1,12 +1,15 @@
 import secrets
 
 from pydantic_settings import BaseSettings
+from sqlalchemy.engine.url import make_url
 
 
 class Settings(BaseSettings):
     APP_NAME: str = "Ideas Studio"
     APP_ENV: str = "development"
     APP_URL: str = "http://localhost:8000"
+    FRONTEND_URL: str = ""
+    CORS_ORIGINS: str = ""
     DATABASE_URL: str = "sqlite:///./ideas_studio.db"
     SECRET_KEY: str = secrets.token_urlsafe(48)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
@@ -101,6 +104,30 @@ class Settings(BaseSettings):
     AGENT_PRODUCT_WRITER_MODEL: str = ""
 
     model_config = {"env_file": ".env", "extra": "ignore"}
+
+    @property
+    def database_url(self) -> str:
+        if self.DATABASE_URL.startswith("postgres://"):
+            return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        return self.DATABASE_URL
+
+    @property
+    def safe_database_url(self) -> str:
+        try:
+            return make_url(self.database_url).render_as_string(hide_password=True)
+        except Exception:
+            return "<invalid database url>"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        configured = [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+        if self.FRONTEND_URL and self.FRONTEND_URL not in configured:
+            configured.append(self.FRONTEND_URL)
+        if self.APP_ENV == "development":
+            for origin in ("http://localhost:5173", "http://127.0.0.1:5173"):
+                if origin not in configured:
+                    configured.append(origin)
+        return configured or ["*"]
 
 
 settings = Settings()

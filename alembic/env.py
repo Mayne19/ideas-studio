@@ -30,7 +30,7 @@ from app.models import agent_assignment  # noqa: F401
 from app.models import ai_usage_log  # noqa: F401
 
 config = context.config
-database_url = settings.DATABASE_URL.replace("%", "%%")
+database_url = settings.database_url.replace("%", "%%")
 config.set_main_option("sqlalchemy.url", database_url)
 
 if config.config_file_name is not None:

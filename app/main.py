@@ -14,6 +14,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -29,11 +30,26 @@ def run_migrations():
     root_dir = Path(__file__).resolve().parents[1]
     alembic_cfg = Config(str(root_dir / "alembic.ini"))
     alembic_cfg.set_main_option("script_location", str(root_dir / "alembic"))
-    command.upgrade(alembic_cfg, "head")
+    logger.info(
+        "Running Alembic migrations at startup. env=%s database=%s",
+        settings.APP_ENV,
+        settings.safe_database_url,
+    )
+    try:
+        command.upgrade(alembic_cfg, "head")
+    except Exception:
+        logger.exception(
+            "Alembic migration failed during startup. env=%s database=%s action=%s",
+            settings.APP_ENV,
+            settings.safe_database_url,
+            "Check the failing revision in Render logs, then run `python -m alembic upgrade head` against a PostgreSQL test database.",
+        )
+        raise
+    logger.info("Alembic migrations completed successfully.")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],

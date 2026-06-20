@@ -5,9 +5,10 @@ from app.core.config import settings
 
 def _make_engine():
     kwargs = {}
-    if settings.DATABASE_URL.startswith("sqlite"):
+    database_url = settings.database_url
+    if database_url.startswith("sqlite"):
         kwargs["connect_args"] = {"check_same_thread": False}
-    return create_engine(settings.DATABASE_URL, **kwargs)
+    return create_engine(database_url, **kwargs)
 
 
 engine = _make_engine()
