@@ -5,8 +5,13 @@ Revises: 018_add_activity_logs
 Create Date: 2026-06-11 13:00:00.000000
 
 """
-from alembic import op
 import sqlalchemy as sa
+from app.core.alembic_helpers import (
+    create_index_if_missing,
+    create_table_if_missing,
+    drop_index_if_exists,
+    drop_table_if_exists,
+)
 
 
 revision = '019_add_webhooks'
@@ -16,7 +21,7 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table(
+    create_table_if_missing(
         'webhooks',
         sa.Column('id', sa.String(), nullable=False),
         sa.Column('project_id', sa.String(), nullable=False),
@@ -24,7 +29,7 @@ def upgrade():
         sa.Column('url', sa.String(length=2000), nullable=False),
         sa.Column('events', sa.Text(), nullable=False),
         sa.Column('secret', sa.String(length=128), nullable=False),
-        sa.Column('enabled', sa.Boolean(), nullable=False, server_default=sa.text('1')),
+        sa.Column('enabled', sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column('last_triggered_at', sa.DateTime(timezone=True), nullable=True),
         sa.Column('last_status', sa.String(length=50), nullable=True),
         sa.Column('last_error', sa.Text(), nullable=True),
@@ -33,9 +38,9 @@ def upgrade():
         sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ),
         sa.PrimaryKeyConstraint('id'),
     )
-    op.create_index(op.f('ix_webhooks_project_id'), 'webhooks', ['project_id'], unique=False)
+    create_index_if_missing('ix_webhooks_project_id', 'webhooks', ['project_id'])
 
 
 def downgrade():
-    op.drop_index(op.f('ix_webhooks_project_id'), table_name='webhooks')
-    op.drop_table('webhooks')
+    drop_index_if_exists('ix_webhooks_project_id', 'webhooks')
+    drop_table_if_exists('webhooks')

@@ -5,8 +5,13 @@ Revises: 017_add_user_avatar
 Create Date: 2026-06-11 12:00:00.000000
 
 """
-from alembic import op
 import sqlalchemy as sa
+from app.core.alembic_helpers import (
+    create_index_if_missing,
+    create_table_if_missing,
+    drop_index_if_exists,
+    drop_table_if_exists,
+)
 
 
 revision = '018_add_activity_logs'
@@ -16,7 +21,7 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table(
+    create_table_if_missing(
         'activity_logs',
         sa.Column('id', sa.String(), nullable=False),
         sa.Column('project_id', sa.String(), nullable=False),
@@ -32,11 +37,11 @@ def upgrade():
         sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
         sa.PrimaryKeyConstraint('id'),
     )
-    op.create_index(op.f('ix_activity_logs_project_id'), 'activity_logs', ['project_id'], unique=False)
-    op.create_index(op.f('ix_activity_logs_user_id'), 'activity_logs', ['user_id'], unique=False)
+    create_index_if_missing('ix_activity_logs_project_id', 'activity_logs', ['project_id'])
+    create_index_if_missing('ix_activity_logs_user_id', 'activity_logs', ['user_id'])
 
 
 def downgrade():
-    op.drop_index(op.f('ix_activity_logs_user_id'), table_name='activity_logs')
-    op.drop_index(op.f('ix_activity_logs_project_id'), table_name='activity_logs')
-    op.drop_table('activity_logs')
+    drop_index_if_exists('ix_activity_logs_user_id', 'activity_logs')
+    drop_index_if_exists('ix_activity_logs_project_id', 'activity_logs')
+    drop_table_if_exists('activity_logs')

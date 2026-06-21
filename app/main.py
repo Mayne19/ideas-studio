@@ -1,10 +1,12 @@
 import logging
 import os
+import sys
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine.url import make_url
 from alembic.config import Config
 from alembic import command
 from app.core.config import settings
@@ -39,6 +41,13 @@ def _read_alembic_revision() -> str:
             engine.dispose()
 
 
+def _database_dialect() -> str:
+    try:
+        return make_url(settings.database_url).get_backend_name()
+    except Exception:
+        return "<unknown>"
+
+
 @app.on_event("startup")
 def run_migrations():
     if settings.APP_ENV == "test":
@@ -47,22 +56,39 @@ def run_migrations():
     alembic_cfg = Config(str(root_dir / "alembic.ini"))
     alembic_cfg.set_main_option("script_location", str(root_dir / "alembic"))
     logger.info(
-        "Running Alembic migrations at startup. env=%s database=%s",
+        "Running Alembic migrations at startup. env=%s database=%s dialect=%s target_revision=%s",
         settings.APP_ENV,
         settings.safe_database_url,
+        _database_dialect(),
+        "head",
     )
     logger.info("Alembic current revision before startup upgrade: %s", _read_alembic_revision())
     try:
         command.upgrade(alembic_cfg, "head")
+    except SystemExit as exc:
+        logger.exception(
+            "Alembic exited during startup. code=%s env=%s database=%s dialect=%s current_revision=%s target_revision=%s",
+            exc.code,
+            settings.APP_ENV,
+            settings.safe_database_url,
+            _database_dialect(),
+            _read_alembic_revision(),
+            "head",
+        )
+        sys.stderr.flush()
+        raise
     except BaseException as exc:
         logger.exception(
-            "Alembic migration failed during startup. exception=%s env=%s database=%s current_revision=%s action=%s",
+            "Alembic migration failed during startup. exception=%s env=%s database=%s dialect=%s current_revision=%s target_revision=%s action=%s",
             repr(exc),
             settings.APP_ENV,
             settings.safe_database_url,
+            _database_dialect(),
             _read_alembic_revision(),
+            "head",
             "Check the failing revision in Render logs, then run `python -m alembic upgrade head` against a PostgreSQL test database.",
         )
+        sys.stderr.flush()
         raise
     logger.info("Alembic migrations completed successfully. current_revision=%s", _read_alembic_revision())
 
