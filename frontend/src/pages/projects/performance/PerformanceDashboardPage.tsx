@@ -64,7 +64,7 @@ function trendTick(period: PeriodMode, value: unknown) {
   const label = String(value)
   if (period === 'day') return label
   if (period === 'year') return label.slice(0, 7)
-  if (period === 'quarter') return label
+  if (period === 'quarter' || period === 'semester') return label
   return label.includes('-') ? label.slice(5) : label
 }
 
@@ -375,15 +375,32 @@ export default function PerformanceDashboardPage() {
   const exportPayload = {
     project_id: projectId,
     period,
+    exported_at: new Date().toISOString(),
     summary: summaryData,
+    cards: {
+      total_views: summaryData.total_views,
+      published_articles: publishedCount,
+      average_editorial_score: averageScore,
+      articles_to_optimize: optimizeItems.length,
+      top_article: topArticle ? { id: topArticle.article.id, title: topArticle.article.title, views: topArticle.views } : null,
+      leader_category: leaderCategory ? { name: leaderCategory.category.name, views: leaderCategory.views } : null,
+    },
+    trend: trendData,
+    category_rows: categoryRows.map((row) => ({ id: row.category.id, name: row.category.name, views: row.views, articles: row.count })),
+    optimize_items: optimizeItems.map((item) => ({ id: item.article.id, title: item.article.title, views: item.views, recommendation: item.recommendation, seo_score: item.article.seo_score })),
     articles: articleMetrics.map((item) => ({
       id: item.article.id,
       title: item.article.title,
       status: item.article.status,
+      category: item.category?.name ?? null,
       views: item.views,
       variation: item.variation,
+      readability_score: item.article.readability_score,
+      quality_score: item.article.quality_score,
+      eeat_score: item.article.eeat_score,
       seo_score: item.article.seo_score,
       recommendation: item.recommendation,
+      updated_at: item.article.updated_at,
     })),
   }
 
@@ -396,11 +413,31 @@ export default function PerformanceDashboardPage() {
       {
         title: 'Synthèse',
         rows: [
+          ['Projet', projectId ?? '—'],
+          ['Période', `${period.startDate} → ${period.endDate}`],
           ['Vues totales', formatMetric(summaryData.total_views)],
           ['Articles publiés', String(publishedCount)],
           ['Score éditorial moyen', averageScore !== null ? `${averageScore}/100` : '—'],
           ['Articles à optimiser', String(optimizeItems.length)],
+          ['Article le plus vu', topArticle ? `${topArticle.article.title} (${formatMetric(topArticle.views)} vues)` : '—'],
+          ['Catégorie leader', leaderCategory ? `${leaderCategory.category.name} (${formatMetric(leaderCategory.views)} vues)` : '—'],
         ],
+      },
+      {
+        title: 'Série des vues',
+        rows: trendData.map((point) => [point.date, formatMetric(point.views)]),
+      },
+      {
+        title: 'Articles à optimiser',
+        rows: optimizeItems.length
+          ? optimizeItems.map((item) => [item.article.title, `${item.recommendation} · SEO ${item.article.seo_score ?? '—'} · ${formatMetric(item.views)} vues`])
+          : [['Aucun article prioritaire', '—']],
+      },
+      {
+        title: 'Catégories',
+        rows: categoryRows.length
+          ? categoryRows.map((row) => [row.category.name, `${formatMetric(row.views)} vues · ${row.count} article${row.count > 1 ? 's' : ''}`])
+          : [['Aucune catégorie avec trafic', '—']],
       },
       {
         title: 'Top articles',

@@ -22,7 +22,7 @@ router = APIRouter(tags=["performance"])
 def project_performance_summary(
     project_id: str,
     period: str = Query(default="30d", pattern=r"^(\d+d|today|yesterday)$"),
-    period_type: str | None = Query(default=None, pattern=r"^(day|week|month|quarter|year)$"),
+    period_type: str | None = Query(default=None, pattern=r"^(day|week|month|quarter|semester|year|custom)$"),
     start_date: date | None = None,
     end_date: date | None = None,
     db: Session = Depends(get_db),
@@ -35,7 +35,7 @@ def project_performance_summary(
 def project_articles_performance(
     project_id: str,
     period: str = Query(default="30d", pattern=r"^(\d+d|today|yesterday)$"),
-    period_type: str | None = Query(default=None, pattern=r"^(day|week|month|quarter|year)$"),
+    period_type: str | None = Query(default=None, pattern=r"^(day|week|month|quarter|semester|year|custom)$"),
     start_date: date | None = None,
     end_date: date | None = None,
     db: Session = Depends(get_db),

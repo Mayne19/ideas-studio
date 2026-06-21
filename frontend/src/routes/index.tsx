@@ -3,6 +3,8 @@ import { lazy, Suspense, useEffect } from 'react'
 import { createBrowserRouter, Navigate, useRouteError } from 'react-router-dom'
 import LoginPage from '@/pages/auth/LoginPage'
 import RegisterPage from '@/pages/auth/RegisterPage'
+import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage'
+import ResetPasswordPage from '@/pages/auth/ResetPasswordPage'
 import ProjectsPage from '@/pages/projects/ProjectsPage'
 import ProjectDashboardPage from '@/pages/projects/ProjectDashboardPage'
 import ProjectSettingsPage from '@/pages/projects/settings/ProjectSettingsPage'
@@ -94,6 +96,14 @@ export const router = createBrowserRouter([
   {
     path: '/register',
     element: <RegisterPage />,
+  },
+  {
+    path: '/forgot-password',
+    element: <ForgotPasswordPage />,
+  },
+  {
+    path: '/reset-password',
+    element: <ResetPasswordPage />,
   },
   {
     path: '/',

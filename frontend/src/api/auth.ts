@@ -20,3 +20,11 @@ export function logout(): Promise<void> {
 export function checkUsername(username: string): Promise<{ available: boolean }> {
   return api.post<{ available: boolean }>('/auth/username/check', { username })
 }
+
+export function forgotPassword(email: string): Promise<{ message: string; email_sent: boolean; dev_reset_url?: string | null }> {
+  return api.post('/auth/forgot-password', { email })
+}
+
+export function resetPassword(token: string, password: string, password_confirm: string): Promise<{ message: string }> {
+  return api.post('/auth/reset-password', { token, password, password_confirm })
+}

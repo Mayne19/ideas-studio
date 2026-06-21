@@ -68,6 +68,11 @@ export default function LoginPage() {
           required
           autoComplete="current-password"
         />
+        <div className="-mt-2 flex justify-end">
+          <Link to="/forgot-password" className="text-[12px] font-medium text-accent hover:underline">
+            Mot de passe oublié ?
+          </Link>
+        </div>
 
         <Button type="submit" loading={loading} className="mt-1 w-full justify-center rounded-full">
           Se connecter

@@ -144,7 +144,7 @@ function trafficTick(period: PeriodMode, value: unknown) {
   const label = String(value)
   if (period === 'day') return label
   if (period === 'year') return label.slice(0, 7)
-  if (period === 'quarter') return label
+  if (period === 'quarter' || period === 'semester') return label
   return label.includes('-') ? label.slice(5) : label
 }
 
@@ -262,7 +262,7 @@ export default function TrafficPage() {
   const channels = ['Organic Search', 'Direct', 'Social', 'Referral'].map((channel) => ({
     channel,
     visits: sources.filter((source) => source.channel === channel).reduce((sum, source) => sum + source.visits, 0),
-  })).filter((channel) => channel.visits > 0)
+  })).filter((channel) => channel.visits > 0).sort((a, b) => b.visits - a.visits)
   const topChannel = channels[0]
 
   if (loadStatus === 'loading') return <LoadingState />
@@ -279,9 +279,23 @@ export default function TrafficPage() {
     downloadJson(`ideas-studio-traffic-${period.startDate}-${period.endDate}.json`, {
       project_id: projectId,
       period,
+      exported_at: new Date().toISOString(),
       summary: summaryData,
+      cards: {
+        total_views: summaryData.total_views,
+        unique_pages: uniquePages,
+        counted_sources: visits,
+        top_source: topSource ?? null,
+        top_channel: topChannel ?? null,
+        top_country: topCountry ?? null,
+        mobile_share: mobileShare,
+      },
+      trend: channelTrend,
       sources,
       channels,
+      pages: summaryData.top_pages,
+      countries: summaryData.countries,
+      devices: summaryData.devices,
     })
   }
 
@@ -290,16 +304,39 @@ export default function TrafficPage() {
       {
         title: 'Synthèse',
         rows: [
+          ['Projet', projectId ?? '—'],
+          ['Période', `${period.startDate} → ${period.endDate}`],
           ['Pages vues', formatMetric(summaryData.total_views)],
           ['Pages uniques', uniquePages !== null ? formatMetric(uniquePages) : '—'],
           ['Source principale', topSource?.label ?? '—'],
+          ['Famille de trafic principale', topChannel?.channel ?? '—'],
           ['Pays principal', topCountry ? getCountryDisplay(topCountry.country).label : '—'],
           ['Part mobile', `${mobileShare}%`],
         ],
       },
       {
+        title: 'Évolution par canal',
+        rows: channelTrend.map((point) => [
+          point.date,
+          `Direct ${formatMetric(point.direct)} · Google ${formatMetric(point.organic)} · Social ${formatMetric(point.social)} · Referral ${formatMetric(point.referral)}`,
+        ]),
+      },
+      {
         title: 'Sources',
         rows: sources.slice(0, 10).map((source) => [source.label, `${formatMetric(source.visits)} vues · ${source.share}%`]),
+      },
+      {
+        title: 'Pages d’entrée',
+        rows: summaryData.top_pages.length
+          ? summaryData.top_pages.slice(0, 10).map((page) => [entryPageLabel(page.path), `${formatMetric(page.views)} vues`])
+          : [['Aucune page d’entrée', '—']],
+      },
+      {
+        title: 'Pays et appareils',
+        rows: [
+          ...summaryData.countries.slice(0, 8).map((country) => [getCountryDisplay(country.country).label, `${formatMetric(country.views)} vues`] as [string, string]),
+          ...summaryData.devices.slice(0, 5).map((device) => [getDeviceLabel(device.device), `${formatMetric(device.views)} vues`] as [string, string]),
+        ],
       },
     ])
   }
@@ -373,7 +410,7 @@ export default function TrafficPage() {
                 tone="accent"
               />
               <StatCard icon={<BarSmallIcon />} value={formatMetric(displayData.top_pages.length)} label="Pages d’entrée" variation={null} tone="warning" />
-              <StatCard icon={<ExternalLink size={18} />} value={topChannel?.channel ?? '—'} label="Canal principal" variation={null} tone="violet" />
+              <StatCard icon={<ExternalLink size={18} />} value={topChannel?.channel ?? '—'} label="Famille de trafic" variation={null} tone="violet" />
             </div>
           </div>
 

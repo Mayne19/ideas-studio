@@ -32,9 +32,10 @@ function cleanRevalidateForm(data: ConnectInfo) {
   const publicSiteUrl = data.public_site_url ?? ''
   const endpoint = data.revalidate_url ?? ''
   const derived = deriveRevalidateUrl(publicSiteUrl)
+  const safeEndpoint = looksLikeEmail(endpoint) ? '' : endpoint
   return {
     public_site_url: publicSiteUrl,
-    revalidate_url: !endpoint || looksLikeEmail(endpoint) ? derived : endpoint,
+    revalidate_url: safeEndpoint || derived,
     revalidate_secret: '',
   }
 }
@@ -144,10 +145,13 @@ export default function ProjectIntegrationPage() {
     if (!projectId) return
     setSavingRevalidate(true)
     setRevalidateMessage('')
+    const safeEndpoint = looksLikeEmail(revalidateForm.revalidate_url)
+      ? deriveRevalidateUrl(revalidateForm.public_site_url)
+      : revalidateForm.revalidate_url
     try {
       await updateProject(projectId, {
         public_site_url: revalidateForm.public_site_url || null,
-        revalidate_url: revalidateForm.revalidate_url || null,
+        revalidate_url: safeEndpoint || null,
         revalidate_secret: revalidateForm.revalidate_secret || undefined,
       })
       const data = await getConnectInfo(projectId)
@@ -379,10 +383,21 @@ export default function ProjectIntegrationPage() {
               <span className="text-[12px] font-medium text-secondary">Endpoint revalidate</span>
               <input
                 value={revalidateForm.revalidate_url}
-                onChange={(event) => setRevalidateForm((form) => ({ ...form, revalidate_url: event.target.value }))}
+                onChange={(event) => {
+                  const value = event.target.value
+                  setRevalidateForm((form) => ({
+                    ...form,
+                    revalidate_url: looksLikeEmail(value) ? deriveRevalidateUrl(form.public_site_url) : value,
+                  }))
+                }}
                 placeholder="https://www.votresite.com/api/ideas-studio/revalidate"
                 className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
               />
+              {!revalidateForm.revalidate_url && (
+                <span className="text-[11px] text-tertiary">
+                  Renseignez l'URL du site public pour générer l'endpoint. Un email ne peut pas servir d'endpoint serveur.
+                </span>
+              )}
             </label>
           </div>
           <label className="flex flex-col gap-1.5">

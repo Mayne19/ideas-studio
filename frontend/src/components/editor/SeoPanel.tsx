@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { AlertCircle, AlertTriangle, Info, RefreshCw, CheckCircle, XCircle, MinusCircle, HelpCircle } from 'lucide-react'
 import { analyzeArticle, readyCheck, runSeoExpertReview } from '@/api/seo'
 import { ApiError } from '@/api/client'
-import type { SeoAnalysis, SeoIssue, ReadyCheck, EditorArticle, SeoExpertIssue, SeoExpertReview } from '@/types'
+import type { AnalysisBrief, SeoAnalysis, SeoIssue, ReadyCheck, EditorArticle, SeoExpertIssue, SeoExpertReview } from '@/types'
 import Button from '@/components/ui/Button'
 import BriefPanel from './BriefPanel'
 import GenerationReportPanel from './GenerationReportPanel'
@@ -71,6 +71,76 @@ function ScoreRing({ label, score }: { label: string; score: number | null }) {
         </text>
       </svg>
       <span className="text-[11px] font-semibold text-secondary">{label}</span>
+    </div>
+  )
+}
+
+function finiteScore(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function scoreTone(score: number | null) {
+  if (score === null) return 'bg-[#f0f0f2] text-tertiary'
+  if (score >= 85) return 'bg-success/10 text-[#16723a]'
+  if (score >= 65) return 'bg-warning/12 text-[#a35b00]'
+  return 'bg-danger/10 text-danger'
+}
+
+function scoreFromReport(report: unknown, keys: string[]) {
+  if (!report || typeof report !== 'object') return null
+  const data = report as Record<string, unknown>
+  for (const key of keys) {
+    const score = finiteScore(data[key])
+    if (score !== null) return score
+  }
+  return null
+}
+
+function ScoreSummary({
+  article,
+  brief,
+  expertReview,
+  onSelect,
+  selected,
+}: {
+  article: EditorArticle
+  brief: AnalysisBrief | SeoAnalysis | null
+  expertReview: SeoExpertReview | null
+  onSelect: (label: string) => void
+  selected: string
+}) {
+  const rows = [
+    { label: 'Global', value: finiteScore(article.global_score ?? expertReview?.score_global), detail: article.global_score_valid === false ? 'Score global incomplet : au moins un contrôle requis manque.' : 'Score global utilisé pour la validation finale.' },
+    { label: 'SEO', value: finiteScore(brief?.seo_score ?? article.seo_score ?? expertReview?.seo_score), detail: 'Balises, mot-clé, structure Hn, slug et densité.' },
+    { label: 'GEO', value: scoreFromReport(article.geo_optimization_json, ['geo_score', 'score']), detail: 'Optimisation des réponses IA, formats extractibles et clarté sémantique.' },
+    { label: 'Orig.', value: scoreFromReport(article.originality_report_json, ['heuristic_score', 'score']), detail: 'Originalité heuristique et risque de contenu trop générique.' },
+    { label: 'Qualité', value: finiteScore(brief?.quality_score ?? article.quality_score), detail: 'Structure éditoriale, longueur, introduction, conclusion et contenu actionnable.' },
+    { label: 'Lisibilité', value: finiteScore(brief?.readability_score ?? article.readability_score ?? expertReview?.readability_score), detail: 'Phrases, paragraphes, rythme et densité de sections.' },
+    { label: 'EEAT', value: finiteScore(brief?.eeat_score ?? article.eeat_score ?? expertReview?.eeat_score), detail: 'Sources, exemples, crédibilité et preuves éditoriales.' },
+  ]
+  const current = rows.find((row) => row.label === selected) ?? rows[0]
+
+  return (
+    <div className="rounded-[12px] border border-border bg-surface p-3">
+      <p className="text-[12px] font-semibold text-primary">Synthèse des scores</p>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {rows.map((row) => (
+          <button
+            key={row.label}
+            type="button"
+            onClick={() => onSelect(row.label)}
+            className={`rounded-[10px] px-2.5 py-2 text-left transition-colors ${selected === row.label ? 'bg-surface-soft ring-1 ring-accent/25' : 'hover:bg-surface-soft'}`}
+          >
+            <span className="block text-[10px] font-medium uppercase tracking-wide text-tertiary">{row.label}</span>
+            <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${scoreTone(row.value)}`}>
+              {row.value === null ? '—' : Math.round(row.value)}
+            </span>
+          </button>
+        ))}
+      </div>
+      <div className="mt-3 rounded-[10px] bg-[#f9f9fb] px-3 py-2 text-[11px] leading-snug text-secondary">
+        <span className="font-semibold text-primary">{current.label}</span> : {current.detail}
+      </div>
     </div>
   )
 }
@@ -190,6 +260,7 @@ export default function SeoPanel({
   const [error, setError] = useState('')
   const [expertError, setExpertError] = useState('')
   const [expertSuccess, setExpertSuccess] = useState('')
+  const [selectedScore, setSelectedScore] = useState('Global')
   const expertReview = normalizeExpertReview(expertReviewOverride ?? article.seo_review_json ?? null)
 
   const brief = analysis ?? article.latest_analysis
@@ -245,6 +316,14 @@ export default function SeoPanel({
 
   return (
     <div className="flex flex-col gap-4">
+      <ScoreSummary
+        article={article}
+        brief={brief}
+        expertReview={expertReview}
+        selected={selectedScore}
+        onSelect={setSelectedScore}
+      />
+
       {brief && (
         <div className="grid grid-cols-2 gap-3">
           <ScoreRing label="SEO" score={brief.seo_score} />

@@ -28,6 +28,7 @@ from app.models import article_comment  # noqa: F401
 from app.models import kanban_column  # noqa: F401
 from app.models import agent_assignment  # noqa: F401
 from app.models import ai_usage_log  # noqa: F401
+from app.models import password_reset_token  # noqa: F401
 
 config = context.config
 database_url = settings.database_url.replace("%", "%%")

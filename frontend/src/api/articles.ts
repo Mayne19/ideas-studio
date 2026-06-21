@@ -77,6 +77,10 @@ export function archiveArticle(_projectId: string, articleId: string): Promise<A
   return api.post<Article>(`/articles/${articleId}/archive`)
 }
 
+export function unarchiveArticle(_projectId: string, articleId: string): Promise<Article> {
+  return api.post<Article>(`/articles/${articleId}/unarchive`)
+}
+
 export function scheduleArticle(_projectId: string, articleId: string, scheduledAt: string): Promise<Article> {
   return api.post<Article>(`/articles/${articleId}/schedule`, { scheduled_at: scheduledAt })
 }
@@ -122,4 +126,3 @@ export type GenerateArticleResponse = {
 export function generateArticle(projectId: string, payload: GenerateArticleRequest = {}): Promise<GenerateArticleResponse> {
   return api.post<GenerateArticleResponse>(`/projects/${projectId}/articles/generate`, payload)
 }
-

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Plus, FileText, Pencil, Calendar, Trash2, Sparkles, Zap, Loader2, CheckCircle, AlertTriangle } from 'lucide-react'
-import { listArticles, createArticle, publishArticle, unpublishArticle, markReadyArticle, archiveArticle, scheduleArticle, analyzeSeoArticle, deleteArticle, generateArticle } from '@/api/articles'
+import { listArticles, createArticle, publishArticle, unpublishArticle, markReadyArticle, archiveArticle, unarchiveArticle, scheduleArticle, analyzeSeoArticle, deleteArticle, generateArticle } from '@/api/articles'
 import type { CreateArticlePayload, GenerateArticleRequest } from '@/api/articles'
 import { listCategories } from '@/api/categories'
 import type { Article, ArticleStatus, Category } from '@/types'
@@ -84,10 +84,10 @@ function ArticleRow({
   const allActions = [
     ...actions,
     { key: 'analyze-seo', label: 'Analyser SEO', variant: 'secondary' as const },
-    ...(!['published', 'archived', 'scheduled'].includes(article.status)
+    ...(!actions.some((a) => a.key === 'schedule') && !['published', 'archived', 'scheduled'].includes(article.status)
       ? [{ key: 'schedule', label: 'Programmer', variant: 'secondary' as const }]
       : []),
-    { key: 'delete', label: 'Supprimer', variant: 'danger' as const },
+    ...(!actions.some((a) => a.key === 'delete') ? [{ key: 'delete', label: 'Supprimer', variant: 'danger' as const }] : []),
   ]
 
   return (
@@ -305,8 +305,10 @@ export default function ArticlesPage() {
       if (key === 'publish') updated = await publishArticle(projectId, article.id)
       else if (key === 'unpublish') updated = await unpublishArticle(projectId, article.id)
       else if (key === 'mark-ready') updated = await markReadyArticle(projectId, article.id)
+      else if (key === 'unschedule') updated = await markReadyArticle(projectId, article.id)
       else if (key === 'archive') updated = await archiveArticle(projectId, article.id)
-      else if (key === 'analyze-seo') { await analyzeSeoArticle(projectId, article.id); return }
+      else if (key === 'unarchive') updated = await unarchiveArticle(projectId, article.id)
+      else if (key === 'analyze-seo') { await analyzeSeoArticle(projectId, article.id); setTick((t) => t + 1); return }
       if (updated) {
         setArticles((prev) => prev.map((a) => a.id === updated!.id ? updated! : a))
       }

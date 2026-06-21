@@ -1,13 +1,15 @@
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CalendarDays, Download } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import { cn } from '@/utils/cn'
-import { currentPeriod, isFuturePeriod, shiftPeriod, type PeriodMode, type PeriodRange } from '@/utils/periodNavigator'
+import { customPeriod, currentPeriod, isFuturePeriod, shiftPeriod, type PeriodMode, type PeriodRange } from '@/utils/periodNavigator'
 
 const MODES: Array<{ value: PeriodMode; label: string }> = [
-  { value: 'day', label: 'Aujourd’hui' },
-  { value: 'week', label: 'Cette semaine' },
-  { value: 'month', label: 'Ce mois-ci' },
-  { value: 'year', label: 'Cette année' },
+  { value: 'day', label: '1 jour' },
+  { value: 'week', label: '1 semaine' },
+  { value: 'month', label: '1 mois' },
+  { value: 'quarter', label: '3 mois' },
+  { value: 'semester', label: '6 mois' },
+  { value: 'year', label: '1 an' },
 ]
 
 type PeriodNavigatorProps = {
@@ -61,6 +63,25 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
           </button>
         ))}
       </div>
+      <div className="flex flex-wrap items-center gap-1 rounded-[12px] bg-surface-soft p-1">
+        <span className="flex h-8 w-8 items-center justify-center text-tertiary">
+          <CalendarDays size={14} />
+        </span>
+        <input
+          type="date"
+          value={value.startDate}
+          onChange={(event) => onChange(customPeriod(event.target.value, value.endDate))}
+          className="h-8 rounded-[9px] bg-surface px-2 text-[12px] text-secondary outline-none"
+          aria-label="Date de début"
+        />
+        <input
+          type="date"
+          value={value.endDate}
+          onChange={(event) => onChange(customPeriod(value.startDate, event.target.value))}
+          className="h-8 rounded-[9px] bg-surface px-2 text-[12px] text-secondary outline-none"
+          aria-label="Date de fin"
+        />
+      </div>
     </div>
   )
 }
@@ -74,10 +95,10 @@ export function ExportButtons({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <Button type="button" size="sm" variant="secondary" onClick={onJson}>
+      <Button type="button" size="sm" variant="secondary" icon={<Download size={13} />} onClick={onJson}>
         Export JSON
       </Button>
-      <Button type="button" size="sm" variant="secondary" onClick={onPdf}>
+      <Button type="button" size="sm" variant="secondary" icon={<Download size={13} />} onClick={onPdf}>
         Export PDF
       </Button>
     </div>

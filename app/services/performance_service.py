@@ -46,10 +46,20 @@ def _explicit_period_window(
         granularity = "day"
     elif period_type == "month":
         granularity = "day"
-    elif period_type == "quarter":
+    elif period_type in {"quarter", "semester"}:
         granularity = "week"
     elif period_type == "year":
         granularity = "month"
+    elif period_type == "custom":
+        days = max(1, (end.date() - start.date()).days)
+        if days <= 1:
+            granularity = "hour"
+        elif days <= 93:
+            granularity = "day"
+        elif days <= 366:
+            granularity = "week"
+        else:
+            granularity = "month"
     return start, end, granularity
 
 

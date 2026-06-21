@@ -33,18 +33,34 @@ export const STATUS_LABELS: Record<ArticleStatus, string> = {
 export function getAvailableActions(status: ArticleStatus): ArticleAction[] {
   const actions: ArticleAction[] = []
 
-  if (status === 'ready_to_publish' || status === 'draft_ready' || status === 'scheduled') {
-    actions.push({ key: 'publish', label: 'Publier', variant: 'primary' })
-  }
-  if (status === 'published') {
-    actions.push({ key: 'unpublish', label: 'Dépublier', variant: 'secondary' })
-  }
-  if (!['published', 'ready_to_publish', 'archived'].includes(status)) {
-    actions.push({ key: 'mark-ready', label: 'Marquer prêt', variant: 'secondary' })
-  }
-  if (status !== 'archived') {
-    actions.push({ key: 'archive', label: 'Archiver', variant: 'danger' })
+  if (status === 'archived') {
+    actions.push({ key: 'unarchive', label: 'Restaurer brouillon', variant: 'secondary' })
+    actions.push({ key: 'delete', label: 'Supprimer', variant: 'danger' })
+    return actions
   }
 
+  if (status === 'published') {
+    actions.push({ key: 'unpublish', label: 'Dépublier', variant: 'secondary' })
+    actions.push({ key: 'archive', label: 'Archiver', variant: 'danger' })
+    return actions
+  }
+
+  if (status === 'scheduled') {
+    actions.push({ key: 'publish', label: 'Publier maintenant', variant: 'primary' })
+    actions.push({ key: 'unschedule', label: 'Repasser en prêt', variant: 'secondary' })
+    actions.push({ key: 'archive', label: 'Archiver', variant: 'danger' })
+    return actions
+  }
+
+  if (status === 'ready_to_publish' || status === 'draft_ready') {
+    actions.push({ key: 'publish', label: 'Publier', variant: 'primary' })
+    actions.push({ key: 'schedule', label: 'Programmer', variant: 'secondary' })
+  }
+
+  if (!['ready_to_publish'].includes(status)) {
+    actions.push({ key: 'mark-ready', label: 'Envoyer en validation', variant: 'secondary' })
+  }
+
+  actions.push({ key: 'archive', label: 'Archiver', variant: 'danger' })
   return actions
 }
