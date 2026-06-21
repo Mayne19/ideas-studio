@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom'
 import { updateProject } from '@/api/projects'
 import type { UpdateProjectPayload } from '@/api/projects'
 import { useProject } from '@/context/ProjectContext'
-import { useAuth } from '@/context/AuthContext'
 import FormCard from '@/components/ui/FormCard'
 import Input from '@/components/ui/Input'
 import Textarea from '@/components/ui/Textarea'
@@ -20,13 +19,31 @@ const LANGUAGE_OPTIONS = [
   { value: 'it', label: 'Italien' },
 ]
 
-const TONE_OPTIONS = [
+const COUNTRY_OPTIONS = [
   { value: '', label: 'Non défini' },
-  { value: 'professionnel', label: 'Professionnel' },
-  { value: 'décontracté', label: 'Décontracté' },
-  { value: 'éducatif', label: 'Éducatif' },
-  { value: 'expert', label: 'Expert' },
-  { value: 'conversationnel', label: 'Conversationnel' },
+  { value: 'France', label: 'France' },
+  { value: 'Belgique', label: 'Belgique' },
+  { value: 'Suisse', label: 'Suisse' },
+  { value: 'Canada', label: 'Canada francophone' },
+  { value: 'International', label: 'International' },
+]
+
+const TIMEZONE_OPTIONS = [
+  { value: 'Europe/Paris', label: 'Europe/Paris' },
+  { value: 'Europe/Brussels', label: 'Europe/Brussels' },
+  { value: 'Europe/Zurich', label: 'Europe/Zurich' },
+  { value: 'America/Montreal', label: 'America/Montreal' },
+  { value: 'UTC', label: 'UTC' },
+]
+
+const INDUSTRY_OPTIONS = [
+  { value: '', label: 'Non défini' },
+  { value: 'SaaS B2B', label: 'SaaS B2B' },
+  { value: 'E-commerce', label: 'E-commerce' },
+  { value: 'Media / publication', label: 'Média / publication' },
+  { value: 'Agence', label: 'Agence' },
+  { value: 'Formation', label: 'Formation' },
+  { value: 'Services professionnels', label: 'Services professionnels' },
 ]
 
 type FormState = {
@@ -38,8 +55,6 @@ type FormState = {
   public_site_url: string
   description: string
   industry: string
-  audience: string
-  tone: string
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -47,7 +62,6 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 export default function ProjectSettingsPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const { project, loading, refetch } = useProject()
-  const { user } = useAuth()
   const [form, setForm] = useState<FormState>({
     name: '',
     domain: '',
@@ -57,8 +71,6 @@ export default function ProjectSettingsPage() {
     public_site_url: '',
     description: '',
     industry: '',
-    audience: '',
-    tone: '',
   })
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [errorMsg, setErrorMsg] = useState('')
@@ -74,8 +86,6 @@ export default function ProjectSettingsPage() {
       public_site_url: project.public_site_url ?? '',
       description: project.description ?? '',
       industry: project.industry ?? '',
-      audience: project.audience ?? '',
-      tone: project.tone ?? '',
     }
     Promise.resolve().then(() => setForm(values))
   }, [project])
@@ -102,8 +112,6 @@ export default function ProjectSettingsPage() {
         public_site_url: form.public_site_url.trim() || null,
         description: form.description.trim() || undefined,
         industry: form.industry.trim() || undefined,
-        audience: form.audience.trim() || undefined,
-        tone: form.tone || undefined,
       }
       await updateProject(projectId, payload)
       setSaveStatus('saved')
@@ -116,10 +124,6 @@ export default function ProjectSettingsPage() {
   }
 
   if (loading) return <LoadingState />
-
-  const ownerLabel = project?.owner_id === user?.id && user
-    ? `${user.name} · ${user.email}`
-    : project?.owner_id ?? ''
 
   return (
     <form onSubmit={handleSave} className="flex flex-col gap-5">
@@ -161,18 +165,17 @@ export default function ProjectSettingsPage() {
             onChange={set('language')}
           />
           <div className="grid gap-4 md:grid-cols-2">
-            <Input
+            <Select
               label="Pays cible"
+              options={COUNTRY_OPTIONS}
               value={form.country_target}
               onChange={set('country_target')}
-              placeholder="France"
-              hint="Pays principal visé pour le SEO"
             />
-            <Input
+            <Select
               label="Fuseau horaire"
+              options={TIMEZONE_OPTIONS}
               value={form.timezone}
               onChange={set('timezone')}
-              placeholder="Europe/Paris"
             />
           </div>
           <Input
@@ -182,11 +185,11 @@ export default function ProjectSettingsPage() {
             placeholder="https://www.exemple.fr"
             hint={`Connexion site : ${project?.status === 'connected' ? 'connecté' : 'non connecté'}`}
           />
-          <Input
+          <Select
             label="Secteur / niche"
+            options={INDUSTRY_OPTIONS}
             value={form.industry}
             onChange={set('industry')}
-            placeholder="SaaS B2B, média tech, e-commerce..."
           />
           <Textarea
             label="Description courte du projet"
@@ -194,33 +197,6 @@ export default function ProjectSettingsPage() {
             onChange={set('description')}
             placeholder="Décrivez ce que publie le site, pour qui, et pourquoi."
             rows={3}
-          />
-          <Input
-            label="Propriétaire du projet"
-            value={ownerLabel}
-            readOnly
-            className="text-tertiary"
-          />
-        </div>
-      </FormCard>
-
-      <FormCard
-        title="Identité éditoriale"
-        description="Décrivez votre audience et le ton de votre contenu pour guider l'IA."
-      >
-        <div className="flex flex-col gap-4">
-          <Textarea
-            label="Audience cible"
-            value={form.audience}
-            onChange={set('audience')}
-            placeholder="Développeurs web, indépendants, petites agences..."
-            rows={3}
-          />
-          <Select
-            label="Ton éditorial"
-            options={TONE_OPTIONS}
-            value={form.tone}
-            onChange={set('tone')}
           />
         </div>
       </FormCard>

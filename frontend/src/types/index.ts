@@ -191,6 +191,8 @@ export type Article = {
   created_at: string
   updated_at: string
   // Extended fields
+  generation_report_json: Record<string, unknown> | null
+  human_validated_at: string | null
   estimated_cost_json: Record<string, unknown> | null
   actual_cost_json: Record<string, unknown> | null
   geo_optimization_json: Record<string, unknown> | null

@@ -1,5 +1,5 @@
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app.models.article import Article
@@ -29,8 +29,28 @@ def _period_window(period: str) -> tuple[datetime, datetime, str]:
     return start, now, "month"
 
 
-def _parse_period(period: str) -> datetime:
-    return _period_window(period)[0]
+def _explicit_period_window(
+    period: str,
+    period_type: str | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> tuple[datetime, datetime, str]:
+    if not start_date or not end_date:
+        return _period_window(period)
+    start = datetime.combine(start_date, time.min, tzinfo=timezone.utc)
+    end = datetime.combine(end_date + timedelta(days=1), time.min, tzinfo=timezone.utc)
+    granularity = "day"
+    if period_type == "day":
+        granularity = "hour"
+    elif period_type == "week":
+        granularity = "day"
+    elif period_type == "month":
+        granularity = "day"
+    elif period_type == "quarter":
+        granularity = "week"
+    elif period_type == "year":
+        granularity = "month"
+    return start, end, granularity
 
 
 def _bucket_key(value: datetime, granularity: str) -> str:
@@ -84,8 +104,15 @@ def _source_channel(referrer: str | None) -> str:
     return "referral"
 
 
-def get_project_traffic_summary(db: Session, project_id: str, period: str = "30d") -> dict:
-    since, until, granularity = _period_window(period)
+def get_project_traffic_summary(
+    db: Session,
+    project_id: str,
+    period: str = "30d",
+    period_type: str | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> dict:
+    since, until, granularity = _explicit_period_window(period, period_type, start_date, end_date)
     project = db.query(Project).filter(Project.id == project_id).first()
 
     events = (
@@ -210,10 +237,19 @@ def get_article_performance(db: Session, article_id: str, period: str = "30d") -
     }
 
 
-def get_all_articles_performance(db: Session, project_id: str, period: str = "30d") -> list[dict]:
-    since = _parse_period(period)
+def get_all_articles_performance(
+    db: Session,
+    project_id: str,
+    period: str = "30d",
+    period_type: str | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> list[dict]:
+    since, until, _granularity = _explicit_period_window(period, period_type, start_date, end_date)
     # Previous period for variation calculation
-    if period in {"today", "yesterday", "1d"}:
+    if start_date and end_date:
+        period_days = max(1, (until.date() - since.date()).days)
+    elif period in {"today", "yesterday", "1d"}:
         period_days = 1
     else:
         period_days = int(period.replace("d", "")) if period.endswith("d") else 30
@@ -230,6 +266,7 @@ def get_all_articles_performance(db: Session, project_id: str, period: str = "30
         .filter(
             TrafficEvent.project_id == project_id,
             TrafficEvent.created_at >= prev_since,
+            TrafficEvent.created_at < until,
         )
         .all()
     )
@@ -237,7 +274,7 @@ def get_all_articles_performance(db: Session, project_id: str, period: str = "30
     results = []
     for article in articles:
         slug = article.slug or ""
-        current_matching = [e for e in all_events if slug and (slug in (e.path or e.url)) and e.created_at >= since]
+        current_matching = [e for e in all_events if slug and (slug in (e.path or e.url)) and since <= e.created_at < until]
         prev_matching = [e for e in all_events if slug and (slug in (e.path or e.url)) and e.created_at < since]
         current_views = len(current_matching)
         prev_views = len(prev_matching)

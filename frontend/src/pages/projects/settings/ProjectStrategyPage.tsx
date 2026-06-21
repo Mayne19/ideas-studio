@@ -3,8 +3,8 @@ import { useParams } from 'react-router-dom'
 import { Save, Sparkles } from 'lucide-react'
 import { getProject, updateProject } from '@/api/projects'
 import type { Project } from '@/types'
-import Input from '@/components/ui/Input'
 import Textarea from '@/components/ui/Textarea'
+import Select from '@/components/ui/Select'
 import Button from '@/components/ui/Button'
 import LoadingState from '@/components/ui/LoadingState'
 import EditorialSetupAssistant from '@/components/editorial/EditorialSetupAssistant'
@@ -24,6 +24,50 @@ const textFields = [
   ['external_linking_guidelines', 'Maillage externe', 'Sources externes autorisées, nofollow, domaines à éviter.'],
   ['style_examples', 'Exemples de style', 'Collez ici un extrait représentatif du ton attendu.'],
 ] as const
+
+const TONE_OPTIONS = [
+  { value: '', label: 'Non défini' },
+  { value: 'Professionnel clair', label: 'Professionnel clair' },
+  { value: 'Expert accessible', label: 'Expert accessible' },
+  { value: 'Pédagogique', label: 'Pédagogique' },
+  { value: 'Direct et opérationnel', label: 'Direct et opérationnel' },
+  { value: 'Éditorial premium', label: 'Éditorial premium' },
+]
+
+const READER_LEVEL_OPTIONS = [
+  { value: '', label: 'Non défini' },
+  { value: 'Découverte', label: 'Découverte' },
+  { value: 'Pratique', label: 'Pratique' },
+  { value: 'Intermédiaire', label: 'Intermédiaire' },
+  { value: 'Expert opérationnel', label: 'Expert opérationnel' },
+  { value: 'Décideur', label: 'Décideur' },
+]
+
+const WRITING_STYLE_OPTIONS = [
+  { value: '', label: 'Non défini' },
+  { value: 'Guide pratique', label: 'Guide pratique' },
+  { value: 'Analyse experte', label: 'Analyse experte' },
+  { value: 'Comparatif structuré', label: 'Comparatif structuré' },
+  { value: 'Tutoriel étape par étape', label: 'Tutoriel étape par étape' },
+  { value: 'Article éditorial', label: 'Article éditorial' },
+]
+
+const LENGTH_OPTIONS = [
+  { value: '', label: 'Adaptatif' },
+  { value: '600-900 mots', label: '600-900 mots' },
+  { value: '900-1200 mots', label: '900-1200 mots' },
+  { value: '1200-1600 mots', label: '1200-1600 mots' },
+  { value: '1600-2200 mots', label: '1600-2200 mots' },
+  { value: '2200+ mots si la SERP le justifie', label: '2200+ mots si la SERP le justifie' },
+]
+
+const TECHNICAL_LEVEL_OPTIONS = [
+  { value: '', label: 'Non défini' },
+  { value: 'Accessible sans prérequis', label: 'Accessible sans prérequis' },
+  { value: 'Exemples concrets modérés', label: 'Exemples concrets modérés' },
+  { value: 'Technique assumé', label: 'Technique assumé' },
+  { value: 'Expert avec détails avancés', label: 'Expert avec détails avancés' },
+]
 
 type StrategyForm = {
   audience: string
@@ -177,38 +221,39 @@ export default function ProjectStrategyPage() {
           rows={3}
           hint="Décrit le lecteur idéal de votre blog."
         />
-        <Input
+        <Select
           label="Ton éditorial"
+          options={TONE_OPTIONS}
           value={form.tone}
           onChange={(e) => setForm((f) => ({ ...f, tone: e.target.value }))}
-          placeholder="Ex : Expert mais accessible, pédagogique, sans jargon excessif."
           hint="Style et voix qui caractérisent vos articles."
         />
         <div className="grid gap-4 md:grid-cols-3">
-          <Input
+          <Select
             label="Niveau du lecteur"
+            options={READER_LEVEL_OPTIONS}
             value={form.reader_level}
             onChange={(e) => setForm((f) => ({ ...f, reader_level: e.target.value }))}
-            placeholder="Débutant, intermédiaire, expert"
           />
-          <Input
+          <Select
             label="Style d’écriture"
+            options={WRITING_STYLE_OPTIONS}
             value={form.writing_style}
             onChange={(e) => setForm((f) => ({ ...f, writing_style: e.target.value }))}
-            placeholder="Pédagogique, direct, analytique..."
           />
-          <Input
+          <Select
             label="Longueur moyenne cible"
+            options={LENGTH_OPTIONS}
             value={form.average_target_length}
             onChange={(e) => setForm((f) => ({ ...f, average_target_length: e.target.value }))}
-            placeholder="1200-1800 mots"
           />
         </div>
-        <Input
+        <Select
           label="Niveau de technicité"
+          options={TECHNICAL_LEVEL_OPTIONS}
           value={form.technical_level}
           onChange={(e) => setForm((f) => ({ ...f, technical_level: e.target.value }))}
-          placeholder="Accessible avec exemples techniques modérés"
+          hint="Ces paramètres sont transmis au contexte de génération et contraignent le brief rédactionnel."
         />
       </div>
 

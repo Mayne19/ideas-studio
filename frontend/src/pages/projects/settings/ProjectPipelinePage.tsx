@@ -136,6 +136,19 @@ export default function ProjectPipelinePage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="rounded-[16px] bg-surface p-4">
+        <p className="text-[13px] font-medium text-primary">Flux éditorial automatique</p>
+        <p className="mt-1 text-[12px] leading-relaxed text-secondary">
+          Les catégories et leurs fréquences alimentent la génération d'idées, puis la validation humaine déclenche la production,
+          la rédaction, la relecture et la planification. Ideas Studio ne publie pas automatiquement sans validation humaine.
+        </p>
+        <div className="mt-3 grid gap-2 text-[11px] text-secondary sm:grid-cols-5">
+          {['Catégories', 'Idées', 'Validation', 'Production', 'Publication'].map((step) => (
+            <span key={step} className="rounded-[10px] bg-surface-soft px-3 py-2 text-center font-medium">{step}</span>
+          ))}
+        </div>
+      </div>
+
       {/* Enable toggle */}
       <div className="rounded-[16px] bg-surface p-4">
         <p className="text-[13px] font-medium text-primary">Volume éditorial</p>
@@ -215,7 +228,7 @@ export default function ProjectPipelinePage() {
                 })}
               </div>
               {activeDays.length === 0 && (
-                <p className="mt-1 text-[11px] text-tertiary">Aucun jour sélectionné = tous les jours</p>
+                <p className="mt-1 text-[11px] text-tertiary">Aucun jour sélectionné = tous les jours actifs</p>
               )}
             </div>
 

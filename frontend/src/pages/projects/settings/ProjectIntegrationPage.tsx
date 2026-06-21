@@ -13,6 +13,32 @@ import { formatDateTime } from '@/utils/format'
 
 const API_KEY_MASK = '********'
 
+function looksLikeEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+}
+
+function deriveRevalidateUrl(publicSiteUrl: string) {
+  const raw = publicSiteUrl.trim()
+  if (!raw) return ''
+  try {
+    const url = new URL(raw.startsWith('http') ? raw : `https://${raw}`)
+    return `${url.origin}/api/ideas-studio/revalidate`
+  } catch {
+    return ''
+  }
+}
+
+function cleanRevalidateForm(data: ConnectInfo) {
+  const publicSiteUrl = data.public_site_url ?? ''
+  const endpoint = data.revalidate_url ?? ''
+  const derived = deriveRevalidateUrl(publicSiteUrl)
+  return {
+    public_site_url: publicSiteUrl,
+    revalidate_url: !endpoint || looksLikeEmail(endpoint) ? derived : endpoint,
+    revalidate_secret: '',
+  }
+}
+
 function InfoRow({
   label,
   value,
@@ -78,11 +104,7 @@ export default function ProjectIntegrationPage() {
     getConnectInfo(projectId)
       .then((data) => {
         setInfo(data)
-        setRevalidateForm({
-          public_site_url: data.public_site_url ?? '',
-          revalidate_url: data.revalidate_url ?? '',
-          revalidate_secret: '',
-        })
+        setRevalidateForm(cleanRevalidateForm(data))
         setStatus('success')
         if (quiet) {
           setRefreshState('success')
@@ -105,11 +127,7 @@ export default function ProjectIntegrationPage() {
     getConnectInfo(projectId)
       .then((data) => {
         setInfo(data)
-        setRevalidateForm({
-          public_site_url: data.public_site_url ?? '',
-          revalidate_url: data.revalidate_url ?? '',
-          revalidate_secret: '',
-        })
+        setRevalidateForm(cleanRevalidateForm(data))
         setStatus('success')
       })
       .catch(() => setStatus('error'))
@@ -134,11 +152,7 @@ export default function ProjectIntegrationPage() {
       })
       const data = await getConnectInfo(projectId)
       setInfo(data)
-      setRevalidateForm({
-        public_site_url: data.public_site_url ?? '',
-        revalidate_url: data.revalidate_url ?? '',
-        revalidate_secret: '',
-      })
+      setRevalidateForm(cleanRevalidateForm(data))
       setRevalidateMessage('Configuration sauvegardée.')
     } catch (err) {
       setRevalidateMessage(err instanceof Error ? err.message : 'Sauvegarde impossible.')
@@ -346,7 +360,17 @@ export default function ProjectIntegrationPage() {
               <span className="text-[12px] font-medium text-secondary">URL du site public</span>
               <input
                 value={revalidateForm.public_site_url}
-                onChange={(event) => setRevalidateForm((form) => ({ ...form, public_site_url: event.target.value }))}
+                onChange={(event) => {
+                  const nextSiteUrl = event.target.value
+                  setRevalidateForm((form) => {
+                    const shouldDerive = !form.revalidate_url || looksLikeEmail(form.revalidate_url) || form.revalidate_url === deriveRevalidateUrl(form.public_site_url)
+                    return {
+                      ...form,
+                      public_site_url: nextSiteUrl,
+                      revalidate_url: shouldDerive ? deriveRevalidateUrl(nextSiteUrl) : form.revalidate_url,
+                    }
+                  })
+                }}
                 placeholder="https://www.votresite.com"
                 className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
               />

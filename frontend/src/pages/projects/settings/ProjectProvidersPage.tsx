@@ -74,6 +74,7 @@ export default function ProjectProvidersPage() {
   const [testResult, setTestResult] = useState<{ id: string; status: string; message: string } | null>(null)
   const [showKeys, setShowKeys] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
 
   const loadConfigs = useCallback(async () => {
     setLoading(true)
@@ -109,6 +110,7 @@ export default function ProjectProvidersPage() {
     setEditingId(null)
     setShowForm(true)
     setTestResult(null)
+    setAdvancedOpen(providerKey === 'custom' || providerKey === 'ollama')
   }
 
   function openEdit(config: AIProviderConfig) {
@@ -125,6 +127,7 @@ export default function ProjectProvidersPage() {
     setEditingId(config.id)
     setShowForm(true)
     setTestResult(null)
+    setAdvancedOpen(config.provider === 'custom' || config.provider === 'ollama')
   }
 
   async function handleSave() {
@@ -356,6 +359,7 @@ export default function ProjectProvidersPage() {
                       model: def?.default_model ?? '',
                       base_url: def?.default_base_url ?? '',
                     })
+                    setAdvancedOpen(e.target.value === 'custom' || e.target.value === 'ollama')
                   }}
                   className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
                 >
@@ -396,7 +400,7 @@ export default function ProjectProvidersPage() {
                 </button>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] font-medium text-secondary">Modèle</label>
                 <input
@@ -407,17 +411,33 @@ export default function ProjectProvidersPage() {
                   className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
                 />
               </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-medium text-secondary">URL de base</label>
-                <input
-                  type="text"
-                  value={form.base_url}
-                  onChange={(e) => setForm({ ...form, base_url: e.target.value })}
-                  placeholder="https://api.openai.com/v1"
-                  className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
-                />
-              </div>
+              {(advancedOpen || form.provider === 'custom' || form.provider === 'ollama') && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-medium text-secondary">URL de base</label>
+                  <input
+                    type="text"
+                    value={form.base_url}
+                    onChange={(e) => setForm({ ...form, base_url: e.target.value })}
+                    placeholder="https://api.openai.com/v1"
+                    className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                  />
+                </div>
+              )}
             </div>
+            {form.provider !== 'custom' && form.provider !== 'ollama' && (
+              <button
+                type="button"
+                onClick={() => setAdvancedOpen((open) => !open)}
+                className="w-fit rounded-[8px] px-2 py-1 text-[11px] font-medium text-accent hover:bg-accent/8"
+              >
+                {advancedOpen ? 'Masquer les options avancées' : 'Afficher Base URL avancée'}
+              </button>
+            )}
+            {form.provider === 'ollama' && (
+              <div className="rounded-[12px] bg-warning/8 px-3 py-2 text-[12px] text-secondary">
+                Ollama local fonctionne sur votre machine. Sur Render, utilisez un endpoint public sécurisé ou un provider cloud.
+              </div>
+            )}
             <div className="flex items-center gap-4">
               <ToggleSwitch checked={form.is_default} onChange={(v) => setForm({ ...form, is_default: v })} label="Provider par défaut" />
               <ToggleSwitch checked={form.enabled} onChange={(v) => setForm({ ...form, enabled: v })} label="Activé" />

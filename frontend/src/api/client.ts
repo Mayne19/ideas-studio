@@ -14,22 +14,40 @@ type RequestOptions = {
   method?: string
   body?: unknown
   signal?: AbortSignal
+  timeoutMs?: number
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const token = localStorage.getItem('token')
+  const controller = new AbortController()
+  const timeoutMs = options.timeoutMs ?? 25000
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
+  if (options.signal) {
+    if (options.signal.aborted) controller.abort()
+    else options.signal.addEventListener('abort', () => controller.abort(), { once: true })
+  }
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   }
   if (token) headers['Authorization'] = `Bearer ${token}`
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: options.method ?? 'GET',
-    headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-    signal: options.signal,
-  })
+  let res: Response
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      method: options.method ?? 'GET',
+      headers,
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
+    })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new ApiError(408, 'La requête a pris trop de temps. Réessayez dans un instant.')
+    }
+    throw error
+  } finally {
+    window.clearTimeout(timeout)
+  }
 
   if (res.status === 401) {
     localStorage.removeItem('token')

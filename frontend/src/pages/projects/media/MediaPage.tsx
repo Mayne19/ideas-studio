@@ -25,11 +25,24 @@ function mediaUrl(asset: MediaAsset) {
   return raw
 }
 
+function mediaUrlCandidates(asset: MediaAsset) {
+  const values = [asset.public_url, asset.url]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => {
+      if (value.startsWith('/')) return `${API_BASE_URL}${value}`
+      if (!value.startsWith('http') && !value.startsWith('blob:')) return `${API_BASE_URL}/${value.replace(/^\/+/, '')}`
+      return value
+    })
+  return Array.from(new Set(values))
+}
+
 function MediaCard({ asset, onDelete }: { asset: MediaAsset; onDelete: () => void }) {
   const [copied, setCopied] = useState(false)
-  const [imageFailed, setImageFailed] = useState(false)
+  const [imageIndex, setImageIndex] = useState(0)
   const [imageLoaded, setImageLoaded] = useState(false)
-  const src = mediaUrl(asset)
+  const candidates = mediaUrlCandidates(asset)
+  const src = candidates[imageIndex] || mediaUrl(asset)
+  const imageFailed = asset.mime_type?.startsWith('image/') && candidates.length > 0 && imageIndex >= candidates.length
 
   async function handleCopy() {
     await navigator.clipboard.writeText(src)
@@ -52,7 +65,10 @@ function MediaCard({ asset, onDelete }: { asset: MediaAsset; onDelete: () => voi
             alt={asset.alt_text ?? ''}
             className="h-full w-full object-cover"
             onLoad={() => setImageLoaded(true)}
-            onError={() => setImageFailed(true)}
+            onError={() => {
+              setImageLoaded(false)
+              setImageIndex((index) => index + 1)
+            }}
           />
           </>
         ) : (

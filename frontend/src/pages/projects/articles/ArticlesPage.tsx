@@ -741,7 +741,7 @@ export default function ArticlesPage() {
             />
             <div className="flex flex-wrap items-center gap-4">
               <ToggleSwitch
-                checked={generateForm.include_faq ?? true}
+                checked={generateForm.include_faq ?? false}
                 onChange={(checked) => setGenerateForm((f) => ({ ...f, include_faq: checked }))}
                 label="Inclure FAQ"
               />

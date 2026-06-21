@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -20,20 +22,26 @@ router = APIRouter(tags=["performance"])
 def project_performance_summary(
     project_id: str,
     period: str = Query(default="30d", pattern=r"^(\d+d|today|yesterday)$"),
+    period_type: str | None = Query(default=None, pattern=r"^(day|week|month|quarter|year)$"),
+    start_date: date | None = None,
+    end_date: date | None = None,
     db: Session = Depends(get_db),
     member: ProjectMember = Depends(get_project_member),
 ):
-    return get_project_traffic_summary(db, project_id, period)
+    return get_project_traffic_summary(db, project_id, period, period_type=period_type, start_date=start_date, end_date=end_date)
 
 
 @router.get("/projects/{project_id}/performance/articles", response_model=list[ArticlePerformanceBrief])
 def project_articles_performance(
     project_id: str,
     period: str = Query(default="30d", pattern=r"^(\d+d|today|yesterday)$"),
+    period_type: str | None = Query(default=None, pattern=r"^(day|week|month|quarter|year)$"),
+    start_date: date | None = None,
+    end_date: date | None = None,
     db: Session = Depends(get_db),
     member: ProjectMember = Depends(get_project_member),
 ):
-    return get_all_articles_performance(db, project_id, period)
+    return get_all_articles_performance(db, project_id, period, period_type=period_type, start_date=start_date, end_date=end_date)
 
 
 @router.get("/articles/{article_id}/performance", response_model=ArticlePerformance)

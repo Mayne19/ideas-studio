@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   FileText, Lightbulb, BarChart2, Sparkles, Globe,
   WifiOff, ArrowRight, AlertCircle, Clock, CheckCircle, PenLine,
-  Edit3, Eye, Send, Star, BookOpen, Cpu, Zap, DollarSign,
+  Edit3, Eye, Send, Star, BookOpen, Cpu, Zap, ClipboardList,
 } from 'lucide-react'
 import { useProject } from '@/context/ProjectContext'
 import { useAuth } from '@/context/AuthContext'
@@ -11,10 +11,10 @@ import { listArticles } from '@/api/articles'
 import { listCategories } from '@/api/categories'
 import { getPerformanceSummary } from '@/api/performance'
 import { listRecommendations } from '@/api/recommendations'
-import { getPipelineSettings } from '@/api/pipeline'
+import { getPipelineLogs, getPipelineSettings } from '@/api/pipeline'
 import { listAIProviders } from '@/api/aiProviders'
 import type { Article, Category, OptimizationRecommendation } from '@/types'
-import type { PipelineSettings } from '@/api/pipeline'
+import type { PipelineLog, PipelineSettings } from '@/api/pipeline'
 import type { AIProviderPublic } from '@/api/aiProviders'
 import { Card } from '@/components/ui/Card'
 import StatusBadge from '@/components/ui/StatusBadge'
@@ -116,6 +116,9 @@ type DashboardData = {
   readyCount: number
   scheduledCount: number
   failedCount: number
+  aiValidatedCount: number
+  ideasReadyForProductionCount: number
+  activeProductionCount: number
   pendingRecs: OptimizationRecommendation[]
   totalViews: number | null
   avgSeoScore: number | null
@@ -134,6 +137,28 @@ const IN_PROGRESS_STATUSES = new Set<Article['status']>([
   'scheduled',
   'update_recommended',
 ])
+
+const PRODUCTION_STATUSES = new Set<Article['status']>([
+  'outline_ready',
+  'writing_requested',
+  'writing_in_progress',
+  'draft_ready',
+  'review_needed',
+  'correction_needed',
+])
+
+function isAiGeneratedArticle(article: Article) {
+  const source = (article.proposal_source ?? '').toLowerCase()
+  return Boolean(
+    article.generation_report_json ||
+    article.workflow_run_id ||
+    article.agent_outputs_json ||
+    article.production_brief_json ||
+    source.includes('ia') ||
+    source.includes('ai') ||
+    source.includes('llm'),
+  )
+}
 
 function isFilledScore(score: number | null | undefined): score is number {
   return typeof score === 'number' && Number.isFinite(score)
@@ -234,6 +259,7 @@ export default function ProjectDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [activityModalOpen, setActivityModalOpen] = useState(false)
   const [pipeline, setPipeline] = useState<PipelineSettings | null>(null)
+  const [pipelineLogs, setPipelineLogs] = useState<PipelineLog[]>([])
   const [providers, setProviders] = useState<AIProviderPublic[]>([])
 
   useEffect(() => {
@@ -244,9 +270,11 @@ export default function ProjectDashboardPage() {
       getPerformanceSummary(projectId, '30d'),
       listCategories(projectId),
       getPipelineSettings(projectId).catch(() => null),
+      getPipelineLogs(projectId, 1).catch(() => []),
       listAIProviders(projectId).catch(() => []),
-    ]).then(([articles, recs, perf, cats, pipelineResult, providersResult]) => {
+    ]).then(([articles, recs, perf, cats, pipelineResult, logsResult, providersResult]) => {
       if (pipelineResult.status === 'fulfilled') setPipeline(pipelineResult.value)
+      if (logsResult.status === 'fulfilled') setPipelineLogs(logsResult.value)
       if (providersResult.status === 'fulfilled') setProviders(providersResult.value)
       const allArticles =
         articles.status === 'fulfilled'
@@ -269,6 +297,13 @@ export default function ProjectDashboardPage() {
       const contentArticles = allArticles.filter((article) => !article.status.startsWith('idea_'))
       const publishedArticles = allArticles.filter((article) => article.status === 'published')
       const inProgressArticles = allArticles.filter((article) => IN_PROGRESS_STATUSES.has(article.status))
+      const aiValidatedArticles = allArticles.filter((article) =>
+        isAiGeneratedArticle(article) &&
+        ['published', 'scheduled'].includes(article.status) &&
+        Boolean(article.human_validated_at || article.published_at || article.scheduled_at),
+      )
+      const ideasReadyForProduction = allArticles.filter((article) => article.status === 'idea_priority')
+      const activeProductionArticles = allArticles.filter((article) => PRODUCTION_STATUSES.has(article.status))
       const scored = contentArticles.filter((a) => a.seo_score !== null)
       const avgSeoScore = scored.length > 0
         ? scored.reduce((s, a) => s + (a.seo_score ?? 0), 0) / scored.length
@@ -289,6 +324,9 @@ export default function ProjectDashboardPage() {
         readyCount: allArticles.filter((article) => article.status === 'ready_to_publish').length,
         scheduledCount: allArticles.filter((article) => article.status === 'scheduled').length,
         failedCount: allArticles.filter((article) => article.status === 'failed').length,
+        aiValidatedCount: aiValidatedArticles.length,
+        ideasReadyForProductionCount: ideasReadyForProduction.length,
+        activeProductionCount: activeProductionArticles.length,
         pendingRecs:
           recs.status === 'fulfilled'
             ? recs.value.filter((r) => r.status === 'pending')
@@ -369,6 +407,8 @@ export default function ProjectDashboardPage() {
 
   const seoValue = scoreOnTen(data?.avgSeoScore)
   const hasTrackingData = Boolean(data?.totalViews && data.totalViews > 0)
+  const lastPipelineRun = pipelineLogs[0]
+  const enabledProviders = providers.filter((provider) => provider.enabled)
 
   const summaryText = (() => {
     if (!data) return 'Chargement de vos données…'
@@ -469,70 +509,55 @@ export default function ProjectDashboardPage() {
         />
       </div>
 
-      {/* Providers / Pipeline / Coûts */}
-      {(providers.length > 0 || pipeline) && (
-        <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {/* Pipeline */}
-          {pipeline && (
-            <Card padding="sm" className="flex items-start gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-accent/10 text-accent">
-                <Cpu size={15} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[12px] font-medium text-primary">Pipeline</p>
-                <p className="mt-0.5 text-[11px] text-tertiary">
-                  {pipeline.enabled
-                    ? `Actif — ${pipeline.articles_per_week} art./sem., ${pipeline.active_days.length}j/sem.`
-                    : 'Inactif'}
-                </p>
-                {pipeline.cost_limit_per_article_eur != null && (
-                  <p className="text-[11px] text-tertiary">
-                    Limite coût/article : {pipeline.cost_limit_per_article_eur.toFixed(4)} €
-                  </p>
-                )}
-              </div>
-            </Card>
-          )}
-          {/* Providers */}
-          {providers.length > 0 && (
-            <Card padding="sm" className="flex items-start gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-violet-500/10 text-violet-600">
-                <Zap size={15} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[12px] font-medium text-primary">Fournisseurs IA</p>
-                <div className="mt-0.5 flex flex-wrap gap-1">
-                  {providers.filter((p) => p.enabled).map((p) => (
-                    <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-[#f0f0f2] px-1.5 py-0.5 text-[10px] text-secondary">
-                      <span className={`h-1.5 w-1.5 rounded-full ${p.last_test_status === 'success' ? 'bg-success' : p.last_test_status === 'error' ? 'bg-danger' : 'bg-tertiary'}`} />
-                      {p.display_name || p.provider}{p.model ? ` (${p.model})` : ''}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </Card>
-          )}
-          {/* Coûts estimés */}
-          {data && (
-            <Card padding="sm" className="flex items-start gap-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-warning/10 text-[#c07000]">
-                <DollarSign size={15} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[12px] font-medium text-primary">Coûts IA (est.)</p>
-                <p className="mt-0.5 text-[11px] text-tertiary">
-                  {data.publishedCount > 0
-                    ? `${(data.publishedCount * 0.05).toFixed(2)} € ce mois`
-                    : 'Aucun coût ce mois'}
-                </p>
-                <p className="text-[11px] text-tertiary">
-                  {data.inProgressCount} article{data.inProgressCount > 1 ? 's' : ''} en cours
-                </p>
-              </div>
-            </Card>
-          )}
-        </div>
-      )}
+      {/* Workflow health */}
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Card padding="sm" className="flex items-start gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-accent/10 text-accent">
+            <Cpu size={15} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[12px] font-medium text-primary">Pipeline</p>
+            <p className="mt-0.5 text-[11px] text-tertiary">
+              {pipeline?.enabled ? `Actif - ${pipeline.active_days.length || 7}j/sem.` : 'Inactif'}
+            </p>
+            <p className="text-[11px] text-tertiary">
+              Dernier run : {lastPipelineRun ? timeAgo(lastPipelineRun.started_at) : 'aucun'}
+            </p>
+          </div>
+        </Card>
+        <Card padding="sm" className="flex items-start gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-orange-500/10 text-orange-600">
+            <ClipboardList size={15} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[12px] font-medium text-primary">Production en cours</p>
+            <p className="mt-0.5 text-[18px] font-semibold leading-none text-primary">{data?.activeProductionCount ?? '—'}</p>
+            <p className="mt-1 text-[11px] text-tertiary">{data?.reviewNeededCount ?? 0} en validation</p>
+          </div>
+        </Card>
+        <Card padding="sm" className="flex items-start gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-violet-500/10 text-violet-600">
+            <Zap size={15} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[12px] font-medium text-primary">Articles IA validés</p>
+            <p className="mt-0.5 text-[18px] font-semibold leading-none text-primary">{data?.aiValidatedCount ?? '—'}</p>
+            <p className="mt-1 text-[11px] text-tertiary">Publiés ou programmés.</p>
+          </div>
+        </Card>
+        <Card padding="sm" className="flex items-start gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-success/10 text-[#1a7a3a]">
+            <Lightbulb size={15} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[12px] font-medium text-primary">Idées prêtes</p>
+            <p className="mt-0.5 text-[18px] font-semibold leading-none text-primary">{data?.ideasReadyForProductionCount ?? '—'}</p>
+            <p className="mt-1 text-[11px] text-tertiary">
+              {enabledProviders.length} provider{enabledProviders.length > 1 ? 's' : ''} IA actif{enabledProviders.length > 1 ? 's' : ''}.
+            </p>
+          </div>
+        </Card>
+      </div>
 
       {!hasTrackingData && (
         <Card className="mb-6">

@@ -25,10 +25,10 @@ import type { Article, ArticlePerformanceBrief, Category, PerformanceSummary } f
 import { Card } from '@/components/ui/Card'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
-import PeriodFilter, { type PeriodOption } from '@/components/ui/PeriodFilter'
+import PeriodNavigator, { ExportButtons } from '@/components/ui/PeriodNavigator'
+import { downloadJson, printReport } from '@/utils/exportReport'
+import { currentPeriod, type PeriodMode, type PeriodRange } from '@/utils/periodNavigator'
 import { formatAxisTick, formatMetric, percentOf } from '@/utils/trafficDisplay'
-
-type Period = 'today' | 'yesterday' | '7d' | '30d' | '90d' | '180d' | '365d'
 
 type ArticleMetric = {
   article: Article
@@ -39,16 +39,6 @@ type ArticleMetric = {
   averageTime: number | null
   recommendation: string
 }
-
-const PERIODS: PeriodOption<Period>[] = [
-  { value: 'today', label: 'Aujourd’hui' },
-  { value: 'yesterday', label: 'Hier' },
-  { value: '7d', label: '7 jours' },
-  { value: '30d', label: '30 jours' },
-  { value: '90d', label: '90 jours' },
-  { value: '180d', label: '6 mois' },
-  { value: '365d', label: '1 an' },
-]
 
 const STATUS_LABELS: Record<string, string> = {
   draft: 'Brouillon',
@@ -70,11 +60,11 @@ function categoryColor(category: Category | null | undefined, fallbackIndex = 0)
   return category?.color || palette[fallbackIndex % palette.length]
 }
 
-function trendTick(period: Period, value: unknown) {
+function trendTick(period: PeriodMode, value: unknown) {
   const label = String(value)
-  if (period === 'today' || period === 'yesterday') return label
-  if (period === '365d') return label.slice(0, 7)
-  if (period === '90d' || period === '180d') return label
+  if (period === 'day') return label
+  if (period === 'year') return label.slice(0, 7)
+  if (period === 'quarter') return label
   return label.includes('-') ? label.slice(5) : label
 }
 
@@ -302,7 +292,7 @@ function KeywordOpportunities() {
 export default function PerformanceDashboardPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
-  const [period, setPeriod] = useState<Period>('today')
+  const [period, setPeriod] = useState<PeriodRange>(() => currentPeriod('day'))
   const [data, setData] = useState<PerformanceSummary | null>(null)
   const [articles, setArticles] = useState<Article[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -315,8 +305,8 @@ export default function PerformanceDashboardPage() {
     let cancelled = false
     Promise.resolve().then(() => { if (!cancelled) setLoadStatus('loading') })
     Promise.all([
-      getPerformanceSummary(projectId, period),
-      getArticlesPerformance(projectId, period),
+      getPerformanceSummary(projectId, { period_type: period.mode, start_date: period.startDate, end_date: period.endDate }),
+      getArticlesPerformance(projectId, { period_type: period.mode, start_date: period.startDate, end_date: period.endDate }),
       listArticles(projectId, { limit: 100 }),
       listCategories(projectId),
     ])
@@ -347,10 +337,11 @@ export default function PerformanceDashboardPage() {
   if (!displayData) {
     return <ErrorState message="Impossible de charger les données de performance." onRetry={() => setTick((t) => t + 1)} />
   }
+  const summaryData = displayData
 
   const publishedCount = articles.filter((article) => article.status === 'published').length
   const topArticle = articleMetrics[0]
-  const hasRealTraffic = displayData.total_views > 0
+  const hasRealTraffic = summaryData.total_views > 0
   const optimizeItems = (hasRealTraffic ? articleMetrics : [])
     .filter((item) => item.recommendation !== 'Surveiller' || ((item.article.seo_score ?? 100) < 70 && item.views > 0))
     .slice(0, 6)
@@ -372,15 +363,51 @@ export default function PerformanceDashboardPage() {
     .filter((row) => row.count > 0)
     .sort((a, b) => b.views - a.views)
   const totalArticleViews = articleMetrics.reduce((sum, item) => sum + item.views, 0)
-  const trendData = displayData.trend_by_day ?? []
+  const trendData = summaryData.trend_by_day ?? []
   const bestRiser = risingItems[0]
   const leaderCategory = categoryRows[0]
   const averageScore = scoreAverage(articleMetrics)
-  const trackingMessage = trackingStatusMessage(displayData.tracking_status)
+  const trackingMessage = trackingStatusMessage(summaryData.tracking_status)
   const showPeriodEmpty = !hasRealTraffic
   const hasTrendData = hasRealTraffic && trendData.length > 0
   const topArticleRows = hasRealTraffic ? articleMetrics.slice(0, 6).map((item) => ({ title: item.article.title, views: item.views })) : []
   const hasTopArticleViews = topArticleRows.some((item) => item.views > 0)
+  const exportPayload = {
+    project_id: projectId,
+    period,
+    summary: summaryData,
+    articles: articleMetrics.map((item) => ({
+      id: item.article.id,
+      title: item.article.title,
+      status: item.article.status,
+      views: item.views,
+      variation: item.variation,
+      seo_score: item.article.seo_score,
+      recommendation: item.recommendation,
+    })),
+  }
+
+  function handleExportJson() {
+    downloadJson(`ideas-studio-performance-${period.startDate}-${period.endDate}.json`, exportPayload)
+  }
+
+  function handleExportPdf() {
+    printReport('Ideas Studio - Performance', period.label, [
+      {
+        title: 'Synthèse',
+        rows: [
+          ['Vues totales', formatMetric(summaryData.total_views)],
+          ['Articles publiés', String(publishedCount)],
+          ['Score éditorial moyen', averageScore !== null ? `${averageScore}/100` : '—'],
+          ['Articles à optimiser', String(optimizeItems.length)],
+        ],
+      },
+      {
+        title: 'Top articles',
+        rows: articleMetrics.slice(0, 10).map((item) => [item.article.title, `${formatMetric(item.views)} vues · ${item.recommendation}`]),
+      },
+    ])
+  }
 
   return (
     <div className="project-page project-page--wide">
@@ -391,7 +418,10 @@ export default function PerformanceDashboardPage() {
             <p className="mt-0.5 text-[13px] text-secondary">Identifiez les contenus qui montent, baissent ou méritent une optimisation.</p>
           </div>
         </div>
-        <PeriodFilter options={PERIODS} value={period} onChange={setPeriod} />
+        <div className="flex flex-col items-end gap-2">
+          <PeriodNavigator value={period} onChange={setPeriod} />
+          <ExportButtons onJson={handleExportJson} onPdf={handleExportPdf} />
+        </div>
       </div>
 
         <div className="flex flex-col gap-6">
@@ -421,7 +451,7 @@ export default function PerformanceDashboardPage() {
                 <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1} debounce={100}>
                   <LineChart data={trendData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
-                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} tickFormatter={(v) => trendTick(period, v)} interval="preserveStartEnd" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} tickFormatter={(v) => trendTick(period.mode, v)} interval="preserveStartEnd" />
                     <YAxis tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} width={44} allowDecimals={false} domain={[0, 'dataMax']} tickFormatter={formatAxisTick} />
                     <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} labelStyle={{ color: '#1d1d1f', fontWeight: 600 }} formatter={(v) => [formatMetric(Number(v)), 'Vues']} />
                     <Line type="monotone" dataKey="views" stroke="#007aff" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#007aff' }} />

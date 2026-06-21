@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronRight, LogOut, User, Bell, BellDot, Search, FileText, FolderOpen, Loader2, Image, Settings } from 'lucide-react'
+import { ChevronRight, LogOut, User, FileText, FolderOpen, Loader2, Image, Settings } from 'lucide-react'
+import { BellDotIcon, BellIcon, Search01Icon } from '@hugeicons/core-free-icons'
 import { useAuth } from '@/context/AuthContext'
 import { useProject } from '@/context/ProjectContext'
 import { globalSearch, type SearchResult } from '@/api/search'
@@ -8,6 +9,7 @@ import { listNotifications } from '@/api/notifications'
 import type { Notification } from '@/types'
 import { cn } from '@/utils/cn'
 import ConfirmModal from '@/components/ui/ConfirmModal'
+import HugeIcon from '@/components/ui/HugeIcon'
 
 export default function Topbar() {
   const { user, logout } = useAuth()
@@ -140,7 +142,7 @@ export default function Topbar() {
         {projectId && (
           <div className="relative" ref={searchRef}>
             <div className="flex items-center gap-1.5">
-              <Search size={13} className="absolute left-2.5 text-tertiary pointer-events-none" />
+              <HugeIcon icon={Search01Icon} size={13} className="absolute left-2.5 text-tertiary pointer-events-none" />
               <input
                 type="text"
                 placeholder="Rechercher…"
@@ -195,7 +197,7 @@ export default function Topbar() {
               title="Notifications"
               aria-label="Notifications"
             >
-              {notifications.filter((n) => !n.read_at).length > 0 ? <BellDot size={16} /> : <Bell size={16} />}
+              {notifications.filter((n) => !n.read_at).length > 0 ? <HugeIcon icon={BellDotIcon} size={16} /> : <HugeIcon icon={BellIcon} size={16} />}
               {notifications.filter((n) => !n.read_at).length > 0 && (
                 <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-danger px-1 text-[8px] font-bold text-white leading-none">
                   {notifications.filter((n) => !n.read_at).length > 9 ? '9+' : notifications.filter((n) => !n.read_at).length}
@@ -217,7 +219,7 @@ export default function Topbar() {
                 <div className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
                   {notifications.filter((n) => !n.read_at).slice(0, 5).length === 0 ? (
                     <div className="flex flex-col items-center gap-2 py-6 text-center">
-                      <Bell size={16} className="text-tertiary opacity-40" />
+                      <HugeIcon icon={BellIcon} size={16} className="text-tertiary opacity-40" />
                       <p className="text-[12px] text-secondary">Aucune notification non lue.</p>
                       {notifications.length > 0 && (
                         <button
@@ -241,7 +243,7 @@ export default function Topbar() {
                           n.level === 'success' ? 'bg-success/10 text-[#1a7a3a]' :
                           'bg-accent/10 text-accent'
                         }`}>
-                          <Bell size={11} />
+                          <HugeIcon icon={BellIcon} size={11} />
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="text-[12px] font-medium text-primary truncate">{n.title}</p>

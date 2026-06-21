@@ -22,7 +22,9 @@ import { Card } from '@/components/ui/Card'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import Button from '@/components/ui/Button'
-import PeriodFilter, { type PeriodOption } from '@/components/ui/PeriodFilter'
+import PeriodNavigator, { ExportButtons } from '@/components/ui/PeriodNavigator'
+import { downloadJson, printReport } from '@/utils/exportReport'
+import { currentPeriod, type PeriodMode, type PeriodRange } from '@/utils/periodNavigator'
 import {
   formatAxisTick,
   formatMetric,
@@ -33,8 +35,6 @@ import {
   getSourceDisplay,
   percentOf,
 } from '@/utils/trafficDisplay'
-
-type Period = 'today' | 'yesterday' | '7d' | '30d' | '90d' | '180d' | '365d'
 
 type ChannelTrendPoint = {
   date: string
@@ -54,16 +54,6 @@ type SourceRow = {
   variation: number | null
   share: number
 }
-
-const PERIODS: PeriodOption<Period>[] = [
-  { value: 'today', label: 'Aujourd’hui' },
-  { value: 'yesterday', label: 'Hier' },
-  { value: '7d', label: '7 jours' },
-  { value: '30d', label: '30 jours' },
-  { value: '90d', label: '90 jours' },
-  { value: '180d', label: '6 mois' },
-  { value: '365d', label: '1 an' },
-]
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <p className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-secondary">{children}</p>
@@ -150,11 +140,11 @@ function buildChannelTrend(data: PerformanceSummary): ChannelTrendPoint[] {
   return data.channel_trend_by_day ?? []
 }
 
-function trafficTick(period: Period, value: unknown) {
+function trafficTick(period: PeriodMode, value: unknown) {
   const label = String(value)
-  if (period === 'today' || period === 'yesterday') return label
-  if (period === '365d') return label.slice(0, 7)
-  if (period === '90d' || period === '180d') return label
+  if (period === 'day') return label
+  if (period === 'year') return label.slice(0, 7)
+  if (period === 'quarter') return label
   return label.includes('-') ? label.slice(5) : label
 }
 
@@ -244,7 +234,7 @@ function VisualRow({
 
 export default function TrafficPage() {
   const { projectId } = useParams<{ projectId: string }>()
-  const [period, setPeriod] = useState<Period>('today')
+  const [period, setPeriod] = useState<PeriodRange>(() => currentPeriod('day'))
   const [data, setData] = useState<PerformanceSummary | null>(null)
   const [loadStatus, setLoadStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [tick, setTick] = useState(0)
@@ -253,7 +243,7 @@ export default function TrafficPage() {
     if (!projectId) return
     let cancelled = false
     Promise.resolve().then(() => { if (!cancelled) setLoadStatus('loading') })
-    getPerformanceSummary(projectId, period)
+    getPerformanceSummary(projectId, { period_type: period.mode, start_date: period.startDate, end_date: period.endDate })
       .then((summary) => { if (!cancelled) { setData(summary); setLoadStatus('success') } })
       .catch(() => { if (!cancelled) setLoadStatus('error') })
     return () => { cancelled = true }
@@ -278,11 +268,41 @@ export default function TrafficPage() {
   if (loadStatus === 'loading') return <LoadingState />
   if (loadStatus === 'error') return <ErrorState onRetry={() => setTick((t) => t + 1)} />
   if (!displayData) return <ErrorState onRetry={() => setTick((t) => t + 1)} />
+  const summaryData = displayData
 
-  const trackingMessage = trackingStatusMessage(displayData.tracking_status)
-  const hasRealTraffic = displayData.total_views > 0
+  const trackingMessage = trackingStatusMessage(summaryData.tracking_status)
+  const hasRealTraffic = summaryData.total_views > 0
   const showPeriodEmpty = !hasRealTraffic
   const hasChannelTrend = hasRealTraffic && channelTrend.length > 0
+
+  function handleExportJson() {
+    downloadJson(`ideas-studio-traffic-${period.startDate}-${period.endDate}.json`, {
+      project_id: projectId,
+      period,
+      summary: summaryData,
+      sources,
+      channels,
+    })
+  }
+
+  function handleExportPdf() {
+    printReport('Ideas Studio - Trafic', period.label, [
+      {
+        title: 'Synthèse',
+        rows: [
+          ['Pages vues', formatMetric(summaryData.total_views)],
+          ['Pages uniques', uniquePages !== null ? formatMetric(uniquePages) : '—'],
+          ['Source principale', topSource?.label ?? '—'],
+          ['Pays principal', topCountry ? getCountryDisplay(topCountry.country).label : '—'],
+          ['Part mobile', `${mobileShare}%`],
+        ],
+      },
+      {
+        title: 'Sources',
+        rows: sources.slice(0, 10).map((source) => [source.label, `${formatMetric(source.visits)} vues · ${source.share}%`]),
+      },
+    ])
+  }
 
   return (
     <div className="project-page project-page--wide">
@@ -292,7 +312,10 @@ export default function TrafficPage() {
           <p className="mt-0.5 text-[13px] text-secondary">Comprenez d’où viennent les visiteurs et quelles sources apportent le meilleur trafic.</p>
         </div>
         <div className="flex items-center gap-2">
-          <PeriodFilter options={PERIODS} value={period} onChange={setPeriod} />
+          <div className="flex flex-col items-end gap-2">
+            <PeriodNavigator value={period} onChange={setPeriod} />
+            <ExportButtons onJson={handleExportJson} onPdf={handleExportPdf} />
+          </div>
           <Button size="sm" variant="secondary" icon={<RefreshCw size={13} />} onClick={() => setTick((t) => t + 1)}>
             Rafraîchir
           </Button>
@@ -321,7 +344,7 @@ export default function TrafficPage() {
                 <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1} debounce={100}>
                   <LineChart data={channelTrend} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
-                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} tickFormatter={(v) => trafficTick(period, v)} interval="preserveStartEnd" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} tickFormatter={(v) => trafficTick(period.mode, v)} interval="preserveStartEnd" />
                     <YAxis tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} width={44} allowDecimals={false} domain={[0, 'dataMax']} tickFormatter={formatAxisTick} />
                     <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v) => [formatMetric(Number(v)), 'Visites']} />
                     <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />

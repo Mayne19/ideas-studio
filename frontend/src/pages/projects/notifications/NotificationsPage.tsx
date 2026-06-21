@@ -5,7 +5,6 @@ import { listNotifications, markNotificationRead, markAllNotificationsRead } fro
 import type { Notification } from '@/types'
 import Button from '@/components/ui/Button'
 import LoadingState from '@/components/ui/LoadingState'
-import ErrorState from '@/components/ui/ErrorState'
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -62,7 +61,6 @@ export default function NotificationsPage() {
   }
 
   if (status === 'loading') return <LoadingState />
-  if (status === 'error') return <ErrorState onRetry={load} />
 
   const unreadCount = notifications.filter((n) => !n.read_at).length
 
@@ -87,6 +85,16 @@ export default function NotificationsPage() {
           </Button>
         )}
       </div>
+
+      {status === 'error' && (
+        <div className="mb-4 flex items-start justify-between gap-3 rounded-[14px] bg-danger/5 px-4 py-3 text-[13px] text-secondary">
+          <div>
+            <p className="font-medium text-primary">Notifications momentanément indisponibles</p>
+            <p className="mt-0.5 text-[12px] text-secondary">La page reste accessible. Réessayez dans quelques instants.</p>
+          </div>
+          <Button size="sm" variant="secondary" onClick={load}>Réessayer</Button>
+        </div>
+      )}
 
       {notifications.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-20 text-center">

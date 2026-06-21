@@ -16,8 +16,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   review: 'Révision',
 }
 
-const CATEGORY_ORDER = ['research', 'strategy', 'creation', 'review']
-
 export default function ProjectAgentsPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const [agents, setAgents] = useState<AgentInfo[]>([])
@@ -123,14 +121,6 @@ export default function ProjectAgentsPage() {
 
   const enabledProviders = providers.filter((p) => p.enabled && p.api_key_configured)
 
-  const groupedAgents = CATEGORY_ORDER.reduce(
-    (acc, cat) => {
-      acc[cat] = agents.filter((a) => a.category === cat)
-      return acc
-    },
-    {} as Record<string, AgentInfo[]>,
-  )
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -164,82 +154,65 @@ export default function ProjectAgentsPage() {
         Les agents désactivés sont ignorés par le routage IA.
       </div>
 
-      {CATEGORY_ORDER.map((cat) => {
-        const catAgents = groupedAgents[cat]
-        if (!catAgents || catAgents.length === 0) return null
-        return (
-          <div key={cat}>
-            <h3 className="mb-3 text-[15px] font-semibold text-primary">
-              {CATEGORY_LABELS[cat] || cat} ({catAgents.length})
-            </h3>
-            <div className="space-y-2">
-              {catAgents.map((agent) => {
-                const ass = getAssignment(agent.agent_id)
-                const isSaving = savingId === agent.agent_id
-                return (
-                  <div
-                    key={agent.agent_id}
-                    className="rounded-[14px] border border-border bg-surface p-4"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[14px] font-semibold text-primary">
-                            {agent.name}
-                          </span>
-                          <span className="rounded-full bg-[#f0f0f2] px-2 py-0.5 text-[11px] text-tertiary">
-                            {agent.agent_id}
-                          </span>
-                          {!agent.has_implementation && (
-                            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700">
-                              Heuristique uniquement
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-1 text-[13px] text-secondary">{agent.description}</p>
-                      </div>
-
-                      <div className="flex items-center gap-3 shrink-0">
-                        {ass && (
-                          <ToggleSwitch
-                            checked={ass.enabled}
-                            onChange={() => handleToggle(agent.agent_id, ass.enabled)}
-                            disabled={isSaving}
-                          />
-                        )}
-
-                        <div className="min-w-[180px]">
-                          {isSaving ? (
-                            <Loader2 size={16} className="animate-spin text-secondary" />
-                          ) : (
-                            <Select
-                              value={ass?.provider_id || ''}
-                              onChange={(e) => handleAssign(agent.agent_id, e.target.value)}
-                              options={[
-                                { value: '', label: 'Provider par défaut' },
-                                ...enabledProviders.map((p) => ({
-                                  value: p.id,
-                                  label: `${p.label} (${p.provider})`,
-                                })),
-                              ]}
-                            />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {ass && !ass.enabled && (
-                      <p className="mt-2 text-[12px] text-amber-600">
-                        Agent désactivé pour ce projet.
-                      </p>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+      <div className="overflow-x-auto rounded-[16px] bg-surface">
+        <div className="min-w-[980px]">
+          <div className="grid grid-cols-[1.1fr_0.65fr_1.6fr_0.7fr_1.1fr_0.75fr_0.9fr] gap-3 border-b border-border px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-tertiary">
+            <span>Agent</span>
+            <span>Phase</span>
+            <span>Rôle</span>
+            <span>Actif</span>
+            <span>Provider</span>
+            <span>Fallback</span>
+            <span>Statut</span>
           </div>
-        )
-      })}
+          {agents.map((agent) => {
+            const ass = getAssignment(agent.agent_id)
+            const isSaving = savingId === agent.agent_id
+            return (
+              <div key={agent.agent_id} className="grid grid-cols-[1.1fr_0.65fr_1.6fr_0.7fr_1.1fr_0.75fr_0.9fr] gap-3 border-b border-border px-4 py-3 text-[12px] last:border-0">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-primary">{agent.name}</p>
+                  <p className="truncate text-[11px] text-tertiary">{agent.agent_id}</p>
+                </div>
+                <span className="text-secondary">{CATEGORY_LABELS[agent.category] ?? agent.category}</span>
+                <span className="min-w-0 truncate text-secondary" title={agent.description}>{agent.description}</span>
+                <span>
+                  {ass ? (
+                    <ToggleSwitch checked={ass.enabled} onChange={() => handleToggle(agent.agent_id, ass.enabled)} disabled={isSaving} />
+                  ) : (
+                    <span className="text-tertiary">Défaut</span>
+                  )}
+                </span>
+                <span>
+                  {isSaving ? (
+                    <Loader2 size={16} className="animate-spin text-secondary" />
+                  ) : (
+                    <Select
+                      value={ass?.provider_id || ''}
+                      onChange={(e) => handleAssign(agent.agent_id, e.target.value)}
+                      options={[
+                        { value: '', label: 'Provider par défaut' },
+                        ...enabledProviders.map((p) => ({
+                          value: p.id,
+                          label: `${p.label} (${p.provider})`,
+                        })),
+                      ]}
+                    />
+                  )}
+                </span>
+                <span className="text-secondary">Projet puis défaut</span>
+                <span>
+                  {agent.has_implementation ? (
+                    <span className="rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">Implémenté</span>
+                  ) : (
+                    <span className="rounded-full bg-warning/12 px-2 py-0.5 text-[11px] font-medium text-[#a35b00]">Heuristique</span>
+                  )}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }

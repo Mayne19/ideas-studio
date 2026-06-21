@@ -1,26 +1,29 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Link, useParams, useLocation, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard,
-  FileText,
-  Lightbulb,
-  BarChart2,
-  Sparkles,
-  Settings,
   FolderOpen,
   ChevronDown,
-  Zap,
-  CalendarDays,
-  TrendingUp,
-  Bell,
-  ImageIcon,
-  LogOut,
   PanelLeftClose,
   PanelLeftOpen,
   Check,
-  ClipboardList,
-  ListChecks,
 } from 'lucide-react'
+import {
+  AiBrain01Icon,
+  BellIcon,
+  BulbIcon,
+  Calendar03Icon,
+  ChartBarLineIcon,
+  CheckListIcon,
+  ClipboardListIcon,
+  DashboardSquare01Icon,
+  File01Icon,
+  Folder01Icon,
+  Image01Icon,
+  Logout01Icon,
+  MagicWand01Icon,
+  Setting06Icon,
+  WorkflowCircle03Icon,
+} from '@hugeicons/core-free-icons'
 import { useProject } from '@/context/ProjectContext'
 import { useAuth } from '@/context/AuthContext'
 import { listProjects } from '@/api/projects'
@@ -28,6 +31,7 @@ import type { Project } from '@/types'
 import { cn } from '@/utils/cn'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { getSettingsSections } from '@/lib/settingsSections'
+import HugeIcon from '@/components/ui/HugeIcon'
 
 type NavItem = {
   label: string
@@ -213,28 +217,28 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
             <SidebarSection collapsed={collapsed}>
               <SidebarLink
                 to={`/projects/${projectId}/dashboard`}
-                icon={<LayoutDashboard size={16} />}
+                icon={<HugeIcon icon={DashboardSquare01Icon} size={16} />}
                 label="Dashboard"
                 collapsed={collapsed}
               />
             </SidebarSection>
 
             <SidebarSection title="Éditorial" collapsed={collapsed}>
-              <SidebarLink to={`/projects/${projectId}/articles`} icon={<FileText size={16} />} label="Articles" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/categories`} icon={<FolderOpen size={16} />} label="Catégories" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/ideas`} icon={<Lightbulb size={16} />} label="Idées" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/production`} icon={<ClipboardList size={16} />} label="Production" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/validation`} icon={<ListChecks size={16} />} label="Validation" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/media`} icon={<ImageIcon size={16} />} label="Médias" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/calendar`} icon={<CalendarDays size={16} />} label="Calendrier" collapsed={collapsed} />
+              <SidebarLink to={`/projects/${projectId}/articles`} icon={<HugeIcon icon={File01Icon} size={16} />} label="Articles" collapsed={collapsed} />
+              <SidebarLink to={`/projects/${projectId}/categories`} icon={<HugeIcon icon={Folder01Icon} size={16} />} label="Catégories" collapsed={collapsed} />
+              <SidebarLink to={`/projects/${projectId}/ideas`} icon={<HugeIcon icon={BulbIcon} size={16} />} label="Idées" collapsed={collapsed} />
+              <SidebarLink to={`/projects/${projectId}/production`} icon={<HugeIcon icon={ClipboardListIcon} size={16} />} label="Production" collapsed={collapsed} />
+              <SidebarLink to={`/projects/${projectId}/validation`} icon={<HugeIcon icon={CheckListIcon} size={16} />} label="Validation" collapsed={collapsed} />
+              <SidebarLink to={`/projects/${projectId}/media`} icon={<HugeIcon icon={Image01Icon} size={16} />} label="Médias" collapsed={collapsed} />
+              <SidebarLink to={`/projects/${projectId}/calendar`} icon={<HugeIcon icon={Calendar03Icon} size={16} />} label="Calendrier" collapsed={collapsed} />
             </SidebarSection>
 
             <SidebarSection title="Intelligence" collapsed={collapsed}>
-              <SidebarLink to={`/projects/${projectId}/performance`} icon={<BarChart2 size={16} />} label="Performance" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/traffic`} icon={<TrendingUp size={16} />} label="Trafic" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/recommendations`} icon={<Sparkles size={16} />} label="Optimisations" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/generate`} icon={<Zap size={16} />} label="Génération IA" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/notifications`} icon={<Bell size={16} />} label="Notifications" collapsed={collapsed} />
+              <SidebarLink to={`/projects/${projectId}/performance`} icon={<HugeIcon icon={ChartBarLineIcon} size={16} />} label="Performance" collapsed={collapsed} />
+              <SidebarLink to={`/projects/${projectId}/traffic`} icon={<HugeIcon icon={WorkflowCircle03Icon} size={16} />} label="Trafic" collapsed={collapsed} />
+              <SidebarLink to={`/projects/${projectId}/recommendations`} icon={<HugeIcon icon={MagicWand01Icon} size={16} />} label="Optimisations" collapsed={collapsed} />
+              <SidebarLink to={`/projects/${projectId}/generate`} icon={<HugeIcon icon={AiBrain01Icon} size={16} />} label="Génération IA" collapsed={collapsed} />
+              <SidebarLink to={`/projects/${projectId}/notifications`} icon={<HugeIcon icon={BellIcon} size={16} />} label="Notifications" collapsed={collapsed} />
             </SidebarSection>
 
             <SidebarSection title="Projet" collapsed={collapsed}>
@@ -251,7 +255,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                       onClick={() => setSettingsOpen(true)}
                       className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-[13px] font-medium"
                     >
-                      <Settings size={16} className="shrink-0" />
+                      <HugeIcon icon={Setting06Icon} size={16} className="shrink-0" />
                       <span className="truncate">Paramètres</span>
                     </NavLink>
                     <button
@@ -291,7 +295,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                   )}
                 </>
               ) : (
-                <SidebarLink to={`/projects/${projectId}/settings`} icon={<Settings size={16} />} label="Paramètres" collapsed={collapsed} />
+                <SidebarLink to={`/projects/${projectId}/settings`} icon={<HugeIcon icon={Setting06Icon} size={16} />} label="Paramètres" collapsed={collapsed} />
               )}
             </SidebarSection>
 
@@ -305,14 +309,14 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                   collapsed && 'justify-center px-2',
                 )}
               >
-                <LogOut size={16} className="shrink-0" />
+                <HugeIcon icon={Logout01Icon} size={16} className="shrink-0" />
                 {!collapsed && 'Déconnexion'}
               </button>
             </div>
           </>
         ) : (
           <SidebarSection collapsed={collapsed}>
-            <SidebarLink to="/projects" icon={<FolderOpen size={16} />} label="Mes projets" collapsed={collapsed} />
+            <SidebarLink to="/projects" icon={<HugeIcon icon={Folder01Icon} size={16} />} label="Mes projets" collapsed={collapsed} />
           </SidebarSection>
         )}
       </nav>
