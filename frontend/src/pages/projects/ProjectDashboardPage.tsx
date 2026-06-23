@@ -594,19 +594,13 @@ export default function ProjectDashboardPage() {
                     <button
                       key={a.id}
                       onClick={() => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
-                      className="flex flex-col gap-1 rounded-[12px] px-2.5 py-1.5 text-left transition-colors hover:bg-[#f5f5f7]"
+                      className="grid grid-cols-1 gap-2 rounded-[12px] px-2.5 py-2 text-left transition-colors hover:bg-[#f5f5f7] sm:grid-cols-[minmax(0,1fr)_112px]"
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        <p className="flex-1 min-w-0 text-[13px] font-medium leading-snug text-primary break-words">
+                      <div className="min-w-0">
+                        <p className="min-w-0 text-[13px] font-medium leading-snug text-primary break-words">
                           {a.title}
                         </p>
-                        <div className="flex shrink-0 items-center gap-1 text-[10px] text-tertiary mt-0.5">
-                          <Clock size={9} />
-                          <span>{formatDate(getArticleDate(a))}</span>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-[auto_1fr_auto] gap-3 items-center">
-                        <div className="flex items-center gap-2">
+                        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1.5">
                           <span
                             className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${cat?.color ? '' : 'bg-[#f0f0f2] text-tertiary'}`}
                             style={cat?.color ? { backgroundColor: `${cat.color}20`, color: cat.color } : undefined}
@@ -616,10 +610,16 @@ export default function ProjectDashboardPage() {
                           <span className="text-[10px] text-tertiary whitespace-nowrap">
                             {a.word_count > 0 ? `${a.word_count.toLocaleString('fr-FR')} mots` : '— mots'}
                           </span>
+                          <ArticleScoreBadges article={a} />
+                          <StatusBadge status={a.status} />
                         </div>
-                        <ArticleScoreBadges article={a} />
-                        <StatusBadge status={a.status} />
-                        <div className="flex items-center gap-1 text-[10px] text-tertiary">
+                      </div>
+                      <div className="flex shrink-0 flex-row items-center justify-between gap-3 text-[10px] text-tertiary sm:flex-col sm:items-end sm:justify-start sm:gap-1 sm:pt-0.5">
+                        <div className="flex items-center gap-1 whitespace-nowrap">
+                          <Clock size={9} />
+                          <span>{formatDate(getArticleDate(a))}</span>
+                        </div>
+                        <div className="flex items-center gap-1 whitespace-nowrap">
                           <User size={9} />
                           <span>{a.author_name ?? 'Auteur —'}</span>
                         </div>
