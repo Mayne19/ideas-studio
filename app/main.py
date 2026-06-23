@@ -19,10 +19,51 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+OPENAPI_TAGS = [
+    {"name": "auth", "description": "Inscription, connexion, session utilisateur et récupération du profil courant."},
+    {"name": "profile", "description": "Profil utilisateur, avatar et mot de passe."},
+    {"name": "projects", "description": "Création, configuration générale, connexion publique et suppression de projets."},
+    {"name": "members", "description": "Membres projet, rôles, invitations et permissions collaboratives."},
+    {"name": "invitations", "description": "Lecture et acceptation des invitations par token."},
+    {"name": "articles", "description": "Articles, publication, dépublication, planification, archives et validation en lot."},
+    {"name": "editor", "description": "Données éditeur, autosave et preview d'article."},
+    {"name": "versions", "description": "Historique et restauration des versions d'articles."},
+    {"name": "comments", "description": "Commentaires éditoriaux associés aux articles."},
+    {"name": "categories", "description": "Catégories éditoriales, priorités et synchronisation."},
+    {"name": "callouts", "description": "Templates de callouts réutilisables dans l'éditeur."},
+    {"name": "ideas", "description": "Idées, opportunités SEO, passage en production et file de production."},
+    {"name": "generation", "description": "Génération IA, rapports de génération, découverte d'idées et planning."},
+    {"name": "pipeline", "description": "Configuration, exécution et logs du pipeline éditorial."},
+    {"name": "seo", "description": "Analyse SEO, readiness checks et scores éditoriaux."},
+    {"name": "recommendations", "description": "Recommandations d'optimisation et actions associées."},
+    {"name": "performance", "description": "Métriques de performance projet et article."},
+    {"name": "tracking", "description": "Snippet analytics et collecte d'événements publics."},
+    {"name": "public", "description": "API publique pour exposer articles et catégories publiés."},
+    {"name": "media", "description": "Médiathèque, uploads et métadonnées des fichiers."},
+    {"name": "notifications", "description": "Notifications projet et actions de lecture/suppression."},
+    {"name": "ai_providers", "description": "Providers IA, tests de connexion et statut des clés masquées."},
+    {"name": "ai_agents", "description": "Registre des agents IA et assignations aux providers."},
+    {"name": "search", "description": "Recherche globale dans le studio."},
+    {"name": "search_console", "description": "Intégration Google Search Console, partielle selon configuration."},
+    {"name": "editorial_setup", "description": "Assistant de configuration éditoriale initiale."},
+    {"name": "activity", "description": "Journal d'activité projet."},
+    {"name": "webhooks", "description": "Webhooks sortants, secrets partagés et tests."},
+    {"name": "kanban_columns", "description": "Colonnes personnalisées du workflow de production."},
+    {"name": "monitoring", "description": "Analyse d'amélioration et brouillons d'optimisation."},
+    {"name": "health", "description": "Santé backend et vérification légère des providers."},
+]
+
 app = FastAPI(
     title=settings.APP_NAME,
-    description="Headless AI-assisted SEO CMS for coded blogs.",
+    description=(
+        "Ideas Studio est un CMS editorial SEO/GEO assiste par IA. "
+        "L'API couvre les projets, articles, workflow editorial, providers IA, "
+        "agents, pipeline, tracking, analytics et API publique. Les routes privees "
+        "necessitent un token JWT ; les cles providers restent cote backend et ne "
+        "sont jamais exposees en clair."
+    ),
     version="0.2.0",
+    openapi_tags=OPENAPI_TAGS,
 )
 
 

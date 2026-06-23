@@ -2,6 +2,9 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Search, Menu, X } from 'lucide-react'
 
+const configuredApiUrl = (import.meta.env['VITE_API_URL'] as string | undefined)?.trim().replace(/\/$/, '')
+const documentationApiUrl = configuredApiUrl || 'http://localhost:8000'
+
 const NAV_ITEMS = [
   { label: 'Produits', href: '#getting-started' },
   { label: 'Documentation', href: '/documentation' },
@@ -345,14 +348,17 @@ const CHAPTERS: Chapter[] = [
       <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le SEO est intégré à chaque étape de la production éditoriale : de la suggestion de mot-clé à la révision finale. Chaque article bénéficie d'une analyse automatisée avant publication.</p>
 
       <h2 id="scores-editoriaux" class="mt-12">Scores éditoriaux</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Chaque article reçoit quatre scores calculés par les agents IA :</p>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Chaque article peut afficher sept scores. Ils ne remplacent pas la relecture humaine : ils servent à prioriser les corrections avant validation.</p>
       <ul class="mt-3 space-y-2 text-[15px] leading-relaxed text-secondary list-disc pl-6">
+        <li><strong class="text-primary">Global</strong> — Synthèse pondérée utilisée comme signal de validation.</li>
         <li><strong class="text-primary">SEO</strong> — Optimisation pour les moteurs de recherche.</li>
+        <li><strong class="text-primary">Qualité</strong> — Pertinence, profondeur et valeur ajoutée du contenu.</li>
         <li><strong class="text-primary">Lisibilité</strong> — Clarté et fluidité du texte.</li>
-        <li><strong class="text-primary">Qualité</strong> — Pertinence et valeur ajoutée du contenu.</li>
-        <li><strong class="text-primary">EEAT</strong> — Expertise, Expérience, Authorité, Trust.</li>
+        <li><strong class="text-primary">Originalité</strong> — Signal issu du rapport d'originalité ; il peut être heuristique selon le provider disponible.</li>
+        <li><strong class="text-primary">GEO</strong> — Optimisation pour les réponses génératives et les moteurs assistés par IA.</li>
+        <li><strong class="text-primary">EEAT</strong> — Expertise, expérience, autorité et confiance.</li>
       </ul>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Ces scores sont visibles dans l'éditeur, la page Performance et les recommandations.</p>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Ces scores sont visibles dans l'éditeur, les listes d'articles, la validation, la performance et les recommandations. Une donnée absente est affichée avec <code class="text-accent">—</code> plutôt qu'une valeur inventée.</p>
 
       <h2 id="rapport-seo" class="mt-12">Rapport SEO</h2>
       <p class="mt-3 text-[15px] leading-relaxed text-secondary">Depuis l'éditeur, le panneau SEO affiche une analyse détaillée pour chaque article : mots-clés détectés, meta description, structure des titres, liens internes, optimisation des images, et checklist de publication.</p>
@@ -638,6 +644,7 @@ const CHAPTERS: Chapter[] = [
     label: 'API et Webhooks',
     sections: [
       { id: 'api-publique', label: 'API publique', depth: 2 },
+      { id: 'swagger-openapi', label: 'Swagger et OpenAPI', depth: 2 },
       { id: 'endpoints-disponibles', label: 'Endpoints disponibles', depth: 2 },
       { id: 'webhooks-evenements', label: 'Webhooks et événements', depth: 2 },
       { id: 'securite-webhooks', label: 'Sécurité des webhooks', depth: 2 },
@@ -646,6 +653,10 @@ const CHAPTERS: Chapter[] = [
     content: `
       <h2 id="api-publique">API publique</h2>
       <p class="mt-3 text-[15px] leading-relaxed text-secondary">Les articles publiés sont accessibles via une API REST publique. Cette API ne nécessite pas d'authentification et peut être utilisée par le site public pour afficher les articles.</p>
+
+      <h2 id="swagger-openapi" class="mt-12">Swagger, ReDoc et OpenAPI</h2>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le backend FastAPI expose automatiquement Swagger UI, ReDoc et le schéma OpenAPI JSON. Les liens techniques sont disponibles en haut de cette page et utilisent l'URL backend configurée par <code class="text-accent">VITE_API_URL</code>. Si cette variable n'est pas définie, l'interface suppose le backend local de développement.</p>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Les routes privées nécessitent un token JWT. Les routes publiques sont regroupées sous <code class="text-accent">/api/public</code>, et le tracking utilise des endpoints dédiés qui ne doivent pas exposer de secrets.</p>
 
       <h2 id="endpoints-disponibles" class="mt-12">Endpoints disponibles</h2>
 
@@ -796,6 +807,40 @@ const CHAPTERS: Chapter[] = [
     `,
   },
   {
+    id: 'statut-actuel',
+    label: 'Statut actuel',
+    sections: [
+      { id: 'phase-test', label: 'Phase de test', depth: 2 },
+      { id: 'fonctionnel', label: 'Fonctionnel', depth: 2 },
+      { id: 'partiel', label: 'Partiel ou à connecter', depth: 2 },
+      { id: 'avant-production', label: 'Avant production complète', depth: 2 },
+    ],
+    content: `
+      <h2 id="phase-test">Phase de test</h2>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Ideas Studio est lançable avec réserves pour une phase de test réelle. Le CMS, les routes principales, le workflow éditorial, les providers IA configurables et les pages projet sont en place. La qualité des contenus générés doit toutefois être validée avec un provider réel connecté.</p>
+
+      <h2 id="fonctionnel" class="mt-12">Fonctionnel</h2>
+      <ul class="mt-3 space-y-2 text-[15px] leading-relaxed text-secondary list-disc pl-6">
+        <li>Gestion projets, articles, archives, catégories, idées, production et validation.</li>
+        <li>Éditeur TipTap, médias, commentaires, versions et publication/dépublication.</li>
+        <li>Permissions projet, invitations, profil utilisateur et notifications.</li>
+        <li>Providers IA, agents IA, pipeline éditorial et rapports de génération.</li>
+        <li>API publique, snippet de tracking, dashboards performance et trafic.</li>
+      </ul>
+
+      <h2 id="partiel" class="mt-12">Partiel ou à connecter</h2>
+      <ul class="mt-3 space-y-2 text-[15px] leading-relaxed text-secondary list-disc pl-6">
+        <li>Les providers réels doivent être configurés projet par projet ou via les variables backend.</li>
+        <li>Search Console dépend de la configuration Google et peut rester partielle sans credentials.</li>
+        <li>Les emails transactionnels et certains workers dépendent de l'environnement de déploiement.</li>
+        <li>Les scores Originalité et GEO peuvent être heuristiques selon les données disponibles.</li>
+      </ul>
+
+      <h2 id="avant-production" class="mt-12">Avant production complète</h2>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Avant exploitation complète, configurez une <code class="text-accent">SECRET_KEY</code> stable, une base PostgreSQL, les URLs publiques, les origines CORS, au moins un provider IA réel et un test léger de génération. Ne placez jamais de clé IA dans le frontend.</p>
+    `,
+  },
+  {
     id: 'faq',
     label: 'FAQ',
     sections: [
@@ -864,14 +909,17 @@ export default function DocumentationPage() {
   }, [query])
 
   const outline = activeChapter ? extractOutline(activeChapter.sections) : []
+  const swaggerUrl = `${documentationApiUrl}/docs`
+  const redocUrl = `${documentationApiUrl}/redoc`
+  const openApiUrl = `${documentationApiUrl}/openapi.json`
 
   return (
     <div className="min-h-screen bg-bg text-primary">
       {/* Topbar */}
       <header className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/80">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-5">
+          <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-5">
           <Link to="/" className="flex items-center gap-2 text-[15px] font-semibold tracking-tight text-primary">
-            <span className="flex h-7 w-7 items-center justify-center rounded-[8px] bg-accent text-[12px] font-bold text-white">IS</span>
+            <img src="/icon.svg" alt="" className="h-7 w-7 rounded-[8px]" />
             Ideas Studio
           </Link>
 
@@ -946,7 +994,33 @@ export default function DocumentationPage() {
 
         {/* Main content - active chapter only */}
         <main className="min-w-0 px-6 lg:px-10 py-10 max-w-3xl">
-          <p className="text-[12px] font-semibold uppercase tracking-wider text-accent mb-1">Documentation</p>
+          <section className="mb-10 rounded-[8px] border border-border bg-surface p-5">
+            <p className="text-[12px] font-semibold uppercase tracking-wider text-accent">Documentation</p>
+            <h1 className="mt-2 text-[32px] font-semibold leading-tight text-primary">Documentation Ideas Studio</h1>
+            <p className="mt-3 text-[15px] leading-relaxed text-secondary">
+              Comprendre, configurer et utiliser le studio éditorial SEO/GEO assisté par IA.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Link to="/projects" className="inline-flex h-9 items-center gap-1.5 rounded-[8px] bg-accent px-3.5 text-[13px] font-semibold text-white hover:opacity-90">
+                Ouvrir le studio
+                <ArrowRight size={14} />
+              </Link>
+              <a href={swaggerUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-[8px] border border-border px-3.5 text-[13px] font-medium text-primary hover:bg-[#f0f0f2]">
+                Ouvrir Swagger API
+              </a>
+              <a href={redocUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-[8px] border border-border px-3.5 text-[13px] font-medium text-primary hover:bg-[#f0f0f2]">
+                ReDoc
+              </a>
+              <a href={openApiUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-[8px] border border-border px-3.5 text-[13px] font-medium text-primary hover:bg-[#f0f0f2]">
+                OpenAPI JSON
+              </a>
+            </div>
+            {!configuredApiUrl && (
+              <p className="mt-3 text-[12px] leading-relaxed text-tertiary">
+                Aucun <code className="text-accent">VITE_API_URL</code> n'est configuré : les liens API utilisent le backend local de développement.
+              </p>
+            )}
+          </section>
           <div className="doc-content" dangerouslySetInnerHTML={{ __html: activeChapter.content }} />
         </main>
 
