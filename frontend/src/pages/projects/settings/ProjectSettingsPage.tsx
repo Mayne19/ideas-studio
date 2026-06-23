@@ -40,10 +40,11 @@ const INDUSTRY_OPTIONS = [
   { value: '', label: 'Non défini' },
   { value: 'SaaS B2B', label: 'SaaS B2B' },
   { value: 'E-commerce', label: 'E-commerce' },
-  { value: 'Media / publication', label: 'Média / publication' },
+  { value: 'Média / publication', label: 'Média / publication' },
   { value: 'Agence', label: 'Agence' },
   { value: 'Formation', label: 'Formation' },
   { value: 'Services professionnels', label: 'Services professionnels' },
+  { value: '__custom__', label: 'Autre / personnalisé' },
 ]
 
 type FormState = {
@@ -52,9 +53,9 @@ type FormState = {
   language: string
   country_target: string
   timezone: string
-  public_site_url: string
   description: string
   industry: string
+  industry_custom: string
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -68,24 +69,28 @@ export default function ProjectSettingsPage() {
     language: 'fr',
     country_target: '',
     timezone: 'Europe/Paris',
-    public_site_url: '',
     description: '',
     industry: '',
+    industry_custom: '',
   })
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [errorMsg, setErrorMsg] = useState('')
 
+  const isCustomIndustry = form.industry === '__custom__'
+
   useEffect(() => {
     if (!project) return
+    const raw = project.industry ?? ''
+    const isCustom = !INDUSTRY_OPTIONS.some((o) => o.value === raw)
     const values = {
       name: project.name ?? '',
       domain: project.domain ?? '',
       language: project.language ?? 'fr',
       country_target: project.country_target ?? '',
       timezone: project.timezone ?? 'Europe/Paris',
-      public_site_url: project.public_site_url ?? '',
       description: project.description ?? '',
-      industry: project.industry ?? '',
+      industry: isCustom ? '__custom__' : raw,
+      industry_custom: isCustom ? raw : '',
     }
     Promise.resolve().then(() => setForm(values))
   }, [project])
@@ -103,15 +108,15 @@ export default function ProjectSettingsPage() {
     setErrorMsg('')
     setSaveStatus('saving')
     try {
+      const industry = isCustomIndustry ? form.industry_custom.trim() : form.industry
       const payload: UpdateProjectPayload = {
         name: form.name.trim(),
         domain: form.domain.trim() || undefined,
         language: form.language || undefined,
         country_target: form.country_target.trim() || undefined,
         timezone: form.timezone.trim() || undefined,
-        public_site_url: form.public_site_url.trim() || null,
         description: form.description.trim() || undefined,
-        industry: form.industry.trim() || undefined,
+        industry: industry || undefined,
       }
       await updateProject(projectId, payload)
       setSaveStatus('saved')
@@ -145,26 +150,28 @@ export default function ProjectSettingsPage() {
         }
       >
         <div className="flex flex-col gap-4">
-          <Input
-            label="Nom du projet"
-            value={form.name}
-            onChange={set('name')}
-            required
-            placeholder="Mon blog tech"
-          />
-          <Input
-            label="Domaine"
-            value={form.domain}
-            onChange={set('domain')}
-            placeholder="monblog.com"
-          />
-          <Select
-            label="Langue principale"
-            options={LANGUAGE_OPTIONS}
-            value={form.language}
-            onChange={set('language')}
-          />
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Nom du projet"
+              value={form.name}
+              onChange={set('name')}
+              required
+              placeholder="Mon blog tech"
+            />
+            <Input
+              label="Domaine"
+              value={form.domain}
+              onChange={set('domain')}
+              placeholder="monblog.com"
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <Select
+              label="Langue principale"
+              options={LANGUAGE_OPTIONS}
+              value={form.language}
+              onChange={set('language')}
+            />
             <Select
               label="Pays cible"
               options={COUNTRY_OPTIONS}
@@ -178,19 +185,22 @@ export default function ProjectSettingsPage() {
               onChange={set('timezone')}
             />
           </div>
-          <Input
-            label="URL publique du site"
-            value={form.public_site_url}
-            onChange={set('public_site_url')}
-            placeholder="https://www.exemple.fr"
-            hint={`Connexion site : ${project?.status === 'connected' ? 'connecté' : 'non connecté'}`}
-          />
-          <Select
-            label="Secteur / niche"
-            options={INDUSTRY_OPTIONS}
-            value={form.industry}
-            onChange={set('industry')}
-          />
+          <div className="flex flex-col gap-2">
+            <Select
+              label="Secteur / niche"
+              options={INDUSTRY_OPTIONS}
+              value={form.industry}
+              onChange={set('industry')}
+            />
+            {isCustomIndustry && (
+              <Input
+                label="Secteur personnalisé"
+                value={form.industry_custom}
+                onChange={set('industry_custom')}
+                placeholder="Ex. Crypto, Immobilier, Santé…"
+              />
+            )}
+          </div>
           <Textarea
             label="Description courte du projet"
             value={form.description}

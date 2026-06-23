@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { User, Mail, Camera, Check, Loader2, AtSign, Lock, ArrowLeft, FolderOpen } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
@@ -7,9 +7,17 @@ import { checkUsername } from '@/api/auth'
 import Button from '@/components/ui/Button'
 import CopyButton from '@/components/ui/CopyButton'
 
+const fullName = (name: string) => {
+  const parts = name.split(' ')
+  return { first: parts[0] || '', last: parts.slice(1).join(' ') }
+}
+
 export default function AccountPage() {
   const { user, refreshUser } = useAuth()
-  const [name, setName] = useState(user?.name ?? '')
+  const nameParts = useMemo(() => fullName(user?.name ?? ''), [user?.name])
+  const [firstName, setFirstName] = useState(nameParts.first)
+  const [lastName, setLastName] = useState(nameParts.last)
+  const [displayName, setDisplayName] = useState(nameParts.first)
   const [username, setUsername] = useState(user?.username ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -19,23 +27,24 @@ export default function AccountPage() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [showPasswordForm, setShowPasswordForm] = useState(false)
-  const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '' })
+  const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', confirm_password: '' })
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [passwordSaved, setPasswordSaved] = useState(false)
   const [passwordError, setPasswordError] = useState('')
 
-  const initials = name
-    ? name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
+  const initials = (displayName || firstName)
+    ? (displayName || firstName).split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
     : '?'
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) return
+    const finalName = displayName.trim() || firstName.trim()
+    if (!finalName) return
     setSaving(true)
     setError('')
     setSaved(false)
     try {
-      const payload: Record<string, string> = { name: name.trim() }
+      const payload: Record<string, string> = { name: finalName }
       if (username.trim()) {
         const clean = username.trim().replace(/^@/, '')
         const result = await checkUsername(clean)
@@ -88,13 +97,18 @@ export default function AccountPage() {
       setPasswordError('Le mot de passe doit contenir au moins 6 caractères.')
       return
     }
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      setPasswordError('Les nouveaux mots de passe ne correspondent pas.')
+      return
+    }
     setPasswordSaving(true)
     setPasswordError('')
     setPasswordSaved(false)
     try {
-      await api.post('/profile/password', passwordForm)
+      await api.post('/profile/password', { current_password: passwordForm.current_password, new_password: passwordForm.new_password })
       setPasswordSaved(true)
-      setPasswordForm({ current_password: '', new_password: '' })
+      setShowPasswordForm(false)
+      setPasswordForm({ current_password: '', new_password: '', confirm_password: '' })
       setTimeout(() => setPasswordSaved(false), 2500)
     } catch (err) {
       setPasswordError(err instanceof Error ? err.message : 'Impossible de changer le mot de passe.')
@@ -104,7 +118,7 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="mx-auto max-w-xl">
+    <div className="mx-auto max-w-2xl">
       <div className="mb-6">
         <div className="flex items-center gap-4 mb-4">
           <Link to="/projects" className="flex items-center gap-1.5 text-[13px] text-secondary hover:text-primary transition-colors">
@@ -153,53 +167,85 @@ export default function AccountPage() {
           />
         </div>
         <div>
-          <p className="text-[13px] font-medium text-primary">{user?.name}</p>
+          <p className="text-[13px] font-medium text-primary">{displayName || firstName}</p>
           <p className="text-[12px] text-tertiary">{user?.email}</p>
         </div>
       </div>
 
       <form onSubmit={handleSave} className="flex flex-col gap-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-[12px] font-medium text-secondary">Prénom</label>
+            <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+              <User size={14} className="text-tertiary shrink-0" />
+              <input
+                type="text"
+                value={firstName}
+                onChange={(e) => {
+                  setFirstName(e.target.value)
+                  if (!displayName || displayName === nameParts.first) {
+                    setDisplayName(e.target.value)
+                  }
+                }}
+                placeholder="Votre prénom"
+                className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+              />
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[12px] font-medium text-secondary">Nom</label>
+            <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+              <User size={14} className="text-tertiary shrink-0" />
+              <input
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Votre nom"
+                className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-[12px] font-medium text-secondary">Email</label>
+            <div className="flex items-center gap-2 rounded-[10px] border border-border bg-[#f5f5f7] px-3 py-2">
+              <Mail size={14} className="text-tertiary shrink-0" />
+              <span className="text-[13px] text-tertiary">{user?.email}</span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[12px] font-medium text-secondary">Nom d'utilisateur</label>
+            <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+              <AtSign size={14} className="text-tertiary shrink-0" />
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="votre-pseudo"
+                className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+              />
+              {user?.username && (
+                <CopyButton value={`@${user.username}`} label="Copier mon @username" />
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="flex flex-col gap-1">
           <label className="text-[12px] font-medium text-secondary">Nom affiché</label>
           <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
             <User size={14} className="text-tertiary shrink-0" />
             <input
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Votre nom"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder={firstName || 'Votre prénom'}
               className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
             />
           </div>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-[12px] font-medium text-secondary">Email</label>
-          <div className="flex items-center gap-2 rounded-[10px] border border-border bg-[#f5f5f7] px-3 py-2">
-            <Mail size={14} className="text-tertiary shrink-0" />
-            <span className="text-[13px] text-tertiary">{user?.email}</span>
-          </div>
-          <p className="text-[11px] text-tertiary">L'email ne peut pas être modifié.</p>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-[12px] font-medium text-secondary">Nom d'utilisateur</label>
-          <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
-            <AtSign size={14} className="text-tertiary shrink-0" />
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="votre-pseudo"
-              className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
-            />
-            {user?.username && (
-              <CopyButton value={`@${user.username}`} label="Copier mon @username" />
-            )}
-          </div>
-          <p className="text-[11px] text-tertiary">
-            Les autres membres peuvent vous ajouter avec @{username || 'votre-pseudo'}.
-          </p>
+          <p className="text-[11px] text-tertiary">Par défaut, votre prénom est utilisé.</p>
         </div>
 
         {error && (
@@ -266,6 +312,19 @@ export default function AccountPage() {
                 />
               </div>
             </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[12px] font-medium text-secondary">Confirmer le nouveau mot de passe</label>
+              <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+                <Lock size={14} className="text-tertiary shrink-0" />
+                <input
+                  type="password"
+                  value={passwordForm.confirm_password}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })}
+                  placeholder="Confirmez le nouveau mot de passe"
+                  className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+                />
+              </div>
+            </div>
             {passwordError && (
               <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
                 {passwordError}
@@ -273,11 +332,11 @@ export default function AccountPage() {
             )}
             <div className="flex items-center gap-2">
               <Button type="submit" loading={passwordSaving} icon={passwordSaving ? <Loader2 size={14} className="animate-spin" /> : undefined}>
-                Changer le mot de passe
+                Valider le changement
               </Button>
               <button
                 type="button"
-                onClick={() => { setShowPasswordForm(false); setPasswordForm({ current_password: '', new_password: '' }); setPasswordError('') }}
+                onClick={() => { setShowPasswordForm(false); setPasswordForm({ current_password: '', new_password: '', confirm_password: '' }); setPasswordError('') }}
                 className="text-[12px] text-tertiary hover:text-secondary transition-colors"
               >
                 Annuler

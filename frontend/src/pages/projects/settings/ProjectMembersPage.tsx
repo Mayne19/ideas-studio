@@ -414,24 +414,22 @@ export default function ProjectMembersPage() {
         title="Rôles et permissions"
         description="Comprenez rapidement ce que chaque rôle peut faire dans Ideas Studio."
       >
-        <div className="grid gap-2 md:grid-cols-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
           {ROLE_GUIDE.map((item) => {
             const RoleIcon = item.icon
 
             return (
-              <div key={item.role} className="rounded-[16px] bg-[#f9f9fb] px-4 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] bg-white text-tertiary">
-                      <RoleIcon size={14} />
-                    </span>
-                    <p className="text-[13px] font-semibold text-primary">{item.title}</p>
-                  </div>
+              <div key={item.role} className="flex flex-col rounded-[14px] bg-[#f9f9fb] px-3 py-2.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[8px] bg-white text-tertiary">
+                    <RoleIcon size={13} />
+                  </span>
+                  <p className="text-[12px] font-semibold text-primary">{item.title}</p>
                   <RoleBadge role={item.role} />
                 </div>
-                <ul className="mt-2 flex flex-col gap-1">
+                <ul className="mt-1.5 flex flex-col gap-0.5">
                   {item.permissions.map((permission) => (
-                    <li key={permission} className="text-[12px] leading-snug text-secondary">
+                    <li key={permission} className="text-[11px] leading-snug text-secondary">
                       {permission}
                     </li>
                   ))}
