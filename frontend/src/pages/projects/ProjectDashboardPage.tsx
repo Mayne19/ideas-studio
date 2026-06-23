@@ -185,6 +185,20 @@ function ArticleScoreBadge({ label, value }: { label: string; value: number | nu
   )
 }
 
+function getOriginalityScore(article: Article): number | null {
+  const report = article.originality_report_json
+  if (!report || typeof report !== 'object') return null
+  const score = (report as Record<string, unknown>).heuristic_score
+  return typeof score === 'number' && Number.isFinite(score) ? score : null
+}
+
+function getGeoScore(article: Article): number | null {
+  const report = article.geo_optimization_json
+  if (!report || typeof report !== 'object') return null
+  const score = (report as Record<string, unknown>).geo_score
+  return typeof score === 'number' && Number.isFinite(score) ? score : null
+}
+
 function getArticleDate(article: Article): string {
   return article.published_at ?? article.scheduled_at ?? article.updated_at ?? article.created_at
 }
@@ -613,14 +627,19 @@ export default function ProjectDashboardPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-medium leading-snug text-primary break-words">{a.title}</p>
                         <div className="mt-1 flex flex-wrap items-center gap-y-1">
-                          <span className="mr-5 min-w-[112px] text-[10px] font-medium text-accent/80">
+                          <span
+                            className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${cat?.color ? '' : 'bg-[#f0f0f2] text-tertiary'}`}
+                            style={cat?.color ? { backgroundColor: `${cat.color}20`, color: cat.color } : undefined}
+                          >
                             {cat?.name ?? 'Sans catégorie'}
                           </span>
                           <span className="mr-5 flex flex-wrap items-center gap-1.5">
+                            <ArticleScoreBadge label="Global" value={a.global_score} />
                             <ArticleScoreBadge label="SEO" value={a.seo_score} />
-                            <ArticleScoreBadge label="Lisibilité" value={a.readability_score} />
                             <ArticleScoreBadge label="Qualité" value={a.quality_score} />
-                            <ArticleScoreBadge label="EEAT" value={a.eeat_score} />
+                            <ArticleScoreBadge label="Lisibilité" value={a.readability_score} />
+                            <ArticleScoreBadge label="Originalité" value={getOriginalityScore(a)} />
+                            <ArticleScoreBadge label="GEO" value={getGeoScore(a)} />
                           </span>
                           <span className="inline-flex min-w-[96px] items-center">
                             <StatusBadge status={a.status} />
