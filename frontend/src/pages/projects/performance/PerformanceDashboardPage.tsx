@@ -13,8 +13,9 @@ import {
   Clock3,
   Eye,
   FileText,
-  Lightbulb,
   Info,
+  Lightbulb,
+  RefreshCw,
   Sparkles,
   Tags,
 } from 'lucide-react'
@@ -23,6 +24,7 @@ import { listArticles } from '@/api/articles'
 import { listCategories } from '@/api/categories'
 import type { Article, ArticlePerformanceBrief, Category, PerformanceSummary } from '@/types'
 import { Card } from '@/components/ui/Card'
+import Button from '@/components/ui/Button'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import PeriodNavigator, { ExportButtons } from '@/components/ui/PeriodNavigator'
@@ -449,16 +451,19 @@ export default function PerformanceDashboardPage() {
   return (
     <div className="project-page project-page--wide">
       <div className="project-page-header">
-        <div className="flex items-center gap-3">
-          <div>
-            <h1 className="text-[20px] font-semibold tracking-tight text-primary">Performance</h1>
-            <p className="mt-0.5 text-[13px] text-secondary">Identifiez les contenus qui montent, baissent ou méritent une optimisation.</p>
-          </div>
+        <div>
+          <h1 className="text-[20px] font-semibold tracking-tight text-primary">Performance</h1>
+          <p className="mt-0.5 text-[13px] text-secondary">Identifiez les contenus qui montent, baissent ou méritent une optimisation.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="secondary" icon={<RefreshCw size={13} />} onClick={() => setTick((t) => t + 1)}>
+            Rafraîchir
+          </Button>
           <ExportButtons onJson={handleExportJson} onPdf={handleExportPdf} />
-          <PeriodNavigator value={period} onChange={setPeriod} />
         </div>
+      </div>
+      <div className="mb-6">
+        <PeriodNavigator value={period} onChange={setPeriod} />
       </div>
 
         <div className="flex flex-col gap-6">

@@ -52,7 +52,7 @@ function CategoryColumn({
   const headerBackground = `linear-gradient(135deg, ${color}24 0%, ${color}12 100%)`
 
   return (
-    <div className="flex min-h-[360px] min-w-[260px] max-w-[260px] flex-col rounded-[18px] p-2" style={{ background: columnBackground }}>
+    <div className="flex min-h-[360px] min-w-[240px] flex-1 max-w-[360px] flex-col rounded-[18px] p-2" style={{ background: columnBackground }}>
       <div className="flex items-start gap-3 rounded-[14px] px-3 py-3" style={{ background: headerBackground }}>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
@@ -162,7 +162,7 @@ function UncategorizedColumn({
   onCreateArticle: () => void
 }) {
   return (
-    <div className="flex min-h-[360px] min-w-[260px] max-w-[260px] flex-col rounded-[18px] bg-gradient-to-b from-[#f0f0f2] to-[#f7f7f9] p-2">
+    <div className="flex min-h-[360px] min-w-[240px] flex-1 max-w-[360px] flex-col rounded-[18px] bg-gradient-to-b from-[#f0f0f2] to-[#f7f7f9] p-2">
       <div className="rounded-[14px] bg-white/75 px-3 py-3">
         <p className="text-[13px] font-medium text-primary">Sans catégorie</p>
         <p className="mt-0.5 text-[12px] text-tertiary">
@@ -387,7 +387,7 @@ export default function CategoriesPage() {
 
   return (
     <>
-      <div className="mx-auto max-w-6xl">
+      <div className="project-page project-page--wide">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-[20px] font-semibold text-primary tracking-tight">Catégories</h1>

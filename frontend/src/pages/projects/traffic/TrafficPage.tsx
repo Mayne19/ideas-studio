@@ -348,13 +348,15 @@ export default function TrafficPage() {
           <h1 className="text-[20px] font-semibold tracking-tight text-primary">Trafic</h1>
           <p className="mt-0.5 text-[13px] text-secondary">Comprenez d’où viennent les visiteurs et quelles sources apportent le meilleur trafic.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button size="sm" variant="secondary" icon={<RefreshCw size={13} />} onClick={() => setTick((t) => t + 1)}>
             Rafraîchir
           </Button>
           <ExportButtons onJson={handleExportJson} onPdf={handleExportPdf} />
-          <PeriodNavigator value={period} onChange={setPeriod} />
         </div>
+      </div>
+      <div className="mb-6">
+        <PeriodNavigator value={period} onChange={setPeriod} />
       </div>
 
         <div className="flex flex-col gap-6">
