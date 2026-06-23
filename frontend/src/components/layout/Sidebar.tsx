@@ -138,7 +138,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
       <div className="flex h-[64px] items-center border-b border-border px-3 justify-between shrink-0">
         {!collapsed && (
           <Link to="/projects" className="flex min-w-0 items-center gap-2 text-[15px] font-semibold text-primary hover:opacity-80 transition-opacity">
-            <img src="/brand-icon.svg" alt="" className="h-7 w-7 shrink-0 rounded-[8px]" />
+            <img src="/icon.svg" alt="" className="h-7 w-7 shrink-0 rounded-[8px]" />
             <span className="truncate">Ideas Studio</span>
           </Link>
         )}

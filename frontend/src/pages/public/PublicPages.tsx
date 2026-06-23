@@ -26,7 +26,7 @@ function PublicNav() {
   return (
     <header className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4">
       <Link to="/" className="flex items-center gap-2 text-[15px] font-semibold text-[#101114]">
-        <img src="/brand-icon.svg" alt="" className="h-7 w-7 rounded-[8px]" />
+        <img src="/icon.svg" alt="" className="h-7 w-7 rounded-[8px]" />
         Ideas Studio
       </Link>
       <nav className="hidden items-center gap-6 text-[13px] font-medium text-[#5f6368] md:flex">
@@ -53,7 +53,7 @@ function PublicFooter() {
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 md:grid-cols-[1.2fr_2fr]">
         <div>
           <div className="flex items-center gap-2 text-[15px] font-semibold text-[#101114]">
-            <img src="/brand-icon.svg" alt="" className="h-7 w-7 rounded-[8px]" />
+            <img src="/icon.svg" alt="" className="h-7 w-7 rounded-[8px]" />
             Ideas Studio
           </div>
           <p className="mt-3 max-w-sm text-[13px] leading-6 text-[#6b7280]">
@@ -89,7 +89,7 @@ function DashboardVisual() {
     <div className="mx-auto w-full max-w-5xl rounded-[8px] border border-[#dfe3ea] bg-white p-3 shadow-[0_24px_80px_rgba(17,24,39,0.16)]">
       <div className="flex items-center justify-between border-b border-[#edf0f4] pb-3">
         <div className="flex items-center gap-2">
-          <img src="/brand-icon.svg" alt="" className="h-7 w-7 rounded-[8px]" />
+          <img src="/icon.svg" alt="" className="h-7 w-7 rounded-[8px]" />
           <span className="text-[13px] font-semibold text-[#111827]">Editorial Command Center</span>
         </div>
         <div className="hidden items-center gap-2 text-[11px] text-[#6b7280] sm:flex">
