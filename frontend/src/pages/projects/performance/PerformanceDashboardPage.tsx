@@ -455,9 +455,9 @@ export default function PerformanceDashboardPage() {
             <p className="mt-0.5 text-[13px] text-secondary">Identifiez les contenus qui montent, baissent ou méritent une optimisation.</p>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <PeriodNavigator value={period} onChange={setPeriod} />
+        <div className="flex items-center gap-3">
           <ExportButtons onJson={handleExportJson} onPdf={handleExportPdf} />
+          <PeriodNavigator value={period} onChange={setPeriod} />
         </div>
       </div>
 
