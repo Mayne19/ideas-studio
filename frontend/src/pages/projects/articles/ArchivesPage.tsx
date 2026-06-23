@@ -76,7 +76,7 @@ function ArticleRow({
   const category = categories.find((c) => c.id === article.category_id)
 
   return (
-    <div className={`grid gap-2.5 rounded-[12px] px-3 py-2.5 transition-colors hover:bg-[#f5f5f7] lg:items-center ${TABLE_GRID}`}>
+    <div className={`grid gap-2.5 rounded-[12px] bg-surface px-3 py-3 transition-colors hover:bg-[#f5f5f7] lg:items-center ${TABLE_GRID}`}>
       <div className="min-w-0">
         <button
           type="button"
@@ -86,7 +86,7 @@ function ArticleRow({
         >
           {article.title}
         </button>
-        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-tertiary">
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-tertiary">
           <span
             className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${category?.color ? '' : 'bg-[#f0f0f2] text-tertiary'}`}
             style={category?.color ? { backgroundColor: `${category.color}20`, color: category.color } : undefined}
@@ -101,7 +101,7 @@ function ArticleRow({
           <span>{article.word_count > 0 ? `${article.word_count} mots` : '— mots'}</span>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-1">
+      <div className="flex flex-wrap items-center gap-1.5">
         <ScorePill label="Global" value={finiteScore(article.global_score)} />
         <ScorePill label="SEO" value={finiteScore(article.seo_score)} />
         <ScorePill label="Qualité" value={finiteScore(article.quality_score)} />
@@ -354,25 +354,25 @@ export default function ArchivesPage() {
         )}
 
         {/* Filters */}
-        <div className="mb-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(200px,1.25fr)_220px_220px]">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
           <Input
             placeholder="Rechercher..."
             value={filterSearch}
             onChange={handleSearchChange}
-            className="w-full"
+            className="w-[440px] max-w-full"
           />
           <Select
             options={scoreOptions}
             value={filterScore}
             onChange={(e) => setFilterScore(e.target.value as ScoreFilter)}
-            className="w-full"
+            className="w-[185px]"
           />
           {categories.length > 0 && (
             <Select
               options={categoryOptions}
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="w-full"
+              className="w-[185px]"
             />
           )}
         </div>
@@ -404,7 +404,7 @@ export default function ArchivesPage() {
               <div>Statut</div>
               <div className="text-right">Actions</div>
             </div>
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-1">
               {visibleArticles.map((article) => (
                 <ArticleRow
                   key={article.id}
