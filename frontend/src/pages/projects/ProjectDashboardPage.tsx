@@ -573,7 +573,7 @@ export default function ProjectDashboardPage() {
         </Card>
       </div>
 
-      {!hasTrackingData && (
+      {data && !hasTrackingData && (
         <Card className="mb-6">
           <div className="flex items-start gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-accent/10 text-accent">

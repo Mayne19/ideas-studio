@@ -76,7 +76,7 @@ function getUniqueAuthors(articles: Article[]): string[] {
   return Array.from(names).sort()
 }
 
-const ARTICLE_TABLE_GRID = 'lg:grid-cols-[minmax(240px,1fr)_auto_80px_90px_130px]'
+const ARTICLE_TABLE_GRID = 'lg:grid-cols-[minmax(240px,1.2fr)_minmax(300px,auto)_80px_90px_130px]'
 
 function ArticleRow({
   article,
@@ -117,7 +117,7 @@ function ArticleRow({
           <span>{article.word_count > 0 ? `${article.word_count} mots` : '— mots'}</span>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
         <ScorePill label="Global" value={finiteScore(article.global_score)} />
         <ScorePill label="SEO" value={finiteScore(article.seo_score)} />
         <ScorePill label="Qualité" value={finiteScore(article.quality_score)} />
@@ -142,7 +142,7 @@ function ArticleRow({
       <div className="flex items-center">
         <StatusBadge status={article.status} />
       </div>
-      <div className="flex items-center gap-2.5 lg:justify-end">
+      <div className="flex items-center gap-3 lg:justify-end">
         <button
           type="button"
           onClick={() => onEdit(article)}
