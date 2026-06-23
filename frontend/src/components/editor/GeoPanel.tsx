@@ -1,4 +1,4 @@
-import { Globe, CheckCircle, HelpCircle, TrendingUp } from 'lucide-react'
+import { Globe, CheckCircle, HelpCircle, TrendingUp } from '@/components/ui/hugeIcons'
 import type { EditorArticle } from '@/types'
 
 export default function GeoPanel({ article }: { article: EditorArticle }) {

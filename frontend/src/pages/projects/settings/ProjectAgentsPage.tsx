@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { CheckCircle, Loader2, RefreshCw } from 'lucide-react'
+import { CheckCircle, Loader2, RefreshCw } from '@/components/ui/hugeIcons'
 import { api } from '@/api/client'
 import Button from '@/components/ui/Button'
 import Select from '@/components/ui/Select'

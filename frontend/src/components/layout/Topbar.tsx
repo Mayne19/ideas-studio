@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronRight, LogOut, User, FileText, FolderOpen, Loader2, Image, Settings } from 'lucide-react'
+import { ChevronRight, LogOut, User, FileText, FolderOpen, Loader2, Image, Settings } from '@/components/ui/hugeIcons'
 import { BellDotIcon, BellIcon, Search01Icon } from '@hugeicons/core-free-icons'
 import { useAuth } from '@/context/AuthContext'
 import { useProject } from '@/context/ProjectContext'

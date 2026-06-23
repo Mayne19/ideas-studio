@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react'
+import { Loader2 } from '@/components/ui/hugeIcons'
 import { MayneSkeleton } from '@mayne/ui-kit/ui'
 import { cn } from '@/utils/cn'
 

@@ -18,7 +18,7 @@ import {
   Eye, BarChart2, Settings, History, Loader2, RefreshCw,
   AlertCircle, MessageCircle, ChevronDown, ChevronUp, Plus, Trash2,
   BookOpen, Type, Check, Send, Undo2, Redo2, PencilLine,
-} from 'lucide-react'
+} from '@/components/ui/hugeIcons'
 import { getEditorArticle, autosaveArticle } from '@/api/editor'
 import { listCategories } from '@/api/categories'
 import { listCalloutTemplates } from '@/api/callouts'

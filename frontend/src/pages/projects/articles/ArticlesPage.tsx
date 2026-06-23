@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Plus, FileText, Pencil, Trash2, Sparkles, Zap, Loader2, CheckCircle, Archive, EyeOff } from 'lucide-react'
+import { Plus, FileText, Pencil, Trash2, Sparkles, Zap, Loader2, CheckCircle, Archive, EyeOff } from '@/components/ui/hugeIcons'
 import { listArticles, createArticle, unpublishArticle, archiveArticle, analyzeSeoArticle, deleteArticle, generateArticle } from '@/api/articles'
 import type { CreateArticlePayload, GenerateArticleRequest } from '@/api/articles'
 import { listCategories } from '@/api/categories'

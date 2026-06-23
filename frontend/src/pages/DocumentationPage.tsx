@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Search, Menu, X } from 'lucide-react'
+import { ArrowRight, Search, Menu, X } from '@/components/ui/hugeIcons'
 
 const configuredApiUrl = (import.meta.env['VITE_API_URL'] as string | undefined)?.trim().replace(/\/$/, '')
 const documentationApiUrl = configuredApiUrl || 'http://localhost:8000'

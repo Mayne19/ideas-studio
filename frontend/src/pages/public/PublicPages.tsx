@@ -16,7 +16,7 @@ import {
   ShieldCheck,
   Sparkles,
   Users,
-} from 'lucide-react'
+} from '@/components/ui/hugeIcons'
 import { publicCopy } from '@/lib/publicI18n'
 
 const t = publicCopy.en

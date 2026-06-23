@@ -18,7 +18,7 @@ import {
   RefreshCw,
   Sparkles,
   Tags,
-} from 'lucide-react'
+} from '@/components/ui/hugeIcons'
 import { getArticlesPerformance, getPerformanceSummary } from '@/api/performance'
 import { listArticles } from '@/api/articles'
 import { listCategories } from '@/api/categories'

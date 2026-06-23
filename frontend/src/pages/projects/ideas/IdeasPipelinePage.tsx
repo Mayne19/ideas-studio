@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   Lightbulb, Plus, Star, Pencil, X, ExternalLink, RefreshCw,
   Search, Info, Sparkles, CheckCircle, Eye, Send,
-} from 'lucide-react'
+} from '@/components/ui/hugeIcons'
 import { listIdeas, generateIdea, rejectIdea, setIdeaPriority, startWriting, createManualDraft, autoGenerateIdeas, sendToProduction } from '@/api/ideas'
 import type { AutoGenerateIdeasResponse } from '@/api/ideas'
 import { listCategories } from '@/api/categories'

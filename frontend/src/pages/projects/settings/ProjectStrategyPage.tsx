@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Save, Sparkles } from 'lucide-react'
+import { Save, Sparkles } from '@/components/ui/hugeIcons'
 import { getProject, updateProject } from '@/api/projects'
 import type { Project } from '@/types'
 import Textarea from '@/components/ui/Textarea'

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Plus, Pencil, Trash2, FolderOpen, RefreshCw, Info, Palette, ExternalLink } from 'lucide-react'
+import { Plus, Pencil, Trash2, FolderOpen, RefreshCw, Info, Palette, ExternalLink } from '@/components/ui/hugeIcons'
 import { listCategories, createCategory, updateCategory, deleteCategory, syncCategories } from '@/api/categories'
 import type { CreateCategoryPayload, UpdateCategoryPayload } from '@/api/categories'
 import { listArticles, createArticle } from '@/api/articles'

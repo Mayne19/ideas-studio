@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
-import { X } from 'lucide-react'
+import { X } from '@/components/ui/hugeIcons'
 import { cn } from '@/utils/cn'
 
 type ModalSize = 'sm' | 'md' | 'lg'

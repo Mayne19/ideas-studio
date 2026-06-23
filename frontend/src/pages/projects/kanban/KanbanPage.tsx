@@ -16,7 +16,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { CalendarClock, ExternalLink, FileText, Loader2, Plus, RefreshCw } from 'lucide-react'
+import { CalendarClock, ExternalLink, FileText, Loader2, Plus, RefreshCw } from '@/components/ui/hugeIcons'
 import {
   listArticles, createArticle, publishArticle, unpublishArticle, markReadyArticle, archiveArticle,
   scheduleArticle, patchArticle,

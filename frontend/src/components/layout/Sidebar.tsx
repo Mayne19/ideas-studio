@@ -7,7 +7,7 @@ import {
   PanelLeftOpen,
   Check,
   Archive,
-} from 'lucide-react'
+} from '@/components/ui/hugeIcons'
 import {
   AiBrain01Icon,
   BellIcon,

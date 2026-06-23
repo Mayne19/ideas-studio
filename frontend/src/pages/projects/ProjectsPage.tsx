@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Globe, FolderOpen, FileText, Lightbulb, AlertCircle, ExternalLink, WifiOff, Trash2 } from 'lucide-react'
+import { Plus, Globe, FolderOpen, FileText, Lightbulb, AlertCircle, ExternalLink, WifiOff, Trash2 } from '@/components/ui/hugeIcons'
 import { listProjects, createProject, deleteProject } from '@/api/projects'
 import { listArticles } from '@/api/articles'
 import type { CreateProjectPayload } from '@/api/projects'

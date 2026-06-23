@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
-import { ArrowLeft, Pencil, Eye } from 'lucide-react'
+import { ArrowLeft, Pencil, Eye } from '@/components/ui/hugeIcons'
 import { getArticlePerformance } from '@/api/performance'
 import type { ArticlePerformance } from '@/types'
 import { Card } from '@/components/ui/Card'

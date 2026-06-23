@@ -1,4 +1,4 @@
-import { AlertCircle, DollarSign, TrendingUp, HelpCircle } from 'lucide-react'
+import { AlertCircle, DollarSign, TrendingUp, HelpCircle } from '@/components/ui/hugeIcons'
 import type { EditorArticle } from '@/types'
 
 export default function CostPanel({ article }: { article: EditorArticle }) {

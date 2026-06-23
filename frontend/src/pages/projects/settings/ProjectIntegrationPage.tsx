@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
-import { Code2, Globe, Key, Power, RefreshCw, Wifi, WifiOff } from 'lucide-react'
+import { Code2, Globe, Key, Power, RefreshCw, Wifi, WifiOff } from '@/components/ui/hugeIcons'
 import { getConnectInfo, disconnectProject, revalidateProject, updateProject } from '@/api/projects'
 import type { ConnectInfo } from '@/types'
 import FormCard from '@/components/ui/FormCard'

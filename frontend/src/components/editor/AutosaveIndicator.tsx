@@ -1,4 +1,4 @@
-import { Loader2, Check, AlertCircle } from 'lucide-react'
+import { Loader2, Check, AlertCircle } from '@/components/ui/hugeIcons'
 
 type AutosaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 

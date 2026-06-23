@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlertCircle, AlertTriangle, Info, RefreshCw, CheckCircle, XCircle, MinusCircle, HelpCircle } from 'lucide-react'
+import { AlertCircle, AlertTriangle, Info, RefreshCw, CheckCircle, XCircle, MinusCircle, HelpCircle } from '@/components/ui/hugeIcons'
 import { analyzeArticle, readyCheck, runSeoExpertReview } from '@/api/seo'
 import { ApiError } from '@/api/client'
 import type { AnalysisBrief, SeoAnalysis, SeoIssue, ReadyCheck, EditorArticle, SeoExpertIssue, SeoExpertReview } from '@/types'

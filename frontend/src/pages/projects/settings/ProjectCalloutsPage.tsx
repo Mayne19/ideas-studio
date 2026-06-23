@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Import, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Import, Pencil, Plus, Trash2 } from '@/components/ui/hugeIcons'
 
 import {
   createCalloutTemplate,

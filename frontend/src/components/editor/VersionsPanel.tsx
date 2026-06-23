@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { RotateCcw } from 'lucide-react'
+import { RotateCcw } from '@/components/ui/hugeIcons'
 import { listVersions, restoreVersion } from '@/api/editor'
 import type { ArticleVersion, EditorArticle, ProjectMember } from '@/types'
 import { formatDateTime } from '@/utils/format'

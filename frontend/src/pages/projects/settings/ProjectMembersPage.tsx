@@ -14,8 +14,8 @@ import {
   Shield,
   Trash2,
   UserPlus,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+} from '@/components/ui/hugeIcons'
+import type { HugeIconComponent } from '@/components/ui/hugeIcons'
 import { listMembers, addMemberByUsername, inviteByEmail, updateMemberRole, removeMember, listInvitations, removeInvitation } from '@/api/members'
 import { listActivity } from '@/api/activity'
 import type { Invitation, ProjectMember, ProjectRole, ActivityLog } from '@/types'
@@ -44,7 +44,7 @@ const ASSIGNABLE_ROLES = [
 const ROLE_GUIDE: Array<{
   role: ProjectRole
   title: string
-  icon: LucideIcon
+  icon: HugeIconComponent
   permissions: string[]
 }> = [
   {

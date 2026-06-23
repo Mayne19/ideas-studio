@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { AlertTriangle, Bot, CheckCircle, Euro, History, Loader2, Play, RefreshCw, RotateCw, Settings, TestTube2, XCircle } from 'lucide-react'
+import { AlertTriangle, Bot, CheckCircle, Euro, History, Loader2, Play, RefreshCw, RotateCw, Settings, TestTube2, XCircle } from '@/components/ui/hugeIcons'
 import { listAIProviders } from '@/api/aiProviders'
 import { getPipelineLogs, getPipelineSettings, triggerPipelineRun } from '@/api/pipeline'
 import { listArticles } from '@/api/articles'

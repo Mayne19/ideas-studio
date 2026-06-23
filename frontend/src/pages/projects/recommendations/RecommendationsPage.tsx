@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Sparkles, RefreshCw, Pencil, Check, X, Zap, Loader2, FileText } from 'lucide-react'
+import { Sparkles, RefreshCw, Pencil, Check, X, Zap, Loader2, FileText } from '@/components/ui/hugeIcons'
 import {
   listRecommendations,
   triggerReview,

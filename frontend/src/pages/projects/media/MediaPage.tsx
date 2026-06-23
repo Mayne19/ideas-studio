@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { ExternalLink, Image, Upload, Trash2, Copy, Check, Loader2 } from 'lucide-react'
+import { ExternalLink, Image, Upload, Trash2, Copy, Check, Loader2 } from '@/components/ui/hugeIcons'
 import { listMedia, uploadMedia, deleteMedia } from '@/api/media'
 import type { MediaAsset } from '@/api/media'
 import LoadingState from '@/components/ui/LoadingState'

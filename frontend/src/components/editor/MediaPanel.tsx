@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Image, Upload, Loader2, X } from 'lucide-react'
+import { Image, Upload, Loader2, X } from '@/components/ui/hugeIcons'
 import { uploadMedia } from '@/api/media'
 
 export default function MediaPanel({

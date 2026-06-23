@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Calendar, ExternalLink, RefreshCw, List, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar, ExternalLink, RefreshCw, List, ChevronLeft, ChevronRight } from '@/components/ui/hugeIcons'
 import { listArticles } from '@/api/articles'
 import type { Article } from '@/types'
 import { STATUS_LABELS } from '@/utils/articleActions'

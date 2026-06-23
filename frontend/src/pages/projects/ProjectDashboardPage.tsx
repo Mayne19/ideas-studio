@@ -4,7 +4,7 @@ import {
   FileText, Lightbulb, BarChart2, Sparkles, Globe,
   WifiOff, ArrowRight, AlertCircle, Clock, CheckCircle, PenLine,
   Edit3, Eye, Send, Star, BookOpen, Cpu, Zap, ClipboardList, User,
-} from 'lucide-react'
+} from '@/components/ui/hugeIcons'
 import { useProject } from '@/context/ProjectContext'
 import { useAuth } from '@/context/AuthContext'
 import { listArticles } from '@/api/articles'

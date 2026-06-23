@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Play, RotateCw, History, Loader2 } from 'lucide-react'
+import { Play, RotateCw, History, Loader2 } from '@/components/ui/hugeIcons'
 import { getPipelineSettings, updatePipelineSettings, triggerPipelineRun, getPipelineLogs } from '@/api/pipeline'
 import type { PipelineLog, PipelineSettings } from '@/api/pipeline'
 import LoadingState from '@/components/ui/LoadingState'

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlertCircle, Calendar } from 'lucide-react'
+import { AlertCircle, Calendar } from '@/components/ui/hugeIcons'
 import { publishArticle, unpublishArticle, markReadyArticle, archiveArticle, scheduleArticle, rollbackArticle } from '@/api/articles'
 import { ApiError } from '@/api/client'
 import type { EditorArticle } from '@/types'

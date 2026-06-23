@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { BarChart2, ArrowLeft, ExternalLink, RefreshCw } from 'lucide-react'
+import { BarChart2, ArrowLeft, ExternalLink, RefreshCw } from '@/components/ui/hugeIcons'
 import { getArticlesPerformance } from '@/api/performance'
 import type { ArticlePerformanceBrief } from '@/types'
 import { formatDate } from '@/utils/format'

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Copy, Check } from 'lucide-react'
+import { Copy, Check } from '@/components/ui/hugeIcons'
 import { cn } from '@/utils/cn'
 
 type CopyButtonProps = {

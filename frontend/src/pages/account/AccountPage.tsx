@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { User, Mail, Camera, Check, Loader2, AtSign, Lock, Copy } from 'lucide-react'
+import { User, Mail, Camera, Check, Loader2, AtSign, Lock, Copy } from '@/components/ui/hugeIcons'
 import { useAuth } from '@/context/AuthContext'
 import { api } from '@/api/client'
 import { checkUsername } from '@/api/auth'

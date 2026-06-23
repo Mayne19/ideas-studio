@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { FileText, Pencil, Trash2, RotateCcw, Send } from 'lucide-react'
+import { FileText, Pencil, Trash2, RotateCcw, Send } from '@/components/ui/hugeIcons'
 import { listArticles, publishArticle, unarchiveArticle, deleteArticle } from '@/api/articles'
 import { listCategories } from '@/api/categories'
 import type { Article, Category } from '@/types'

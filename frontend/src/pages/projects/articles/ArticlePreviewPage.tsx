@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Pencil } from 'lucide-react'
+import { ArrowLeft, Pencil } from '@/components/ui/hugeIcons'
 import { getEditorArticle } from '@/api/editor'
 import type { EditorArticle } from '@/types'
 import Button from '@/components/ui/Button'

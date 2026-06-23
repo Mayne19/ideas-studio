@@ -1,6 +1,6 @@
 import { forwardRef } from 'react'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2 } from '@/components/ui/hugeIcons'
 import { cn } from '@/utils/cn'
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'

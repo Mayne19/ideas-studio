@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MessageCircle, Check, Trash2, Loader2 } from 'lucide-react'
+import { MessageCircle, Check, Trash2, Loader2 } from '@/components/ui/hugeIcons'
 import { listComments, resolveComment, deleteComment } from '@/api/comments'
 import type { ArticleComment } from '@/api/comments'
 

@@ -1,4 +1,4 @@
-import { Code, AlertCircle, CheckCircle } from 'lucide-react'
+import { Code, AlertCircle, CheckCircle } from '@/components/ui/hugeIcons'
 import type { EditorArticle } from '@/types'
 
 export default function StructuredDataPanel({ article }: { article: EditorArticle }) {

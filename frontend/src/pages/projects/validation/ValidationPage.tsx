@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { AlertTriangle, Calendar, CheckCircle, ExternalLink, RefreshCw, Send, XCircle } from 'lucide-react'
+import { AlertTriangle, Calendar, CheckCircle, ExternalLink, RefreshCw, Send, XCircle } from '@/components/ui/hugeIcons'
 import { bulkValidateArticles, listArticles, patchArticle, publishArticle } from '@/api/articles'
 import type { BulkValidateResponse } from '@/api/articles'
 import { listCategories } from '@/api/categories'

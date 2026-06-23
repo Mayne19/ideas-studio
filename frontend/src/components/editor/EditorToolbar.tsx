@@ -25,7 +25,7 @@ import {
   Plus,
   Trash2,
   Library,
-} from 'lucide-react'
+} from '@/components/ui/hugeIcons'
 import { createCalloutTemplate } from '@/api/callouts'
 import { uploadMedia, listMedia } from '@/api/media'
 import type { MediaAsset } from '@/api/media'

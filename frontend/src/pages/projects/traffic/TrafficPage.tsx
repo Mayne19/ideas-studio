@@ -15,7 +15,7 @@ import {
   Tablet,
   TrendingUp,
   Users,
-} from 'lucide-react'
+} from '@/components/ui/hugeIcons'
 import { getPerformanceSummary } from '@/api/performance'
 import type { PerformanceSummary } from '@/types'
 import { Card } from '@/components/ui/Card'

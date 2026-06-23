@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Sparkles, Check, Loader2, AlertCircle, Wand2, Info } from 'lucide-react'
+import { Sparkles, Check, Loader2, AlertCircle, Wand2, Info } from '@/components/ui/hugeIcons'
 import { suggestEditorialSetup, updateProject } from '@/api/projects'
 import type { EditorialSuggestion } from '@/api/projects'
 import Modal from '@/components/ui/Modal'

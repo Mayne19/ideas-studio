@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { Plus, Trash2, TestTube, CheckCircle, XCircle, Loader2, Eye, EyeOff, Save } from 'lucide-react'
+import { Plus, Trash2, TestTube, CheckCircle, XCircle, Loader2, Eye, EyeOff, Save } from '@/components/ui/hugeIcons'
 import { api } from '@/api/client'
 import ToggleSwitch from '@/components/ui/ToggleSwitch'
 

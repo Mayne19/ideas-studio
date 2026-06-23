@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, ArrowRight, CalendarDays, Download } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CalendarDays, Download } from '@/components/ui/hugeIcons'
 import Button from '@/components/ui/Button'
 import { cn } from '@/utils/cn'
 import { customPeriod, currentPeriod, isFuturePeriod, shiftPeriod, type PeriodMode, type PeriodRange } from '@/utils/periodNavigator'

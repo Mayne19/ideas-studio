@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Bell, CheckCheck, Loader2 } from 'lucide-react'
+import { Bell, CheckCheck, Loader2 } from '@/components/ui/hugeIcons'
 import { useNavigate, useParams } from 'react-router-dom'
 import { listNotifications, markNotificationRead, markAllNotificationsRead } from '@/api/notifications'
 import type { Notification } from '@/types'
