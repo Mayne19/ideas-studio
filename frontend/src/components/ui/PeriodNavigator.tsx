@@ -82,13 +82,13 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
       </div>
 
       {/* Custom - Right */}
-      <div className="relative" ref={customRef}>
+      <div className="relative flex items-center rounded-[12px] bg-surface-soft p-1" ref={customRef}>
         <button
           type="button"
           onClick={() => { setCustomOpen(!customOpen); setCustomStart(value.startDate); setCustomEnd(value.endDate) }}
           className={cn(
-            'flex h-8 items-center gap-1.5 rounded-[12px] px-3 text-[12px] font-medium transition-colors',
-            customOpen || !value.isCurrent ? 'bg-accent/10 text-accent' : 'bg-surface-soft text-secondary hover:bg-surface hover:text-primary',
+            'flex h-8 items-center gap-1.5 rounded-[9px] px-3 text-[12px] font-medium transition-colors whitespace-nowrap',
+            customOpen || !value.isCurrent ? 'bg-accent/10 text-accent' : 'text-secondary hover:bg-surface hover:text-primary',
           )}
         >
           <CalendarDays size={14} />
