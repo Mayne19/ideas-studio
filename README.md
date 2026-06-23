@@ -21,7 +21,7 @@ Ideas Studio est une plateforme SaaS complète qui automatise la création de co
 
 ### Frontend
 
-- **React 18** — Bibliothèque UI
+- **React 19** — Bibliothèque UI
 - **TypeScript** — Typage
 - **Vite** — Bundler
 - **Tailwind CSS** — Styles
@@ -74,6 +74,41 @@ python worker.py
 - API : `http://localhost:8000`
 - Documentation API : `http://localhost:8000/docs`
 - Frontend : `http://localhost:5173`
+
+---
+
+## État de lancement
+
+Verdict au 23 juin 2026 : **lançable avec réserves pour une phase de test réelle**.
+
+Ce qui a été vérifié :
+
+- Frontend : build Vite/TypeScript OK, lint OK, routes publiques et routes projet déclarées pour les pages principales du CMS.
+- Backend : API FastAPI structurée par domaines (`auth`, projets, articles, catégories, idées, production, validation, médias, performance, trafic, recommandations, notifications, providers IA, agents, pipeline, tracking, API publique).
+- Auth : login corrigé pour éviter le timeout trop court et le double submit côté frontend.
+- Providers IA : clés stockées côté backend, réponses publiques masquées (`api_key_configured` uniquement), fallback propre si aucune configuration IA réelle n'est disponible.
+- Migrations : Alembic expose une seule tête (`027`).
+- Hygiène Git : `venv`, `frontend/node_modules`, caches Python et `.env.local` ont été retirés de l'index Git et ignorés.
+
+Réserves avant test réel :
+
+- Configurer une vraie variable `SECRET_KEY` stable en production. La valeur par défaut est générée au démarrage et ne doit pas être utilisée pour un déploiement durable.
+- Configurer `DATABASE_URL`, `APP_ENV`, `APP_URL`, `FRONTEND_URL`, `CORS_ORIGINS` et au moins un provider IA réel côté backend ou dans les settings CMS.
+- Ne jamais exposer de clé IA dans `VITE_*` ni dans le frontend.
+- Le test de génération IA complète avec provider réel n'a pas été exécuté pendant cet audit afin d'éviter un workflow coûteux.
+- Le build signale un gros chunk lazy-loadé pour l'éditeur TipTap ; ce n'est pas bloquant pour une phase de test, mais à surveiller si le temps de chargement éditeur devient sensible.
+
+Commandes validées pendant l'audit :
+
+```bash
+./venv/bin/python -m alembic heads
+./venv/bin/python -m pytest tests/ -q
+./venv/bin/python -m pytest tests/test_auth.py tests/test_permissions.py tests/test_projects.py tests/test_generation.py -q
+npm --prefix frontend run build
+npm --prefix frontend run lint
+```
+
+Résultat de la suite complète : `300 passed, 20 skipped`.
 
 ---
 

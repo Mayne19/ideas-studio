@@ -21,6 +21,7 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (loading) return
     setError('')
     setLoading(true)
     try {
@@ -75,7 +76,7 @@ export default function LoginPage() {
         </div>
 
         <Button type="submit" loading={loading} className="mt-1 w-full justify-center rounded-full">
-          Se connecter
+          {loading ? 'Connexion en cours...' : 'Se connecter'}
         </Button>
 
         <p className="text-center text-[13px] text-secondary">

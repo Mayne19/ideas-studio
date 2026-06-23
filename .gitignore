@@ -3,7 +3,13 @@ venv/
 __pycache__/
 *.pyc
 *.db
+*.sqlite
+*.sqlite3
 frontend/dist/
 frontend/dist-build/
 uploads/
 .env
+.env.local
+.env.*.local
+*.log
+coverage/

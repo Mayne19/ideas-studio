@@ -1,6 +1,8 @@
 import json
 from abc import ABC, abstractmethod
 
+from sqlalchemy.exc import SQLAlchemyError
+
 
 class ProviderUnavailableError(RuntimeError):
     """Raised when a real LLM provider cannot be reached."""
@@ -251,6 +253,8 @@ def get_llm_provider() -> LLMProvider:
 
             if provider.is_available():
                 return provider
+            return None
+        except SQLAlchemyError:
             return None
         finally:
             db.close()

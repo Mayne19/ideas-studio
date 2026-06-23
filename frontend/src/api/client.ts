@@ -17,6 +17,8 @@ type RequestOptions = {
   timeoutMs?: number
 }
 
+type ApiCallOptions = Pick<RequestOptions, 'signal' | 'timeoutMs'>
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const token = localStorage.getItem('token')
   const controller = new AbortController()
@@ -83,12 +85,12 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 export const api = {
   get: <T>(path: string, signal?: AbortSignal) =>
     request<T>(path, { signal }),
-  post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'POST', body }),
-  put: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'PUT', body }),
-  patch: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'PATCH', body }),
-  delete: <T>(path: string) =>
-    request<T>(path, { method: 'DELETE' }),
+  post: <T>(path: string, body?: unknown, options: ApiCallOptions = {}) =>
+    request<T>(path, { method: 'POST', body, ...options }),
+  put: <T>(path: string, body?: unknown, options: ApiCallOptions = {}) =>
+    request<T>(path, { method: 'PUT', body, ...options }),
+  patch: <T>(path: string, body?: unknown, options: ApiCallOptions = {}) =>
+    request<T>(path, { method: 'PATCH', body, ...options }),
+  delete: <T>(path: string, options: ApiCallOptions = {}) =>
+    request<T>(path, { method: 'DELETE', ...options }),
 }

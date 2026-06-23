@@ -2,7 +2,7 @@ import { api } from './client'
 import type { User, LoginResponse } from '@/types'
 
 export function login(email: string, password: string): Promise<LoginResponse> {
-  return api.post<LoginResponse>('/auth/login', { email, password })
+  return api.post<LoginResponse>('/auth/login', { email, password }, { timeoutMs: 90000 })
 }
 
 export function register(firstName: string, lastName: string, email: string, password: string, username?: string): Promise<User> {
