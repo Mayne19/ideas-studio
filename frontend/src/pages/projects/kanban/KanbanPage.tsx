@@ -30,6 +30,7 @@ import ErrorState from '@/components/ui/ErrorState'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import StatusBadge from '@/components/ui/StatusBadge'
+import ArticleScoreBadges from '@/components/ui/ArticleScoreBadges'
 
 type ColumnDef = {
   status: string
@@ -57,19 +58,6 @@ const QUICK_ACTIONS: Partial<Record<ArticleStatus, { key: string; label: string 
 }
 
 const FINAL_STATUSES = new Set<ArticleStatus>(['scheduled', 'published', 'unpublished', 'archived'])
-
-function scoreTone(value: number | null) {
-  if (value === null) return 'bg-[#f0f0f2] text-tertiary'
-  return value >= 70 ? 'bg-success/10 text-[#1a7a3a]' : value >= 40 ? 'bg-warning/10 text-[#c07000]' : 'bg-danger/10 text-danger'
-}
-
-function ScorePill({ label, value }: { label: string; value: number | null }) {
-  return (
-    <span className={`inline-flex min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-full px-1 py-0.5 text-[8px] font-medium ${scoreTone(value)}`}>
-      {label} {value === null ? '—' : Math.round(value)}
-    </span>
-  )
-}
 
 function stripHtml(value: string): string {
   return value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -119,9 +107,6 @@ function CardContent({
   const category = categories.find((c) => c.id === article.category_id)
   const wordCount = getWordCount(article)
   const usefulDate = getUsefulDate(article)
-  const geoScore = article.geo_optimization_json ? (((article.geo_optimization_json as Record<string, unknown>).geo_score ?? (article.geo_optimization_json as Record<string, unknown>).score) as number | null ?? null) : null
-  const originalityScore = article.originality_report_json ? ((article.originality_report_json as Record<string, unknown>).heuristic_score as number | null ?? null) : null
-
   return (
     <div className={`rounded-[16px] bg-surface p-3 ${isDragging ? 'opacity-50' : 'hover:bg-white'} transition-colors`}>
       <div className="flex items-start justify-between gap-2 mb-1.5">
@@ -151,12 +136,8 @@ function CardContent({
         <StatusBadge status={article.status} className="shrink-0" />
       </div>
 
-      <div className="mb-2 flex items-center gap-1">
-        <ScorePill label="Glob." value={article.global_score} />
-        <ScorePill label="SEO" value={article.seo_score} />
-        <ScorePill label="Qual." value={article.quality_score} />
-        <ScorePill label="GEO" value={geoScore} />
-        <ScorePill label="Orig." value={originalityScore} />
+      <div className="mb-2">
+        <ArticleScoreBadges article={article} compact />
       </div>
 
       {article.is_validable === false && article.validation_reasons.length > 0 && (

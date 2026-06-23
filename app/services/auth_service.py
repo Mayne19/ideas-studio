@@ -16,8 +16,11 @@ def get_user_by_username(db: Session, username: str) -> User | None:
 
 def create_user(db: Session, data: RegisterRequest) -> User:
     is_first_user = db.query(User.id).first() is None
+    name = data.name or f"{data.first_name or ''} {data.last_name or ''}".strip()
     kwargs = {
-        "name": data.name,
+        "name": name,
+        "first_name": data.first_name,
+        "last_name": data.last_name,
         "email": data.email,
         "password_hash": hash_password(data.password),
         "is_platform_admin": is_first_user,
@@ -35,6 +38,10 @@ def create_user(db: Session, data: RegisterRequest) -> User:
 def update_user(db: Session, user: User, data: UserUpdate) -> User:
     if data.name is not None:
         user.name = data.name
+    if data.first_name is not None:
+        user.first_name = data.first_name
+    if data.last_name is not None:
+        user.last_name = data.last_name
     if data.username is not None:
         clean = data.username.strip().lstrip("@").lower()
         # Check uniqueness

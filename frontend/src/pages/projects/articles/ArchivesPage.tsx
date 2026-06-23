@@ -13,45 +13,12 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import EmptyState from '@/components/ui/EmptyState'
 import ErrorState from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
+import ArticleScoreBadges from '@/components/ui/ArticleScoreBadges'
+import { finiteScore, getGeoScore, getOriginalityScore } from '@/lib/scoreBadge'
 
 const PAGE_SIZE = 20
 
 type ScoreFilter = '' | 'global_gte_90' | 'global_lt_90' | 'seo_lt_85' | 'quality_lt_85' | 'readability_lt_80' | 'geo_lt_80' | 'originality_lt_85' | 'critical'
-
-function finiteScore(value: unknown): number | null {
-  if (typeof value !== 'number') return null
-  return Number.isFinite(value) ? value : null
-}
-
-function scoreTone(value: number | null): string {
-  if (value === null) return 'bg-[#f0f0f2] text-tertiary'
-  if (value >= 85) return 'bg-success/10 text-[#1a7a3a]'
-  if (value >= 70) return 'bg-warning/10 text-[#9B6B19]'
-  if (value >= 50) return 'bg-orange-500/10 text-orange-600'
-  return 'bg-[#f0f0f2] text-tertiary'
-}
-
-function ScorePill({ label, value }: { label: string; value: number | null }) {
-  return (
-    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${scoreTone(value)}`}>
-      {label} {value === null ? '—' : Math.round(value)}
-    </span>
-  )
-}
-
-function getOriginalityScore(article: Article): number | null {
-  const report = article.originality_report_json
-  if (!report || typeof report !== 'object') return null
-  const score = (report as Record<string, unknown>).heuristic_score
-  return typeof score === 'number' && Number.isFinite(score) ? score : null
-}
-
-function getGeoScore(article: Article): number | null {
-  const report = article.geo_optimization_json
-  if (!report || typeof report !== 'object') return null
-  const score = (report as Record<string, unknown>).geo_score
-  return typeof score === 'number' && Number.isFinite(score) ? score : null
-}
 
 function getCost(article: Article): number | null {
   const costJson = article.estimated_cost_json
@@ -101,14 +68,7 @@ function ArticleRow({
           <span>{article.word_count > 0 ? `${article.word_count} mots` : '— mots'}</span>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-        <ScorePill label="Global" value={finiteScore(article.global_score)} />
-        <ScorePill label="SEO" value={finiteScore(article.seo_score)} />
-        <ScorePill label="Qualité" value={finiteScore(article.quality_score)} />
-        <ScorePill label="Lisibilité" value={finiteScore(article.readability_score)} />
-        <ScorePill label="Originalité" value={getOriginalityScore(article)} />
-        <ScorePill label="GEO" value={getGeoScore(article)} />
-      </div>
+      <ArticleScoreBadges article={article} />
       <div className="flex items-center">
         {(() => {
           const cost = getCost(article)

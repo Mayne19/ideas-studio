@@ -18,6 +18,7 @@ import type { PipelineLog, PipelineSettings } from '@/api/pipeline'
 import type { AIProviderPublic } from '@/api/aiProviders'
 import { Card } from '@/components/ui/Card'
 import StatusBadge from '@/components/ui/StatusBadge'
+import ArticleScoreBadges from '@/components/ui/ArticleScoreBadges'
 import LoadingState from '@/components/ui/LoadingState'
 import Modal from '@/components/ui/Modal'
 import { formatDate } from '@/utils/format'
@@ -168,35 +169,6 @@ function scoreOnTen(score: number | null | undefined): string {
   if (!isFilledScore(score)) return '—'
   const normalized = score > 10 ? score / 10 : score
   return normalized.toFixed(1)
-}
-
-function scoreTone(score: number | null | undefined): string {
-  if (!isFilledScore(score)) return 'bg-[#f0f0f2] text-tertiary'
-  if (score >= 70) return 'bg-success/10 text-[#1a7a3a]'
-  if (score >= 40) return 'bg-warning/10 text-[#c07000]'
-  return 'bg-danger/10 text-danger'
-}
-
-function ArticleScoreBadge({ label, value }: { label: string; value: number | null }) {
-  return (
-    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${scoreTone(value)}`}>
-      {label} {isFilledScore(value) ? Math.round(value) : '—'}
-    </span>
-  )
-}
-
-function getOriginalityScore(article: Article): number | null {
-  const report = article.originality_report_json
-  if (!report || typeof report !== 'object') return null
-  const score = (report as Record<string, unknown>).heuristic_score
-  return typeof score === 'number' && Number.isFinite(score) ? score : null
-}
-
-function getGeoScore(article: Article): number | null {
-  const report = article.geo_optimization_json
-  if (!report || typeof report !== 'object') return null
-  const score = (report as Record<string, unknown>).geo_score
-  return typeof score === 'number' && Number.isFinite(score) ? score : null
 }
 
 function getArticleDate(article: Article): string {
@@ -645,15 +617,8 @@ export default function ProjectDashboardPage() {
                             {a.word_count > 0 ? `${a.word_count.toLocaleString('fr-FR')} mots` : '— mots'}
                           </span>
                         </div>
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <ArticleScoreBadge label="Global" value={a.global_score} />
-                          <ArticleScoreBadge label="SEO" value={a.seo_score} />
-                          <ArticleScoreBadge label="Qualité" value={a.quality_score} />
-                          <ArticleScoreBadge label="Lisibilité" value={a.readability_score} />
-                          <ArticleScoreBadge label="Originalité" value={getOriginalityScore(a)} />
-                          <ArticleScoreBadge label="GEO" value={getGeoScore(a)} />
-                          <StatusBadge status={a.status} />
-                        </div>
+                        <ArticleScoreBadges article={a} />
+                        <StatusBadge status={a.status} />
                         <div className="flex items-center gap-1 text-[10px] text-tertiary">
                           <User size={9} />
                           <span>{a.author_name ?? 'Auteur —'}</span>

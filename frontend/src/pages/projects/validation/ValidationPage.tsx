@@ -12,7 +12,9 @@ import ErrorState from '@/components/ui/ErrorState'
 import Modal from '@/components/ui/Modal'
 import Select from '@/components/ui/Select'
 import StatusBadge from '@/components/ui/StatusBadge'
+import ScoreBadge from '@/components/ui/ScoreBadge'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { finiteScore, getGeoScore, getOriginalityScore } from '@/lib/scoreBadge'
 
 const VALIDATION_STATUSES = ['ready_to_publish']
 
@@ -23,6 +25,7 @@ type ValidationFilter =
   | 'global_lt_90'
   | 'seo_lt_85'
   | 'quality_lt_85'
+  | 'readability_lt_80'
   | 'geo_lt_80'
   | 'originality_lt_85'
   | 'critical'
@@ -36,6 +39,7 @@ const FILTERS: Array<{ value: ValidationFilter; label: string }> = [
   { value: 'global_lt_90', label: 'Global < 90' },
   { value: 'seo_lt_85', label: 'SEO < 85' },
   { value: 'quality_lt_85', label: 'Qualité < 85' },
+  { value: 'readability_lt_80', label: 'Lisibilité < 80' },
   { value: 'geo_lt_80', label: 'GEO < 80' },
   { value: 'originality_lt_85', label: 'Originalité < 85' },
   { value: 'critical', label: 'Warnings critiques' },
@@ -43,38 +47,7 @@ const FILTERS: Array<{ value: ValidationFilter; label: string }> = [
   { value: 'needs_fix', label: 'À corriger' },
 ]
 
-const GRID = 'lg:grid-cols-[32px_minmax(320px,1fr)_86px_70px_70px_70px_82px_90px_130px_170px]'
-
-function finiteScore(value: unknown): number | null {
-  if (typeof value !== 'number') return null
-  return Number.isFinite(value) ? value : null
-}
-
-function geoScore(article: Article) {
-  const json = article.geo_optimization_json
-  if (!json) return null
-  return finiteScore(json.geo_score ?? json.score)
-}
-
-function originalityScore(article: Article) {
-  return finiteScore(article.originality_report_json?.heuristic_score)
-}
-
-function scoreTone(value: number | null, valid?: boolean | null) {
-  if (value === null) return 'bg-surface-muted text-tertiary'
-  if (valid === false) return 'bg-warning/10 text-[#9B6B19]'
-  if (value >= 90) return 'bg-success/10 text-[#1f6d3d]'
-  if (value >= 80) return 'bg-warning/10 text-[#9B6B19]'
-  return 'bg-danger/10 text-danger'
-}
-
-function ScoreCell({ value, label, valid }: { value: number | null; label: string; valid?: boolean | null }) {
-  return (
-    <span className={`inline-flex w-full items-center justify-center rounded-full px-2 py-1 text-[11px] font-medium ${scoreTone(value, valid)}`}>
-      {value === null ? `${label} —` : valid === false ? `${Math.round(value)} incomplet` : Math.round(value)}
-    </span>
-  )
-}
+const GRID = 'lg:grid-cols-[32px_minmax(320px,1fr)_86px_70px_70px_70px_70px_70px_70px_90px_130px_170px]'
 
 function isReady(article: Article) {
   return article.is_validable === true && Boolean(article.scheduled_at)
@@ -84,13 +57,14 @@ function matchesFilter(article: Article, filter: ValidationFilter) {
   const global = finiteScore(article.global_score)
   const seo = finiteScore(article.seo_score)
   const quality = finiteScore(article.quality_score)
-  const geo = geoScore(article)
-  const originality = originalityScore(article)
+  const geo = getGeoScore(article)
+  const originality = getOriginalityScore(article)
   if (filter === 'ready') return isReady(article)
   if (filter === 'global_gte_90') return global !== null && global >= 90
   if (filter === 'global_lt_90') return global === null || global < 90 || article.global_score_valid === false
   if (filter === 'seo_lt_85') return seo === null || seo < 85
   if (filter === 'quality_lt_85') return quality === null || quality < 85
+  if (filter === 'readability_lt_80') return finiteScore(article.readability_score) === null || (finiteScore(article.readability_score) ?? 0) < 80
   if (filter === 'geo_lt_80') return geo === null || geo < 80
   if (filter === 'originality_lt_85') return originality === null || originality < 85
   if (filter === 'critical') return article.critical_warnings.length > 0
@@ -319,11 +293,13 @@ export default function ValidationPage() {
                         )}
                       </div>
                     </div>
-                    <ScoreCell value={finiteScore(article.global_score)} label="Global" valid={article.global_score_valid} />
-                    <ScoreCell value={finiteScore(article.seo_score)} label="SEO" />
-                    <ScoreCell value={finiteScore(article.quality_score)} label="Qualité" />
-                    <ScoreCell value={geoScore(article)} label="GEO" />
-                    <ScoreCell value={originalityScore(article)} label="Orig." />
+                    <ScoreBadge value={finiteScore(article.global_score)} label="Global" valid={article.global_score_valid} className="w-full justify-center" />
+                    <ScoreBadge value={finiteScore(article.seo_score)} label="SEO" className="w-full justify-center" />
+                    <ScoreBadge value={finiteScore(article.quality_score)} label="Qualité" className="w-full justify-center" />
+                    <ScoreBadge value={finiteScore(article.readability_score)} label="Lisibilité" className="w-full justify-center" />
+                    <ScoreBadge value={getOriginalityScore(article)} label="Orig." className="w-full justify-center" />
+                    <ScoreBadge value={getGeoScore(article)} label="GEO" className="w-full justify-center" />
+                    <ScoreBadge value={finiteScore(article.eeat_score)} label="EEAT" className="w-full justify-center" />
                     <span className={`inline-flex items-center justify-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium ${criticalCount > 0 ? 'bg-danger/10 text-danger' : 'bg-success/10 text-[#1f6d3d]'}`}>
                       {criticalCount > 0 ? <AlertTriangle size={11} /> : <CheckCircle size={11} />}
                       {criticalCount}

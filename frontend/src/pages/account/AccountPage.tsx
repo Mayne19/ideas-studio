@@ -1,23 +1,21 @@
 import { useState, useRef, useMemo } from 'react'
-import { User, Mail, Camera, Check, Loader2, AtSign, Lock, ArrowLeft, FolderOpen } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { User, Mail, Camera, Check, Loader2, AtSign, Lock, Copy } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { api } from '@/api/client'
 import { checkUsername } from '@/api/auth'
 import Button from '@/components/ui/Button'
-import CopyButton from '@/components/ui/CopyButton'
 
-const fullName = (name: string) => {
-  const parts = name.split(' ')
-  return { first: parts[0] || '', last: parts.slice(1).join(' ') }
+function getDisplayName(user: { first_name?: string | null; name?: string; username?: string | null }) {
+  if (user.first_name) return user.first_name
+  if (user.name) return user.name.split(' ')[0]
+  return user.username ?? ''
 }
 
 export default function AccountPage() {
   const { user, refreshUser } = useAuth()
-  const nameParts = useMemo(() => fullName(user?.name ?? ''), [user?.name])
-  const [firstName, setFirstName] = useState(nameParts.first)
-  const [lastName, setLastName] = useState(nameParts.last)
-  const [displayName, setDisplayName] = useState(nameParts.first)
+  const [firstName, setFirstName] = useState(user?.first_name ?? user?.name?.split(' ')[0] ?? '')
+  const [lastName, setLastName] = useState(user?.last_name ?? user?.name?.split(' ').slice(1).join(' ') ?? '')
+  const [displayName, setDisplayName] = useState(getDisplayName(user ?? { first_name: user?.first_name, name: user?.name, username: user?.username }))
   const [username, setUsername] = useState(user?.username ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -32,9 +30,25 @@ export default function AccountPage() {
   const [passwordSaved, setPasswordSaved] = useState(false)
   const [passwordError, setPasswordError] = useState('')
 
-  const initials = (displayName || firstName)
-    ? (displayName || firstName).split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
-    : '?'
+  const [copied, setCopied] = useState(false)
+
+  const effectiveDisplayName = displayName.trim() || firstName.trim() || username || '?'
+
+  const initials = effectiveDisplayName
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+
+  async function handleCopyUsername() {
+    if (!user?.username) return
+    try {
+      await navigator.clipboard.writeText(`@${user.username}`)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {}
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -44,7 +58,7 @@ export default function AccountPage() {
     setError('')
     setSaved(false)
     try {
-      const payload: Record<string, string> = { name: finalName }
+      const payload: Record<string, string> = { name: finalName, first_name: firstName.trim(), last_name: lastName.trim() }
       if (username.trim()) {
         const clean = username.trim().replace(/^@/, '')
         const result = await checkUsername(clean)
@@ -118,18 +132,8 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="mb-6">
-        <div className="flex items-center gap-4 mb-4">
-          <Link to="/projects" className="flex items-center gap-1.5 text-[13px] text-secondary hover:text-primary transition-colors">
-            <ArrowLeft size={15} />
-            Mes projets
-          </Link>
-          <Link to="/projects" className="flex items-center gap-1.5 text-[13px] text-accent hover:underline">
-            <FolderOpen size={15} />
-            Ouvrir le studio
-          </Link>
-        </div>
+    <div className="flex flex-col gap-5">
+      <div className="mb-2">
         <h1 className="text-[20px] font-semibold text-primary tracking-tight">Mon profil</h1>
         <p className="mt-0.5 text-[13px] text-secondary">
           Gérez vos informations personnelles.
@@ -137,7 +141,7 @@ export default function AccountPage() {
       </div>
 
       {/* Avatar */}
-      <div className="mb-6 flex items-center gap-4">
+      <div className="flex items-center gap-4">
         <div className="relative">
           {user?.avatar_url ? (
             <img
@@ -167,7 +171,7 @@ export default function AccountPage() {
           />
         </div>
         <div>
-          <p className="text-[13px] font-medium text-primary">{displayName || firstName}</p>
+          <p className="text-[13px] font-medium text-primary">{effectiveDisplayName}</p>
           <p className="text-[12px] text-tertiary">{user?.email}</p>
         </div>
       </div>
@@ -183,8 +187,8 @@ export default function AccountPage() {
                 value={firstName}
                 onChange={(e) => {
                   setFirstName(e.target.value)
-                  if (!displayName || displayName === nameParts.first) {
-                    setDisplayName(e.target.value)
+                  if (!displayName || displayName === (user?.first_name ?? user?.name?.split(' ')[0] ?? '')) {
+                    setDisplayName(e.target.value || username)
                   }
                 }}
                 placeholder="Votre prénom"
@@ -227,25 +231,54 @@ export default function AccountPage() {
                 className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
               />
               {user?.username && (
-                <CopyButton value={`@${user.username}`} label="Copier mon @username" />
+                <button
+                  type="button"
+                  onClick={handleCopyUsername}
+                  className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors shrink-0"
+                  title="Copier mon @username"
+                >
+                  {copied ? <Check size={12} className="text-success" /> : <Copy size={12} />}
+                </button>
               )}
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <label className="text-[12px] font-medium text-secondary">Nom affiché</label>
-          <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
-            <User size={14} className="text-tertiary shrink-0" />
-            <input
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder={firstName || 'Votre prénom'}
-              className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
-            />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-[12px] font-medium text-secondary">Nom affiché</label>
+            <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+              <User size={14} className="text-tertiary shrink-0" />
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder={firstName || username || 'Votre prénom'}
+                className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+              />
+            </div>
+            <p className="text-[11px] text-tertiary">
+              Par défaut, votre prénom est utilisé{username ? ', sinon votre nom d\'utilisateur' : ''}.
+            </p>
           </div>
-          <p className="text-[11px] text-tertiary">Par défaut, votre prénom est utilisé.</p>
+
+          {/* Profile preview */}
+          <div className="flex flex-col gap-1">
+            <label className="text-[12px] font-medium text-secondary">Aperçu du profil</label>
+            <div className="flex items-center gap-3 rounded-[10px] border border-border bg-[#f9f9fb] px-3 py-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent text-[11px] font-bold">
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[12px] font-medium text-primary">
+                  {effectiveDisplayName}
+                </p>
+                {user?.username && (
+                  <p className="truncate text-[11px] text-tertiary">@{user.username}</p>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         {error && (
@@ -268,7 +301,7 @@ export default function AccountPage() {
       </form>
 
       {/* Password section */}
-      <div className="mt-8 border-t border-border pt-6">
+      <div className="mt-4 border-t border-border pt-6">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-[15px] font-semibold text-primary">Mot de passe</h2>
           {!showPasswordForm && (

@@ -9,7 +9,8 @@ import Button from '@/components/ui/Button'
 export default function RegisterPage() {
   const { register, user } = useAuth()
   const navigate = useNavigate()
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -24,13 +25,17 @@ export default function RegisterPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    if (!firstName.trim()) {
+      setError('Le prénom est requis.')
+      return
+    }
     if (password.length < 8) {
       setError('Le mot de passe doit contenir au moins 8 caractères.')
       return
     }
     const clean = username.trim().replace(/^@/, '')
     if (!clean) {
-      setError('Le nom d\'utilisateur est requis.')
+      setError("Le nom d'utilisateur est requis.")
       return
     }
     if (!/^[a-zA-Z0-9_-]+$/.test(clean)) {
@@ -44,7 +49,7 @@ export default function RegisterPage() {
     }
     setLoading(true)
     try {
-      await register(name, email, password, clean)
+      await register(firstName.trim(), lastName.trim(), email, password, clean)
       navigate('/projects', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la création du compte')
@@ -69,16 +74,27 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <Input
-          label="Nom complet"
-          type="text"
-          placeholder="Jean Dupont"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          autoComplete="name"
-          autoFocus
-        />
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label="Prénom"
+            type="text"
+            placeholder="Jean"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            required
+            autoComplete="given-name"
+            autoFocus
+          />
+          <Input
+            label="Nom"
+            type="text"
+            placeholder="Dupont"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            autoComplete="family-name"
+          />
+        </div>
+
         <Input
           label="Nom d'utilisateur"
           type="text"

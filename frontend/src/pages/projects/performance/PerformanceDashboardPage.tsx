@@ -28,6 +28,8 @@ import Button from '@/components/ui/Button'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import PeriodNavigator, { ExportButtons } from '@/components/ui/PeriodNavigator'
+import ScoreBadge from '@/components/ui/ScoreBadge'
+import { finiteScore, getOriginalityScore, getGeoScore } from '@/lib/scoreBadge'
 import { downloadJson, printReport } from '@/utils/exportReport'
 import { currentPeriod, type PeriodMode, type PeriodRange } from '@/utils/periodNavigator'
 import { formatAxisTick, formatMetric, percentOf } from '@/utils/trafficDisplay'
@@ -123,15 +125,6 @@ function VariationBadge({ value }: { value: number | null | undefined }) {
   return (
     <span className={`text-[12px] font-semibold ${positive ? 'text-success' : 'text-danger'}`}>
       {positive ? '+' : ''}{value}%
-    </span>
-  )
-}
-
-function ScoreBadge({ label, value, showLabel = true }: { label: string; value: number | null; showLabel?: boolean }) {
-  const color = value === null ? 'bg-[#f0f0f2] text-tertiary' : value >= 75 ? 'bg-success/10 text-[#16723a]' : value >= 55 ? 'bg-warning/12 text-[#a35b00]' : 'bg-danger/10 text-danger'
-  return (
-    <span className={`inline-flex min-w-8 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ${color}`}>
-      {showLabel ? `${label} ` : ''}{value ?? '—'}
     </span>
   )
 }
@@ -590,11 +583,11 @@ export default function PerformanceDashboardPage() {
             <SectionTitle>Tableau performance articles</SectionTitle>
             <div className="overflow-x-auto">
               <div className="min-w-[1040px]">
-                <div className="grid grid-cols-[2fr_0.8fr_0.8fr_0.5fr_0.5fr_0.6fr_0.6fr_0.45fr_0.5fr_0.5fr_0.45fr_0.7fr_0.7fr] gap-2 border-b border-border px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-tertiary">
-                  <span className="truncate">Article</span><span className="whitespace-nowrap">Catégorie</span><span className="whitespace-nowrap">Statut</span><span className="whitespace-nowrap">Vues</span><span className="whitespace-nowrap">Variation</span><span className="whitespace-nowrap">Temps</span><span className="whitespace-nowrap">Engagement</span><span className="whitespace-nowrap">SEO</span><span className="whitespace-nowrap">Lisibilité</span><span className="whitespace-nowrap">Qualité</span><span className="whitespace-nowrap">EEAT</span><span className="whitespace-nowrap">MAJ</span><span className="whitespace-nowrap">Action</span>
+                <div className="grid grid-cols-[2fr_0.8fr_0.8fr_0.5fr_0.5fr_0.6fr_0.6fr_0.45fr_0.45fr_0.45fr_0.45fr_0.45fr_0.45fr_0.45fr_0.7fr_0.7fr] gap-2 border-b border-border px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-tertiary">
+                  <span className="truncate">Article</span><span className="whitespace-nowrap">Catégorie</span><span className="whitespace-nowrap">Statut</span><span className="whitespace-nowrap">Vues</span><span className="whitespace-nowrap">Variation</span><span className="whitespace-nowrap">Temps</span><span className="whitespace-nowrap">Engagement</span><span className="whitespace-nowrap">Global</span><span className="whitespace-nowrap">SEO</span><span className="whitespace-nowrap">Qualité</span><span className="whitespace-nowrap">Lisibilité</span><span className="whitespace-nowrap">Originalité</span><span className="whitespace-nowrap">GEO</span><span className="whitespace-nowrap">EEAT</span><span className="whitespace-nowrap">MAJ</span><span className="whitespace-nowrap">Action</span>
                 </div>
                 {articleMetrics.slice(0, 12).map((item) => (
-                  <div key={item.article.id} className="grid grid-cols-[2fr_0.8fr_0.8fr_0.5fr_0.5fr_0.6fr_0.6fr_0.45fr_0.5fr_0.5fr_0.45fr_0.7fr_0.7fr] gap-2 border-b border-border px-2 py-3 text-[12px] last:border-0">
+                  <div key={item.article.id} className="grid grid-cols-[2fr_0.8fr_0.8fr_0.5fr_0.5fr_0.6fr_0.6fr_0.45fr_0.45fr_0.45fr_0.45fr_0.45fr_0.45fr_0.45fr_0.7fr_0.7fr] gap-2 border-b border-border px-2 py-3 text-[12px] last:border-0">
                     <span className="min-w-0 truncate font-medium text-primary" title={item.article.title}>{item.article.title}</span>
                     <span className="truncate text-secondary whitespace-nowrap">{item.category?.name ?? '—'}</span>
                     <span className="truncate text-secondary whitespace-nowrap">{statusLabel(item.article.status)}</span>
@@ -602,10 +595,13 @@ export default function PerformanceDashboardPage() {
                     <span className="whitespace-nowrap"><VariationBadge value={item.variation} /></span>
                     <span className="text-secondary whitespace-nowrap"><DurationText seconds={item.averageTime} /></span>
                     <span className="text-secondary whitespace-nowrap">{item.engagement !== null ? `${item.engagement}%` : '—'}</span>
-                    <span className="whitespace-nowrap"><ScoreBadge label="SEO" value={item.article.seo_score} showLabel={false} /></span>
-                    <span className="whitespace-nowrap"><ScoreBadge label="Lis." value={item.article.readability_score} showLabel={false} /></span>
-                    <span className="whitespace-nowrap"><ScoreBadge label="Qual." value={item.article.quality_score} showLabel={false} /></span>
-                    <span className="whitespace-nowrap"><ScoreBadge label="EEAT" value={item.article.eeat_score} showLabel={false} /></span>
+                    <span className="whitespace-nowrap"><ScoreBadge label="Global" value={finiteScore(item.article.global_score)} showLabel={false} /></span>
+                    <span className="whitespace-nowrap"><ScoreBadge label="SEO" value={finiteScore(item.article.seo_score)} showLabel={false} /></span>
+                    <span className="whitespace-nowrap"><ScoreBadge label="Qualité" value={finiteScore(item.article.quality_score)} showLabel={false} /></span>
+                    <span className="whitespace-nowrap"><ScoreBadge label="Lisibilité" value={finiteScore(item.article.readability_score)} showLabel={false} /></span>
+                    <span className="whitespace-nowrap"><ScoreBadge label="Originalité" value={getOriginalityScore(item.article)} showLabel={false} /></span>
+                    <span className="whitespace-nowrap"><ScoreBadge label="GEO" value={getGeoScore(item.article)} showLabel={false} /></span>
+                    <span className="whitespace-nowrap"><ScoreBadge label="EEAT" value={finiteScore(item.article.eeat_score)} showLabel={false} /></span>
                     <span className="text-secondary whitespace-nowrap">{new Date(item.article.updated_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                     <span className="whitespace-nowrap"><ActionBadge action={item.recommendation} /></span>
                   </div>

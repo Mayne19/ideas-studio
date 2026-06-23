@@ -9,6 +9,8 @@ USERNAME_RE = re.compile(r"^[a-zA-Z0-9_]+$")
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     username: Optional[str] = None
 
     @field_validator("username")
@@ -38,6 +40,8 @@ class UserPublic(BaseModel):
     id: str
     username: Optional[str] = None
     name: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     email: EmailStr
     avatar_url: Optional[str] = None
     is_active: bool

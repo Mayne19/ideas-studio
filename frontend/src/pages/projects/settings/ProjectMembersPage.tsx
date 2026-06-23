@@ -188,6 +188,7 @@ export default function ProjectMembersPage() {
   // Confirm revoke invitation
   const [revokeInvitationTarget, setRevokeInvitationTarget] = useState<Invitation | null>(null)
   const [revoking, setRevoking] = useState(false)
+  const [revokeSuccess, setRevokeSuccess] = useState('')
 
   const currentMember = members.find((m) => m.user_id === user?.id)
   const canManage = ['owner', 'admin'].includes(currentMember?.role ?? '')
@@ -277,11 +278,15 @@ export default function ProjectMembersPage() {
   async function handleRevokeInvitation() {
     if (!projectId || !revokeInvitationTarget) return
     setRevoking(true)
+    setRevokeSuccess('')
     try {
       await removeInvitation(projectId, revokeInvitationTarget.id)
       setRevokeInvitationTarget(null)
       loadInvitations()
+      setRevokeSuccess(`Invitation de ${revokeInvitationTarget.email} révoquée.`)
+      setTimeout(() => setRevokeSuccess(''), 3000)
     } catch (err) {
+      setRevokeSuccess('')
       console.error(err)
     } finally {
       setRevoking(false)
@@ -336,6 +341,12 @@ export default function ProjectMembersPage() {
           </div>
         )}
       </FormCard>
+
+      {revokeSuccess && (
+        <div className="rounded-[10px] bg-success/10 px-3.5 py-2.5 text-[13px] text-[#1a7a3a]">
+          {revokeSuccess}
+        </div>
+      )}
 
       {invitations.filter((inv) => !inv.accepted_at).length > 0 && (
         <FormCard

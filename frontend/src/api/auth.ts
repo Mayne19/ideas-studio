@@ -5,8 +5,8 @@ export function login(email: string, password: string): Promise<LoginResponse> {
   return api.post<LoginResponse>('/auth/login', { email, password })
 }
 
-export function register(name: string, email: string, password: string, username?: string): Promise<User> {
-  return api.post<User>('/auth/register', { name, email, password, username: username || undefined })
+export function register(firstName: string, lastName: string, email: string, password: string, username?: string): Promise<User> {
+  return api.post<User>('/auth/register', { first_name: firstName, last_name: lastName, email, password, username: username || undefined })
 }
 
 export function me(): Promise<User> {
