@@ -156,11 +156,11 @@ export default function ProjectPipelinePage() {
           {settings?.total_monthly_from_categories ?? 0} article(s)/mois calculé(s) depuis les catégories actives.
         </p>
         {settings?.categories_frequencies && settings.categories_frequencies.length > 0 && (
-          <div className="mt-3 flex flex-col gap-1.5 border-t border-border pt-3">
+          <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-border pt-3 sm:grid-cols-3 md:grid-cols-4">
             {settings.categories_frequencies.map((category) => (
               <div key={category.id} className="flex items-center justify-between rounded-[8px] bg-[#f9f9fb] px-2.5 py-1.5 text-[12px]">
-                <span className="text-primary">{category.name}</span>
-                <span className={category.pipeline_enabled === false ? 'text-tertiary' : 'text-secondary'}>
+                <span className="text-primary truncate">{category.name}</span>
+                <span className={category.pipeline_enabled === false ? 'text-tertiary shrink-0 ml-2' : 'text-secondary shrink-0 ml-2'}>
                   {category.pipeline_enabled === false ? 'désactivée' : `${category.monthly_frequency ?? 0}/mois`}
                 </span>
               </div>

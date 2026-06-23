@@ -18,6 +18,7 @@ export default function AccountPage() {
   const [avatarUploading, setAvatarUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  const [showPasswordForm, setShowPasswordForm] = useState(false)
   const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '' })
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [passwordSaved, setPasswordSaved] = useState(false)
@@ -222,54 +223,74 @@ export default function AccountPage() {
 
       {/* Password section */}
       <div className="mt-8 border-t border-border pt-6">
-        <h2 className="text-[15px] font-semibold text-primary mb-1">Mot de passe</h2>
-        <p className="text-[13px] text-secondary mb-4">
-          Modifiez votre mot de passe.
-        </p>
-        <form onSubmit={handlePasswordChange} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-[12px] font-medium text-secondary">Mot de passe actuel</label>
-            <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
-              <Lock size={14} className="text-tertiary shrink-0" />
-              <input
-                type="password"
-                value={passwordForm.current_password}
-                onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })}
-                placeholder="Mot de passe actuel"
-                className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
-              />
-            </div>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[12px] font-medium text-secondary">Nouveau mot de passe</label>
-            <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
-              <Lock size={14} className="text-tertiary shrink-0" />
-              <input
-                type="password"
-                value={passwordForm.new_password}
-                onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })}
-                placeholder="Nouveau mot de passe (6 caractères minimum)"
-                className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
-              />
-            </div>
-          </div>
-          {passwordError && (
-            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
-              {passwordError}
-            </div>
-          )}
-          <div className="flex items-center gap-2">
-            <Button type="submit" loading={passwordSaving} icon={passwordSaving ? <Loader2 size={14} className="animate-spin" /> : undefined}>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-[15px] font-semibold text-primary">Mot de passe</h2>
+          {!showPasswordForm && (
+            <button
+              onClick={() => setShowPasswordForm(true)}
+              className="flex items-center gap-1.5 rounded-[10px] bg-accent px-3.5 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-accent/90"
+            >
+              <Lock size={13} />
               Changer le mot de passe
-            </Button>
-            {passwordSaved && (
-              <span className="flex items-center gap-1 text-[13px] text-success">
-                <Check size={14} />
-                Mot de passe modifié
-              </span>
+            </button>
+          )}
+        </div>
+        {!showPasswordForm && (
+          <p className="text-[13px] text-secondary">Modifiez votre mot de passe.</p>
+        )}
+        {showPasswordForm && (
+          <form onSubmit={handlePasswordChange} className="flex flex-col gap-3 mt-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-[12px] font-medium text-secondary">Mot de passe actuel</label>
+              <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+                <Lock size={14} className="text-tertiary shrink-0" />
+                <input
+                  type="password"
+                  value={passwordForm.current_password}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })}
+                  placeholder="Mot de passe actuel"
+                  className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[12px] font-medium text-secondary">Nouveau mot de passe</label>
+              <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+                <Lock size={14} className="text-tertiary shrink-0" />
+                <input
+                  type="password"
+                  value={passwordForm.new_password}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })}
+                  placeholder="Nouveau mot de passe (6 caractères minimum)"
+                  className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+                />
+              </div>
+            </div>
+            {passwordError && (
+              <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+                {passwordError}
+              </div>
             )}
-          </div>
-        </form>
+            <div className="flex items-center gap-2">
+              <Button type="submit" loading={passwordSaving} icon={passwordSaving ? <Loader2 size={14} className="animate-spin" /> : undefined}>
+                Changer le mot de passe
+              </Button>
+              <button
+                type="button"
+                onClick={() => { setShowPasswordForm(false); setPasswordForm({ current_password: '', new_password: '' }); setPasswordError('') }}
+                className="text-[12px] text-tertiary hover:text-secondary transition-colors"
+              >
+                Annuler
+              </button>
+              {passwordSaved && (
+                <span className="flex items-center gap-1 text-[13px] text-success">
+                  <Check size={14} />
+                  Mot de passe modifié
+                </span>
+              )}
+            </div>
+          </form>
+        )}
       </div>
     </div>
   )

@@ -224,6 +224,24 @@ def patch_member(
     return _to_public(target, user)
 
 
+@router.delete("/{project_id}/invitations/{invitation_id}")
+def remove_invitation(
+    project_id: str,
+    invitation_id: str,
+    _actor: ProjectMember = Depends(require_project_role("owner", "admin")),
+    db: Session = Depends(get_db),
+):
+    inv = db.query(Invitation).filter(
+        Invitation.id == invitation_id,
+        Invitation.project_id == project_id,
+    ).first()
+    if not inv:
+        raise HTTPException(status_code=404, detail="Invitation introuvable.")
+    db.delete(inv)
+    db.commit()
+    return {"message": "Invitation supprimée."}
+
+
 @router.delete("/{project_id}/members/{target_user_id}")
 def remove_member(
     project_id: str,

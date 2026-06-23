@@ -32,3 +32,7 @@ export function updateMemberRole(
 export function removeMember(projectId: string, userId: string): Promise<void> {
   return api.delete<void>(`/projects/${projectId}/members/${userId}`)
 }
+
+export function removeInvitation(projectId: string, invitationId: string): Promise<void> {
+  return api.delete<void>(`/projects/${projectId}/invitations/${invitationId}`)
+}

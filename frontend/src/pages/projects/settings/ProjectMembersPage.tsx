@@ -16,7 +16,7 @@ import {
   UserPlus,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { listMembers, addMemberByUsername, inviteByEmail, updateMemberRole, removeMember, listInvitations } from '@/api/members'
+import { listMembers, addMemberByUsername, inviteByEmail, updateMemberRole, removeMember, listInvitations, removeInvitation } from '@/api/members'
 import { listActivity } from '@/api/activity'
 import type { Invitation, ProjectMember, ProjectRole, ActivityLog } from '@/types'
 import { useAuth } from '@/context/AuthContext'
@@ -185,6 +185,10 @@ export default function ProjectMembersPage() {
   const [removeMemberTarget, setRemoveMemberTarget] = useState<ProjectMember | null>(null)
   const [removing, setRemoving] = useState(false)
 
+  // Confirm revoke invitation
+  const [revokeInvitationTarget, setRevokeInvitationTarget] = useState<Invitation | null>(null)
+  const [revoking, setRevoking] = useState(false)
+
   const currentMember = members.find((m) => m.user_id === user?.id)
   const canManage = ['owner', 'admin'].includes(currentMember?.role ?? '')
   const isProjectOwner = project?.owner_id === user?.id
@@ -267,6 +271,20 @@ export default function ProjectMembersPage() {
       console.error(err)
     } finally {
       setRemoving(false)
+    }
+  }
+
+  async function handleRevokeInvitation() {
+    if (!projectId || !revokeInvitationTarget) return
+    setRevoking(true)
+    try {
+      await removeInvitation(projectId, revokeInvitationTarget.id)
+      setRevokeInvitationTarget(null)
+      loadInvitations()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setRevoking(false)
     }
   }
 
@@ -364,17 +382,26 @@ export default function ProjectMembersPage() {
                         : 'En attente'}
                   </span>
                   {!accepted && (
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(
-                          `${window.location.origin}/invitations/${invitation.token}`,
-                        )
-                      }}
-                      className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors"
-                      title="Copier le lien d'invitation"
-                    >
-                      <Link size={13} />
-                    </button>
+                    <>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            `${window.location.origin}/invitations/${invitation.token}`,
+                          )
+                        }}
+                        className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors"
+                        title="Copier le lien d'invitation"
+                      >
+                        <Link size={13} />
+                      </button>
+                      <button
+                        onClick={() => setRevokeInvitationTarget(invitation)}
+                        className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-danger/10 hover:text-danger transition-colors"
+                        title="Révoquer l'invitation"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </>
                   )}
                 </div>
               )
@@ -618,6 +645,18 @@ export default function ProjectMembersPage() {
         description={`${removeMemberTarget?.user_name ?? removeMemberTarget?.user_email} n'aura plus accès à ce projet.`}
         confirmLabel="Retirer"
         loading={removing}
+        variant="danger"
+      />
+
+      {/* Confirm revoke invitation */}
+      <ConfirmModal
+        open={!!revokeInvitationTarget}
+        onClose={() => setRevokeInvitationTarget(null)}
+        onConfirm={handleRevokeInvitation}
+        title="Révoquer l'invitation ?"
+        description={`${revokeInvitationTarget?.email} ne pourra plus utiliser ce lien d'invitation.`}
+        confirmLabel="Révoquer"
+        loading={revoking}
         variant="danger"
       />
 
