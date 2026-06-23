@@ -459,25 +459,25 @@ export default function ArticlesPage() {
         )}
 
         {/* Filters */}
-        <div className="mb-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(200px,1.25fr)_220px_220px_auto]">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
           <Input
             placeholder="Rechercher..."
             value={filterSearch}
             onChange={handleSearchChange}
-            className="w-full"
+            className="w-[440px] max-w-full"
           />
           <Select
             options={scoreOptions}
             value={filterScore}
             onChange={(e) => setFilterScore(e.target.value as ScoreFilter)}
-            className="w-full"
+            className="w-[185px]"
           />
           {categories.length > 0 && (
             <Select
               options={categoryOptions}
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="w-full"
+              className="w-[185px]"
             />
           )}
           {authors.length > 0 ? (
@@ -485,10 +485,10 @@ export default function ArticlesPage() {
               options={authorOptions}
               value={filterAuthor}
               onChange={(e) => setFilterAuthor(e.target.value)}
-              className="w-full"
+              className="w-[185px]"
             />
           ) : (
-            <div className="flex items-center rounded-[10px] border border-border bg-surface px-3 py-2 text-[12px] text-tertiary">
+            <div className="flex h-10 w-[185px] cursor-not-allowed select-none items-center rounded-[12px] border border-border bg-surface/50 px-3.5 text-[13px] text-tertiary">
               Auteurs indisponibles
             </div>
           )}
