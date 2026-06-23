@@ -436,7 +436,7 @@ export default function ProjectDashboardPage() {
   })()
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-7xl">
       {/* Greeting */}
       <div className="mb-6 flex items-start gap-4">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-accent/10 text-accent text-[18px] font-bold">
@@ -484,7 +484,7 @@ export default function ProjectDashboardPage() {
       )}
 
       {/* 5 KPI cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
         <KpiCard
           icon={<BarChart2 size={17} />}
           value={seoValue}
@@ -524,7 +524,7 @@ export default function ProjectDashboardPage() {
       </div>
 
       {/* Workflow health */}
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card padding="sm" className="flex items-start gap-3">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-accent/10 text-accent">
             <Cpu size={15} />
@@ -590,7 +590,7 @@ export default function ProjectDashboardPage() {
       )}
 
       {/* Main 2-col layout: left=articles (65%), right=todo+activity (35%) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left — col-span-2 — Articles récents only */}
         <div className="lg:col-span-2">
           <Card className="flex h-full flex-col">
@@ -615,25 +615,25 @@ export default function ProjectDashboardPage() {
                 </button>
               </div>
             ) : (
-              <div className="flex flex-1 flex-col justify-between gap-1">
+              <div className="flex flex-1 flex-col justify-between gap-1.5">
                 {data.recentArticles.map((a) => {
                   const cat = data.categories.find((c) => c.id === a.category_id)
                   return (
                     <button
                       key={a.id}
                       onClick={() => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
-                      className="flex min-w-0 items-center gap-3 rounded-[12px] px-2 py-1 text-left transition-colors hover:bg-[#f5f5f7]"
+                      className="flex min-w-0 items-center gap-3 rounded-[12px] px-2.5 py-1.5 text-left transition-colors hover:bg-[#f5f5f7]"
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-medium leading-snug text-primary break-words">{a.title}</p>
-                        <div className="mt-1 flex flex-wrap items-center gap-y-1">
+                        <div className="mt-1.5 flex flex-wrap items-center gap-y-1.5">
                           <span
                             className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${cat?.color ? '' : 'bg-[#f0f0f2] text-tertiary'}`}
                             style={cat?.color ? { backgroundColor: `${cat.color}20`, color: cat.color } : undefined}
                           >
                             {cat?.name ?? 'Sans catégorie'}
                           </span>
-                          <span className="mr-5 flex flex-wrap items-center gap-1.5">
+                          <span className="mr-5 flex flex-wrap items-center gap-2">
                             <ArticleScoreBadge label="Global" value={a.global_score} />
                             <ArticleScoreBadge label="SEO" value={a.seo_score} />
                             <ArticleScoreBadge label="Qualité" value={a.quality_score} />

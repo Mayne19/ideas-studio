@@ -26,6 +26,7 @@ import {
 } from '@/pages/public/PublicPages'
 
 const ArticleEditorPage = lazy(() => import('@/pages/projects/editor/ArticleEditorPage'))
+const ArchivesPage = lazy(() => import('@/pages/projects/articles/ArchivesPage'))
 const IdeasPipelinePage = lazy(() => import('@/pages/projects/ideas/IdeasPipelinePage'))
 const KanbanPage = lazy(() => import('@/pages/projects/kanban/KanbanPage'))
 const PerformanceDashboardPage = lazy(() => import('@/pages/projects/performance/PerformanceDashboardPage'))
@@ -274,6 +275,14 @@ export const router = createBrowserRouter([
       {
         path: 'projects/:projectId/articles/:articleId/preview',
         element: <ArticlePreviewPage />,
+      },
+      {
+        path: 'projects/:projectId/archives',
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <ArchivesPage />
+          </Suspense>
+        ),
       },
       {
         path: 'projects/:projectId/categories',

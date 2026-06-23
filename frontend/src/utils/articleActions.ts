@@ -34,7 +34,8 @@ export function getAvailableActions(status: ArticleStatus): ArticleAction[] {
   const actions: ArticleAction[] = []
 
   if (status === 'archived') {
-    actions.push({ key: 'unarchive', label: 'Restaurer brouillon', variant: 'secondary' })
+    actions.push({ key: 'restore', label: 'Restaurer en production', variant: 'secondary' })
+    actions.push({ key: 'republish', label: 'Republier directement', variant: 'primary' })
     actions.push({ key: 'delete', label: 'Supprimer', variant: 'danger' })
     return actions
   }

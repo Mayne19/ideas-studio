@@ -8,6 +8,8 @@ export type ArticleFilters = {
   skip?: number
   limit?: number
   blocked_cost_limit?: number
+  published_only?: boolean
+  archived?: boolean
 }
 
 export type CreateArticlePayload = {
@@ -38,6 +40,8 @@ export function listArticles(projectId: string, filters: ArticleFilters = {}): P
   if (filters.skip !== undefined) params.set('skip', String(filters.skip))
   if (filters.limit !== undefined) params.set('limit', String(filters.limit))
   if (filters.blocked_cost_limit !== undefined) params.set('blocked_cost_limit', String(filters.blocked_cost_limit))
+  if (filters.published_only) params.set('published_only', 'true')
+  if (filters.archived) params.set('archived', 'true')
   const qs = params.toString()
   return api.get<Article[]>(`/projects/${projectId}/articles${qs ? `?${qs}` : ''}`)
 }

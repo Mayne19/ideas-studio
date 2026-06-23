@@ -43,6 +43,7 @@ def list_articles_route(
     category_id: Optional[str] = None,
     search: Optional[str] = None,
     published_only: bool = False,
+    archived: bool = False,
     blocked_cost_limit: Optional[float] = None,
     skip: Optional[int] = None,
     limit: int = 20,
@@ -52,7 +53,8 @@ def list_articles_route(
 ):
     effective_offset = skip if skip is not None else offset
     return list_articles(db, project_id, status=status, category_id=category_id, search=search,
-                         published_only=published_only, blocked_cost_limit=blocked_cost_limit,
+                         published_only=published_only, archived=archived,
+                         blocked_cost_limit=blocked_cost_limit,
                          limit=limit, offset=effective_offset)
 
 
@@ -192,11 +194,11 @@ def publish_article_route(
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions to publish")
 
-    # Backend publish guard: must be ready_to_publish or scheduled
-    if article.status not in ("ready_to_publish", "scheduled", "published"):
+    # Backend publish guard: must be ready_to_publish, scheduled, published or archived (republish)
+    if article.status not in ("ready_to_publish", "scheduled", "published", "archived"):
         raise HTTPException(
             status_code=400,
-            detail="Seuls les articles marques prets (ready_to_publish), programmes (scheduled) ou deja publies peuvent etre publies.",
+            detail="Seuls les articles marques prets (ready_to_publish), programmes (scheduled), deja publies ou archives peuvent etre publies.",
         )
 
     # Backend readiness check: verify validation thresholds and critical warnings.

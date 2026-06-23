@@ -106,6 +106,7 @@ def list_articles(
     category_id: str | None = None,
     search: str | None = None,
     published_only: bool = False,
+    archived: bool = False,
     blocked_cost_limit: float | None = None,
     limit: int = 20,
     offset: int = 0,
@@ -113,6 +114,8 @@ def list_articles(
     q = db.query(Article).filter(Article.project_id == project_id)
     if published_only:
         q = q.filter(Article.status == "published")
+    elif archived:
+        q = q.filter(Article.status == "archived")
     elif status:
         q = q.filter(Article.status == status)
     if category_id:
