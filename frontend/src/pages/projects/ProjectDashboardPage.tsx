@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   FileText, Lightbulb, BarChart2, Sparkles, Globe,
   WifiOff, ArrowRight, AlertCircle, Clock, CheckCircle, PenLine,
-  Edit3, Eye, Send, Star, BookOpen, Cpu, Zap, ClipboardList,
+  Edit3, Eye, Send, Star, BookOpen, Cpu, Zap, ClipboardList, User,
 } from 'lucide-react'
 import { useProject } from '@/context/ProjectContext'
 import { useAuth } from '@/context/AuthContext'
@@ -622,33 +622,42 @@ export default function ProjectDashboardPage() {
                     <button
                       key={a.id}
                       onClick={() => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
-                      className="flex min-w-0 items-center gap-3 rounded-[12px] px-2.5 py-1.5 text-left transition-colors hover:bg-[#f5f5f7]"
+                      className="flex flex-col gap-1 rounded-[12px] px-2.5 py-1.5 text-left transition-colors hover:bg-[#f5f5f7]"
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium leading-snug text-primary break-words">{a.title}</p>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-y-1.5">
+                      <div className="flex items-start justify-between gap-4">
+                        <p className="flex-1 min-w-0 text-[13px] font-medium leading-snug text-primary break-words">
+                          {a.title}
+                        </p>
+                        <div className="flex shrink-0 items-center gap-1 text-[10px] text-tertiary mt-0.5">
+                          <Clock size={9} />
+                          <span>{formatDate(getArticleDate(a))}</span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-[auto_1fr_auto] gap-3 items-center">
+                        <div className="flex items-center gap-2">
                           <span
                             className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${cat?.color ? '' : 'bg-[#f0f0f2] text-tertiary'}`}
                             style={cat?.color ? { backgroundColor: `${cat.color}20`, color: cat.color } : undefined}
                           >
                             {cat?.name ?? 'Sans catégorie'}
                           </span>
-                          <span className="mr-5 flex flex-wrap items-center gap-2">
-                            <ArticleScoreBadge label="Global" value={a.global_score} />
-                            <ArticleScoreBadge label="SEO" value={a.seo_score} />
-                            <ArticleScoreBadge label="Qualité" value={a.quality_score} />
-                            <ArticleScoreBadge label="Lisibilité" value={a.readability_score} />
-                            <ArticleScoreBadge label="Originalité" value={getOriginalityScore(a)} />
-                            <ArticleScoreBadge label="GEO" value={getGeoScore(a)} />
-                          </span>
-                          <span className="inline-flex min-w-[96px] items-center">
-                            <StatusBadge status={a.status} />
+                          <span className="text-[10px] text-tertiary whitespace-nowrap">
+                            {a.word_count > 0 ? `${a.word_count.toLocaleString('fr-FR')} mots` : '— mots'}
                           </span>
                         </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1 pt-0.5 text-[10px] text-tertiary">
-                        <Clock size={9} />
-                        <span>{formatDate(getArticleDate(a))}</span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <ArticleScoreBadge label="Global" value={a.global_score} />
+                          <ArticleScoreBadge label="SEO" value={a.seo_score} />
+                          <ArticleScoreBadge label="Qualité" value={a.quality_score} />
+                          <ArticleScoreBadge label="Lisibilité" value={a.readability_score} />
+                          <ArticleScoreBadge label="Originalité" value={getOriginalityScore(a)} />
+                          <ArticleScoreBadge label="GEO" value={getGeoScore(a)} />
+                          <StatusBadge status={a.status} />
+                        </div>
+                        <div className="flex items-center gap-1 text-[10px] text-tertiary">
+                          <User size={9} />
+                          <span>{a.author_name ?? 'Auteur —'}</span>
+                        </div>
                       </div>
                     </button>
                   )
