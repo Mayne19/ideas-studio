@@ -1,11 +1,17 @@
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef } from 'react'
 import { User, Mail, Camera, Check, Loader2, AtSign, Lock, Copy } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { api } from '@/api/client'
 import { checkUsername } from '@/api/auth'
 import Button from '@/components/ui/Button'
+import type { User as AuthUser } from '@/types'
 
-function getDisplayName(user: { first_name?: string | null; name?: string; username?: string | null }) {
+type AccountUser = Pick<AuthUser, 'first_name' | 'last_name' | 'name' | 'email' | 'username'> & {
+  display_name?: string | null
+}
+
+function getDisplayName(user: AccountUser) {
+  if (user.display_name) return user.display_name
   if (user.first_name) return user.first_name
   if (user.name) return user.name.split(' ')[0]
   return user.username ?? ''
@@ -15,7 +21,7 @@ export default function AccountPage() {
   const { user, refreshUser } = useAuth()
   const [firstName, setFirstName] = useState(user?.first_name ?? user?.name?.split(' ')[0] ?? '')
   const [lastName, setLastName] = useState(user?.last_name ?? user?.name?.split(' ').slice(1).join(' ') ?? '')
-  const [displayName, setDisplayName] = useState(getDisplayName(user ?? { first_name: user?.first_name, name: user?.name, username: user?.username }))
+  const [displayName, setDisplayName] = useState(() => (user ? getDisplayName(user) : ''))
   const [username, setUsername] = useState(user?.username ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -47,7 +53,9 @@ export default function AccountPage() {
       await navigator.clipboard.writeText(`@${user.username}`)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } catch {}
+    } catch {
+      setError("Impossible de copier le nom d'utilisateur.")
+    }
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -172,7 +180,7 @@ export default function AccountPage() {
         </div>
         <div>
           <p className="text-[13px] font-medium text-primary">{effectiveDisplayName}</p>
-          <p className="text-[12px] text-tertiary">{user?.email}</p>
+          <p className="text-[12px] text-tertiary">{user?.email ?? '—'}</p>
         </div>
       </div>
 
@@ -216,7 +224,7 @@ export default function AccountPage() {
             <label className="text-[12px] font-medium text-secondary">Email</label>
             <div className="flex items-center gap-2 rounded-[10px] border border-border bg-[#f5f5f7] px-3 py-2">
               <Mail size={14} className="text-tertiary shrink-0" />
-              <span className="text-[13px] text-tertiary">{user?.email}</span>
+              <span className="text-[13px] text-tertiary">{user?.email ?? '—'}</span>
             </div>
           </div>
           <div className="flex flex-col gap-1">
