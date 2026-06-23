@@ -117,7 +117,7 @@ function ArticleRow({
           <span>{article.word_count > 0 ? `${article.word_count} mots` : '— mots'}</span>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-1">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
         <ScorePill label="Global" value={finiteScore(article.global_score)} />
         <ScorePill label="SEO" value={finiteScore(article.seo_score)} />
         <ScorePill label="Qualité" value={finiteScore(article.quality_score)} />
@@ -142,7 +142,7 @@ function ArticleRow({
       <div className="flex items-center">
         <StatusBadge status={article.status} />
       </div>
-      <div className="flex items-center gap-1.5 lg:justify-end">
+      <div className="flex items-center gap-2.5 lg:justify-end">
         <button
           type="button"
           onClick={() => onEdit(article)}
@@ -522,7 +522,7 @@ export default function ArticlesPage() {
               <div>Statut</div>
               <div className="text-right">Actions</div>
             </div>
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-1">
               {visibleArticles.map((article) => (
                 <ArticleRow
                   key={article.id}
