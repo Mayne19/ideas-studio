@@ -19,6 +19,7 @@ import {
 import { getPerformanceSummary } from '@/api/performance'
 import type { PerformanceSummary } from '@/types'
 import { Card } from '@/components/ui/Card'
+import MetricCard from '@/components/ui/MetricCard'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import Button from '@/components/ui/Button'
@@ -59,12 +60,6 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <p className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-secondary">{children}</p>
 }
 
-function VariationBadge({ value }: { value: number | null | undefined }) {
-  if (value === null || value === undefined) return <span className="text-[12px] text-tertiary">—</span>
-  const positive = value >= 0
-  return <span className={`text-[12px] font-semibold ${positive ? 'text-success' : 'text-danger'}`}>{positive ? '+' : ''}{value}%</span>
-}
-
 function StatCard({
   icon,
   value,
@@ -78,24 +73,15 @@ function StatCard({
   variation?: number | null
   tone?: 'accent' | 'success' | 'warning' | 'danger' | 'violet'
 }) {
-  const toneClass = {
-    accent: 'bg-accent/10 text-accent',
-    success: 'bg-success/10 text-success',
-    warning: 'bg-warning/12 text-[#b46a00]',
-    danger: 'bg-danger/10 text-danger',
-    violet: 'bg-[#eef2ff] text-[#4f46e5]',
-  }[tone]
   return (
-    <Card padding="sm" className="flex h-full flex-col justify-between gap-2">
-      <span className={`flex h-8 w-8 items-center justify-center rounded-[10px] ${toneClass}`}>{icon}</span>
-      <div>
-        <p className="truncate text-[22px] font-semibold tracking-tight text-primary">{value}</p>
-        <div className="mt-0.5 flex items-center justify-between gap-2">
-          <p className="text-[12px] text-tertiary">{label}</p>
-          {variation !== undefined && <VariationBadge value={variation} />}
-        </div>
-      </div>
-    </Card>
+    <MetricCard
+      icon={icon}
+      value={value}
+      label={label}
+      tone={tone}
+      trend={variation != null ? `${variation >= 0 ? '+' : ''}${variation}%` : null}
+      className="h-full"
+    />
   )
 }
 

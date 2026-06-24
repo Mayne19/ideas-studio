@@ -3,6 +3,7 @@ import { User, Mail, Camera, Check, Loader2, AtSign, Lock, Copy } from '@/compon
 import { useAuth } from '@/context/AuthContext'
 import { api } from '@/api/client'
 import { checkUsername } from '@/api/auth'
+import PageSection from '@/components/ui/PageSection'
 import Button from '@/components/ui/Button'
 import type { User as AuthUser } from '@/types'
 
@@ -184,147 +185,145 @@ export default function AccountPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-[12px] font-medium text-secondary">Prénom</label>
-            <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
-              <User size={14} className="text-tertiary shrink-0" />
-              <input
-                type="text"
-                value={firstName}
-                onChange={(e) => {
-                  setFirstName(e.target.value)
-                  if (!displayName || displayName === (user?.first_name ?? user?.name?.split(' ')[0] ?? '')) {
-                    setDisplayName(e.target.value || username)
-                  }
-                }}
-                placeholder="Votre prénom"
-                className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
-              />
-            </div>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[12px] font-medium text-secondary">Nom</label>
-            <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
-              <User size={14} className="text-tertiary shrink-0" />
-              <input
-                type="text"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Votre nom"
-                className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-[12px] font-medium text-secondary">Email</label>
-            <div className="flex items-center gap-2 rounded-[10px] border border-border bg-[#f5f5f7] px-3 py-2">
-              <Mail size={14} className="text-tertiary shrink-0" />
-              <span className="text-[13px] text-tertiary">{user?.email ?? '—'}</span>
-            </div>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[12px] font-medium text-secondary">Nom d'utilisateur</label>
-            <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
-              <AtSign size={14} className="text-tertiary shrink-0" />
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="votre-pseudo"
-                className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
-              />
-              {user?.username && (
-                <button
-                  type="button"
-                  onClick={handleCopyUsername}
-                  className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors shrink-0"
-                  title="Copier mon @username"
-                >
-                  {copied ? <Check size={12} className="text-success" /> : <Copy size={12} />}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-[12px] font-medium text-secondary">Nom affiché</label>
-            <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
-              <User size={14} className="text-tertiary shrink-0" />
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder={firstName || username || 'Votre prénom'}
-                className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
-              />
-            </div>
-            <p className="text-[11px] text-tertiary">
-              Par défaut, votre prénom est utilisé{username ? ', sinon votre nom d\'utilisateur' : ''}.
-            </p>
-          </div>
-
-          {/* Profile preview */}
-          <div className="flex flex-col gap-1">
-            <label className="text-[12px] font-medium text-secondary">Aperçu du profil</label>
-            <div className="flex items-center gap-3 rounded-[10px] border border-border bg-[#f9f9fb] px-3 py-2.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent text-[11px] font-bold">
-                {initials}
+      <PageSection title="Informations personnelles" description="Gérez votre nom, email et nom d'utilisateur.">
+        <form onSubmit={handleSave} className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-[12px] font-medium text-secondary">Prénom</label>
+              <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+                <User size={14} className="text-tertiary shrink-0" />
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => {
+                    setFirstName(e.target.value)
+                    if (!displayName || displayName === (user?.first_name ?? user?.name?.split(' ')[0] ?? '')) {
+                      setDisplayName(e.target.value || username)
+                    }
+                  }}
+                  placeholder="Votre prénom"
+                  className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+                />
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[12px] font-medium text-primary">
-                  {effectiveDisplayName}
-                </p>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[12px] font-medium text-secondary">Nom</label>
+              <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+                <User size={14} className="text-tertiary shrink-0" />
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Votre nom"
+                  className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-[12px] font-medium text-secondary">Email</label>
+              <div className="flex items-center gap-2 rounded-[10px] border border-border bg-[#f5f5f7] px-3 py-2">
+                <Mail size={14} className="text-tertiary shrink-0" />
+                <span className="text-[13px] text-tertiary">{user?.email ?? '—'}</span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[12px] font-medium text-secondary">Nom d'utilisateur</label>
+              <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+                <AtSign size={14} className="text-tertiary shrink-0" />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="votre-pseudo"
+                  className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+                />
                 {user?.username && (
-                  <p className="truncate text-[11px] text-tertiary">@{user.username}</p>
+                  <button
+                    type="button"
+                    onClick={handleCopyUsername}
+                    className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors shrink-0"
+                    title="Copier mon @username"
+                  >
+                    {copied ? <Check size={12} className="text-success" /> : <Copy size={12} />}
+                  </button>
                 )}
               </div>
             </div>
           </div>
-        </div>
 
-        {error && (
-          <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
-            {error}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-[12px] font-medium text-secondary">Nom affiché</label>
+              <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+                <User size={14} className="text-tertiary shrink-0" />
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder={firstName || username || 'Votre prénom'}
+                  className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+                />
+              </div>
+              <p className="text-[11px] text-tertiary">
+                Par défaut, votre prénom est utilisé{username ? ', sinon votre nom d\'utilisateur' : ''}.
+              </p>
+            </div>
+
+            {/* Profile preview */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[12px] font-medium text-secondary">Aperçu du profil</label>
+              <div className="flex items-center gap-3 rounded-[10px] border border-border bg-[#f9f9fb] px-3 py-2.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent text-[11px] font-bold">
+                  {initials}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[12px] font-medium text-primary">
+                    {effectiveDisplayName}
+                  </p>
+                  {user?.username && (
+                    <p className="truncate text-[11px] text-tertiary">@{user.username}</p>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
-        )}
 
-        <div className="flex items-center gap-2 pt-1">
-          <Button type="submit" loading={saving} icon={saving ? <Loader2 size={14} className="animate-spin" /> : undefined}>
-            Sauvegarder
-          </Button>
-          {saved && (
-            <span className="flex items-center gap-1 text-[13px] text-success">
-              <Check size={14} />
-              Sauvegardé
-            </span>
+          {error && (
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+              {error}
+            </div>
           )}
-        </div>
-      </form>
 
-      {/* Password section */}
-      <div className="mt-4 border-t border-border pt-6">
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-[15px] font-semibold text-primary">Mot de passe</h2>
-          {!showPasswordForm && (
-            <button
-              onClick={() => setShowPasswordForm(true)}
-              className="flex items-center gap-1.5 rounded-[10px] bg-accent px-3.5 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-accent/90"
-            >
-              <Lock size={13} />
-              Changer le mot de passe
-            </button>
-          )}
-        </div>
-        {!showPasswordForm && (
-          <p className="text-[13px] text-secondary">Modifiez votre mot de passe.</p>
-        )}
+          <div className="flex items-center gap-2 pt-1">
+            <Button type="submit" loading={saving} icon={saving ? <Loader2 size={14} className="animate-spin" /> : undefined}>
+              Sauvegarder
+            </Button>
+            {saved && (
+              <span className="flex items-center gap-1 text-[13px] text-success">
+                <Check size={14} />
+                Sauvegardé
+              </span>
+            )}
+          </div>
+        </form>
+      </PageSection>
+
+      <PageSection
+        title="Mot de passe"
+        description={!showPasswordForm ? "Modifiez votre mot de passe." : undefined}
+        action={!showPasswordForm ? (
+          <button
+            onClick={() => setShowPasswordForm(true)}
+            className="flex items-center gap-1.5 rounded-[10px] bg-accent px-3.5 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-accent/90"
+          >
+            <Lock size={13} />
+            Changer le mot de passe
+          </button>
+        ) : undefined}
+      >
         {showPasswordForm && (
           <form onSubmit={handlePasswordChange} className="flex flex-col gap-3 mt-3">
             <div className="flex flex-col gap-1">
@@ -391,7 +390,7 @@ export default function AccountPage() {
             </div>
           </form>
         )}
-      </div>
+      </PageSection>
     </div>
   )
 }
