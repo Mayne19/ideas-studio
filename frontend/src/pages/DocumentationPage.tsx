@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Search, Menu, X } from '@/components/ui/hugeIcons'
+import { Card } from '@/components/ui/Card'
 
 const configuredApiUrl = (import.meta.env['VITE_API_URL'] as string | undefined)?.trim().replace(/\/$/, '')
 const documentationApiUrl = configuredApiUrl || 'http://localhost:8000'
@@ -994,7 +995,7 @@ export default function DocumentationPage() {
 
         {/* Main content - active chapter only */}
         <main className="min-w-0 px-6 lg:px-10 py-10 max-w-3xl">
-          <section className="mb-10 rounded-[8px] border border-border bg-surface p-5">
+          <Card className="mb-10">
             <p className="text-[12px] font-semibold uppercase tracking-wider text-accent">Documentation</p>
             <h1 className="mt-2 text-[32px] font-semibold leading-tight text-primary">Documentation Ideas Studio</h1>
             <p className="mt-3 text-[15px] leading-relaxed text-secondary">
@@ -1020,7 +1021,7 @@ export default function DocumentationPage() {
                 Aucun <code className="text-accent">VITE_API_URL</code> n'est configuré : les liens API utilisent le backend local de développement.
               </p>
             )}
-          </section>
+          </Card>
           <div className="doc-content" dangerouslySetInnerHTML={{ __html: activeChapter.content }} />
         </main>
 

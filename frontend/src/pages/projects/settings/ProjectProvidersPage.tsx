@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { Plus, Trash2, TestTube, CheckCircle, XCircle, Loader2, Eye, EyeOff, Save } from '@/components/ui/hugeIcons'
 import { api } from '@/api/client'
+import { Card } from '@/components/ui/Card'
 import ToggleSwitch from '@/components/ui/ToggleSwitch'
 
 type AIProviderConfig = {
@@ -230,7 +231,7 @@ export default function ProjectProvidersPage() {
       )}
 
       {configs.length === 0 && !showForm && (
-        <div className="rounded-[14px] border border-border bg-surface p-6 text-center">
+        <Card className="text-center">
           <p className="text-[13px] text-secondary mb-4">Aucun provider configuré. Ajoutez-en un depuis la liste ci-dessous.</p>
           <div className="flex flex-wrap justify-center gap-2">
             {SUPPORTED_PROVIDERS.map((p) => (
@@ -245,13 +246,13 @@ export default function ProjectProvidersPage() {
               </button>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {configs.map((config) => {
         const def = getProviderDef(config.provider)
         return (
-          <div key={config.id} className="rounded-[16px] border border-border bg-surface p-4">
+          <div key={config.id} className="rounded-[22px] bg-surface p-4">
             <div className="flex items-start justify-between mb-3">
               <div>
                 <div className="flex items-center gap-2">
@@ -340,7 +341,7 @@ export default function ProjectProvidersPage() {
       )}
 
       {showForm && (
-        <div className="rounded-[16px] border border-border bg-surface p-4">
+        <Card>
           <p className="text-[13px] font-medium text-primary mb-4">
             {editingId ? `Modifier : ${form.label}` : `Ajouter : ${getProviderDef(form.provider)?.label || form.provider}`}
           </p>
@@ -459,7 +460,7 @@ export default function ProjectProvidersPage() {
               </button>
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
       <div className="rounded-[14px] border border-accent/20 bg-accent/5 px-4 py-3">

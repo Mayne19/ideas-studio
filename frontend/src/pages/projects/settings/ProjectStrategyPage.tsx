@@ -6,6 +6,7 @@ import type { Project } from '@/types'
 import Textarea from '@/components/ui/Textarea'
 import Select from '@/components/ui/Select'
 import Button from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 import LoadingState from '@/components/ui/LoadingState'
 import EditorialSetupAssistant from '@/components/editorial/EditorialSetupAssistant'
 
@@ -211,7 +212,7 @@ export default function ProjectStrategyPage() {
       )}
 
       {/* Editorial positioning */}
-      <div className="rounded-[14px] border border-border bg-surface p-5 flex flex-col gap-4">
+      <Card className="flex flex-col gap-4">
         <p className="text-[12px] font-semibold text-secondary uppercase tracking-wide">Positionnement éditorial</p>
         <Textarea
           label="Audience cible"
@@ -248,14 +249,14 @@ export default function ProjectStrategyPage() {
             onChange={(e) => setForm((f) => ({ ...f, average_target_length: e.target.value }))}
           />
         </div>
-        <Select
-          label="Niveau de technicité"
-          options={TECHNICAL_LEVEL_OPTIONS}
-          value={form.technical_level}
-          onChange={(e) => setForm((f) => ({ ...f, technical_level: e.target.value }))}
-          hint="Ces paramètres sont transmis au contexte de génération et contraignent le brief rédactionnel."
-        />
-      </div>
+          <Select
+            label="Niveau de technicité"
+            options={TECHNICAL_LEVEL_OPTIONS}
+            value={form.technical_level}
+            onChange={(e) => setForm((f) => ({ ...f, technical_level: e.target.value }))}
+            hint="Ces paramètres sont transmis au contexte de génération et contraignent le brief rédactionnel."
+          />
+        </Card>
 
       <div className="grid gap-4 xl:grid-cols-2">
         {textFields.filter(([key]) => key !== 'audience').map(([key, label, placeholder]) => (

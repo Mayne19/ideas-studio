@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Play, RotateCw, History, Loader2 } from '@/components/ui/hugeIcons'
+import { Play, RotateCw, History } from '@/components/ui/hugeIcons'
 import { getPipelineSettings, updatePipelineSettings, triggerPipelineRun, getPipelineLogs } from '@/api/pipeline'
 import type { PipelineLog, PipelineSettings } from '@/api/pipeline'
+import { Card } from '@/components/ui/Card'
+import Button from '@/components/ui/Button'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import ToggleSwitch from '@/components/ui/ToggleSwitch'
@@ -136,7 +138,7 @@ export default function ProjectPipelinePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-[16px] bg-surface p-4">
+      <Card padding="sm">
         <p className="text-[13px] font-medium text-primary">Flux éditorial automatique</p>
         <p className="mt-1 text-[12px] leading-relaxed text-secondary">
           Les catégories et leurs fréquences alimentent la génération d'idées, puis la validation humaine déclenche la production,
@@ -147,10 +149,10 @@ export default function ProjectPipelinePage() {
             <span key={step} className="rounded-[10px] bg-surface-soft px-3 py-2 text-center font-medium">{step}</span>
           ))}
         </div>
-      </div>
+      </Card>
 
       {/* Enable toggle */}
-      <div className="rounded-[16px] bg-surface p-4">
+      <Card padding="sm">
         <p className="text-[13px] font-medium text-primary">Volume éditorial</p>
         <p className="mt-0.5 text-[12px] text-tertiary">
           {settings?.total_monthly_from_categories ?? 0} article(s)/mois calculé(s) depuis les catégories actives.
@@ -167,9 +169,9 @@ export default function ProjectPipelinePage() {
             ))}
           </div>
         )}
-      </div>
+      </Card>
 
-      <div className="rounded-[16px] bg-surface p-4">
+      <Card padding="sm">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[13px] font-medium text-primary">Pipeline automatique</p>
@@ -191,18 +193,18 @@ export default function ProjectPipelinePage() {
             Le pipeline prépare le contenu dans Ideas Studio. La publication reste toujours une action humaine.
           </p>
         )}
-      </div>
+      </Card>
 
-      <div className="rounded-[14px] border border-border bg-surface px-4 py-3">
+      <Card padding="sm" className="!rounded-[14px]">
         <p className="text-[12px] text-secondary">
           {settings?.automation_notes || 'Automatisation non confirmée. Le lancement manuel reste disponible.'}
         </p>
-      </div>
+      </Card>
 
       {enabled && (
         <>
           {/* Schedule */}
-          <div className="rounded-[16px] bg-surface p-4">
+          <Card padding="sm">
             <p className="mb-3 text-[13px] font-medium text-primary">Planification</p>
 
             <div className="mb-3">
@@ -273,35 +275,36 @@ export default function ProjectPipelinePage() {
                 className="w-full rounded-[8px] border border-border bg-[#f5f5f7] px-2.5 py-1.5 text-[12px] text-primary"
               />
             </div>
-          </div>
+          </Card>
 
           {/* Actions */}
           <div className="flex items-center gap-2">
-            <button
-              type="button"
+            <Button
+              size="sm"
               onClick={handleSave}
               disabled={saving || !dirty}
-              className="flex items-center gap-1.5 rounded-[10px] bg-accent px-4 py-2 text-[12px] font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+              loading={saving}
+              icon={!saving ? <RotateCw size={13} /> : undefined}
             >
-              {saving ? <Loader2 size={13} className="animate-spin" /> : <RotateCw size={13} />}
               {saveStatus === 'saved' ? 'Enregistré' : 'Enregistrer'}
-            </button>
+            </Button>
             {saveStatus === 'error' && <p className="text-[12px] text-danger">Erreur</p>}
 
-            <button
-              type="button"
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={handleRun}
               disabled={running}
-              className="flex items-center gap-1.5 rounded-[10px] border border-border bg-surface px-4 py-2 text-[12px] font-medium text-secondary transition-colors hover:bg-[#f0f0f2] disabled:opacity-50"
+              loading={running}
+              icon={!running ? <Play size={13} /> : undefined}
             >
-              {running ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
               Exécuter maintenant
-            </button>
+            </Button>
           </div>
           {runStatus && <p className="text-[12px] text-secondary">{runStatus}</p>}
 
           {/* Execution history */}
-          <div className="rounded-[16px] bg-surface p-4">
+          <Card padding="sm">
             <div className="flex items-center gap-1.5 mb-3">
               <History size={14} className="text-tertiary" />
               <p className="text-[13px] font-medium text-primary">Historique d'exécution</p>
@@ -332,38 +335,39 @@ export default function ProjectPipelinePage() {
                 ))}
               </div>
             )}
-          </div>
+          </Card>
         </>
       )}
 
       {!enabled && (
-        <div className="rounded-[14px] border border-border bg-surface px-4 py-3">
+        <Card padding="sm">
           <p className="text-[12px] text-tertiary">
             Activez le pipeline automatique puis enregistrez pour configurer la planification et voir l'historique.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
+            <Button
+              size="sm"
               onClick={handleSave}
               disabled={saving || !dirty}
-              className="flex items-center gap-1.5 rounded-[10px] bg-accent px-4 py-2 text-[12px] font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+              loading={saving}
+              icon={!saving ? <RotateCw size={13} /> : undefined}
             >
-              {saving ? <Loader2 size={13} className="animate-spin" /> : <RotateCw size={13} />}
               {saveStatus === 'saved' ? 'Enregistré' : 'Enregistrer'}
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={handleRun}
               disabled={running}
-              className="flex items-center gap-1.5 rounded-[10px] border border-border bg-surface px-4 py-2 text-[12px] font-medium text-secondary transition-colors hover:bg-[#f0f0f2] disabled:opacity-50"
+              loading={running}
+              icon={!running ? <Play size={13} /> : undefined}
             >
-              {running ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
               Exécuter maintenant
-            </button>
+            </Button>
             {saveStatus === 'error' && <p className="text-[12px] text-danger">Erreur</p>}
           </div>
           {runStatus && <p className="mt-2 text-[12px] text-secondary">{runStatus}</p>}
-        </div>
+        </Card>
       )}
     </div>
   )
