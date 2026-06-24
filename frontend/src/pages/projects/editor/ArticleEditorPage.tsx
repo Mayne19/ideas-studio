@@ -38,10 +38,7 @@ import { ApiError } from '@/api/client'
 import type { EditorArticle, Category, ProjectMember, SeoAnalysis, ReadyCheck, CalloutTemplate } from '@/types'
 import EditorToolbar from '@/components/editor/EditorToolbar'
 import AutosaveIndicator from '@/components/editor/AutosaveIndicator'
-import SeoPanel from '@/components/editor/SeoPanel'
-import CostPanel from '@/components/editor/CostPanel'
-import StructuredDataPanel from '@/components/editor/StructuredDataPanel'
-import GeoPanel from '@/components/editor/GeoPanel'
+import AnalysePanel from '@/components/editor/AnalysePanel'
 import MediaPanel from '@/components/editor/MediaPanel'
 import VersionsPanel from '@/components/editor/VersionsPanel'
 import CommentsPanel from '@/components/editor/CommentsPanel'
@@ -1676,53 +1673,39 @@ export default function ArticleEditorPage() {
 
               {/* ── Analyse tab ── */}
               {activeRightTab === 'analyse' && (
-                <div className="flex flex-col gap-3 p-3">
-                  <SeoPanel
-                    article={{ ...article, title: metaFields.title }}
-                    projectId={projectId!}
-                    onBeforeAnalyze={handleSaveNow}
-                    initialAnalysis={latestSeoAnalysis}
-                    initialReadiness={latestReadyCheck}
-                    onAnalysisUpdate={(analysis) => {
-                      setLatestSeoAnalysis(analysis)
-                      setArticle((prev) => prev ? {
-                        ...prev,
+                <AnalysePanel
+                  article={{ ...article, title: metaFields.title }}
+                  projectId={projectId!}
+                  onBeforeAnalyze={handleSaveNow}
+                  initialAnalysis={latestSeoAnalysis}
+                  initialReadiness={latestReadyCheck}
+                  onAnalysisUpdate={(analysis) => {
+                    setLatestSeoAnalysis(analysis)
+                    setArticle((prev) => prev ? {
+                      ...prev,
+                      seo_score: analysis.seo_score,
+                      readability_score: analysis.readability_score,
+                      quality_score: analysis.quality_score,
+                      eeat_score: analysis.eeat_score,
+                      readiness_status: analysis.readiness_status,
+                      latest_analysis: {
                         seo_score: analysis.seo_score,
                         readability_score: analysis.readability_score,
                         quality_score: analysis.quality_score,
                         eeat_score: analysis.eeat_score,
                         readiness_status: analysis.readiness_status,
-                        latest_analysis: {
-                          seo_score: analysis.seo_score,
-                          readability_score: analysis.readability_score,
-                          quality_score: analysis.quality_score,
-                          eeat_score: analysis.eeat_score,
-                          readiness_status: analysis.readiness_status,
-                          created_at: analysis.created_at,
-                        },
-                      } : prev)
-                    }}
-                    onReadinessUpdate={setLatestReadyCheck}
-                    onExpertReviewUpdate={(review) => {
-                      setArticle((prev) => prev ? {
-                        ...prev,
-                        seo_review_json: review,
-                      } : prev)
-                    }}
-                  />
-
-                  <div className="border-t border-border pt-3">
-                    <CostPanel article={article} />
-                  </div>
-
-                  <div className="border-t border-border pt-3">
-                    <StructuredDataPanel article={article} />
-                  </div>
-
-                  <div className="border-t border-border pt-3">
-                    <GeoPanel article={article} />
-                  </div>
-                </div>
+                        created_at: analysis.created_at,
+                      },
+                    } : prev)
+                  }}
+                  onReadinessUpdate={setLatestReadyCheck}
+                  onExpertReviewUpdate={(review) => {
+                    setArticle((prev) => prev ? {
+                      ...prev,
+                      seo_review_json: review,
+                    } : prev)
+                  }}
+                />
               )}
 
               {/* ── Versions tab ── */}
