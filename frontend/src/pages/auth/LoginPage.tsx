@@ -12,27 +12,33 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingMessage, setLoadingMessage] = useState('')
 
   useEffect(() => {
     if (user) navigate('/projects', { replace: true })
   }, [navigate, user])
 
-  if (user) return null
+  useEffect(() => {
+    if (!loading) return
+    const timer = setTimeout(() => {
+      setLoadingMessage('Réveil du serveur, cela peut prendre quelques instants...')
+    }, 6000)
+    return () => clearTimeout(timer)
+  }, [loading])
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (loading) return
     setError('')
     setLoading(true)
-    try {
-      await login(email, password)
-      navigate('/projects', { replace: true })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Identifiants invalides')
-    } finally {
-      setLoading(false)
-    }
+    setLoadingMessage('Connexion en cours...')
+    login(email, password)
+      .then(() => navigate('/projects', { replace: true }))
+      .catch((err) => setError(err instanceof Error ? err.message : 'Identifiants invalides'))
+      .finally(() => { setLoading(false); setLoadingMessage('') })
   }
+
+  if (user) return null
 
   return (
     <AuthLayout>
@@ -76,8 +82,12 @@ export default function LoginPage() {
         </div>
 
         <Button type="submit" loading={loading} className="mt-1 w-full justify-center rounded-full">
-          {loading ? 'Connexion en cours...' : 'Se connecter'}
+          {loading ? loadingMessage : 'Se connecter'}
         </Button>
+
+        {loading && loadingMessage !== 'Connexion en cours...' && (
+          <p className="text-center text-[12px] text-tertiary">{loadingMessage}</p>
+        )}
 
         <p className="text-center text-[13px] text-secondary">
           Pas encore de compte ?{' '}

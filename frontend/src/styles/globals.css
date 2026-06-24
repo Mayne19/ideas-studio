@@ -11,9 +11,12 @@
   --color-secondary: #6F665C;
   --color-tertiary: #8C8379;
   --color-border: #E7DCC8;
+  --color-border-soft: #EFE7DA;
   --color-border-strong: #D8C7AD;
   --color-accent: #A8643A;
   --color-accent-dark: #8F4F2B;
+  --color-brand: #A8643A;
+  --color-brand-soft: #FDF6F0;
   --color-success: #4A7C59;
   --color-warning: #C4943A;
   --color-danger: #B03A3A;
@@ -23,9 +26,11 @@
   --radius-md: 16px;
   --radius-lg: 22px;
   --radius-xl: 28px;
+  --radius-card: 22px;
 
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.025);
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04);
   --shadow-card: none;
   --shadow-float: none;
 

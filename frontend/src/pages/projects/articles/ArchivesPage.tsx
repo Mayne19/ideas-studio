@@ -13,6 +13,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import EmptyState from '@/components/ui/EmptyState'
 import ErrorState from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
+import Toolbar from '@/components/ui/Toolbar'
 import ArticleScoreBadges from '@/components/ui/ArticleScoreBadges'
 import { finiteScore, getGeoScore, getOriginalityScore } from '@/lib/scoreBadge'
 
@@ -314,7 +315,7 @@ export default function ArchivesPage() {
         )}
 
         {/* Filters */}
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Toolbar>
           <Input
             placeholder="Rechercher..."
             value={filterSearch}
@@ -335,7 +336,7 @@ export default function ArchivesPage() {
               className="w-[185px]"
             />
           )}
-        </div>
+        </Toolbar>
 
         {/* Content */}
         {status === 'loading' && (

@@ -297,6 +297,29 @@ En environnement de développement, Swagger est accessible sans restriction. En 
 
 ---
 
+## Design system / UI foundation
+
+Composants partagés dans `frontend/src/components/ui/` :
+- **PageHeader** — Titre + description + action optionnelle
+- **PageSection** — Section avec titre, description optionnelle et action
+- **MetricCard** — Carte métrique KPI avec icône, valeur, tendance
+- **Card** — Carte conteneur avec padding adjustable
+- **PremiumTable** — Table générique avec colonnes, loading/empty/error
+- **Toolbar** — Barre de filtres/actions
+- **Toast** — Notifications contextuelles (success/error/info)
+- **Drawer** — Panneau latéral coulissant
+- **Skeleton / SkeletonBlock** — États de chargement squelettes
+- **EmptyState / ErrorState / LoadingState** — États vides/erreur/chargement
+- **Button / Input / Select / Textarea / ToggleSwitch** — Formulaires
+- **Modal / ConfirmModal** — Fenêtres modales
+- **Badge / StatusBadge / ScoreBadge / RoleBadge** — Badges
+- **ArticleScoreBadges** — Affiche les 7 scores dans l'ordre : Global, SEO, Qualité, Lisibilité, Originalité, GEO, EEAT
+
+Usage recommandé :
+- Privilégier les composants internes avant toute bibliothèque externe
+- Ne pas recoder headers / tables / cards page par page
+- `@mayne/ui-kit` utilisable pour pages docs/public/landing ou composants compatibles
+
 ## Déploiement
 
 - **Backend** : Compatible Render, Railway, ou tout hébergeur Python

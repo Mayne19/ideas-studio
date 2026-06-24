@@ -17,6 +17,7 @@ import type { Article, Category, OptimizationRecommendation } from '@/types'
 import type { PipelineLog, PipelineSettings } from '@/api/pipeline'
 import type { AIProviderPublic } from '@/api/aiProviders'
 import { Card } from '@/components/ui/Card'
+import MetricCard from '@/components/ui/MetricCard'
 import StatusBadge from '@/components/ui/StatusBadge'
 import ArticleScoreBadges from '@/components/ui/ArticleScoreBadges'
 import LoadingState from '@/components/ui/LoadingState'
@@ -31,51 +32,6 @@ function timeAgo(iso: string): string {
   if (days < 7) return `Il y a ${days} j`
   if (days < 30) return `Il y a ${Math.floor(days / 7)} sem.`
   return formatDate(iso)
-}
-
-function KpiCard({
-  icon, value, suffix, label, trend, onClick, tone = 'accent',
-}: {
-  icon: React.ReactNode
-  value: string | number
-  suffix?: string
-  label: string
-  trend?: string | null
-  onClick?: () => void
-  tone?: 'accent' | 'sky' | 'indigo' | 'violet' | 'orange' | 'success'
-}) {
-  const trendClass = trend?.startsWith('+')
-    ? 'bg-success/10 text-[#1a7a3a]'
-    : trend?.startsWith('-')
-      ? 'bg-danger/10 text-danger'
-      : 'text-tertiary'
-  const iconTone = {
-    accent: 'bg-accent/10 text-accent',
-    sky: 'bg-sky-500/10 text-sky-600',
-    indigo: 'bg-indigo-500/10 text-indigo-600',
-    violet: 'bg-violet-500/10 text-violet-600',
-    orange: 'bg-orange-500/10 text-orange-600',
-    success: 'bg-success/10 text-[#1a7a3a]',
-  }[tone]
-
-  return (
-    <div
-      className={`rounded-[22px] bg-surface p-4 flex flex-col justify-between gap-2 ${onClick ? 'cursor-pointer transition-colors hover:bg-white' : ''}`}
-      onClick={onClick}
-    >
-      <span className={`flex h-8 w-8 items-center justify-center rounded-[10px] ${iconTone}`}>{icon}</span>
-      <p className="text-[24px] font-semibold text-primary tracking-tight leading-none">
-        {value}
-        {suffix && <span className="text-[14px] font-normal text-tertiary ml-0.5">{suffix}</span>}
-      </p>
-      <div className="flex items-center justify-between">
-        <p className="text-[12px] text-tertiary">{label}</p>
-        {trend !== undefined && (
-          <span className={`rounded-full px-1.5 py-0.5 text-[11px] font-medium ${trendClass}`}>{trend ?? '—'}</span>
-        )}
-      </div>
-    </div>
-  )
 }
 
 const RECENT_ARTICLES_LIMIT = 7
@@ -457,7 +413,7 @@ export default function ProjectDashboardPage() {
 
       {/* 5 KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
-        <KpiCard
+        <MetricCard
           icon={<BarChart2 size={17} />}
           value={seoValue}
           suffix="/10"
@@ -465,28 +421,28 @@ export default function ProjectDashboardPage() {
           tone="accent"
           onClick={() => navigate(`/projects/${projectId}/performance`)}
         />
-        <KpiCard
+        <MetricCard
           icon={<Globe size={17} />}
           value={hasTrackingData && data?.totalViews != null ? data.totalViews.toLocaleString('fr-FR') : '—'}
           label="Vues du mois"
           tone="sky"
           onClick={() => navigate(`/projects/${projectId}/traffic`)}
         />
-        <KpiCard
+        <MetricCard
           icon={<BookOpen size={17} />}
           value={data?.avgReadingTime != null ? data.avgReadingTime : '—'}
           suffix={data?.avgReadingTime != null ? ' min' : undefined}
           label="Temps moyen"
           tone="indigo"
         />
-        <KpiCard
+        <MetricCard
           icon={<FileText size={17} />}
           value={data?.publishedCount ?? '—'}
           label="Publiés"
           tone="violet"
           onClick={() => navigate(`/projects/${projectId}/articles`)}
         />
-        <KpiCard
+        <MetricCard
           icon={<PenLine size={17} />}
           value={data?.inProgressCount ?? '—'}
           label="En cours"
