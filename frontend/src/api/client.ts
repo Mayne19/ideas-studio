@@ -82,6 +82,10 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return res.json() as Promise<T>
 }
 
+export function healthCheck(): Promise<{ status: string }> {
+  return api.get<{ status: string }>('/health')
+}
+
 export const api = {
   get: <T>(path: string, signal?: AbortSignal) =>
     request<T>(path, { signal }),

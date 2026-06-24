@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { login as apiLogin, register as apiRegister, me as apiMe, logout as apiLogout } from '@/api/auth'
+import { healthCheck } from '@/api/client'
 import type { User } from '@/types'
 
 type AuthState = {
@@ -24,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) return
+    healthCheck().catch(() => {})
     apiMe()
       .then((profile) => setUser(profile))
       .catch(() => localStorage.removeItem('token'))

@@ -1,9 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
+import { healthCheck } from '@/api/client'
 import AuthLayout from '@/components/layout/AuthLayout'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+
+const LOADING_MESSAGES = [
+  { after: 0, label: 'Chargement…' },
+  { after: 5, label: 'Connexion au serveur…' },
+  { after: 10, label: 'Réveil du serveur, cela peut prendre quelques instants…' },
+]
 
 export default function LoginPage() {
   const { login, user } = useAuth()
@@ -19,11 +26,21 @@ export default function LoginPage() {
   }, [navigate, user])
 
   useEffect(() => {
+    healthCheck().catch(() => {})
+  }, [])
+
+  useEffect(() => {
     if (!loading) return
-    const timer = setTimeout(() => {
-      setLoadingMessage('Réveil du serveur, cela peut prendre quelques instants...')
-    }, 6000)
-    return () => clearTimeout(timer)
+    const start = Date.now()
+    const interval = setInterval(() => {
+      const elapsed = (Date.now() - start) / 1000
+      let current = LOADING_MESSAGES[0]!.label
+      for (const msg of LOADING_MESSAGES) {
+        if (elapsed >= msg.after) current = msg.label
+      }
+      setLoadingMessage(current)
+    }, 1000)
+    return () => clearInterval(interval)
   }, [loading])
 
   function handleSubmit(e: React.FormEvent) {
@@ -31,7 +48,7 @@ export default function LoginPage() {
     if (loading) return
     setError('')
     setLoading(true)
-    setLoadingMessage('Connexion en cours...')
+    setLoadingMessage(LOADING_MESSAGES[0]!.label)
     login(email, password)
       .then(() => navigate('/projects', { replace: true }))
       .catch((err) => setError(err instanceof Error ? err.message : 'Identifiants invalides'))
@@ -82,10 +99,10 @@ export default function LoginPage() {
         </div>
 
         <Button type="submit" loading={loading} className="mt-1 w-full justify-center rounded-full">
-          {loading ? loadingMessage : 'Se connecter'}
+          {loading ? 'Connexion…' : 'Se connecter'}
         </Button>
 
-        {loading && loadingMessage !== 'Connexion en cours...' && (
+        {loading && (
           <p className="text-center text-[12px] text-tertiary">{loadingMessage}</p>
         )}
 
