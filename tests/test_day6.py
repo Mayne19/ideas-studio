@@ -799,6 +799,53 @@ def test_publish_returns_revalidated_false_when_no_webhook(client: TestClient):
         settings.BLOG_REVALIDATE_SECRET = old_secret
 
 
+def test_revalidation_sends_secret_in_headers_and_query(monkeypatch):
+    from app.models.project import Project
+    from app.services.publication_revalidation_service import trigger_project_revalidation
+
+    captured = {}
+
+    class DummyResponse:
+        def raise_for_status(self):
+            return None
+
+    class DummyClient:
+        def __init__(self, timeout):
+            self.timeout = timeout
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def post(self, url, *, params, json, headers):
+            captured.update({
+                "url": url,
+                "params": params,
+                "json": json,
+                "headers": headers,
+            })
+            return DummyResponse()
+
+    class DummyDB:
+        def commit(self):
+            return None
+
+    monkeypatch.setattr("app.services.publication_revalidation_service.httpx.Client", DummyClient)
+    project = Project(id="project-1", revalidate_url="https://example.test/api/revalidate")
+    project.revalidate_secret_encrypted = "shared-secret"
+
+    result = trigger_project_revalidation(DummyDB(), project, event_type="manual")
+
+    assert result["revalidated"] is True
+    assert captured["params"]["secret"] == "shared-secret"
+    assert captured["json"]["secret"] == "shared-secret"
+    assert captured["headers"]["Authorization"] == "Bearer shared-secret"
+    assert captured["headers"]["X-Ideas-Studio-Secret"] == "shared-secret"
+    assert captured["headers"]["X-Revalidate-Secret"] == "shared-secret"
+
+
 def test_autosave_version_has_updated_title(client: TestClient):
     """After autosave changes the title, the created version should have the new title."""
     headers, project = _setup(client, "ver_title@test.com")

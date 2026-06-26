@@ -43,9 +43,17 @@ def trigger_project_revalidation(
             "path": f"/{article.slug}",
         })
 
+    headers = {
+        "Authorization": f"Bearer {secret}",
+        "Cache-Control": "no-store",
+        "X-Ideas-Studio-Secret": secret,
+        "X-Revalidate-Secret": secret,
+    }
+    params = {"secret": secret}
+
     try:
         with httpx.Client(timeout=15) as client:
-            resp = client.post(url, json=payload, headers={"Cache-Control": "no-store"})
+            resp = client.post(url, params=params, json=payload, headers=headers)
             resp.raise_for_status()
         project.last_revalidate_status = "success"
         project.last_revalidate_error = None
