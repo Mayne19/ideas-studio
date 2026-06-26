@@ -11,6 +11,7 @@ import Modal from '@/components/ui/Modal'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import Input from '@/components/ui/Input'
 import Textarea from '@/components/ui/Textarea'
+import ToggleSwitch from '@/components/ui/ToggleSwitch'
 import ColorPickerField from '@/components/ui/ColorPickerField'
 import EmptyState from '@/components/ui/EmptyState'
 import ErrorState from '@/components/ui/ErrorState'
@@ -209,6 +210,9 @@ type FormState = {
   color: string
   priority: string
   target_frequency: string
+  pipeline_enabled: boolean
+  target_audience: string
+  editorial_goal: string
 }
 
 const EMPTY_FORM: FormState = {
@@ -217,6 +221,9 @@ const EMPTY_FORM: FormState = {
   color: DEFAULT_ACCENT_COLOR,
   priority: '0',
   target_frequency: '',
+  pipeline_enabled: true,
+  target_audience: '',
+  editorial_goal: '',
 }
 
 export default function CategoriesPage() {
@@ -290,6 +297,9 @@ export default function CategoriesPage() {
       color: categoryColor(c),
       priority: String(c.priority),
       target_frequency: (c.monthly_frequency ?? c.target_frequency) !== null ? String(c.monthly_frequency ?? c.target_frequency) : '',
+      pipeline_enabled: c.pipeline_enabled !== false,
+      target_audience: c.target_audience ?? '',
+      editorial_goal: c.editorial_goal ?? '',
     })
     setFormError('')
     setModalOpen(true)
@@ -314,7 +324,9 @@ export default function CategoriesPage() {
           priority: parseInt(form.priority) || 0,
           target_frequency: freq,
           monthly_frequency: freq,
-          pipeline_enabled: true,
+          pipeline_enabled: form.pipeline_enabled,
+          target_audience: form.target_audience.trim() || null,
+          editorial_goal: form.editorial_goal.trim() || null,
         }
         await updateCategory(projectId, editTarget.id, payload)
       } else {
@@ -325,7 +337,9 @@ export default function CategoriesPage() {
           priority: parseInt(form.priority) || 0,
           target_frequency: freq ?? undefined,
           monthly_frequency: freq ?? undefined,
-          pipeline_enabled: true,
+          pipeline_enabled: form.pipeline_enabled,
+          target_audience: form.target_audience.trim() || null,
+          editorial_goal: form.editorial_goal.trim() || null,
         }
         await createCategory(projectId, payload)
       }
@@ -562,6 +576,30 @@ export default function CategoriesPage() {
               value={form.target_frequency}
               onChange={(e) => setForm((f) => ({ ...f, target_frequency: e.target.value }))}
               placeholder="4"
+            />
+          </div>
+          <Input
+            label="Audience cible"
+            value={form.target_audience}
+            onChange={(e) => setForm((f) => ({ ...f, target_audience: e.target.value }))}
+            placeholder="Développeurs web, freelances, entrepreneurs..."
+          />
+          <Textarea
+            label="Objectif éditorial"
+            value={form.editorial_goal}
+            onChange={(e) => setForm((f) => ({ ...f, editorial_goal: e.target.value }))}
+            placeholder="Éduquer sur les bonnes pratiques, générer des leads..."
+            rows={2}
+          />
+          <div className="flex items-center justify-between rounded-[12px] bg-[#f9f9fb] px-3.5 py-3">
+            <div>
+              <p className="text-[13px] font-medium text-primary">Inclure dans le pipeline</p>
+              <p className="mt-0.5 text-[12px] text-secondary">Génération automatique d'idées activée.</p>
+            </div>
+            <ToggleSwitch
+              checked={form.pipeline_enabled}
+              onChange={(v) => setForm((f) => ({ ...f, pipeline_enabled: v }))}
+              ariaLabel="Inclure dans le pipeline automatique"
             />
           </div>
           <div className="flex gap-2 pt-1">

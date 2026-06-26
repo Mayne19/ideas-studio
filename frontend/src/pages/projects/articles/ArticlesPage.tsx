@@ -46,6 +46,13 @@ function getUniqueAuthors(articles: Article[]): string[] {
 
 const ARTICLE_TABLE_GRID = 'lg:grid-cols-[minmax(240px,1.2fr)_minmax(300px,auto)_80px_90px_130px]'
 
+const PUBLISHED_STATUSES = new Set(['published', 'scheduled'])
+const EDITABLE_STATUSES = new Set([
+  'draft', 'outline_ready', 'writing_requested', 'writing_in_progress',
+  'draft_ready', 'review_needed', 'correction_needed', 'ready_to_publish',
+  'update_recommended', 'failed',
+])
+
 function ArticleRow({
   article,
   categories,
@@ -58,6 +65,8 @@ function ArticleRow({
   onAction: (key: string, a: Article) => void
 }) {
   const category = categories.find((c) => c.id === article.category_id)
+  const isPublished = PUBLISHED_STATUSES.has(article.status)
+  const isEditable = EDITABLE_STATUSES.has(article.status)
 
   return (
     <div className={`grid gap-2.5 rounded-[12px] px-3 py-2.5 transition-colors hover:bg-[#f5f5f7] lg:items-center ${ARTICLE_TABLE_GRID}`}>
@@ -120,10 +129,10 @@ function ArticleRow({
           aria-label={`Actions pour ${article.title}`}
         >
           <option value="" disabled>Actions</option>
-          <option value="view-site">Voir sur le site</option>
-          <option value="analyze-seo">Analyser SEO</option>
-          <option value="unpublish">Dépublier</option>
-          <option value="archive">Archiver</option>
+          {isPublished && <option value="view-site">Voir sur le site</option>}
+          {isEditable && <option value="analyze-seo">Analyser SEO</option>}
+          {isPublished && <option value="unpublish">Dépublier</option>}
+          {!isPublished && <option value="archive">Archiver</option>}
           <option value="delete">Supprimer</option>
         </select>
       </div>
@@ -146,6 +155,7 @@ export default function ArticlesPage() {
   const [filterSearch, setFilterSearch] = useState('')
   const [filterAuthor, setFilterAuthor] = useState('')
   const [filterScore, setFilterScore] = useState<ScoreFilter>('')
+  const [filterStatus, setFilterStatus] = useState('')
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
@@ -182,7 +192,7 @@ export default function ArticlesPage() {
     let cancelled = false
     Promise.resolve().then(() => { if (!cancelled) setStatus('loading') })
     listArticles(projectId, {
-      published_only: true,
+      status: filterStatus || undefined,
       category_id: filterCategory || undefined,
       search: debouncedSearch || undefined,
       skip: 0,
@@ -197,7 +207,7 @@ export default function ArticlesPage() {
       })
       .catch(() => { if (!cancelled) setStatus('error') })
     return () => { cancelled = true }
-  }, [projectId, filterCategory, debouncedSearch, tick])
+  }, [projectId, filterCategory, filterStatus, debouncedSearch, tick])
 
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
     setFilterSearch(e.target.value)
@@ -209,7 +219,7 @@ export default function ArticlesPage() {
     if (!projectId) return
     setLoadingMore(true)
     listArticles(projectId, {
-      published_only: true,
+      status: filterStatus || undefined,
       category_id: filterCategory || undefined,
       search: debouncedSearch || undefined,
       skip: articles.length,
@@ -337,6 +347,22 @@ export default function ArticlesPage() {
     }
   }
 
+  const statusOptions = [
+    { value: '', label: 'Tous les statuts' },
+    { value: 'draft', label: 'Brouillon' },
+    { value: 'outline_ready', label: 'Plan prêt' },
+    { value: 'writing_requested', label: 'Rédaction demandée' },
+    { value: 'writing_in_progress', label: 'En rédaction' },
+    { value: 'draft_ready', label: 'Brouillon prêt' },
+    { value: 'review_needed', label: 'Révision requise' },
+    { value: 'correction_needed', label: 'Correction requise' },
+    { value: 'ready_to_publish', label: 'Prêt à publier' },
+    { value: 'scheduled', label: 'Programmé' },
+    { value: 'published', label: 'Publié' },
+    { value: 'update_recommended', label: 'Mise à jour conseillée' },
+    { value: 'failed', label: 'Échec' },
+  ]
+
   const categoryOptions = [
     { value: '', label: 'Toutes les catégories' },
     ...categories.map((c) => ({ value: c.id, label: c.name })),
@@ -393,7 +419,7 @@ export default function ArticlesPage() {
           <div>
             <h1 className="text-[20px] font-semibold text-primary tracking-tight">Articles</h1>
             <p className="mt-0.5 text-[13px] text-secondary">
-              Contenus publiés sur votre site.
+              Gérez l'ensemble de votre contenu éditorial.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -426,6 +452,12 @@ export default function ArticlesPage() {
             value={filterSearch}
             onChange={handleSearchChange}
             className="w-[440px] max-w-full"
+          />
+          <Select
+            options={statusOptions}
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="w-[185px]"
           />
           <Select
             options={scoreOptions}
@@ -469,9 +501,9 @@ export default function ArticlesPage() {
         {status === 'success' && visibleArticles.length === 0 && (
           <EmptyState
             icon={<FileText size={22} />}
-            title="Aucun article publié"
-            description="Les articles publiés apparaîtront ici."
-            action={{ label: 'Créer un article', onClick: () => setCreateOpen(true) }}
+            title="Aucun article"
+            description={filterStatus || filterCategory || debouncedSearch ? 'Aucun article ne correspond aux filtres sélectionnés.' : 'Créez votre premier article pour commencer.'}
+            action={!filterStatus && !filterCategory && !debouncedSearch ? { label: 'Créer un article', onClick: () => setCreateOpen(true) } : undefined}
           />
         )}
         {status === 'success' && visibleArticles.length > 0 && (

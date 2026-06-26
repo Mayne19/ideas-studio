@@ -1,0 +1,47 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"],
+      "description": "Documentation officielle à jour pour les frameworks (React, FastAPI, TailwindCSS, TipTap, etc.)"
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "description": "Résolution de problèmes complexes étape par étape"
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/mluca/perso/ideas-studio"
+      ],
+      "description": "Lecture, écriture, navigation et refactoring des fichiers du projet"
+    },
+    "git": {
+      "command": "/home/mluca/.local/bin/uvx",
+      "args": ["mcp-server-git", "--repository", "/home/mluca/perso/ideas-studio"],
+      "description": "Commits, branches, historique, comparaison et retour arrière Git"
+    },
+    "sqlite": {
+      "command": "/home/mluca/.local/bin/uvx",
+      "args": [
+        "mcp-server-sqlite",
+        "--db-path",
+        "/home/mluca/perso/ideas-studio/ideas_studio.db"
+      ],
+      "description": "Inspection base SQLite : schéma, requêtes, migrations, contraintes, intégrité"
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"],
+      "description": "Chrome DevTools MCP : DOM, console, réseau, performances, captures d'écran"
+    },
+    "browser-tools": {
+      "command": "npx",
+      "args": ["-y", "@agentdeskai/browser-tools-mcp@latest"],
+      "description": "Inspection navigateur avancée : React DevTools, réseau, responsive, accessibilité"
+    }
+  }
+}
