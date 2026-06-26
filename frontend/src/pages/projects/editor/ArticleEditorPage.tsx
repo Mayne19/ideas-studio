@@ -883,11 +883,9 @@ export default function ArticleEditorPage() {
         })
       }
       let updated: EditorArticle | undefined
-      let revalidated: boolean | undefined
       if (key === 'publish') {
         const resp = await publishArticle(projectId, article.id)
         updated = resp as unknown as EditorArticle
-        revalidated = (resp as { revalidated?: boolean }).revalidated
       } else if (key === 'unpublish') {
         updated = await unpublishArticle(projectId, article.id) as unknown as EditorArticle
       } else if (key === 'mark-ready') {
@@ -896,9 +894,6 @@ export default function ArticleEditorPage() {
         updated = await archiveArticle(projectId, article.id) as unknown as EditorArticle
       }
       if (updated) setArticle((prev) => ({ ...prev!, ...updated }))
-      if (revalidated === false) {
-        setActionError('Article publié, mais cache du site non revalidé.')
-      }
     } catch (err) {
       setActionError(translateError(err))
     } finally {
@@ -949,9 +944,6 @@ export default function ArticleEditorPage() {
       })
       setPersistedSnapshot(promotedSnapshot)
       setLastPromotedSnapshot(promotedSnapshot)
-      if (!updated.revalidated) {
-        setActionError('Article mis à jour, mais cache du site non revalidé.')
-      }
     } catch (err) {
       setActionError(translateError(err))
     } finally {
