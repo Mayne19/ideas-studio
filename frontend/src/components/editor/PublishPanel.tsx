@@ -101,7 +101,7 @@ export default function PublishPanel({
       )}
 
       <div className="flex flex-col gap-1.5 pt-1">
-        {['ready_to_publish', 'draft_ready', 'scheduled'].includes(article.status) && (
+        {article.status !== 'published' && (
           <Button
             size="sm"
             className="w-full justify-center"

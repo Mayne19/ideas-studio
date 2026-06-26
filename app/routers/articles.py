@@ -194,26 +194,6 @@ def publish_article_route(
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions to publish")
 
-    # Backend publish guard: must be ready_to_publish, scheduled, published or archived (republish)
-    if article.status not in ("ready_to_publish", "scheduled", "published", "archived"):
-        raise HTTPException(
-            status_code=400,
-            detail="Seuls les articles marques prets (ready_to_publish), programmes (scheduled), deja publies ou archives peuvent etre publies.",
-        )
-
-    # Backend readiness check: verify validation thresholds and critical warnings.
-    from app.services.validation_service import check_validation_thresholds
-    publish_at = article.scheduled_at or datetime.now(timezone.utc)
-    validation = check_validation_thresholds(article, planned_publish_at=publish_at)
-    if not validation["valid"]:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "message": "L'article contient des problemes bloquants.",
-                "reasons": validation["reasons"],
-            },
-        )
-
     article = publish_article(db, article)
 
     project = db.query(Project).filter(Project.id == article.project_id).first()

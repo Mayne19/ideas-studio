@@ -335,7 +335,7 @@ export default function ValidationPage() {
             <>
               <p className="text-[13px] leading-relaxed text-secondary">
                 {confirmMode === 'publish'
-                  ? `Publication immédiate explicite de ${selectedCount} article(s). Les articles non validables seront bloqués par le backend.`
+                  ? `Publication immédiate explicite de ${selectedCount} article(s). Les alertes de validation restent visibles mais ne bloquent pas votre décision.`
                   : confirmMode === 'correction'
                     ? `${selectedCount} article(s) repasseront en correction.`
                     : `${selectedCount} article(s) seront validés et programmés selon leur date prévue.`}
@@ -352,7 +352,7 @@ export default function ValidationPage() {
           ) : (
             <>
               <div className="rounded-[12px] bg-surface-soft p-3 text-[13px] text-secondary">
-                {bulkResult.scheduled_count} traité(s), {bulkResult.blocked_count} bloqué(s).
+                {bulkResult.scheduled_count} traité(s), {bulkResult.blocked_count} échec(s).
               </div>
               {bulkResult.blocked_articles.length > 0 && (
                 <div className="max-h-64 overflow-auto rounded-[12px] border border-border">

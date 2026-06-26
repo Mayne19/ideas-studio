@@ -81,7 +81,6 @@ type PersistedSnapshot = {
 }
 
 const GENERATING_STATUSES: string[] = ['writing_requested', 'writing_in_progress']
-const PUBLISHABLE_STATUSES = ['draft', 'outline_ready', 'writing_requested', 'writing_in_progress', 'draft_ready', 'review_needed', 'correction_needed', 'ready_to_publish', 'scheduled', 'update_recommended']
 
 const RIGHT_TABS: { key: RightTab; label: string; icon: React.ReactNode }[] = [
   { key: 'publish',  label: 'Publication', icon: <Settings size={13} /> },
@@ -1561,17 +1560,12 @@ export default function ArticleEditorPage() {
                         <div className="flex flex-col gap-1.5">
                           <button
                             onClick={() => doAction('publish')}
-                            disabled={busy || !PUBLISHABLE_STATUSES.includes(article.status)}
+                            disabled={busy}
                             className="w-full rounded-[8px] bg-accent py-2 text-[12px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
                           >
                             {actionLoading === 'publish' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
                             Publier maintenant
                           </button>
-                          {!PUBLISHABLE_STATUSES.includes(article.status) && (
-                            <p className="text-[10px] text-tertiary text-center">
-                              Marquez l'article comme prêt avant de publier.
-                            </p>
-                          )}
                         </div>
                       )}
 

@@ -55,7 +55,7 @@ def test_publish_article(client):
     assert data["published_at"] is not None
 
 
-def test_publish_article_blocks_unready_article(client):
+def test_publish_article_allows_unready_article(client):
     headers, project = _setup(client)
     article = client.post(
         f"/projects/{project['id']}/articles",
@@ -63,7 +63,10 @@ def test_publish_article_blocks_unready_article(client):
         headers=headers,
     ).json()
     resp = client.post(f"/articles/{article['id']}/publish", headers=headers)
-    assert resp.status_code == 400
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "published"
+    assert data["published_at"] is not None
 
 
 def test_unpublish_article(client):
