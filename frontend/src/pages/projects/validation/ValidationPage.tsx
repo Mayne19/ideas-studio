@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AlertTriangle, Calendar, CheckCircle, ExternalLink, RefreshCw, Send, XCircle } from '@/components/ui/hugeIcons'
-import { bulkValidateArticles, listArticles, patchArticle, publishArticle } from '@/api/articles'
+import { bulkPublishArticles, bulkValidateArticles, listArticles, patchArticle } from '@/api/articles'
 import type { BulkValidateResponse } from '@/api/articles'
 import { listCategories } from '@/api/categories'
 import type { Article, Category } from '@/types'
@@ -143,23 +143,8 @@ export default function ValidationPage() {
         const result = await bulkValidateArticles(projectId, selectedArticles.map((article) => article.id))
         setBulkResult(result)
       } else if (confirmMode === 'publish') {
-        const results = await Promise.allSettled(selectedArticles.map((article) => publishArticle(projectId, article.id)))
-        const blocked = results
-          .map((result, index) => ({ result, article: selectedArticles[index] }))
-          .filter((item) => item.result.status === 'rejected')
-          .map((item) => ({
-            article_id: item.article.id,
-            title: item.article.title,
-            reasons: [item.result.status === 'rejected' && item.result.reason instanceof Error ? item.result.reason.message : 'Publication impossible'],
-          }))
-        setBulkResult({
-          validated_count: results.length - blocked.length,
-          scheduled_count: results.length - blocked.length,
-          blocked_count: blocked.length,
-          not_found_count: 0,
-          not_found_ids: [],
-          blocked_articles: blocked,
-        })
+        const result = await bulkPublishArticles(projectId, selectedArticles.map((article) => article.id))
+        setBulkResult(result)
       } else {
         await Promise.all(selectedArticles.map((article) => patchArticle(projectId, article.id, { status: 'correction_needed' })))
         setConfirmMode(null)

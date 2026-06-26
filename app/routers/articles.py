@@ -7,7 +7,7 @@ from app.core.database import get_db
 from app.dependencies.auth import get_current_user, get_project_member, require_project_role, get_member_for_project
 from app.models.user import User
 from app.models.project_member import ProjectMember
-from app.models.article import WRITER_EDITABLE_STATUSES
+from app.models.article import Article, WRITER_EDITABLE_STATUSES
 from app.models.project import Project
 from app.schemas.article import ArticleCreate, ArticleUpdate, ArticlePublic, ArticleScheduleRequest, PromoteResponse, BulkValidateRequest, BulkValidateResponse
 
@@ -385,6 +385,39 @@ def bulk_validate_articles_route(
 ):
     from app.services.validation_service import validate_bulk_articles
     return validate_bulk_articles(db, project_id, data.article_ids)
+
+
+@router.post("/projects/{project_id}/articles/bulk/publish", response_model=BulkValidateResponse)
+def bulk_publish_articles_route(
+    project_id: str,
+    data: BulkValidateRequest,
+    member: ProjectMember = Depends(require_project_role(*_MANAGE_ROLES)),
+    db: Session = Depends(get_db),
+):
+    articles = db.query(Article).filter(
+        Article.id.in_(data.article_ids),
+        Article.project_id == project_id,
+    ).all()
+
+    found_ids = {article.id for article in articles}
+    not_found = [article_id for article_id in data.article_ids if article_id not in found_ids]
+
+    project = db.query(Project).filter(Project.id == project_id).first()
+    published_count = 0
+    for article in articles:
+        published = publish_article(db, article)
+        published_count += 1
+        if project:
+            trigger_project_revalidation(db, project, article=published, event_type="article.published")
+
+    return {
+        "validated_count": published_count,
+        "scheduled_count": published_count,
+        "blocked_count": 0,
+        "not_found_count": len(not_found),
+        "not_found_ids": not_found,
+        "blocked_articles": [],
+    }
 
 
 @router.delete("/articles/{article_id}", status_code=204)

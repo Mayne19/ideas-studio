@@ -105,6 +105,10 @@ export function bulkValidateArticles(projectId: string, articleIds: string[]): P
   return api.post<BulkValidateResponse>(`/projects/${projectId}/articles/bulk/validate`, { article_ids: articleIds })
 }
 
+export function bulkPublishArticles(projectId: string, articleIds: string[]): Promise<BulkValidateResponse> {
+  return api.post<BulkValidateResponse>(`/projects/${projectId}/articles/bulk/publish`, { article_ids: articleIds })
+}
+
 export type GenerateArticleRequest = {
   preferred_title?: string | null
   keyword?: string | null

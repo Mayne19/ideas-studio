@@ -69,6 +69,26 @@ def test_publish_article_allows_unready_article(client):
     assert data["published_at"] is not None
 
 
+def test_bulk_publish_allows_unready_article(client):
+    headers, project = _setup(client)
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Bulk Not Ready"},
+        headers=headers,
+    ).json()
+    resp = client.post(
+        f"/projects/{project['id']}/articles/bulk/publish",
+        json={"article_ids": [article["id"]]},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    result = resp.json()
+    assert result["scheduled_count"] == 1
+    assert result["blocked_count"] == 0
+    public = client.get(f"/api/public/projects/{project['id']}/articles/{article['slug']}")
+    assert public.status_code == 200
+
+
 def test_unpublish_article(client):
     headers, project = _setup(client)
     article = client.post(
