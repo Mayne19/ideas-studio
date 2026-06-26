@@ -15,10 +15,21 @@ def list_public_articles(
     response: Response,
     limit: int = 20,
     offset: int = 0,
+    category_slug: str | None = None,
+    sub_niche: str | None = None,
+    featured: bool | None = None,
     db: Session = Depends(get_db),
 ):
     response.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
-    return get_public_articles(db, project_id, limit=limit, offset=offset)
+    return get_public_articles(
+        db,
+        project_id,
+        limit=limit,
+        offset=offset,
+        category_slug=category_slug,
+        sub_niche=sub_niche,
+        featured=featured,
+    )
 
 
 @router.get("/projects/{project_id}/articles/{slug}", response_model=ArticlePublicApiResponse)

@@ -24,6 +24,8 @@ export type PreviewResponse = {
   meta_title: string | null;
   meta_description: string | null;
   cover_image_url: string | null;
+  sub_niche: string | null;
+  featured: boolean;
   faq_json: unknown;
   callouts_json: unknown;
   internal_links_json: unknown;

@@ -16,6 +16,8 @@ export type CreateArticlePayload = {
   title: string
   keyword?: string
   category_id?: string
+  sub_niche?: string
+  featured?: boolean
   status?: string
 }
 

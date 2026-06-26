@@ -58,6 +58,7 @@ export type MetaFields = {
   meta_description: string
   keyword: string
   category_id: string
+  sub_niche: string
 }
 
 type FaqItem = { question: string; answer: string }
@@ -73,6 +74,8 @@ type PersistedSnapshot = {
   meta_title: string
   meta_description: string
   category_id: string
+  sub_niche: string
+  featured: boolean
   cover_image_url: string
   content: string
   faq_json: string | null
@@ -91,7 +94,7 @@ const RIGHT_TABS: { key: RightTab; label: string; icon: React.ReactNode }[] = [
 type AutosaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 const EMPTY_META: MetaFields = {
-  title: '', slug: '', excerpt: '', meta_title: '', meta_description: '', keyword: '', category_id: '',
+  title: '', slug: '', excerpt: '', meta_title: '', meta_description: '', keyword: '', category_id: '', sub_niche: '',
 }
 
 const CommentMark = Mark.create({
@@ -191,6 +194,7 @@ function buildPersistedSnapshot({
   faqItems,
   authorName,
   readingTimeMinutes,
+  featured,
 }: {
   content: string
   meta: MetaFields
@@ -198,6 +202,7 @@ function buildPersistedSnapshot({
   faqItems: FaqItem[]
   authorName: string
   readingTimeMinutes: number | null
+  featured: boolean
 }): PersistedSnapshot {
   return {
     title: meta.title,
@@ -207,6 +212,8 @@ function buildPersistedSnapshot({
     meta_title: meta.meta_title,
     meta_description: meta.meta_description,
     category_id: meta.category_id,
+    sub_niche: meta.sub_niche,
+    featured,
     cover_image_url: coverImageUrl,
     content,
     faq_json: serializeFaqItems(faqItems),
@@ -234,11 +241,13 @@ function buildPublishedSnapshot(article: EditorArticle | null): PersistedSnapsho
         meta_title: article.meta_title ?? '',
         meta_description: article.meta_description ?? '',
         category_id: article.category_id ?? '',
+        sub_niche: article.sub_niche ?? '',
       },
       coverImageUrl: article.cover_image_url ?? '',
       faqItems: parseFaqItems(article.faq_json),
       authorName: article.author_name ?? '',
       readingTimeMinutes: article.reading_time_minutes,
+      featured: Boolean(article.featured),
     })
   }
   return {
@@ -249,6 +258,8 @@ function buildPublishedSnapshot(article: EditorArticle | null): PersistedSnapsho
     meta_title: article.meta_title ?? '',
     meta_description: article.published_meta_description ?? '',
     category_id: article.category_id ?? '',
+    sub_niche: article.sub_niche ?? '',
+    featured: Boolean(article.featured),
     cover_image_url: article.published_cover_image_url ?? '',
     content: article.published_content ?? '',
     faq_json: article.published_faq_json as string | null ?? null,
@@ -286,6 +297,7 @@ export default function ArticleEditorPage() {
   const [selectedAuthorId, setSelectedAuthorId] = useState('')
   const [manualAuthorName, setManualAuthorName] = useState('')
   const [manualReadingTime, setManualReadingTime] = useState<number | null>(null)
+  const [featured, setFeatured] = useState(false)
   const [persistedSnapshot, setPersistedSnapshot] = useState<PersistedSnapshot | null>(null)
   const [lastPromotedSnapshot, setLastPromotedSnapshot] = useState<PersistedSnapshot | null>(null)
   const [faqItems, setFaqItems] = useState<FaqItem[]>([])
@@ -315,6 +327,7 @@ export default function ArticleEditorPage() {
   const faqRef = useRef<FaqItem[]>([])
   const authorNameRef = useRef('')
   const readingTimeRef = useRef<number | null>(null)
+  const featuredRef = useRef(false)
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingSaveRef = useRef(false)
   const titleRef = useRef<HTMLTextAreaElement>(null)
@@ -405,6 +418,8 @@ export default function ArticleEditorPage() {
         meta_description: metaRef.current.meta_description || undefined,
         cover_image_url: normalizeOptionalText(coverRef.current),
         category_id: normalizeOptionalText(metaRef.current.category_id),
+        sub_niche: normalizeOptionalText(metaRef.current.sub_niche),
+        featured: featuredRef.current,
         faq_json: serializeFaqItems(faqRef.current),
         author_name: normalizeOptionalText(authorNameRef.current),
         reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
@@ -418,6 +433,7 @@ export default function ArticleEditorPage() {
             faqItems: faqRef.current,
             authorName: authorNameRef.current,
             readingTimeMinutes: readingTimeRef.current,
+            featured: featuredRef.current,
           }))
           setArticle((prev) => prev ? {
             ...prev,
@@ -428,6 +444,8 @@ export default function ArticleEditorPage() {
             meta_title: normalizeOptionalText(metaRef.current.meta_title),
             meta_description: normalizeOptionalText(metaRef.current.meta_description),
             category_id: normalizeOptionalText(metaRef.current.category_id),
+            sub_niche: normalizeOptionalText(metaRef.current.sub_niche),
+            featured: featuredRef.current,
             cover_image_url: normalizeOptionalText(coverRef.current),
             content: html,
             faq_json: serializeFaqItems(faqRef.current),
@@ -464,6 +482,8 @@ export default function ArticleEditorPage() {
         meta_description: metaRef.current.meta_description || undefined,
         cover_image_url: normalizeOptionalText(coverRef.current),
         category_id: normalizeOptionalText(metaRef.current.category_id),
+        sub_niche: normalizeOptionalText(metaRef.current.sub_niche),
+        featured: featuredRef.current,
         faq_json: serializeFaqItems(faqRef.current),
         author_name: normalizeOptionalText(authorNameRef.current),
         reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
@@ -476,6 +496,7 @@ export default function ArticleEditorPage() {
         faqItems: faqRef.current,
         authorName: authorNameRef.current,
         readingTimeMinutes: readingTimeRef.current,
+        featured: featuredRef.current,
       }))
       setArticle((prev) => prev ? {
         ...prev,
@@ -486,6 +507,8 @@ export default function ArticleEditorPage() {
         meta_title: normalizeOptionalText(metaRef.current.meta_title),
         meta_description: normalizeOptionalText(metaRef.current.meta_description),
         category_id: normalizeOptionalText(metaRef.current.category_id),
+        sub_niche: normalizeOptionalText(metaRef.current.sub_niche),
+        featured: featuredRef.current,
         cover_image_url: normalizeOptionalText(coverRef.current),
         content,
         faq_json: serializeFaqItems(faqRef.current),
@@ -548,6 +571,7 @@ export default function ArticleEditorPage() {
           meta_description: art.meta_description ?? '',
           keyword: art.keyword ?? '',
           category_id: art.category_id ?? '',
+          sub_niche: art.sub_niche ?? '',
         }
         setMetaFields(meta)
         metaRef.current = meta
@@ -562,6 +586,8 @@ export default function ArticleEditorPage() {
         authorNameRef.current = art.author_name ?? ''
         setManualReadingTime(normalizeReadingTime(art.reading_time_minutes))
         readingTimeRef.current = normalizeReadingTime(art.reading_time_minutes)
+        setFeatured(Boolean(art.featured))
+        featuredRef.current = Boolean(art.featured)
         setPersistedSnapshot(buildPersistedSnapshot({
           content: art.content ?? '',
           meta,
@@ -569,6 +595,7 @@ export default function ArticleEditorPage() {
           faqItems: faq,
           authorName: art.author_name ?? '',
           readingTimeMinutes: art.reading_time_minutes,
+          featured: Boolean(art.featured),
         }))
         setLastPromotedSnapshot(buildPublishedSnapshot(art))
         setIsGenerating(GENERATING_STATUSES.includes(art.status))
@@ -662,7 +689,7 @@ export default function ArticleEditorPage() {
           const m: MetaFields = {
             title: art.title ?? '', slug: art.slug ?? '', excerpt: art.excerpt ?? '',
             meta_title: art.meta_title ?? '', meta_description: art.meta_description ?? '',
-            keyword: art.keyword ?? '', category_id: art.category_id ?? '',
+            keyword: art.keyword ?? '', category_id: art.category_id ?? '', sub_niche: art.sub_niche ?? '',
           }
           setMetaFields(m)
           metaRef.current = m
@@ -676,6 +703,8 @@ export default function ArticleEditorPage() {
           authorNameRef.current = art.author_name ?? ''
           setManualReadingTime(normalizeReadingTime(art.reading_time_minutes))
           readingTimeRef.current = normalizeReadingTime(art.reading_time_minutes)
+          setFeatured(Boolean(art.featured))
+          featuredRef.current = Boolean(art.featured)
           setPersistedSnapshot(buildPersistedSnapshot({
             content: art.content ?? '',
             meta: m,
@@ -683,6 +712,7 @@ export default function ArticleEditorPage() {
             faqItems: faq,
             authorName: art.author_name ?? '',
             readingTimeMinutes: art.reading_time_minutes,
+            featured: Boolean(art.featured),
           }))
           if (editor && art.content) editor.commands.setContent(art.content)
         }
@@ -704,7 +734,7 @@ export default function ArticleEditorPage() {
         const m: MetaFields = {
           title: art.title ?? '', slug: art.slug ?? '', excerpt: art.excerpt ?? '',
           meta_title: art.meta_title ?? '', meta_description: art.meta_description ?? '',
-          keyword: art.keyword ?? '', category_id: art.category_id ?? '',
+          keyword: art.keyword ?? '', category_id: art.category_id ?? '', sub_niche: art.sub_niche ?? '',
         }
         setMetaFields(m)
         metaRef.current = m
@@ -718,6 +748,8 @@ export default function ArticleEditorPage() {
         authorNameRef.current = art.author_name ?? ''
         setManualReadingTime(normalizeReadingTime(art.reading_time_minutes))
         readingTimeRef.current = normalizeReadingTime(art.reading_time_minutes)
+        setFeatured(Boolean(art.featured))
+        featuredRef.current = Boolean(art.featured)
         setPersistedSnapshot(buildPersistedSnapshot({
           content: art.content ?? '',
           meta: m,
@@ -725,6 +757,7 @@ export default function ArticleEditorPage() {
           faqItems: faq,
           authorName: art.author_name ?? '',
           readingTimeMinutes: art.reading_time_minutes,
+          featured: Boolean(art.featured),
         }))
         if (editor && art.content) editor.commands.setContent(art.content)
       }
@@ -822,6 +855,13 @@ export default function ArticleEditorPage() {
     scheduleAutosave(editor?.getHTML() ?? '')
   }
 
+  function handleFeaturedChange(value: boolean) {
+    featuredRef.current = value
+    setFeatured(value)
+    setArticle((prev) => prev ? { ...prev, featured: value } : prev)
+    scheduleAutosave(editor?.getHTML() ?? '')
+  }
+
   function handleTitleInput(e: React.ChangeEvent<HTMLTextAreaElement>) {
     handleMetaChange('title', e.target.value)
     e.currentTarget.style.height = 'auto'
@@ -877,6 +917,8 @@ export default function ArticleEditorPage() {
           meta_description: normalizeOptionalText(metaRef.current.meta_description),
           cover_image_url: normalizeOptionalText(coverRef.current),
           category_id: normalizeOptionalText(metaRef.current.category_id),
+          sub_niche: normalizeOptionalText(metaRef.current.sub_niche),
+          featured: featuredRef.current,
           faq_json: serializeFaqItems(faqRef.current),
           author_name: normalizeOptionalText(authorNameRef.current),
           reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
@@ -918,6 +960,8 @@ export default function ArticleEditorPage() {
         meta_description: normalizeOptionalText(metaRef.current.meta_description),
         cover_image_url: normalizeOptionalText(coverRef.current),
         category_id: normalizeOptionalText(metaRef.current.category_id),
+        sub_niche: normalizeOptionalText(metaRef.current.sub_niche),
+        featured: featuredRef.current,
         faq_json: serializeFaqItems(faqRef.current),
         author_name: normalizeOptionalText(authorNameRef.current),
         reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
@@ -941,6 +985,7 @@ export default function ArticleEditorPage() {
         faqItems,
         authorName: manualAuthorName,
         readingTimeMinutes: manualReadingTime,
+        featured,
       })
       setPersistedSnapshot(promotedSnapshot)
       setLastPromotedSnapshot(promotedSnapshot)
@@ -1048,6 +1093,7 @@ export default function ArticleEditorPage() {
     faqItems,
     authorName: manualAuthorName,
     readingTimeMinutes: manualReadingTime,
+    featured,
   })
   const hasUnsavedChanges = !snapshotsEqual(persistedSnapshot, currentSnapshot)
   const showUpdateButton = article?.status === 'published' && (
@@ -1370,6 +1416,24 @@ export default function ArticleEditorPage() {
                         </select>
                       </Field>
                     )}
+                    <Field label="Sous-niche" hint="Filtre public Fiindt">
+                      <input
+                        type="text"
+                        value={metaFields.sub_niche}
+                        onChange={(e) => handleMetaChange('sub_niche', e.target.value)}
+                        className={INPUT}
+                        placeholder="ex: comparateurs IA"
+                      />
+                    </Field>
+                    <label className="flex items-center justify-between rounded-[8px] border border-border bg-surface px-3 py-2 text-[12px]">
+                      <span className="font-medium text-secondary">Mis en avant</span>
+                      <input
+                        type="checkbox"
+                        checked={featured}
+                        onChange={(e) => handleFeaturedChange(e.target.checked)}
+                        className="h-4 w-4 accent-accent"
+                      />
+                    </label>
                     <Field label="Mot-clé principal" hint="Pour l'analyse SEO">
                       <input
                         type="text"
@@ -1706,7 +1770,7 @@ export default function ArticleEditorPage() {
                       const meta: MetaFields = {
                         title: restored.title ?? '', slug: restored.slug ?? '', excerpt: restored.excerpt ?? '',
                         meta_title: restored.meta_title ?? '', meta_description: restored.meta_description ?? '',
-                        keyword: restored.keyword ?? '', category_id: restored.category_id ?? '',
+                        keyword: restored.keyword ?? '', category_id: restored.category_id ?? '', sub_niche: restored.sub_niche ?? '',
                       }
                       setMetaFields(meta)
                       metaRef.current = meta
@@ -1720,6 +1784,8 @@ export default function ArticleEditorPage() {
                       authorNameRef.current = restored.author_name ?? ''
                       setManualReadingTime(normalizeReadingTime(restored.reading_time_minutes))
                       readingTimeRef.current = normalizeReadingTime(restored.reading_time_minutes)
+                      setFeatured(Boolean(restored.featured))
+                      featuredRef.current = Boolean(restored.featured)
                       setPersistedSnapshot(buildPersistedSnapshot({
                         content: restored.content ?? '',
                         meta,
@@ -1727,6 +1793,7 @@ export default function ArticleEditorPage() {
                         faqItems: faq,
                         authorName: restored.author_name ?? '',
                         readingTimeMinutes: restored.reading_time_minutes,
+                        featured: Boolean(restored.featured),
                       }))
                       if (editor && restored.content) editor.commands.setContent(restored.content)
                       setRightTab('publish')

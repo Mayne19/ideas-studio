@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 class ArticleCreate(BaseModel):
     title: str
     category_id: Optional[str] = None
+    sub_niche: Optional[str] = None
     slug: Optional[str] = None
     content: Optional[str] = None
     excerpt: Optional[str] = None
@@ -18,12 +19,14 @@ class ArticleCreate(BaseModel):
     meta_description: Optional[str] = None
     cover_image_url: Optional[str] = None
     priority: int = 0
+    featured: bool = False
     author_name: Optional[str] = None
 
 
 class ArticleUpdate(BaseModel):
     title: Optional[str] = None
     category_id: Optional[str] = None
+    sub_niche: Optional[str] = None
     slug: Optional[str] = None
     content: Optional[str] = None
     excerpt: Optional[str] = None
@@ -43,6 +46,7 @@ class ArticleUpdate(BaseModel):
     rejection_reason: Optional[str] = None
     rejection_note: Optional[str] = None
     priority: Optional[int] = None
+    featured: Optional[bool] = None
     author_name: Optional[str] = None
     reading_time_minutes: Optional[int] = None
 
@@ -57,6 +61,7 @@ class PromoteResponse(BaseModel):
     id: str
     project_id: str
     category_id: Optional[str]
+    sub_niche: Optional[str] = None
     title: str
     slug: str
     content: Optional[str]
@@ -68,6 +73,7 @@ class PromoteResponse(BaseModel):
     cover_image_url: Optional[str]
     word_count: int
     priority: int
+    featured: bool = False
     seo_score: Optional[float]
     readability_score: Optional[float]
     quality_score: Optional[float]
@@ -90,6 +96,7 @@ class ArticlePublic(BaseModel):
     id: str
     project_id: str
     category_id: Optional[str]
+    sub_niche: Optional[str] = None
     title: str
     slug: str
     content: Optional[str]
@@ -101,6 +108,7 @@ class ArticlePublic(BaseModel):
     cover_image_url: Optional[str]
     word_count: int
     priority: int
+    featured: bool = False
     seo_score: Optional[float]
     readability_score: Optional[float]
     quality_score: Optional[float]
@@ -170,6 +178,8 @@ class ArticlePublicApiResponse(BaseModel):
     category: Optional[CategoryBrief]
     category_slug: Optional[str] = None
     category_color: Optional[str] = None
+    sub_niche: Optional[str] = None
+    featured: bool = False
     main_keyword: Optional[str] = None
     meta_title: Optional[str]
     meta_description: Optional[str]

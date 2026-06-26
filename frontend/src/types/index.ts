@@ -126,6 +126,7 @@ export type Article = {
   id: string
   project_id: string
   category_id: string | null
+  sub_niche: string | null
   title: string
   slug: string
   status: ArticleStatus
@@ -137,6 +138,7 @@ export type Article = {
   cover_image_url: string | null
   word_count: number
   priority: number
+  featured: boolean
   seo_score: number | null
   readability_score: number | null
   quality_score: number | null
@@ -458,6 +460,8 @@ export type AutosaveRequest = {
   external_links_json?: unknown | null
   content_blocks_json?: unknown | null
   category_id?: string | null
+  sub_niche?: string | null
+  featured?: boolean | null
   author_name?: string | null
   reading_time_minutes?: number | null
 }

@@ -53,6 +53,7 @@ def create_article(db: Session, data: ArticleCreate, project_id: str) -> Article
     article = Article(
         project_id=project_id,
         category_id=data.category_id,
+        sub_niche=data.sub_niche,
         title=data.title,
         slug=slug,
         content=data.content,
@@ -68,6 +69,7 @@ def create_article(db: Session, data: ArticleCreate, project_id: str) -> Article
         cover_image_url=data.cover_image_url,
         word_count=calculate_word_count(data.content),
         priority=data.priority,
+        featured=data.featured,
         author_name=data.author_name,
     )
     db.add(article)
@@ -287,16 +289,27 @@ def delete_article(db: Session, article: Article) -> None:
 
 
 def get_public_articles(
-    db: Session, project_id: str, limit: int = 20, offset: int = 0
+    db: Session,
+    project_id: str,
+    limit: int = 20,
+    offset: int = 0,
+    category_slug: str | None = None,
+    sub_niche: str | None = None,
+    featured: bool | None = None,
 ) -> list[ArticlePublicApiResponse]:
-    articles = (
+    q = (
         db.query(Article)
         .filter(Article.project_id == project_id, Article.status == "published")
-        .order_by(Article.published_at.desc())
-        .limit(limit)
-        .offset(offset)
-        .all()
     )
+
+    if category_slug:
+        q = q.join(Category, Article.category_id == Category.id).filter(Category.slug == category_slug)
+    if sub_niche:
+        q = q.filter(Article.sub_niche == sub_niche)
+    if featured is not None:
+        q = q.filter(Article.featured == featured)
+
+    articles = q.order_by(Article.published_at.desc()).limit(limit).offset(offset).all()
     category_ids = {a.category_id for a in articles if a.category_id}
     category_map: dict[str, Category] = {}
     if category_ids:
@@ -345,6 +358,8 @@ def _to_public_response(article: Article, category: Category | None) -> ArticleP
         ) if category else None,
         category_slug=category.slug if category else None,
         category_color=category.color if category else None,
+        sub_niche=article.sub_niche,
+        featured=bool(article.featured),
         main_keyword=article.keyword,
         meta_title=article.meta_title,
         meta_description=article.published_meta_description or article.meta_description,

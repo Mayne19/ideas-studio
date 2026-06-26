@@ -16,6 +16,7 @@ class EditorData(BaseModel):
     id: str
     project_id: str
     category_id: Optional[str]
+    sub_niche: Optional[str] = None
     title: str
     slug: str
     content: Optional[str]
@@ -71,6 +72,7 @@ class EditorData(BaseModel):
     structured_data_json: Optional[dict] = None
     author_name: Optional[str] = None
     reading_time_minutes: Optional[int] = None
+    featured: bool = False
     latest_analysis: Optional[AnalysisBrief]
     created_at: datetime
     updated_at: datetime
@@ -99,8 +101,10 @@ class AutosaveRequest(BaseModel):
     external_links_json: Optional[str] = None
     content_blocks_json: Optional[str] = None
     category_id: Optional[str] = None
+    sub_niche: Optional[str] = None
     author_name: Optional[str] = None
     reading_time_minutes: Optional[int] = None
+    featured: Optional[bool] = None
 
 
 class AutosaveResponse(BaseModel):
@@ -120,6 +124,8 @@ class PreviewResponse(BaseModel):
     meta_title: Optional[str]
     meta_description: Optional[str]
     cover_image_url: Optional[str]
+    sub_niche: Optional[str] = None
+    featured: bool = False
     faq_json: Optional[str]
     callouts_json: Optional[str]
     internal_links_json: Optional[str]

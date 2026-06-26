@@ -141,6 +141,75 @@ def test_public_api_get_by_slug(client):
     assert resp.json()["slug"] == "slug-post"
 
 
+def test_public_api_filters_by_category_sub_niche_and_featured(client):
+    headers, project = _setup(client)
+    category = client.post(
+        f"/projects/{project['id']}/categories",
+        json={"name": "Guides IA", "slug": "guides-ia"},
+        headers=headers,
+    ).json()
+    featured_article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={
+            "title": "Featured Guide",
+            "slug": "featured-guide",
+            "category_id": category["id"],
+            "sub_niche": "comparateurs-ia",
+            "featured": True,
+            "content": "<p>Featured</p>",
+        },
+        headers=headers,
+    ).json()
+    other_article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={
+            "title": "Other Guide",
+            "slug": "other-guide",
+            "category_id": category["id"],
+            "sub_niche": "prompts-ia",
+            "featured": False,
+            "content": "<p>Other</p>",
+        },
+        headers=headers,
+    ).json()
+    force_publish_article(featured_article["id"])
+    force_publish_article(other_article["id"])
+
+    resp = client.get(
+        f"/api/public/projects/{project['id']}/articles"
+        "?category_slug=guides-ia&sub_niche=comparateurs-ia&featured=true"
+    )
+    assert resp.status_code == 200
+    items = resp.json()
+    assert len(items) == 1
+    assert items[0]["slug"] == "featured-guide"
+    assert items[0]["category_slug"] == "guides-ia"
+    assert items[0]["sub_niche"] == "comparateurs-ia"
+    assert items[0]["featured"] is True
+
+
+def test_editor_autosave_updates_sub_niche_and_featured(client):
+    headers, project = _setup(client)
+    article = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Taxonomy Draft"},
+        headers=headers,
+    ).json()
+
+    resp = client.post(
+        f"/articles/{article['id']}/autosave",
+        json={"sub_niche": "comparateurs-ia", "featured": True},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+
+    editor = client.get(f"/articles/{article['id']}/editor", headers=headers)
+    assert editor.status_code == 200
+    data = editor.json()
+    assert data["sub_niche"] == "comparateurs-ia"
+    assert data["featured"] is True
+
+
 def test_publish_preserves_published_at_on_republish(client):
     headers, project = _setup(client)
     article = client.post(

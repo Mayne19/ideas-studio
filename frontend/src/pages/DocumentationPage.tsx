@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Search, Menu, X } from '@/components/ui/hugeIcons'
+import { ArrowRight, Download, Search, Menu, X } from '@/components/ui/hugeIcons'
 import { Card } from '@/components/ui/Card'
 
 const configuredApiUrl = (import.meta.env['VITE_API_URL'] as string | undefined)?.trim().replace(/\/$/, '')
@@ -896,6 +896,89 @@ function extractOutline(sections: { id: string; label: string; depth: number }[]
   return sections
 }
 
+function normalizeMarkdownText(value: string) {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function inlineMarkdown(node: ChildNode): string {
+  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? ''
+  if (!(node instanceof HTMLElement)) return ''
+
+  const text = Array.from(node.childNodes).map(inlineMarkdown).join('')
+  const normalized = normalizeMarkdownText(text)
+
+  if (node.tagName === 'STRONG') return normalized ? `**${normalized}**` : ''
+  if (node.tagName === 'CODE') return normalized ? `\`${normalized}\`` : ''
+  if (node.tagName === 'A') {
+    const href = node.getAttribute('href')
+    return href && normalized ? `[${normalized}](${href})` : normalized
+  }
+  return text
+}
+
+function blockMarkdown(element: Element): string {
+  if (!(element instanceof HTMLElement)) return ''
+  const text = normalizeMarkdownText(Array.from(element.childNodes).map(inlineMarkdown).join(''))
+
+  if (!text && !['UL', 'OL'].includes(element.tagName)) return ''
+  if (element.tagName === 'H2') return `## ${text}`
+  if (element.tagName === 'H3') return `### ${text}`
+  if (element.tagName === 'P') return text
+  if (element.tagName === 'UL') {
+    return Array.from(element.children)
+      .filter((child) => child.tagName === 'LI')
+      .map((child) => `- ${normalizeMarkdownText(Array.from(child.childNodes).map(inlineMarkdown).join(''))}`)
+      .join('\n')
+  }
+  if (element.tagName === 'OL') {
+    return Array.from(element.children)
+      .filter((child) => child.tagName === 'LI')
+      .map((child, index) => `${index + 1}. ${normalizeMarkdownText(Array.from(child.childNodes).map(inlineMarkdown).join(''))}`)
+      .join('\n')
+  }
+  return text
+}
+
+function chapterContentToMarkdown(html: string): string {
+  const doc = new DOMParser().parseFromString(`<main>${html}</main>`, 'text/html')
+  return Array.from(doc.body.firstElementChild?.children ?? [])
+    .map(blockMarkdown)
+    .filter(Boolean)
+    .join('\n\n')
+}
+
+function buildDocumentationMarkdown() {
+  const exportedAt = new Date().toLocaleString('fr-FR')
+  return [
+    '# Documentation Ideas Studio',
+    '',
+    `Export complet généré le ${exportedAt}.`,
+    '',
+    '## Sommaire',
+    '',
+    ...CHAPTERS.map((chapter, index) => `${index + 1}. ${chapter.label}`),
+    '',
+    ...CHAPTERS.flatMap((chapter) => [
+      `# ${chapter.label}`,
+      '',
+      chapterContentToMarkdown(chapter.content),
+      '',
+    ]),
+  ].join('\n')
+}
+
+function downloadMarkdown(filename: string, markdown: string) {
+  const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
 export default function DocumentationPage() {
   const [query, setQuery] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -913,6 +996,10 @@ export default function DocumentationPage() {
   const swaggerUrl = `${documentationApiUrl}/docs`
   const redocUrl = `${documentationApiUrl}/redoc`
   const openApiUrl = `${documentationApiUrl}/openapi.json`
+
+  function handleDownloadMarkdown() {
+    downloadMarkdown('ideas-studio-documentation-complete.md', buildDocumentationMarkdown())
+  }
 
   return (
     <div className="min-h-screen bg-bg text-primary">
@@ -1006,6 +1093,14 @@ export default function DocumentationPage() {
                 Ouvrir le studio
                 <ArrowRight size={14} />
               </Link>
+              <button
+                type="button"
+                onClick={handleDownloadMarkdown}
+                className="inline-flex h-9 items-center gap-1.5 rounded-[8px] bg-[#1d1d1f] px-3.5 text-[13px] font-semibold text-white hover:bg-[#2d2d30]"
+              >
+                <Download size={14} />
+                Télécharger Markdown complet
+              </button>
               <a href={swaggerUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-[8px] border border-border px-3.5 text-[13px] font-medium text-primary hover:bg-[#f0f0f2]">
                 Ouvrir Swagger API
               </a>
