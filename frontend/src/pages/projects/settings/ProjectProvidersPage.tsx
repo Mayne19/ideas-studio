@@ -4,6 +4,7 @@ import { Plus, Trash2, TestTube, CheckCircle, XCircle, Loader2, Eye, EyeOff, Sav
 import { api } from '@/api/client'
 import { Card } from '@/components/ui/Card'
 import ToggleSwitch from '@/components/ui/ToggleSwitch'
+import { useProject } from '@/context/ProjectContext'
 
 type AIProviderConfig = {
   id: string
@@ -62,8 +63,23 @@ const emptyForm: ProviderFormData = {
   enabled: true,
 }
 
+function AccessDenied() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-error/10">
+        <span className="text-2xl text-error">🔒</span>
+      </div>
+      <h2 className="text-[18px] font-semibold text-primary">Accès réservé aux administrateurs</h2>
+      <p className="mt-2 max-w-sm text-[14px] text-secondary">
+        La configuration des providers, agents et pipeline est réservée aux owners et admins du projet.
+      </p>
+    </div>
+  )
+}
+
 export default function ProjectProvidersPage() {
   const { projectId } = useParams<{ projectId: string }>()
+  const { myRole } = useProject()
   const [configs, setConfigs] = useState<AIProviderConfig[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -197,6 +213,10 @@ export default function ProjectProvidersPage() {
       else next.add(id)
       return next
     })
+  }
+
+  if (myRole !== null && myRole !== 'owner' && myRole !== 'admin') {
+    return <AccessDenied />
   }
 
   if (loading) {

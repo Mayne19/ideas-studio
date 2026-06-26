@@ -28,6 +28,16 @@ def _to_public(member: ProjectMember, user: User | None) -> MemberPublic:
     )
 
 
+@router.get("/{project_id}/members/me", response_model=MemberPublic)
+def get_my_membership(
+    project_id: str,
+    member: ProjectMember = Depends(get_project_member),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.id == member.user_id).first()
+    return _to_public(member, user)
+
+
 @router.get("/{project_id}/members", response_model=list[MemberPublic])
 def list_members(
     project_id: str,

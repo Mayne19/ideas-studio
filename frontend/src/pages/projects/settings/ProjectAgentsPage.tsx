@@ -8,6 +8,7 @@ import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import ToggleSwitch from '@/components/ui/ToggleSwitch'
 import type { AgentInfo, AgentAssignment, AIProviderConfig } from '@/types'
+import { useProject } from '@/context/ProjectContext'
 
 const CATEGORY_LABELS: Record<string, string> = {
   research: 'Recherche',
@@ -16,8 +17,23 @@ const CATEGORY_LABELS: Record<string, string> = {
   review: 'Révision',
 }
 
+function AccessDenied() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-error/10">
+        <span className="text-2xl text-error">🔒</span>
+      </div>
+      <h2 className="text-[18px] font-semibold text-primary">Accès réservé aux administrateurs</h2>
+      <p className="mt-2 max-w-sm text-[14px] text-secondary">
+        La configuration des providers, agents et pipeline est réservée aux owners et admins du projet.
+      </p>
+    </div>
+  )
+}
+
 export default function ProjectAgentsPage() {
   const { projectId } = useParams<{ projectId: string }>()
+  const { myRole } = useProject()
   const [agents, setAgents] = useState<AgentInfo[]>([])
   const [assignments, setAssignments] = useState<AgentAssignment[]>([])
   const [providers, setProviders] = useState<AIProviderConfig[]>([])
@@ -105,6 +121,10 @@ export default function ProjectAgentsPage() {
     } finally {
       setSavingId(null)
     }
+  }
+
+  if (myRole !== null && myRole !== 'owner' && myRole !== 'admin') {
+    return <AccessDenied />
   }
 
   if (loading) return <LoadingState />

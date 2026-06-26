@@ -5,6 +5,10 @@ export function listMembers(projectId: string): Promise<ProjectMember[]> {
   return api.get<ProjectMember[]>(`/projects/${projectId}/members`)
 }
 
+export function getMyMembership(projectId: string): Promise<ProjectMember> {
+  return api.get<ProjectMember>(`/projects/${projectId}/members/me`)
+}
+
 export function addMember(projectId: string, userId: string, role: string): Promise<ProjectMember> {
   return api.post<ProjectMember>(`/projects/${projectId}/members`, { user_id: userId, role })
 }

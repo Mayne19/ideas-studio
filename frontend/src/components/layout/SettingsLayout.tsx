@@ -1,10 +1,12 @@
 import { NavLink, Outlet, useParams } from 'react-router-dom'
 import { cn } from '@/utils/cn'
 import { getSettingsSections } from '@/lib/settingsSections'
+import { useProject } from '@/context/ProjectContext'
 
 export default function SettingsLayout() {
   const { projectId } = useParams<{ projectId: string }>()
-  const tabs = getSettingsSections(projectId)
+  const { isAdminOrOwner } = useProject()
+  const tabs = getSettingsSections(projectId, { showAdminOnly: isAdminOrOwner })
 
   return (
     <div className="project-page project-page--wide">

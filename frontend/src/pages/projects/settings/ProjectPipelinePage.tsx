@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import ToggleSwitch from '@/components/ui/ToggleSwitch'
+import { useProject } from '@/context/ProjectContext'
 
 const DAYS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
 const DAYS_EN = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
@@ -24,8 +25,23 @@ function hourLabel(h: number): string {
 
 const ARTICLES_OPTIONS = [1, 2, 3, 5, 7, 10, 15, 20]
 
+function AccessDenied() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-error/10">
+        <span className="text-2xl text-error">🔒</span>
+      </div>
+      <h2 className="text-[18px] font-semibold text-primary">Accès réservé aux administrateurs</h2>
+      <p className="mt-2 max-w-sm text-[14px] text-secondary">
+        La configuration des providers, agents et pipeline est réservée aux owners et admins du projet.
+      </p>
+    </div>
+  )
+}
+
 export default function ProjectPipelinePage() {
   const { projectId } = useParams<{ projectId: string }>()
+  const { myRole } = useProject()
   const [logs, setLogs] = useState<PipelineLog[]>([])
   const [settings, setSettings] = useState<PipelineSettings | null>(null)
   const [loadStatus, setLoadStatus] = useState<'loading' | 'success' | 'error'>('loading')
@@ -123,6 +139,10 @@ export default function ProjectPipelinePage() {
   function handleRetry() {
     setLoadStatus('loading')
     setLoadTrigger((n) => n + 1)
+  }
+
+  if (myRole !== null && myRole !== 'owner' && myRole !== 'admin') {
+    return <AccessDenied />
   }
 
   if (loadStatus === 'error') {

@@ -186,3 +186,20 @@ def test_nonmember_cannot_add_member(client: TestClient):
         headers=headers_other,
     )
     assert resp.status_code == 403
+
+
+# ── 11. GET /members/me ───────────────────────────────────────────────────────
+
+def test_get_my_membership_owner(client: TestClient):
+    headers, project = _setup(client, email="me_owner@test.com")
+    resp = client.get(f"/projects/{project['id']}/members/me", headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["role"] == "owner"
+
+
+def test_get_my_membership_nonmember(client: TestClient):
+    headers_owner, project = _setup(client, email="me_nm_owner@test.com")
+    headers_other = register_and_login(client, email="me_nm_other@test.com", name="Other")
+    resp = client.get(f"/projects/{project['id']}/members/me", headers=headers_other)
+    assert resp.status_code == 403

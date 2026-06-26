@@ -3,11 +3,16 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import type { ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { getProject } from '@/api/projects'
+import { getMyMembership } from '@/api/members'
 import type { Project } from '@/types'
+
+export type ProjectRole = 'owner' | 'admin' | 'editor' | 'writer' | 'viewer'
 
 type ProjectContextValue = {
   project: Project | null
   loading: boolean
+  myRole: ProjectRole | null
+  isAdminOrOwner: boolean
   refetch: () => void
 }
 
@@ -16,6 +21,7 @@ const ProjectContext = createContext<ProjectContextValue | null>(null)
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const { projectId } = useParams<{ projectId?: string }>()
   const [project, setProject] = useState<Project | null>(null)
+  const [myRole, setMyRole] = useState<ProjectRole | null>(null)
   const [loading, setLoading] = useState(false)
   const [tick, setTick] = useState(0)
 
@@ -25,14 +31,25 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     if (!projectId) return
     let cancelled = false
     Promise.resolve().then(() => { if (!cancelled) setLoading(true) })
-    getProject(projectId)
-      .then((p) => { if (!cancelled) { setProject(p); setLoading(false) } })
-      .catch(() => { if (!cancelled) { setProject(null); setLoading(false) } })
+    Promise.all([
+      getProject(projectId),
+      getMyMembership(projectId).catch(() => null),
+    ])
+      .then(([p, membership]) => {
+        if (!cancelled) {
+          setProject(p)
+          setMyRole((membership?.role as ProjectRole) ?? null)
+          setLoading(false)
+        }
+      })
+      .catch(() => { if (!cancelled) { setProject(null); setMyRole(null); setLoading(false) } })
     return () => { cancelled = true }
   }, [projectId, tick])
 
+  const isAdminOrOwner = myRole === 'owner' || myRole === 'admin'
+
   return (
-    <ProjectContext.Provider value={{ project, loading, refetch }}>
+    <ProjectContext.Provider value={{ project, loading, myRole, isAdminOrOwner, refetch }}>
       {children}
     </ProjectContext.Provider>
   )
