@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { lazy, Suspense, useEffect } from 'react'
-import { createBrowserRouter, Navigate, useRouteError } from 'react-router-dom'
+import { createBrowserRouter, Navigate, useParams, useRouteError } from 'react-router-dom'
 import LoginPage from '@/pages/auth/LoginPage'
 import RegisterPage from '@/pages/auth/RegisterPage'
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage'
@@ -46,6 +46,11 @@ const ProjectAgentsPage = lazy(() => import('@/pages/projects/settings/ProjectAg
 const MediaPage = lazy(() => import('@/pages/projects/media/MediaPage'))
 const AccountPage = lazy(() => import('@/pages/account/AccountPage'))
 const DocumentationPage = lazy(() => import('@/pages/DocumentationPage'))
+
+function OptimizationsRedirect() {
+  const { projectId } = useParams<{ projectId: string }>()
+  return <Navigate to={`/projects/${projectId}/recommendations`} replace />
+}
 
 function RouteErrorFallback() {
   const error = useRouteError()
@@ -350,7 +355,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'projects/:projectId/optimizations',
-        element: <Navigate to="../recommendations" replace />,
+        element: <OptimizationsRedirect />,
       },
       {
         path: 'projects/:projectId/generate',

@@ -96,7 +96,7 @@ export default function NotificationsPage() {
         </div>
       )}
 
-      {notifications.length === 0 ? (
+      {status !== 'error' && notifications.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-20 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-[#f0f0f2] text-tertiary">
             <Bell size={22} />
@@ -108,7 +108,7 @@ export default function NotificationsPage() {
             </p>
           </div>
         </div>
-      ) : (
+      ) : status !== 'error' ? (
         <div className="flex flex-col gap-2">
           {notifications.map((n) => {
             const isUnread = !n.read_at
@@ -149,7 +149,7 @@ export default function NotificationsPage() {
             )
           })}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

@@ -124,9 +124,11 @@ class Settings(BaseSettings):
         if self.FRONTEND_URL and self.FRONTEND_URL not in configured:
             configured.append(self.FRONTEND_URL)
         if self.APP_ENV == "development":
-            for origin in ("http://localhost:5173", "http://127.0.0.1:5173"):
-                if origin not in configured:
-                    configured.append(origin)
+            for port in range(5173, 5180):
+                for host in ("http://localhost", "http://127.0.0.1"):
+                    origin = f"{host}:{port}"
+                    if origin not in configured:
+                        configured.append(origin)
         return configured or ["*"]
 
 

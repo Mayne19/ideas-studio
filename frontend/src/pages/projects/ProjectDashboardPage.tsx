@@ -416,7 +416,7 @@ export default function ProjectDashboardPage() {
         <MetricCard
           icon={<BarChart2 size={17} />}
           value={seoValue}
-          suffix="/10"
+          suffix={seoValue !== '—' ? '/10' : undefined}
           label="Score SEO moyen"
           tone="accent"
           onClick={() => navigate(`/projects/${projectId}/performance`)}

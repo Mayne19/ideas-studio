@@ -111,7 +111,7 @@ def get_pipeline(db: Session, project_id: str) -> PipelineSettingsPublic | None:
             cost_limit_per_article_eur=None,
             total_monthly_from_categories=_category_frequency_summary(db, project_id)[0],
             categories_frequencies=_category_frequency_summary(db, project_id)[1],
-            automation_notes="Pipeline non cree. Configurez-le avant automatisation; lancement manuel disponible apres creation.",
+            automation_notes="Pipeline non créé. Configurez-le avant automatisation ; lancement manuel disponible après création.",
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
