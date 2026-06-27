@@ -5,8 +5,10 @@ from itertools import combinations
 from statistics import mean
 from typing import Any
 
+from app.services.seo.eeat_llm_layer import blend_eeat_with_llm, call_eeat_llm
 from app.services.seo.format_expectations import FormatExpectations, get_expectations, get_format, normalize_to_format
 from app.services.seo.helpers import strip_html
+from app.services.seo.llm_budget import LLMBudgetManager
 
 
 NUANCE_MARKERS = [
@@ -133,7 +135,7 @@ def score_heading_diversity(headings: list[str]) -> float:
     return max(0.0, round(100 - avg_similarity * 150))
 
 
-def compute_eeat_score(article: Any, project_domain: str = "") -> dict:
+def compute_eeat_score(article: Any, project_domain: str = "", budget: LLMBudgetManager | None = None) -> dict:
     if isinstance(article, dict):
         content = article.get("content") or ""
         metadata = article
@@ -210,14 +212,27 @@ def compute_eeat_score(article: Any, project_domain: str = "") -> dict:
     available = sum(1 for v in [s1, s2, s3, s5, s6] if v is not None)
     confidence = "high" if available >= 4 else "medium"
 
+    # Optional LLM layer (15% weight)
+    llm_result = None
+    method = "rules"
+    if budget and budget.should_call_llm("eeat", final_score, confidence):
+        budget.consume("eeat")
+        llm_result = call_eeat_llm(article, fmt)
+        if llm_result:
+            final_score, method = blend_eeat_with_llm(final_score, llm_result)
+            final_score = round(final_score)
+            if llm_result["signals"].get("main_weakness"):
+                explanation += f" LLM : {llm_result['signals']['main_weakness']}"
+
     return {
         "score": final_score,
         "confidence": confidence,
-        "method": "rules",
+        "method": method,
         "content_format": fmt,
         "signals": signals,
         "flags": flags,
         "explanation": explanation,
+        "llm": llm_result,
         "version": "2.1",
     }
 

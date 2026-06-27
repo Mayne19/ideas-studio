@@ -8,6 +8,7 @@ from app.models.article import Article
 from app.models.seo_analysis import SeoAnalysis
 from app.services.seo.eeat_service import compute_eeat_score
 from app.services.seo.geo_expert_service import compute_geo_score
+from app.services.seo.llm_budget import LLMBudgetManager
 from app.services.seo.originality_service import compute_originality_score
 from app.services.seo.readability_service import compute_readability_score
 from app.services.scoring_service import compute_global_score
@@ -634,8 +635,9 @@ def analyze_article(db: Session, article_id: str) -> SeoAnalysis:
     readiness_status = _compute_readiness(all_issues)
     suggestions = _generate_suggestions(article, parsed, all_issues)
 
-    # Run v2.1 expert scoring
-    eeat_v2 = compute_eeat_score(article)
+    # Run v2.1 expert scoring with optional LLM enrichment
+    budget = LLMBudgetManager(max_calls=2)
+    eeat_v2 = compute_eeat_score(article, budget=budget)
     readability_v2 = compute_readability_score(article)
     geo_v2 = compute_geo_score(article)
 
