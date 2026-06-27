@@ -6,6 +6,11 @@ from sqlalchemy.orm import Session
 
 from app.models.article import Article
 from app.models.seo_analysis import SeoAnalysis
+from app.services.seo.eeat_service import compute_eeat_score
+from app.services.seo.geo_expert_service import compute_geo_score
+from app.services.seo.originality_service import compute_originality_score
+from app.services.seo.readability_service import compute_readability_score
+from app.services.scoring_service import compute_global_score
 
 
 def _strip_html(value: str) -> str:
@@ -601,13 +606,37 @@ def analyze_article(db: Session, article_id: str) -> SeoAnalysis:
     readiness_status = _compute_readiness(all_issues)
     suggestions = _generate_suggestions(article, parsed, all_issues)
 
+    # Run v2.1 expert scoring
+    eeat_v2 = compute_eeat_score(article)
+    readability_v2 = compute_readability_score(article)
+    geo_v2 = compute_geo_score(article)
+
+    eeat_score_final = eeat_v2["score"] if eeat_v2["confidence"] != "low" else eeat_score
+    readability_score_final = readability_v2["score"] if readability_v2.get("score") is not None else readability_score
+
+    existing_eeat_json = article.eeat_checklist_json or {}
+    if isinstance(existing_eeat_json, str):
+        try:
+            existing_eeat_json = json.loads(existing_eeat_json)
+        except Exception:
+            existing_eeat_json = {}
+    existing_eeat_json["v2"] = eeat_v2
+
+    existing_geo_json = article.geo_optimization_json or {}
+    if isinstance(existing_geo_json, str):
+        try:
+            existing_geo_json = json.loads(existing_geo_json)
+        except Exception:
+            existing_geo_json = {}
+    existing_geo_json.update({"geo_score": geo_v2["score"], "v2": geo_v2})
+
     analysis = SeoAnalysis(
         project_id=article.project_id,
         article_id=article.id,
         seo_score=seo_score,
-        readability_score=readability_score,
+        readability_score=readability_score_final,
         quality_score=quality_score,
-        eeat_score=eeat_score,
+        eeat_score=eeat_score_final,
         readiness_status=readiness_status,
         issues_json=json.dumps(all_issues),
         suggestions_json=json.dumps(suggestions),
@@ -616,11 +645,19 @@ def analyze_article(db: Session, article_id: str) -> SeoAnalysis:
     db.add(analysis)
 
     article.seo_score = seo_score
-    article.readability_score = readability_score
+    article.readability_score = readability_score_final
     article.quality_score = quality_score
-    article.eeat_score = eeat_score
+    article.eeat_score = eeat_score_final
+    article.eeat_checklist_json = existing_eeat_json
+    article.geo_optimization_json = existing_geo_json
     article.readiness_status = readiness_status
     article.updated_at = datetime.now(timezone.utc)
+
+    # Persist global v2.1 score if computed; stored in JSON blob on article if field exists
+    global_result = compute_global_score(article)
+    global_score_v2 = global_result["global_score"]
+    if global_score_v2 is not None and hasattr(article, "global_score"):
+        article.global_score = global_score_v2
 
     db.flush()
     return analysis
