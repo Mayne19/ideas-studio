@@ -142,6 +142,7 @@ class Article(Base):
     opportunity_justification: Mapped[str | None] = mapped_column(Text, nullable=True)
     recommended_format: Mapped[str | None] = mapped_column(String(100), nullable=True)
     target_word_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    content_format: Mapped[str | None] = mapped_column(String(20), nullable=True)  # short|medium|long|pillar
     needs_faq: Mapped[bool | None] = mapped_column(Integer, nullable=True)
     needs_images: Mapped[bool | None] = mapped_column(Integer, nullable=True)
     suggested_internal_links: Mapped[str | None] = mapped_column(Text, nullable=True)

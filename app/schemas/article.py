@@ -49,6 +49,8 @@ class ArticleUpdate(BaseModel):
     featured: Optional[bool] = None
     author_name: Optional[str] = None
     reading_time_minutes: Optional[int] = None
+    target_word_count: Optional[int] = None
+    content_format: Optional[str] = None  # short|medium|long|pillar
 
 
 class ArticleScheduleRequest(BaseModel):
@@ -86,6 +88,8 @@ class PromoteResponse(BaseModel):
     created_at: datetime
     author_name: Optional[str] = None
     reading_time_minutes: Optional[int] = None
+    target_word_count: Optional[int] = None
+    content_format: Optional[str] = None
     updated_at: datetime
     revalidated: bool = False
 
@@ -127,6 +131,8 @@ class ArticlePublic(BaseModel):
     created_at: datetime
     author_name: Optional[str] = None
     reading_time_minutes: Optional[int] = None
+    target_word_count: Optional[int] = None
+    content_format: Optional[str] = None
     updated_at: datetime
 
     # Editorial dates
