@@ -354,6 +354,40 @@ def _run_seo_checks(article: Article, parsed: dict) -> list[dict]:
             "structure",
         ))
 
+    # Topic angle coverage v2.1 — replaces word-count signal
+    # Checks that H2 headings cover distinct angles beyond just repeating the keyword
+    h2_headings = re.findall(r"<h2[^>]*>(.*?)</h2>", article.content or "", re.IGNORECASE | re.DOTALL)
+    h2_texts = [re.sub(r"<[^>]+>", "", h).strip().lower() for h in h2_headings]
+    if len(h2_texts) >= 2 and keyword:
+        kw_words = set(keyword.split())
+        unique_angles = [
+            h for h in h2_texts
+            if not all(w in h for w in kw_words)  # not just the keyword repeated
+        ]
+        if len(unique_angles) < max(1, len(h2_texts) // 2):
+            issues.append(_issue(
+                "low_topic_angle_coverage", "seo", "info",
+                "Les sections H2 répètent trop le mot-clé sans couvrir des angles distincts.",
+                "Diversifiez les titres H2 pour couvrir différents aspects du sujet (bénéfices, méthodes, exemples, FAQ).",
+                "structure",
+            ))
+
+    # Image alt text — signal SEO v2.1
+    content_html = article.content or ""
+    img_tags = re.findall(r"<img[^>]+>", content_html, re.IGNORECASE)
+    if img_tags:
+        imgs_without_alt = [
+            tag for tag in img_tags
+            if not re.search(r'alt=["\'][^"\']+["\']', tag, re.IGNORECASE)
+        ]
+        if imgs_without_alt:
+            issues.append(_issue(
+                "images_missing_alt", "seo", "warning",
+                f"{len(imgs_without_alt)} image(s) sans attribut alt.",
+                "Ajoutez un alt descriptif contenant le mot-clé sur les images principales.",
+                "media",
+            ))
+
     return issues
 
 
@@ -564,8 +598,8 @@ def _generate_suggestions(article: Article, parsed: dict, issues: list[dict]) ->
         suggestions.append(f"Intégrez le mot-clé « {article.keyword} » dans le titre et le H1.")
     if "missing_meta_title" in issue_types or "missing_meta_description" in issue_types:
         suggestions.append("Complétez les métadonnées SEO (title + description).")
-    if "too_short" in issue_types or "below_recommended_length" in issue_types:
-        suggestions.append(f"Développez l'article ({parsed['word_count']} → 800+ mots recommandés).")
+    if "too_short" in issue_types:
+        suggestions.append("Enrichissez le contenu pour permettre une évaluation complète par les experts de scoring.")
     if "mock_content" in issue_types:
         suggestions.append("Remplacez tout le contenu [Mock] par du contenu réel avant publication.")
     if "no_external_links" in issue_types:
@@ -670,8 +704,10 @@ def analyze_article(db: Session, article_id: str) -> SeoAnalysis:
     # Compute global score v2.1 now that all 4 experts are stored on the article
     global_result = compute_global_score(article)
     global_score_v2 = global_result["global_score"]
-    if global_score_v2 is not None and hasattr(article, "global_score"):
+    if global_score_v2 is not None:
         article.global_score = global_score_v2
+    if hasattr(article, "global_score_valid"):
+        article.global_score_valid = global_result["global_score_valid"]
 
     db.flush()
     return analysis
