@@ -438,19 +438,13 @@ def _run_quality_checks(article: Article, parsed: dict) -> list[dict]:
             "content",
         ))
 
-    # Minimum word count
-    if parsed["word_count"] < 300:
+    # Word count: info only — scoring v2.1 does not penalize volume
+    # (format-relative scoring via content_format/target_word_count)
+    if parsed["word_count"] < 100:
         issues.append(_issue(
-            "too_short", "quality", "critical",
-            f"L'article est trop court ({parsed['word_count']} mots).",
-            "Visez au moins 800 mots pour un article de blog.",
-            "content",
-        ))
-    elif parsed["word_count"] < 800:
-        issues.append(_issue(
-            "below_recommended_length", "quality", "warning",
-            f"L'article est en dessous de la longueur recommandée ({parsed['word_count']} mots).",
-            "Développez le contenu pour atteindre 800+ mots.",
+            "too_short", "quality", "info",
+            f"L'article contient peu de contenu ({parsed['word_count']} mots).",
+            "Enrichissez le contenu pour que les experts de scoring puissent l'évaluer.",
             "content",
         ))
 
@@ -611,6 +605,15 @@ def analyze_article(db: Session, article_id: str) -> SeoAnalysis:
     readability_v2 = compute_readability_score(article)
     geo_v2 = compute_geo_score(article)
 
+    # Originality requires other project articles for internal uniqueness
+    project_articles = (
+        db.query(Article)
+        .filter(Article.project_id == article.project_id, Article.id != article.id)
+        .limit(50)
+        .all()
+    )
+    originality_v2 = compute_originality_score(article, project_articles)
+
     eeat_score_final = eeat_v2["score"] if eeat_v2["confidence"] != "low" else eeat_score
     readability_score_final = readability_v2["score"] if readability_v2.get("score") is not None else readability_score
 
@@ -650,10 +653,21 @@ def analyze_article(db: Session, article_id: str) -> SeoAnalysis:
     article.eeat_score = eeat_score_final
     article.eeat_checklist_json = existing_eeat_json
     article.geo_optimization_json = existing_geo_json
+
+    # Originality: merge with existing report if any
+    existing_orig_json = article.originality_report_json or {}
+    if isinstance(existing_orig_json, str):
+        try:
+            existing_orig_json = json.loads(existing_orig_json)
+        except Exception:
+            existing_orig_json = {}
+    existing_orig_json["v2"] = originality_v2
+    article.originality_report_json = existing_orig_json
+
     article.readiness_status = readiness_status
     article.updated_at = datetime.now(timezone.utc)
 
-    # Persist global v2.1 score if computed; stored in JSON blob on article if field exists
+    # Compute global score v2.1 now that all 4 experts are stored on the article
     global_result = compute_global_score(article)
     global_score_v2 = global_result["global_score"]
     if global_score_v2 is not None and hasattr(article, "global_score"):

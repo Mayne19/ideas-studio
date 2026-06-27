@@ -59,6 +59,8 @@ export type MetaFields = {
   keyword: string
   category_id: string
   sub_niche: string
+  content_format: 'short' | 'medium' | 'long' | 'pillar' | ''
+  target_word_count: string
 }
 
 type FaqItem = { question: string; answer: string }
@@ -95,6 +97,7 @@ type AutosaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 const EMPTY_META: MetaFields = {
   title: '', slug: '', excerpt: '', meta_title: '', meta_description: '', keyword: '', category_id: '', sub_niche: '',
+  content_format: '', target_word_count: '',
 }
 
 const CommentMark = Mark.create({
@@ -242,6 +245,8 @@ function buildPublishedSnapshot(article: EditorArticle | null): PersistedSnapsho
         meta_description: article.meta_description ?? '',
         category_id: article.category_id ?? '',
         sub_niche: article.sub_niche ?? '',
+        content_format: (article.content_format as MetaFields['content_format']) ?? '',
+        target_word_count: article.target_word_count ? String(article.target_word_count) : '',
       },
       coverImageUrl: article.cover_image_url ?? '',
       faqItems: parseFaqItems(article.faq_json),
@@ -423,6 +428,8 @@ export default function ArticleEditorPage() {
         faq_json: serializeFaqItems(faqRef.current),
         author_name: normalizeOptionalText(authorNameRef.current),
         reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
+        content_format: (metaRef.current.content_format as 'short' | 'medium' | 'long' | 'pillar') || null,
+        target_word_count: metaRef.current.target_word_count ? parseInt(metaRef.current.target_word_count, 10) || null : null,
       })
         .then((response) => {
           pendingSaveRef.current = false
@@ -487,6 +494,8 @@ export default function ArticleEditorPage() {
         faq_json: serializeFaqItems(faqRef.current),
         author_name: normalizeOptionalText(authorNameRef.current),
         reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
+        content_format: (metaRef.current.content_format as 'short' | 'medium' | 'long' | 'pillar') || null,
+        target_word_count: metaRef.current.target_word_count ? parseInt(metaRef.current.target_word_count, 10) || null : null,
       })
       pendingSaveRef.current = false
       setPersistedSnapshot(buildPersistedSnapshot({
@@ -572,6 +581,8 @@ export default function ArticleEditorPage() {
           keyword: art.keyword ?? '',
           category_id: art.category_id ?? '',
           sub_niche: art.sub_niche ?? '',
+          content_format: (art.content_format as MetaFields['content_format']) ?? '',
+          target_word_count: art.target_word_count ? String(art.target_word_count) : '',
         }
         setMetaFields(meta)
         metaRef.current = meta
@@ -690,6 +701,8 @@ export default function ArticleEditorPage() {
             title: art.title ?? '', slug: art.slug ?? '', excerpt: art.excerpt ?? '',
             meta_title: art.meta_title ?? '', meta_description: art.meta_description ?? '',
             keyword: art.keyword ?? '', category_id: art.category_id ?? '', sub_niche: art.sub_niche ?? '',
+            content_format: (art.content_format as MetaFields['content_format']) ?? '',
+            target_word_count: art.target_word_count ? String(art.target_word_count) : '',
           }
           setMetaFields(m)
           metaRef.current = m
@@ -735,6 +748,8 @@ export default function ArticleEditorPage() {
           title: art.title ?? '', slug: art.slug ?? '', excerpt: art.excerpt ?? '',
           meta_title: art.meta_title ?? '', meta_description: art.meta_description ?? '',
           keyword: art.keyword ?? '', category_id: art.category_id ?? '', sub_niche: art.sub_niche ?? '',
+          content_format: (art.content_format as MetaFields['content_format']) ?? '',
+          target_word_count: art.target_word_count ? String(art.target_word_count) : '',
         }
         setMetaFields(m)
         metaRef.current = m
@@ -965,6 +980,8 @@ export default function ArticleEditorPage() {
         faq_json: serializeFaqItems(faqRef.current),
         author_name: normalizeOptionalText(authorNameRef.current),
         reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
+        content_format: (metaRef.current.content_format as 'short' | 'medium' | 'long' | 'pillar') || null,
+        target_word_count: metaRef.current.target_word_count ? parseInt(metaRef.current.target_word_count, 10) || null : null,
       })
       const updated: PromoteResponse = await promoteArticle(projectId, article.id)
       setArticle((prev) => prev ? {
@@ -1443,6 +1460,30 @@ export default function ArticleEditorPage() {
                         placeholder="ex: marketing digital"
                       />
                     </Field>
+                    <Field label="Format de contenu" hint="Calibre le scoring v2.1">
+                      <select
+                        value={metaFields.content_format}
+                        onChange={(e) => handleMetaChange('content_format', e.target.value)}
+                        className={INPUT}
+                      >
+                        <option value="">— Inféré depuis le volume —</option>
+                        <option value="short">Court (400–800 mots)</option>
+                        <option value="medium">Moyen (800–1500 mots)</option>
+                        <option value="long">Long (1500–2500 mots)</option>
+                        <option value="pillar">Pilier (2500+ mots)</option>
+                      </select>
+                    </Field>
+                    <Field label="Volume cible (mots)" hint="Optionnel si format déclaré">
+                      <input
+                        type="number"
+                        min={100}
+                        step={100}
+                        value={metaFields.target_word_count}
+                        onChange={(e) => handleMetaChange('target_word_count', e.target.value)}
+                        className={INPUT}
+                        placeholder="ex: 1200"
+                      />
+                    </Field>
                   </div>
 
                   {/* 2. Slug */}
@@ -1771,6 +1812,8 @@ export default function ArticleEditorPage() {
                         title: restored.title ?? '', slug: restored.slug ?? '', excerpt: restored.excerpt ?? '',
                         meta_title: restored.meta_title ?? '', meta_description: restored.meta_description ?? '',
                         keyword: restored.keyword ?? '', category_id: restored.category_id ?? '', sub_niche: restored.sub_niche ?? '',
+                        content_format: (restored.content_format as MetaFields['content_format']) ?? '',
+                        target_word_count: restored.target_word_count ? String(restored.target_word_count) : '',
                       }
                       setMetaFields(meta)
                       metaRef.current = meta

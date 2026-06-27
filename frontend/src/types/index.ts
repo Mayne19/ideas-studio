@@ -201,6 +201,7 @@ export type Article = {
   actual_cost_json: Record<string, unknown> | null
   geo_optimization_json: Record<string, unknown> | null
   originality_report_json: Record<string, unknown> | null
+  content_format: 'short' | 'medium' | 'long' | 'pillar' | null
 }
 
 export type IdeaStatus = 'idea_proposed' | 'idea_priority' | 'idea_rejected'
@@ -464,6 +465,8 @@ export type AutosaveRequest = {
   featured?: boolean | null
   author_name?: string | null
   reading_time_minutes?: number | null
+  content_format?: 'short' | 'medium' | 'long' | 'pillar' | null
+  target_word_count?: number | null
 }
 
 export type AutosaveResponse = {
