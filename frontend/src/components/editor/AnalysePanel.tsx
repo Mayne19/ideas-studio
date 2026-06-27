@@ -181,6 +181,114 @@ function ScoreSynthesisCard({
   )
 }
 
+/* ─── V2.1 signals breakdown ────────────────────────────────── */
+
+type V2Signal = { value: number; weight: number; contribution?: number; [k: string]: unknown }
+type V2Report = { score?: number; signals?: Record<string, V2Signal>; flags?: string[]; explanation?: string; confidence?: string; status?: string; version?: string }
+
+function getV2Report(article: EditorArticle, key: ScoreKey): V2Report | null {
+  const raw: Record<string, unknown> | null = (() => {
+    switch (key) {
+      case 'EEAT':        return (article.eeat_checklist_json as Record<string, unknown> | null)
+      case 'Originalité': return (article.originality_report_json as Record<string, unknown> | null)
+      case 'GEO':         return (article.geo_optimization_json as Record<string, unknown> | null)
+      case 'Lisibilité':  return (article.readability_report_json as Record<string, unknown> | null)
+      default:            return null
+    }
+  })()
+  if (!raw) return null
+  const v2 = raw.v2 as V2Report | undefined
+  return v2?.version === '2.1' ? v2 : (raw.version === '2.1' ? raw as V2Report : null)
+}
+
+const SIGNAL_LABELS: Record<string, string> = {
+  external_links:    'Liens externes',
+  cited_stats:       'Statistiques sourcées',
+  heading_structure: 'Structure H2/H3',
+  author_bio:        'Bio auteur',
+  nuance_markers:    'Marqueurs de nuance',
+  heading_diversity: 'Diversité des titres',
+  ai_generic_absence:'Absence de généricité IA',
+  internal_uniqueness:'Unicité interne',
+  source_verification:'Vérification des sources',
+  concrete_examples: 'Exemples concrets',
+  direct_answers:    'Réponses directes',
+  heading_format:    'Format des titres',
+  structured_data:   'Données structurées',
+  named_entities:    'Entités nommées',
+  summary_blocks:    'Blocs de synthèse',
+  semantic_density:  'Densité sémantique',
+  lix_score:         'Score LIX (lisibilité)',
+  paragraph_score:   'Longueur des paragraphes',
+  passive_score:     'Voix active',
+  transition_score:  'Transitions',
+}
+
+const FLAG_LABELS: Record<string, string> = {
+  no_author_bio:                 'Pas de bio auteur',
+  insufficient_external_links:   'Liens externes insuffisants',
+  no_cited_statistics:           'Aucune statistique sourcée',
+  no_sources_unverified:         'Aucune source fournie — score non vérifié',
+  high_source_overlap:           'Fort chevauchement avec les sources',
+  generic_ai_patterns_detected:  'Patterns IA génériques détectés',
+  probable_internal_duplicate:   'Possible doublon interne',
+  no_structured_data:            'Pas de données structurées (JSON-LD)',
+  no_summary_block:              'Pas de bloc de synthèse',
+  sections_lack_direct_answers:  'Sections sans réponse directe',
+  high_lix_difficult_reading:    'LIX élevé — lecture difficile',
+  paragraph_length_issue:        'Longueur des paragraphes problématique',
+}
+
+function V2SignalsBreakdown({ report }: { report: V2Report }) {
+  const signals = report.signals ?? {}
+  if (Object.keys(signals).length === 0) return null
+
+  return (
+    <div className="flex flex-col gap-2">
+      {report.explanation && (
+        <p className="text-[11px] leading-snug text-secondary italic">{report.explanation}</p>
+      )}
+
+      {report.flags && report.flags.length > 0 && (
+        <div className="flex flex-col gap-1">
+          {report.flags.map((flag) => (
+            <div key={flag} className="flex items-start gap-1.5 rounded-[8px] bg-warning/5 px-2.5 py-1.5">
+              <AlertTriangle size={10} className="mt-0.5 shrink-0 text-warning" />
+              <span className="text-[11px] text-secondary">{FLAG_LABELS[flag] ?? flag}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-tertiary mt-1">Détail des signaux</p>
+      <div className="flex flex-col gap-1.5">
+        {Object.entries(signals).map(([key, signal]) => {
+          const pct = Math.round(signal.value)
+          const barColor = pct >= 75 ? 'bg-success' : pct >= 50 ? 'bg-warning' : 'bg-danger'
+          return (
+            <div key={key}>
+              <div className="flex items-center justify-between mb-0.5">
+                <span className="text-[10px] text-secondary">{SIGNAL_LABELS[key] ?? key}</span>
+                <span className="text-[10px] font-medium text-primary">{pct}/100</span>
+              </div>
+              <div className="h-1 w-full rounded-full bg-border">
+                <div className={`h-1 rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {report.confidence && (
+        <p className="text-[10px] text-tertiary mt-1">
+          Confiance : {report.confidence === 'high' ? 'élevée' : report.confidence === 'medium' ? 'moyenne' : 'faible'}
+          {report.confidence === 'low' && ' — score affiché avec préfixe ~'}
+        </p>
+      )}
+    </div>
+  )
+}
+
 /* ─── Score detail panel ────────────────────────────────────── */
 
 function getIssuesForCategory(issues: SeoIssue[], category: string) {
@@ -208,6 +316,8 @@ function ScoreDetailPanel({
   const hasProblems = crit.length > 0 || warn.length > 0
   const hasActions = info.length > 0 || (analysis?.suggestions?.length ?? 0) > 0
 
+  const v2Report = getV2Report(article, selected)
+
   let whatWorks: string[] = []
   if (selected === 'Synthèse') {
     if (readiness) {
@@ -217,20 +327,18 @@ function ScoreDetailPanel({
     if (expertReview?.passed_checks?.length) {
       whatWorks.push(`${expertReview.passed_checks.length} contrôles SEO Expert validés`)
     }
-  } else if (selected === 'Originalité') {
-    const report = article.originality_report_json
-    if (report && typeof report === 'object') {
-      const checks = (report as Record<string, unknown>).checks as Array<Record<string, unknown>> | undefined
-      if (checks) whatWorks = checks.filter((c) => c.passed).map((c) => (c.label as string) || (c.check as string))
+  } else if (v2Report) {
+    // v2.1 experts: derive "what works" from signal scores
+    const signals = v2Report.signals ?? {}
+    whatWorks = Object.entries(signals)
+      .filter(([, s]) => s.value >= 75)
+      .map(([k]) => SIGNAL_LABELS[k] ?? k)
+    if (v2Report.status === 'original' || v2Report.status === 'adds_value') {
+      whatWorks.push('Contenu original vérifié')
     }
-    if (whatWorks.length === 0 && score !== null && score >= 70) whatWorks.push('Contenu original, aucun risque de similarité détecté')
-  } else if (selected === 'GEO') {
-    const report = article.geo_optimization_json
-    if (report && typeof report === 'object') {
-      const checks = (report as Record<string, unknown>).checks as Array<Record<string, unknown>> | undefined
-      if (checks) whatWorks = checks.filter((c) => c.passed).map((c) => (c.label as string) || (c.check as string))
+    if (score !== null && score >= 70 && whatWorks.length === 0) {
+      whatWorks.push('Tous les signaux sont satisfaisants')
     }
-    if (whatWorks.length === 0 && score !== null && score >= 70) whatWorks.push('Contenu optimisé pour les moteurs génératifs')
   } else {
     const keywords = keywordsMap[selected]
     if (keywords) whatWorks = deriveWhatWorks(categoryIssues, keywords)
@@ -274,7 +382,9 @@ function ScoreDetailPanel({
           </div>
         )}
 
-        {hasProblems && (
+        {v2Report && <V2SignalsBreakdown report={v2Report} />}
+
+        {!v2Report && hasProblems && (
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wide text-danger mb-1.5">
               Problèmes bloquants {crit.length > 0 ? `(${crit.length} critique${crit.length > 1 ? 's' : ''})` : ''}

@@ -435,6 +435,8 @@ export type EditorArticle = Article & {
   estimated_cost_json: Record<string, unknown> | null
   geo_optimization_json: Record<string, unknown> | null
   structured_data_json: Record<string, unknown> | null
+  readability_report_json: Record<string, unknown> | null
+  content_format: 'short' | 'medium' | 'long' | 'pillar' | null
   latest_analysis: AnalysisBrief | null
   published_content: string | null
   published_title: string | null
