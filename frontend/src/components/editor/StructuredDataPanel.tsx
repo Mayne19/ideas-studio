@@ -6,7 +6,7 @@ export default function StructuredDataPanel({ article }: { article: EditorArticl
 
   if (!sd) {
     return (
-      <div className="rounded-[10px] border border-border bg-surface p-3 text-[11px] text-tertiary">
+      <div className="rounded-[6px] border border-border bg-surface p-3 text-[11px] text-tertiary">
         Aucune donnée structurée générée.
       </div>
     )

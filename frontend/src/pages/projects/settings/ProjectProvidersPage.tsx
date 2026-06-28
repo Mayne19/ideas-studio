@@ -234,7 +234,7 @@ export default function ProjectProvidersPage() {
       </div>
 
       {error && (
-        <div className="rounded-[12px] border border-danger/20 bg-danger/5 px-4 py-3">
+        <div className="rounded-[8px] border border-danger/20 bg-danger/5 px-4 py-3">
           <div className="flex items-start gap-2 text-[13px] text-danger">
             <XCircle size={15} className="mt-0.5 shrink-0" />
             <div>
@@ -244,7 +244,7 @@ export default function ProjectProvidersPage() {
               </p>
             </div>
           </div>
-          <button onClick={loadConfigs} className="mt-3 rounded-[10px] bg-accent px-4 py-2 text-[12px] font-medium text-white transition-opacity hover:opacity-90">
+          <button onClick={loadConfigs} className="mt-3 rounded-[6px] bg-primary px-4 py-2 text-[12px] font-medium text-bg transition-opacity hover:opacity-90">
             Réessayer
           </button>
         </div>
@@ -259,7 +259,7 @@ export default function ProjectProvidersPage() {
                 key={p.key}
                 onClick={() => openCreate(p.key)}
                 disabled={!!error}
-                className="flex items-center gap-1.5 rounded-[10px] border border-border px-3 py-2 text-[12px] font-medium text-secondary transition-colors hover:bg-[#f0f0f2] hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-[6px] border border-border px-3 py-2 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Plus size={13} />
                 {p.label}
@@ -272,7 +272,7 @@ export default function ProjectProvidersPage() {
       {configs.map((config) => {
         const def = getProviderDef(config.provider)
         return (
-          <div key={config.id} className="rounded-[22px] bg-surface p-4">
+          <div key={config.id} className="rounded-[8px] bg-surface p-4">
             <div className="flex items-start justify-between mb-3">
               <div>
                 <div className="flex items-center gap-2">
@@ -281,10 +281,10 @@ export default function ProjectProvidersPage() {
                     <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">Par défaut</span>
                   )}
                   {config.last_test_status === 'connected' && (
-                    <span className="rounded-full bg-[#e8f5e9] px-2 py-0.5 text-[10px] font-medium text-[#1a7a3a]">Connecté</span>
+                    <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">Connecté</span>
                   )}
                   {config.last_test_status === 'error' && (
-                    <span className="rounded-full bg-[#fce4ec] px-2 py-0.5 text-[10px] font-medium text-danger">Erreur</span>
+                    <span className="rounded-full bg-danger/10 px-2 py-0.5 text-[10px] font-medium text-danger">Erreur</span>
                   )}
                 </div>
                 <p className="mt-0.5 text-[12px] text-tertiary">
@@ -295,14 +295,14 @@ export default function ProjectProvidersPage() {
                 <button
                   onClick={() => handleTest(config.id)}
                   disabled={testing === config.id}
-                  className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
+                  className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
                   title="Tester la connexion"
                 >
                   {testing === config.id ? <Loader2 size={13} className="animate-spin" /> : <TestTube size={13} />}
                 </button>
                 <button
                   onClick={() => openEdit(config)}
-                  className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
+                  className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
                   title="Modifier"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -325,7 +325,7 @@ export default function ProjectProvidersPage() {
             )}
 
             {testResult && testResult.id === config.id && (
-              <div className={`rounded-[8px] p-2 text-[11px] mb-2 ${testResult.status === 'connected' ? 'bg-[#e8f5e9] text-[#1a7a3a]' : 'bg-[#fce4ec] text-danger'}`}>
+              <div className={`rounded-[6px] p-2 text-[11px] mb-2 ${testResult.status === 'connected' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
                 {testResult.status === 'connected' ? <CheckCircle size={11} className="inline mr-1" /> : <XCircle size={11} className="inline mr-1" />}
                 {testResult.message}
               </div>
@@ -350,7 +350,7 @@ export default function ProjectProvidersPage() {
                 key={p.key}
                 onClick={() => openCreate(p.key)}
                 disabled={!!error}
-                className="flex items-center gap-1.5 rounded-[10px] border border-border px-3 py-2 text-[12px] font-medium text-secondary transition-colors hover:bg-[#f0f0f2] hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-[6px] border border-border px-3 py-2 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Plus size={13} />
                 {p.label}
@@ -382,7 +382,7 @@ export default function ProjectProvidersPage() {
                     })
                     setAdvancedOpen(e.target.value === 'custom' || e.target.value === 'ollama')
                   }}
-                  className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                  className="rounded-[6px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
                 >
                   {SUPPORTED_PROVIDERS.map((p) => (
                     <option key={p.key} value={p.key}>{p.label}</option>
@@ -397,7 +397,7 @@ export default function ProjectProvidersPage() {
                 value={form.label}
                 onChange={(e) => setForm({ ...form, label: e.target.value })}
                 placeholder="Mon provider Gemini"
-                className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                className="rounded-[6px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -410,7 +410,7 @@ export default function ProjectProvidersPage() {
                   value={form.api_key}
                   onChange={(e) => setForm({ ...form, api_key: e.target.value })}
                   placeholder={editingId ? 'Nouvelle clé (optionnelle)' : 'Votre clé API'}
-                  className="w-full rounded-[10px] border border-border bg-surface px-3 py-2 pr-8 text-[13px] text-primary outline-none focus:border-accent"
+                  className="w-full rounded-[6px] border border-border bg-surface px-3 py-2 pr-8 text-[13px] text-primary outline-none focus:border-accent"
                 />
                 <button
                   type="button"
@@ -429,7 +429,7 @@ export default function ProjectProvidersPage() {
                   value={form.model}
                   onChange={(e) => setForm({ ...form, model: e.target.value })}
                   placeholder="gemini-2.5-flash"
-                  className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                  className="rounded-[6px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
                 />
               </div>
               {(advancedOpen || form.provider === 'custom' || form.provider === 'ollama') && (
@@ -440,7 +440,7 @@ export default function ProjectProvidersPage() {
                     value={form.base_url}
                     onChange={(e) => setForm({ ...form, base_url: e.target.value })}
                     placeholder="https://api.openai.com/v1"
-                    className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                    className="rounded-[6px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
                   />
                 </div>
               )}
@@ -449,13 +449,13 @@ export default function ProjectProvidersPage() {
               <button
                 type="button"
                 onClick={() => setAdvancedOpen((open) => !open)}
-                className="w-fit rounded-[8px] px-2 py-1 text-[11px] font-medium text-accent hover:bg-accent/8"
+                className="w-fit rounded-[6px] px-2 py-1 text-[11px] font-medium text-accent hover:bg-accent/10"
               >
                 {advancedOpen ? 'Masquer les options avancées' : 'Afficher Base URL avancée'}
               </button>
             )}
             {form.provider === 'ollama' && (
-              <div className="rounded-[12px] bg-warning/8 px-3 py-2 text-[12px] text-secondary">
+              <div className="rounded-[8px] bg-warning/10 px-3 py-2 text-[12px] text-secondary">
                 Ollama local fonctionne sur votre machine. Sur Render, utilisez un endpoint public sécurisé ou un provider cloud.
               </div>
             )}
@@ -467,14 +467,14 @@ export default function ProjectProvidersPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex items-center gap-1.5 rounded-[10px] bg-accent px-4 py-2 text-[12px] font-medium text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-[6px] bg-primary px-4 py-2 text-[12px] font-medium text-bg hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                 {editingId ? 'Mettre à jour' : 'Ajouter'}
               </button>
               <button
                 onClick={() => { setShowForm(false); setEditingId(null); setTestResult(null) }}
-                className="rounded-[10px] px-4 py-2 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2] transition-colors"
+                className="rounded-[6px] px-4 py-2 text-[12px] font-medium text-secondary hover:bg-surface-soft transition-colors"
               >
                 Annuler
               </button>
@@ -483,7 +483,7 @@ export default function ProjectProvidersPage() {
         </Card>
       )}
 
-      <div className="rounded-[14px] border border-accent/20 bg-accent/5 px-4 py-3">
+      <div className="rounded-[8px] border border-accent/20 bg-accent/5 px-4 py-3">
         <p className="text-[12px] text-secondary leading-snug">
           Les providers configurés ici sont prioritaires par rapport aux variables d'environnement. 
           Vous pouvez ajouter un provider par type, tester sa connexion, et définir le provider par défaut.

@@ -15,11 +15,12 @@ const paddings: Record<CardPadding, string> = {
   lg: 'p-6',
 }
 
+/* Geist card: 8px radius, thin border, subtle raised shadow */
 export function Card({ padding = 'md', children, className, ...props }: CardProps) {
   return (
     <div
       className={cn(
-        'rounded-[22px] bg-surface',
+        'rounded-[8px] bg-surface border border-border shadow-card',
         paddings[padding],
         className,
       )}
@@ -48,7 +49,7 @@ type CardTitleProps = HTMLAttributes<HTMLHeadingElement> & {
 
 export function CardTitle({ children, className, ...props }: CardTitleProps) {
   return (
-    <h3 className={cn('text-[15px] font-semibold text-primary', className)} {...props}>
+    <h3 className={cn('text-[14px] font-semibold text-primary', className)} {...props}>
       {children}
     </h3>
   )

@@ -9,7 +9,7 @@ type SkeletonBlockProps = {
 export function SkeletonBlock({ variant = 'text-block', className }: SkeletonBlockProps) {
   if (variant === 'card') {
     return (
-      <div className={cn('rounded-[22px] border border-border bg-surface p-5', className)}>
+      <div className={cn('rounded-[8px] border border-border bg-surface p-5', className)}>
         <div className="flex flex-col gap-3">
           <Skeleton className="h-4 w-2/3" />
           <Skeleton className="h-3 w-1/2" />
@@ -24,7 +24,7 @@ export function SkeletonBlock({ variant = 'text-block', className }: SkeletonBlo
 
   if (variant === 'table-row') {
     return (
-      <div className={cn('flex items-center gap-3 rounded-[12px] bg-surface px-3 py-3', className)}>
+      <div className={cn('flex items-center gap-3 rounded-[8px] bg-surface px-3 py-3', className)}>
         <Skeleton className="h-4 flex-1" />
         <Skeleton className="h-4 w-20" />
         <Skeleton className="h-4 w-16" />
@@ -35,8 +35,8 @@ export function SkeletonBlock({ variant = 'text-block', className }: SkeletonBlo
 
   if (variant === 'metric') {
     return (
-      <div className={cn('rounded-[22px] bg-surface p-4 flex flex-col gap-2', className)}>
-        <Skeleton className="h-8 w-8 rounded-[10px]" />
+      <div className={cn('rounded-[8px] bg-surface p-4 flex flex-col gap-2', className)}>
+        <Skeleton className="h-8 w-8 rounded-[6px]" />
         <Skeleton className="h-7 w-24" />
         <Skeleton className="h-3 w-16" />
       </div>

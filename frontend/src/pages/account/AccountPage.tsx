@@ -164,7 +164,7 @@ export default function AccountPage() {
             </div>
           )}
           <button
-            className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full bg-surface border border-border text-tertiary hover:bg-[#f0f0f2] transition-colors"
+            className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full bg-surface border border-border text-tertiary hover:bg-surface-soft transition-colors"
             title="Changer la photo de profil"
             onClick={() => fileRef.current?.click()}
             disabled={avatarUploading}
@@ -190,7 +190,7 @@ export default function AccountPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
               <label className="text-[12px] font-medium text-secondary">Prénom</label>
-              <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+              <div className="flex items-center gap-2 rounded-[6px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
                 <User size={14} className="text-tertiary shrink-0" />
                 <input
                   type="text"
@@ -208,7 +208,7 @@ export default function AccountPage() {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[12px] font-medium text-secondary">Nom</label>
-              <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+              <div className="flex items-center gap-2 rounded-[6px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
                 <User size={14} className="text-tertiary shrink-0" />
                 <input
                   type="text"
@@ -224,14 +224,14 @@ export default function AccountPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
               <label className="text-[12px] font-medium text-secondary">Email</label>
-              <div className="flex items-center gap-2 rounded-[10px] border border-border bg-[#f5f5f7] px-3 py-2">
+              <div className="flex items-center gap-2 rounded-[6px] border border-border bg-surface-soft px-3 py-2">
                 <Mail size={14} className="text-tertiary shrink-0" />
                 <span className="text-[13px] text-tertiary">{user?.email ?? '—'}</span>
               </div>
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[12px] font-medium text-secondary">Nom d'utilisateur</label>
-              <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+              <div className="flex items-center gap-2 rounded-[6px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
                 <AtSign size={14} className="text-tertiary shrink-0" />
                 <input
                   type="text"
@@ -244,7 +244,7 @@ export default function AccountPage() {
                   <button
                     type="button"
                     onClick={handleCopyUsername}
-                    className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors shrink-0"
+                    className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors shrink-0"
                     title="Copier mon @username"
                   >
                     {copied ? <Check size={12} className="text-success" /> : <Copy size={12} />}
@@ -257,7 +257,7 @@ export default function AccountPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
               <label className="text-[12px] font-medium text-secondary">Nom affiché</label>
-              <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+              <div className="flex items-center gap-2 rounded-[6px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
                 <User size={14} className="text-tertiary shrink-0" />
                 <input
                   type="text"
@@ -275,7 +275,7 @@ export default function AccountPage() {
             {/* Profile preview */}
             <div className="flex flex-col gap-1">
               <label className="text-[12px] font-medium text-secondary">Aperçu du profil</label>
-              <div className="flex items-center gap-3 rounded-[10px] border border-border bg-[#f9f9fb] px-3 py-2.5">
+              <div className="flex items-center gap-3 rounded-[6px] border border-border bg-surface px-3 py-2.5">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent text-[11px] font-bold">
                   {initials}
                 </div>
@@ -292,7 +292,7 @@ export default function AccountPage() {
           </div>
 
           {error && (
-            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+            <div className="rounded-[6px] bg-danger/10 border border-danger/20 px-3.5 py-2.5 text-[13px] text-danger">
               {error}
             </div>
           )}
@@ -317,7 +317,7 @@ export default function AccountPage() {
         action={!showPasswordForm ? (
           <button
             onClick={() => setShowPasswordForm(true)}
-            className="flex items-center gap-1.5 rounded-[10px] bg-accent px-3.5 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-accent/90"
+            className="flex items-center gap-1.5 rounded-[6px] bg-primary px-3.5 py-1.5 text-[12px] font-medium text-bg transition-colors hover:opacity-90"
           >
             <Lock size={13} />
             Changer le mot de passe
@@ -328,7 +328,7 @@ export default function AccountPage() {
           <form onSubmit={handlePasswordChange} className="flex flex-col gap-3 mt-3">
             <div className="flex flex-col gap-1">
               <label className="text-[12px] font-medium text-secondary">Mot de passe actuel</label>
-              <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+              <div className="flex items-center gap-2 rounded-[6px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
                 <Lock size={14} className="text-tertiary shrink-0" />
                 <input
                   type="password"
@@ -341,7 +341,7 @@ export default function AccountPage() {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[12px] font-medium text-secondary">Nouveau mot de passe</label>
-              <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+              <div className="flex items-center gap-2 rounded-[6px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
                 <Lock size={14} className="text-tertiary shrink-0" />
                 <input
                   type="password"
@@ -354,7 +354,7 @@ export default function AccountPage() {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[12px] font-medium text-secondary">Confirmer le nouveau mot de passe</label>
-              <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
+              <div className="flex items-center gap-2 rounded-[6px] border border-border bg-surface px-3 py-2 focus-within:ring-1 focus-within:ring-accent/30 focus-within:border-accent/50 transition-colors">
                 <Lock size={14} className="text-tertiary shrink-0" />
                 <input
                   type="password"
@@ -366,7 +366,7 @@ export default function AccountPage() {
               </div>
             </div>
             {passwordError && (
-              <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+              <div className="rounded-[6px] bg-danger/10 border border-danger/20 px-3.5 py-2.5 text-[13px] text-danger">
                 {passwordError}
               </div>
             )}

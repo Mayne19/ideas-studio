@@ -47,8 +47,8 @@ export default function ResetPasswordPage() {
             Choisissez un mot de passe d’au moins 8 caractères.
           </p>
         </div>
-        {error && <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">{error}</div>}
-        {done && <div className="rounded-[10px] bg-success/8 px-3.5 py-2.5 text-[13px] text-success">Mot de passe mis à jour. Redirection...</div>}
+        {error && <div className="rounded-[6px] bg-danger/10 border border-danger/20 px-3.5 py-2.5 text-[13px] text-danger">{error}</div>}
+        {done && <div className="rounded-[6px] bg-success/10 border border-success/20 px-3.5 py-2.5 text-[13px] text-success">Mot de passe mis à jour. Redirection...</div>}
         <Input
           label="Nouveau mot de passe"
           type="password"

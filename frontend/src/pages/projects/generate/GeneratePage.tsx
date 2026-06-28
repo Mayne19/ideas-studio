@@ -16,7 +16,7 @@ type LoadState = 'loading' | 'success' | 'error'
 
 function StatusPill({ ok, label }: { ok: boolean; label: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${ok ? 'bg-success/10 text-success' : 'bg-warning/12 text-[#a35b00]'}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${ok ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
       {ok ? <CheckCircle size={11} /> : <AlertTriangle size={11} />}
       {label}
     </span>
@@ -31,12 +31,12 @@ function MetricCard({ icon, label, value, tone = 'accent' }: { icon: React.React
   const toneClass = {
     accent: 'bg-accent/10 text-accent',
     success: 'bg-success/10 text-success',
-    warning: 'bg-warning/12 text-[#a35b00]',
+    warning: 'bg-warning/10 text-warning',
     danger: 'bg-danger/10 text-danger',
   }[tone]
   return (
-    <div className="rounded-[14px] border border-border bg-surface p-4">
-      <span className={`mb-3 flex h-8 w-8 items-center justify-center rounded-[10px] ${toneClass}`}>{icon}</span>
+    <div className="rounded-[8px] border border-border bg-surface p-4">
+      <span className={`mb-3 flex h-8 w-8 items-center justify-center rounded-[6px] ${toneClass}`}>{icon}</span>
       <p className="text-[20px] font-semibold tracking-tight text-primary">{value}</p>
       <p className="mt-0.5 text-[12px] text-tertiary">{label}</p>
     </div>
@@ -147,10 +147,10 @@ export default function GeneratePage() {
       </div>
 
       {runState === 'error' && (
-        <div className="mb-4 rounded-[12px] border border-danger/20 bg-danger/5 px-4 py-3 text-[13px] text-danger">Le lancement manuel a échoué. Consultez l’historique ou les providers.</div>
+        <div className="mb-4 rounded-[8px] border border-danger/20 bg-danger/5 px-4 py-3 text-[13px] text-danger">Le lancement manuel a échoué. Consultez l’historique ou les providers.</div>
       )}
       {runState === 'done' && (
-        <div className="mb-4 rounded-[12px] border border-success/20 bg-success/5 px-4 py-3 text-[13px] text-success">Pipeline lancé. L’historique a été rafraîchi.</div>
+        <div className="mb-4 rounded-[8px] border border-success/20 bg-success/5 px-4 py-3 text-[13px] text-success">Pipeline lancé. L’historique a été rafraîchi.</div>
       )}
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
@@ -162,7 +162,7 @@ export default function GeneratePage() {
       </div>
 
       <div className="mb-6 grid gap-4 lg:grid-cols-3">
-        <div className="rounded-[14px] border border-border bg-surface p-4">
+        <div className="rounded-[8px] border border-border bg-surface p-4">
           <SectionTitle>État du système IA</SectionTitle>
           <div className="flex flex-col gap-2">
             <StatusPill ok={activeProviders.length > 0} label={activeProviders.length ? `${activeProviders.length} provider(s) configuré(s)` : 'Aucun provider actif'} />
@@ -177,18 +177,18 @@ export default function GeneratePage() {
           )}
         </div>
 
-        <div className="rounded-[14px] border border-border bg-surface p-4 lg:col-span-2">
+        <div className="rounded-[8px] border border-border bg-surface p-4 lg:col-span-2">
           <SectionTitle>Workflows IA</SectionTitle>
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-[12px] bg-surface-soft px-3 py-3">
+            <div className="rounded-[8px] bg-surface-soft px-3 py-3">
               <p className="text-[18px] font-semibold text-primary">{runningWorkflows.length}</p>
               <p className="text-[12px] text-tertiary">En cours / bloqués</p>
             </div>
-            <div className="rounded-[12px] bg-surface-soft px-3 py-3">
+            <div className="rounded-[8px] bg-surface-soft px-3 py-3">
               <p className="text-[18px] font-semibold text-primary">{completedWorkflows.length}</p>
               <p className="text-[12px] text-tertiary">Terminés</p>
             </div>
-            <div className="rounded-[12px] bg-surface-soft px-3 py-3">
+            <div className="rounded-[8px] bg-surface-soft px-3 py-3">
               <p className="text-[18px] font-semibold text-primary">{failedWorkflows.length}</p>
               <p className="text-[12px] text-tertiary">Échoués</p>
             </div>
@@ -198,10 +198,10 @@ export default function GeneratePage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.75fr)]">
-        <div className="rounded-[14px] border border-border bg-surface p-4">
+        <div className="rounded-[8px] border border-border bg-surface p-4">
           <SectionTitle>Dernières générations</SectionTitle>
           {recentGenerations.length === 0 ? (
-            <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">Aucune génération IA tracée pour le moment.</p>
+            <p className="rounded-[8px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">Aucune génération IA tracée pour le moment.</p>
           ) : (
             <div className="overflow-x-auto">
               <div className="min-w-[860px]">
@@ -224,14 +224,14 @@ export default function GeneratePage() {
           )}
         </div>
 
-        <div className="rounded-[14px] border border-border bg-surface p-4">
+        <div className="rounded-[8px] border border-border bg-surface p-4">
           <SectionTitle>Logs agents</SectionTitle>
           {logs.length === 0 ? (
-            <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">Aucun log pipeline disponible.</p>
+            <p className="rounded-[8px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">Aucun log pipeline disponible.</p>
           ) : (
             <div className="flex flex-col gap-2">
               {logs.map((log) => (
-                <div key={log.id} className="rounded-[12px] bg-surface-soft px-3 py-2">
+                <div key={log.id} className="rounded-[8px] bg-surface-soft px-3 py-2">
                   <div className="flex items-center justify-between gap-3">
                     <span className="flex items-center gap-1.5 text-[12px] font-medium text-primary">
                       <History size={13} />
@@ -245,7 +245,7 @@ export default function GeneratePage() {
               ))}
             </div>
           )}
-          <div className="mt-4 rounded-[12px] border border-border bg-surface px-3 py-3 text-[12px] text-secondary">
+          <div className="mt-4 rounded-[8px] border border-border bg-surface px-3 py-3 text-[12px] text-secondary">
             <p className="font-medium text-primary">Actions techniques</p>
             <div className="mt-2 flex flex-wrap gap-2">
               <Button size="sm" variant="secondary" icon={<TestTube2 size={13} />} onClick={handleRunPipeline}>Tester pipeline</Button>
@@ -256,14 +256,14 @@ export default function GeneratePage() {
         </div>
       </div>
 
-      <div className="mt-6 rounded-[14px] border border-border bg-surface p-4">
+      <div className="mt-6 rounded-[8px] border border-border bg-surface p-4">
         <SectionTitle>Registre agents</SectionTitle>
         {agents.length === 0 ? (
-          <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">Registry agents indisponible ou non exposé par l’API.</p>
+          <p className="rounded-[8px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">Registry agents indisponible ou non exposé par l’API.</p>
         ) : (
           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
             {agents.slice(0, 12).map((agent) => (
-              <div key={agent.agent_id} className="rounded-[12px] bg-surface-soft px-3 py-3">
+              <div key={agent.agent_id} className="rounded-[8px] bg-surface-soft px-3 py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate text-[13px] font-semibold text-primary">{agent.name}</p>

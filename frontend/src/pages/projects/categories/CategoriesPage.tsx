@@ -53,8 +53,8 @@ function CategoryColumn({
   const headerBackground = `linear-gradient(135deg, ${color}24 0%, ${color}12 100%)`
 
   return (
-    <div className="flex min-h-[360px] min-w-[240px] flex-1 max-w-[360px] flex-col rounded-[18px] p-2" style={{ background: columnBackground }}>
-      <div className="flex items-start gap-3 rounded-[14px] px-3 py-3" style={{ background: headerBackground }}>
+    <div className="flex min-h-[360px] min-w-[240px] flex-1 max-w-[360px] flex-col rounded-[8px] p-2" style={{ background: columnBackground }}>
+      <div className="flex items-start gap-3 rounded-[8px] px-3 py-3" style={{ background: headerBackground }}>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
             <span
@@ -63,7 +63,7 @@ function CategoryColumn({
               aria-hidden="true"
             />
             <p className="truncate text-[13px] font-medium text-primary">{category.name}</p>
-            <span className="rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-medium text-tertiary">
+            <span className="rounded-full bg-surface-soft px-2 py-0.5 text-[10px] font-medium text-tertiary">
               {articles.length}
             </span>
           </div>
@@ -89,7 +89,7 @@ function CategoryColumn({
         <div className="flex shrink-0 items-center gap-1">
           <button
             onClick={() => onEdit(category)}
-            className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors"
+            className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
             title="Modifier"
           >
             <Pencil size={13} />
@@ -106,12 +106,12 @@ function CategoryColumn({
 
       <div className="mt-2 flex flex-1 flex-col gap-2">
         {articles.length === 0 ? (
-          <div className="flex min-h-[140px] items-center justify-center rounded-[14px] border border-dashed border-black/5 bg-white/60 px-4 text-center">
+          <div className="flex min-h-[140px] items-center justify-center rounded-[8px] border border-dashed border-border/40 bg-bg/60 px-4 text-center">
             <p className="text-[12px] text-tertiary">Aucun article dans cette catégorie.</p>
           </div>
         ) : (
           articles.map((article) => (
-            <div key={article.id} className="rounded-[14px] bg-white px-3 py-3">
+            <div key={article.id} className="rounded-[8px] bg-bg px-3 py-3">
               <div className="flex items-start justify-between gap-2">
                 <button
                   type="button"
@@ -128,7 +128,7 @@ function CategoryColumn({
                 <button
                   type="button"
                   onClick={() => onOpenArticle(article)}
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] text-tertiary transition-colors hover:bg-[#e5e5e7] hover:text-primary"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] text-tertiary transition-colors hover:bg-surface-soft hover:text-primary"
                   title="Ouvrir l'article"
                 >
                   <ExternalLink size={12} />
@@ -143,7 +143,7 @@ function CategoryColumn({
         <button
           type="button"
           onClick={() => onCreateArticle(category.id)}
-          className="flex items-center justify-center gap-1.5 rounded-[12px] border border-dashed border-black/10 bg-white/50 px-3 py-2 text-[12px] font-medium text-tertiary transition-colors hover:border-accent/30 hover:text-accent hover:bg-accent/5"
+          className="flex items-center justify-center gap-1.5 rounded-[8px] border border-dashed border-border/40 bg-bg/50 px-3 py-2 text-[12px] font-medium text-tertiary transition-colors hover:border-accent/30 hover:text-accent hover:bg-accent/5"
         >
           <Plus size={12} />
           Créer un article
@@ -163,8 +163,8 @@ function UncategorizedColumn({
   onCreateArticle: () => void
 }) {
   return (
-    <div className="flex min-h-[360px] min-w-[240px] flex-1 max-w-[360px] flex-col rounded-[18px] bg-gradient-to-b from-[#f0f0f2] to-[#f7f7f9] p-2">
-      <div className="rounded-[14px] bg-white/75 px-3 py-3">
+    <div className="flex min-h-[360px] min-w-[240px] flex-1 max-w-[360px] flex-col rounded-[8px] bg-surface-soft p-2">
+      <div className="rounded-[8px] bg-bg/75 px-3 py-3">
         <p className="text-[13px] font-medium text-primary">Sans catégorie</p>
         <p className="mt-0.5 text-[12px] text-tertiary">
           {articles.length}
@@ -172,12 +172,12 @@ function UncategorizedColumn({
       </div>
       <div className="mt-2 flex flex-1 flex-col gap-2">
         {articles.length === 0 ? (
-          <div className="flex min-h-[140px] items-center justify-center rounded-[14px] border border-dashed border-black/5 bg-white/60 px-4 text-center">
+          <div className="flex min-h-[140px] items-center justify-center rounded-[8px] border border-dashed border-border/40 bg-bg/60 px-4 text-center">
             <p className="text-[12px] text-tertiary">Aucun article sans catégorie.</p>
           </div>
         ) : (
           articles.map((article) => (
-            <div key={article.id} className="rounded-[14px] bg-white px-3 py-3">
+            <div key={article.id} className="rounded-[8px] bg-bg px-3 py-3">
               <button
                 type="button"
                 onClick={() => onOpenArticle(article)}
@@ -194,7 +194,7 @@ function UncategorizedColumn({
         <button
           type="button"
           onClick={() => onCreateArticle()}
-          className="flex items-center justify-center gap-1.5 rounded-[12px] border border-dashed border-black/10 bg-white/50 px-3 py-2 text-[12px] font-medium text-tertiary transition-colors hover:border-accent/30 hover:text-accent hover:bg-accent/5"
+          className="flex items-center justify-center gap-1.5 rounded-[8px] border border-dashed border-border/40 bg-bg/50 px-3 py-2 text-[12px] font-medium text-tertiary transition-colors hover:border-accent/30 hover:text-accent hover:bg-accent/5"
         >
           <Plus size={12} />
           Créer un article
@@ -415,7 +415,7 @@ export default function CategoriesPage() {
         </div>
 
         {/* Sync from site */}
-        <div className="mb-5 flex items-start gap-3 rounded-[14px] border border-border bg-[#f9f9fb] px-4 py-3">
+        <div className="mb-5 flex items-start gap-3 rounded-[8px] border border-border bg-surface px-4 py-3">
           <Info size={15} className="mt-0.5 shrink-0 text-tertiary" />
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-medium text-primary">Synchronisation depuis votre site</p>
@@ -429,7 +429,7 @@ export default function CategoriesPage() {
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="shrink-0 flex items-center gap-1.5 rounded-[8px] border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2] hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-wait"
+            className="shrink-0 flex items-center gap-1.5 rounded-[6px] border border-border bg-bg px-3 py-1.5 text-[12px] font-medium text-secondary hover:bg-surface-soft hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-wait"
           >
             <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} />
             {syncing ? 'Synchronisation…' : 'Synchroniser depuis votre site'}
@@ -439,7 +439,7 @@ export default function CategoriesPage() {
         {status === 'loading' && (
           <div className="flex flex-col gap-2">
             {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 w-full rounded-[14px]" />
+              <Skeleton key={i} className="h-14 w-full rounded-[8px]" />
             ))}
           </div>
         )}
@@ -490,7 +490,7 @@ export default function CategoriesPage() {
       >
         <form onSubmit={handleCreateArticleSubmit} className="flex flex-col gap-4">
           {createError && (
-            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+            <div className="rounded-[6px] bg-danger/10 border border-danger/20 px-3.5 py-2.5 text-[13px] text-danger">
               {createError}
             </div>
           )}
@@ -533,7 +533,7 @@ export default function CategoriesPage() {
       >
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {formError && (
-            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+            <div className="rounded-[6px] bg-danger/10 border border-danger/20 px-3.5 py-2.5 text-[13px] text-danger">
               {formError}
             </div>
           )}
@@ -552,7 +552,7 @@ export default function CategoriesPage() {
             placeholder="Articles sur les techniques SEO..."
             rows={2}
           />
-          <div className="rounded-[16px] bg-[#f9f9fb] p-3">
+          <div className="rounded-[8px] bg-surface p-3">
             <div className="mb-2 flex items-center gap-2 text-[12px] font-medium uppercase tracking-[0.04em] text-tertiary">
               <Palette size={13} />
               Apparence
@@ -591,7 +591,7 @@ export default function CategoriesPage() {
             placeholder="Éduquer sur les bonnes pratiques, générer des leads..."
             rows={2}
           />
-          <div className="flex items-center justify-between rounded-[12px] bg-[#f9f9fb] px-3.5 py-3">
+          <div className="flex items-center justify-between rounded-[8px] bg-surface px-3.5 py-3">
             <div>
               <p className="text-[13px] font-medium text-primary">Inclure dans le pipeline</p>
               <p className="mt-0.5 text-[12px] text-secondary">Génération automatique d'idées activée.</p>

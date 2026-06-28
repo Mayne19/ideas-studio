@@ -66,7 +66,7 @@ function getPublicationDateKey(article: Article): string | null {
 }
 
 function heatmapTone(count: number): string {
-  if (count <= 0) return 'bg-[#f0f0f2]'
+  if (count <= 0) return 'bg-surface-soft'
   if (count === 1) return 'bg-success/20'
   if (count === 2) return 'bg-success/35'
   if (count <= 4) return 'bg-success/55'
@@ -128,7 +128,7 @@ function PublicationHeatmapPanel({
         <select
           value={heatmapYear}
           onChange={(event) => onYearChange(Number(event.target.value))}
-          className="h-9 w-[92px] rounded-[10px] bg-[#f5f5f7] px-3 text-[12px] text-secondary outline-none transition-colors hover:bg-[#eeeeef] focus:ring-1 focus:ring-accent/20"
+          className="h-9 w-[92px] rounded-[6px] bg-surface-soft px-3 text-[12px] text-secondary outline-none transition-colors hover:bg-surface-muted focus:ring-1 focus:ring-accent/20"
           aria-label="Année de la heatmap"
         >
           {yearOptions.map((option) => (
@@ -275,11 +275,11 @@ export default function CalendarPage() {
             </div>
 
             <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="flex rounded-[10px] border border-border overflow-hidden">
+              <div className="flex rounded-[6px] border border-border overflow-hidden">
                 <button
                   onClick={() => setViewMode('list')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium transition-colors ${
-                    viewMode === 'list' ? 'bg-accent text-white' : 'text-secondary hover:bg-[#f0f0f2]'
+                    viewMode === 'list' ? 'bg-primary text-bg' : 'text-secondary hover:bg-surface-soft'
                   }`}
                 >
                   <List size={13} />
@@ -288,7 +288,7 @@ export default function CalendarPage() {
                 <button
                   onClick={() => setViewMode('month')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium transition-colors ${
-                    viewMode === 'month' ? 'bg-accent text-white' : 'text-secondary hover:bg-[#f0f0f2]'
+                    viewMode === 'month' ? 'bg-primary text-bg' : 'text-secondary hover:bg-surface-soft'
                   }`}
                 >
                   <Calendar size={13} />
@@ -338,9 +338,9 @@ export default function CalendarPage() {
                           return (
                             <div
                               key={a.id}
-                              className="flex items-center gap-3 rounded-[16px] bg-surface px-4 py-3 transition-colors hover:bg-white group"
+                              className="flex items-center gap-3 rounded-[8px] bg-surface px-4 py-3 transition-colors hover:bg-bg group"
                             >
-                              <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-[10px] bg-[#f0f0f2]">
+                              <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-[6px] bg-surface-soft">
                                 <span className="text-[16px] font-bold text-primary leading-none">{displayDay}</span>
                                 <span className="text-[9px] text-tertiary uppercase">{displayMonth}</span>
                               </div>
@@ -355,7 +355,7 @@ export default function CalendarPage() {
                               <StatusBadge status={a.status} />
                               <button
                                 onClick={() => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
-                                className="opacity-0 group-hover:opacity-100 flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-all"
+                                className="opacity-0 group-hover:opacity-100 flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-surface-soft hover:text-primary transition-all"
                                 title="Ouvrir l'éditeur"
                               >
                                 <ExternalLink size={12} />
@@ -376,7 +376,7 @@ export default function CalendarPage() {
           <div className="mb-4 flex items-center justify-between">
             <button
               onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
-              className="flex h-8 w-8 items-center justify-center rounded-[8px] text-secondary hover:bg-[#f0f0f2] transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-[6px] text-secondary hover:bg-surface-soft transition-colors"
             >
               <ChevronLeft size={15} />
             </button>
@@ -385,7 +385,7 @@ export default function CalendarPage() {
             </p>
             <button
               onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
-              className="flex h-8 w-8 items-center justify-center rounded-[8px] text-secondary hover:bg-[#f0f0f2] transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-[6px] text-secondary hover:bg-surface-soft transition-colors"
             >
               <ChevronRight size={15} />
             </button>
@@ -401,9 +401,9 @@ export default function CalendarPage() {
           </div>
 
           {/* Calendar grid */}
-          <div className="grid grid-cols-7 gap-px bg-border rounded-[12px] overflow-hidden">
+          <div className="grid grid-cols-7 gap-px bg-border rounded-[8px] overflow-hidden">
             {getMonthDays(year, month).map((day, i) => {
-              if (!day) return <div key={`empty-${i}`} className="bg-[#f9f9fb] min-h-[80px] p-1" />
+              if (!day) return <div key={`empty-${i}`} className="bg-surface min-h-[80px] p-1" />
               const dayArts = articlesForDay(day)
               const isToday = day.toDateString() === new Date().toDateString()
               return (
@@ -412,7 +412,7 @@ export default function CalendarPage() {
                   className={`bg-surface min-h-[80px] p-1.5 ${isToday ? 'bg-accent/3' : ''}`}
                 >
                   <p className={`text-[12px] font-medium mb-1 w-6 h-6 flex items-center justify-center rounded-full ${
-                    isToday ? 'bg-accent text-white' : 'text-secondary'
+                    isToday ? 'bg-accent text-bg' : 'text-secondary'
                   }`}>
                     {day.getDate()}
                   </p>
@@ -425,14 +425,14 @@ export default function CalendarPage() {
                           a.status === 'scheduled'
                             ? 'bg-accent/10 text-accent hover:bg-accent/20'
                             : a.status === 'published'
-                            ? 'bg-success/10 text-[#1a7a3a] hover:bg-success/20'
+                            ? 'bg-success/10 text-success hover:bg-success/20'
                             : a.status === 'idea_proposed' || a.status === 'idea_priority'
-                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                            ? 'bg-brand-soft text-accent hover:bg-accent/20'
                             : a.status === 'writing_requested' || a.status === 'writing_in_progress' || a.status === 'draft_ready'
-                            ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                            ? 'bg-accent/10 text-accent hover:bg-accent/20'
                             : a.status === 'review_needed' || a.status === 'ready_to_publish'
-                            ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-                            : 'bg-[#f0f0f2] text-secondary hover:bg-[#e5e5e7]'
+                            ? 'bg-warning/10 text-warning hover:bg-warning/20'
+                            : 'bg-surface-soft text-secondary hover:bg-surface-muted'
                         }`}
                         title={a.title}
                       >
@@ -451,11 +451,11 @@ export default function CalendarPage() {
           {/* Legend */}
           <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-tertiary">
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-blue-400" />
+              <span className="h-2 w-2 rounded-full bg-accent" />
               Idée
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-purple-400" />
+              <span className="h-2 w-2 rounded-full bg-accent/60" />
               En rédaction
             </span>
             <span className="flex items-center gap-1.5">

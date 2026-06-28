@@ -51,7 +51,7 @@ function MediaCard({ asset, onDelete }: { asset: MediaAsset; onDelete: () => voi
   }
 
   return (
-    <div className="group flex flex-col overflow-hidden rounded-[14px] border border-border bg-surface">
+    <div className="group flex flex-col overflow-hidden rounded-[8px] border border-border bg-surface">
       <div className="relative flex aspect-[4/3] items-center justify-center bg-surface-soft">
         {asset.mime_type?.startsWith('image/') && src && !imageFailed ? (
           <>
@@ -190,7 +190,7 @@ export default function MediaPage() {
 
       {loadStatus === 'success' && assets.length === 0 && (
         <div className="flex flex-col items-center gap-4 py-20 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-[#f0f0f2] text-tertiary">
+          <div className="flex h-12 w-12 items-center justify-center rounded-[8px] bg-surface-soft text-tertiary">
             <Image size={22} />
           </div>
           <div>
@@ -201,7 +201,7 @@ export default function MediaPage() {
           </div>
           <button
             onClick={() => fileRef.current?.click()}
-            className="flex items-center gap-1.5 rounded-[10px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent/90 transition-colors"
+            className="flex items-center gap-1.5 rounded-[6px] bg-primary px-4 py-2 text-[13px] font-medium text-bg hover:opacity-90 transition-opacity"
           >
             <Upload size={13} />
             Importer des images

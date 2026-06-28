@@ -149,7 +149,7 @@ export default function ProjectPipelinePage() {
     return (
       <div className="flex flex-col gap-4">
         <ErrorState message={loadError || 'Impossible de charger le pipeline.'} onRetry={handleRetry} />
-        <div className="rounded-[14px] border border-border bg-surface p-4 text-[13px] text-secondary">
+        <div className="rounded-[8px] border border-border bg-surface p-4 text-[13px] text-secondary">
           Les owners/admins doivent pouvoir accéder à cette page. Si ce message apparaît en production, le backend déployé n’inclut pas encore les endpoints Pipeline.
         </div>
       </div>
@@ -166,7 +166,7 @@ export default function ProjectPipelinePage() {
         </p>
         <div className="mt-3 grid gap-2 text-[11px] text-secondary sm:grid-cols-5">
           {['Catégories', 'Idées', 'Validation', 'Production', 'Publication'].map((step) => (
-            <span key={step} className="rounded-[10px] bg-surface-soft px-3 py-2 text-center font-medium">{step}</span>
+            <span key={step} className="rounded-[6px] bg-surface-soft px-3 py-2 text-center font-medium">{step}</span>
           ))}
         </div>
       </Card>
@@ -180,7 +180,7 @@ export default function ProjectPipelinePage() {
         {settings?.categories_frequencies && settings.categories_frequencies.length > 0 && (
           <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-border pt-3 sm:grid-cols-3 md:grid-cols-4">
             {settings.categories_frequencies.map((category) => (
-              <div key={category.id} className="flex items-center justify-between rounded-[8px] bg-[#f9f9fb] px-2.5 py-1.5 text-[12px]">
+              <div key={category.id} className="flex items-center justify-between rounded-[6px] bg-surface px-2.5 py-1.5 text-[12px]">
                 <span className="text-primary truncate">{category.name}</span>
                 <span className={category.pipeline_enabled === false ? 'text-tertiary shrink-0 ml-2' : 'text-secondary shrink-0 ml-2'}>
                   {category.pipeline_enabled === false ? 'désactivée' : `${category.monthly_frequency ?? 0}/mois`}
@@ -215,7 +215,7 @@ export default function ProjectPipelinePage() {
         )}
       </Card>
 
-      <Card padding="sm" className="!rounded-[14px]">
+      <Card padding="sm" className="!rounded-[8px]">
         <p className="text-[12px] text-secondary">
           {settings?.automation_notes || 'Automatisation non confirmée. Le lancement manuel reste disponible.'}
         </p>
@@ -240,8 +240,8 @@ export default function ProjectPipelinePage() {
                       onClick={() => toggleDay(dayEn)}
                       className={`rounded-[8px] px-2.5 py-1 text-[11px] font-medium transition-colors ${
                         active
-                          ? 'bg-accent text-white'
-                          : 'border border-border bg-[#f5f5f7] text-secondary hover:bg-[#ebebed]'
+                          ? 'bg-primary text-bg'
+                          : 'border border-border bg-surface-soft text-secondary hover:bg-surface-muted'
                       }`}
                     >
                       {dayLabel(dayFr)}
@@ -259,7 +259,7 @@ export default function ProjectPipelinePage() {
               <select
                 value={launchHour}
                 onChange={(e) => { setLaunchHour(Number(e.target.value)); setDirty(true) }}
-                className="rounded-[8px] border border-border bg-[#f5f5f7] px-2.5 py-1.5 text-[12px] text-primary"
+                className="rounded-[8px] border border-border bg-surface-soft px-2.5 py-1.5 text-[12px] text-primary"
               >
                 {HOURS.map((h) => (
                   <option key={h} value={h}>{hourLabel(h)}</option>
@@ -272,7 +272,7 @@ export default function ProjectPipelinePage() {
               <select
                 value={articlesPerWeek}
                 onChange={(e) => { setArticlesPerWeek(Number(e.target.value)); setDirty(true) }}
-                className="rounded-[8px] border border-border bg-[#f5f5f7] px-2.5 py-1.5 text-[12px] text-primary"
+                className="rounded-[8px] border border-border bg-surface-soft px-2.5 py-1.5 text-[12px] text-primary"
               >
                 {ARTICLES_OPTIONS.map((n) => (
                   <option key={n} value={n}>{n}</option>
@@ -292,7 +292,7 @@ export default function ProjectPipelinePage() {
                 value={costLimitPerArticle}
                 onChange={(e) => { setCostLimitPerArticle(e.target.value); setDirty(true) }}
                 placeholder="Ex. 1.50"
-                className="w-full rounded-[8px] border border-border bg-[#f5f5f7] px-2.5 py-1.5 text-[12px] text-primary"
+                className="w-full rounded-[8px] border border-border bg-surface-soft px-2.5 py-1.5 text-[12px] text-primary"
               />
             </div>
           </Card>
@@ -334,7 +334,7 @@ export default function ProjectPipelinePage() {
             ) : (
               <div className="flex flex-col gap-1.5">
                 {logs.map((log) => (
-                  <div key={log.id} className="flex items-center justify-between rounded-[8px] bg-[#f5f5f7] px-3 py-2">
+                  <div key={log.id} className="flex items-center justify-between rounded-[6px] bg-surface-soft px-3 py-2">
                     <div>
                       <p className="text-[11px] text-primary">
                         {new Date(log.started_at).toLocaleDateString('fr-FR', {
@@ -347,7 +347,7 @@ export default function ProjectPipelinePage() {
                       </p>
                     </div>
                     <span className={`text-[11px] font-medium ${
-                      log.status === 'completed' ? 'text-[#1a7a3a]' : 'text-danger'
+                      log.status === 'completed' ? 'text-success' : 'text-danger'
                     }`}>
                       {log.status === 'completed' ? 'OK' : 'Échec'}
                     </span>

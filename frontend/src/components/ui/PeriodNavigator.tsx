@@ -38,18 +38,18 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
 
   return (
     <div className={cn('flex flex-wrap items-center gap-2', className)}>
-      {/* Presets - Left */}
-      <div className="flex flex-wrap items-center rounded-[12px] bg-surface-soft p-1">
+      {/* Presets */}
+      <div className="flex flex-wrap items-center rounded-[6px] bg-surface-soft border border-border p-1">
         {MODES.map((mode) => (
           <button
             key={mode.value}
             type="button"
             onClick={() => onChange(currentPeriod(mode.value))}
             className={cn(
-              'h-8 rounded-[9px] px-2.5 text-[12px] font-medium transition-colors whitespace-nowrap',
+              'h-7 rounded-[4px] px-2.5 text-[12px] font-medium transition-colors whitespace-nowrap',
               value.mode === mode.value && value.isCurrent
-                ? 'bg-accent text-white shadow-sm'
-                : 'text-secondary hover:bg-surface hover:text-primary',
+                ? 'bg-primary text-bg shadow-sm'
+                : 'text-secondary hover:bg-bg hover:text-primary',
             )}
           >
             {mode.label}
@@ -57,12 +57,12 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
         ))}
       </div>
 
-      {/* Navigation - Center */}
-      <div className="flex items-center rounded-[12px] bg-surface-soft p-1">
+      {/* Navigation */}
+      <div className="flex items-center rounded-[6px] bg-surface-soft border border-border p-1">
         <button
           type="button"
           onClick={() => onChange(shiftPeriod(value, -1))}
-          className="flex h-8 w-8 items-center justify-center rounded-[9px] text-secondary transition-colors hover:bg-surface hover:text-primary"
+          className="flex h-7 w-7 items-center justify-center rounded-[4px] text-secondary transition-colors hover:bg-bg hover:text-primary"
           aria-label="Période précédente"
         >
           <ArrowLeft size={14} />
@@ -74,42 +74,42 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
           type="button"
           onClick={() => onChange(nextRange)}
           disabled={disableNext}
-          className="flex h-8 w-8 items-center justify-center rounded-[9px] text-secondary transition-colors hover:bg-surface hover:text-primary disabled:cursor-not-allowed disabled:opacity-35"
+          className="flex h-7 w-7 items-center justify-center rounded-[4px] text-secondary transition-colors hover:bg-bg hover:text-primary disabled:cursor-not-allowed disabled:opacity-35"
           aria-label="Période suivante"
         >
           <ArrowRight size={14} />
         </button>
       </div>
 
-      {/* Custom - Right */}
-      <div className="relative flex items-center rounded-[12px] bg-surface-soft p-1" ref={customRef}>
+      {/* Custom range */}
+      <div className="relative flex items-center rounded-[6px] bg-surface-soft border border-border p-1" ref={customRef}>
         <button
           type="button"
           onClick={() => { setCustomOpen(!customOpen); setCustomStart(value.startDate); setCustomEnd(value.endDate) }}
           className={cn(
-            'flex h-8 items-center gap-1.5 rounded-[9px] px-3 text-[12px] font-medium transition-colors whitespace-nowrap',
-            customOpen || !value.isCurrent ? 'bg-accent/10 text-accent' : 'text-secondary hover:bg-surface hover:text-primary',
+            'flex h-7 items-center gap-1.5 rounded-[4px] px-3 text-[12px] font-medium transition-colors whitespace-nowrap',
+            customOpen || !value.isCurrent ? 'bg-accent/10 text-accent' : 'text-secondary hover:bg-bg hover:text-primary',
           )}
         >
           <CalendarDays size={14} />
           Personnalisée
         </button>
         {customOpen && (
-          <div className="absolute right-0 top-full z-50 mt-1.5 flex min-w-[260px] flex-col gap-2 rounded-[14px] border border-border bg-surface p-3.5 shadow-lg">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-secondary">Période personnalisée</p>
+          <div className="absolute right-0 top-full z-50 mt-1.5 flex min-w-[260px] flex-col gap-2 rounded-[8px] border border-border bg-bg p-3.5 shadow-float">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-tertiary">Période personnalisée</p>
             <label className="text-[12px] font-medium text-primary">Date de début</label>
             <input
               type="date"
               value={customStart}
               onChange={(e) => setCustomStart(e.target.value)}
-              className="h-9 rounded-[10px] border border-border bg-surface-soft px-3 text-[13px] text-primary outline-none focus:border-accent"
+              className="h-9 rounded-[6px] border border-border bg-surface-soft px-3 text-[13px] text-primary outline-none focus:border-accent"
             />
             <label className="text-[12px] font-medium text-primary">Date de fin</label>
             <input
               type="date"
               value={customEnd}
               onChange={(e) => setCustomEnd(e.target.value)}
-              className="h-9 rounded-[10px] border border-border bg-surface-soft px-3 text-[13px] text-primary outline-none focus:border-accent"
+              className="h-9 rounded-[6px] border border-border bg-surface-soft px-3 text-[13px] text-primary outline-none focus:border-accent"
             />
             <div className="mt-0.5 flex gap-2">
               <Button size="sm" variant="secondary" className="flex-1 justify-center" onClick={() => setCustomOpen(false)}>Annuler</Button>
@@ -148,11 +148,11 @@ export function ExportButtons({
         Exporter
       </Button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 min-w-[175px] overflow-hidden rounded-[12px] border border-border bg-surface p-1 shadow-lg">
-          <button type="button" onClick={() => { onJson(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[9px] px-3 py-2 text-[13px] text-primary transition-colors hover:bg-surface-soft">
+        <div className="absolute right-0 top-full z-50 mt-1 min-w-[175px] overflow-hidden rounded-[8px] border border-border bg-bg p-1 shadow-float">
+          <button type="button" onClick={() => { onJson(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[6px] px-3 py-2 text-[13px] text-primary transition-colors hover:bg-surface-soft">
             Exporter en JSON
           </button>
-          <button type="button" onClick={() => { onPdf(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[9px] px-3 py-2 text-[13px] text-primary transition-colors hover:bg-surface-soft">
+          <button type="button" onClick={() => { onPdf(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[6px] px-3 py-2 text-[13px] text-primary transition-colors hover:bg-surface-soft">
             Exporter en PDF
           </button>
         </div>

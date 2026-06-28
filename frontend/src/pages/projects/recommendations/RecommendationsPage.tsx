@@ -39,14 +39,14 @@ const STATUS_LABELS: Record<RecommendationStatus, string> = {
 }
 
 const STATUS_CLASSES: Record<RecommendationStatus, string> = {
-  pending: 'bg-accent/8 text-accent',
-  accepted: 'bg-success/10 text-[#1a7a3a]',
-  rejected: 'bg-[#f0f0f2] text-tertiary',
-  applied: 'bg-success/15 text-[#1a7a3a] font-medium',
+  pending: 'bg-brand-soft text-accent',
+  accepted: 'bg-success/10 text-success',
+  rejected: 'bg-surface-soft text-tertiary',
+  applied: 'bg-success/10 text-success font-medium',
 }
 
 function priorityDot(priority: number) {
-  const color = priority >= 3 ? 'bg-danger' : priority === 2 ? 'bg-warning' : 'bg-[#c8c8cc]'
+  const color = priority >= 3 ? 'bg-danger' : priority === 2 ? 'bg-warning' : 'bg-border-strong'
   const label = priority >= 3 ? 'Haute' : priority === 2 ? 'Normale' : 'Basse'
   return (
     <span className="inline-flex items-center gap-1 text-[11px] text-tertiary">
@@ -108,11 +108,11 @@ function RecommendationCard({
   const isAccepted = status === 'accepted'
 
   return (
-    <div className="rounded-[16px] border border-border bg-surface p-4 shadow-card hover:shadow-float transition-shadow">
+    <div className="rounded-[8px] border border-border bg-surface p-4 shadow-card hover:shadow-float transition-shadow">
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="flex flex-col gap-1 flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] font-medium text-secondary bg-[#f0f0f2] rounded-full px-2 py-0.5">
+            <span className="text-[11px] font-medium text-secondary bg-surface-soft rounded-full px-2 py-0.5">
               {TYPE_LABELS[rec.type] ?? rec.type}
             </span>
             {priorityDot(rec.priority)}
@@ -125,7 +125,7 @@ function RecommendationCard({
           </div>
           <p className="text-[13px] font-medium text-primary leading-snug mt-1">{rec.reason}</p>
         </div>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] ${STATUS_CLASSES[status] ?? 'bg-[#f0f0f2] text-tertiary'}`}>
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] ${STATUS_CLASSES[status] ?? 'bg-surface-soft text-tertiary'}`}>
           {STATUS_LABELS[status] ?? rec.status}
         </span>
       </div>
@@ -140,7 +140,7 @@ function RecommendationCard({
         {rec.article_id && (
           <button
             onClick={() => onNavigate(rec.article_id!)}
-            className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[11px] text-secondary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
+            className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[11px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors"
           >
             <Pencil size={11} />
             Voir l'article
@@ -150,7 +150,7 @@ function RecommendationCard({
           <button
             onClick={() => doAction('apply')}
             disabled={busy}
-            className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[11px] text-secondary hover:bg-accent/8 hover:text-accent transition-colors disabled:opacity-40"
+            className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[11px] text-secondary hover:bg-accent/10 hover:text-accent transition-colors disabled:opacity-40"
           >
             {loadingAction === 'apply' ? <Loader2 size={11} className="animate-spin" /> : <Zap size={11} />}
             Appliquer
@@ -161,7 +161,7 @@ function RecommendationCard({
             <button
               onClick={() => doAction('accept')}
               disabled={busy}
-              className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[11px] text-secondary hover:bg-success/8 hover:text-[#1a7a3a] transition-colors disabled:opacity-40"
+              className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[11px] text-secondary hover:bg-success/10 hover:text-success transition-colors disabled:opacity-40"
             >
               {loadingAction === 'accept' ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
               Accepter
@@ -272,12 +272,12 @@ export default function RecommendationsPage() {
 
       {/* Feedback banners */}
       {reviewError && (
-        <div className="mb-4 rounded-[10px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[13px] text-danger">
+        <div className="mb-4 rounded-[8px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[13px] text-danger">
           {reviewError}
         </div>
       )}
       {reviewSuccess && (
-        <div className="mb-4 rounded-[10px] border border-success/20 bg-success/5 px-4 py-2.5 text-[13px] text-[#1a7a3a]">
+        <div className="mb-4 rounded-[8px] border border-success/20 bg-success/5 px-4 py-2.5 text-[13px] text-success">
           {reviewSuccess}
         </div>
       )}
@@ -291,8 +291,8 @@ export default function RecommendationsPage() {
               onClick={() => setFilterStatus(f.value)}
               className={`rounded-full px-3 py-1 text-[12px] font-medium transition-colors ${
                 filterStatus === f.value
-                  ? 'bg-accent text-white'
-                  : 'bg-[#f0f0f2] text-secondary hover:bg-[#e5e5e7] hover:text-primary'
+                  ? 'bg-primary text-bg'
+                  : 'bg-surface-soft text-secondary hover:bg-surface-muted hover:text-primary'
               }`}
             >
               {f.label}
@@ -313,7 +313,7 @@ export default function RecommendationsPage() {
       )}
       {loadStatus === 'success' && recs.length === 0 && (
         <div className="flex flex-col items-center gap-3 py-20 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-[#f0f0f2] text-tertiary">
+          <div className="flex h-12 w-12 items-center justify-center rounded-[8px] bg-surface-soft text-tertiary">
             <Sparkles size={22} />
           </div>
           <div>

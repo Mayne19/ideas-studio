@@ -5,7 +5,7 @@ export default function CostPanel({ article }: { article: EditorArticle }) {
   const report = article.generation_report_json as Record<string, unknown> | null
   if (!report) {
     return (
-      <div className="rounded-[10px] border border-border bg-surface p-3 text-[11px] text-tertiary">
+      <div className="rounded-[6px] border border-border bg-surface p-3 text-[11px] text-tertiary">
         Aucun coût enregistré pour cet article.
       </div>
     )
@@ -42,13 +42,13 @@ export default function CostPanel({ article }: { article: EditorArticle }) {
       )}
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-[8px] border border-border bg-[#f9f9fb] px-2.5 py-2">
+        <div className="rounded-[6px] border border-border bg-surface px-2.5 py-2">
           <div className="text-[10px] text-tertiary">Estimé</div>
           <div className="text-[13px] font-medium text-primary">
             {est != null ? `${est.toFixed(4)} €` : '—'}
           </div>
         </div>
-        <div className="rounded-[8px] border border-border bg-[#f9f9fb] px-2.5 py-2">
+        <div className="rounded-[6px] border border-border bg-surface px-2.5 py-2">
           <div className="text-[10px] text-tertiary">Réel</div>
           <div className="text-[13px] font-medium text-primary">
             {act != null ? `${act.toFixed(4)} €` : '—'}

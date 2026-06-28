@@ -69,7 +69,7 @@ function ArticleRow({
   const isEditable = EDITABLE_STATUSES.has(article.status)
 
   return (
-    <div className={`grid gap-2.5 rounded-[12px] px-3 py-2.5 transition-colors hover:bg-[#f5f5f7] lg:items-center ${ARTICLE_TABLE_GRID}`}>
+    <div className={`grid gap-2.5 rounded-[8px] px-3 py-2.5 transition-colors hover:bg-surface-soft lg:items-center ${ARTICLE_TABLE_GRID}`}>
       <div className="min-w-0">
         <button
           type="button"
@@ -81,7 +81,7 @@ function ArticleRow({
         </button>
         <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-tertiary">
           <span
-            className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${category?.color ? '' : 'bg-[#f0f0f2] text-tertiary'}`}
+            className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${category?.color ? '' : 'bg-surface-soft text-tertiary'}`}
             style={category?.color ? { backgroundColor: `${category.color}20`, color: category.color } : undefined}
           >
             {category?.name ?? 'Sans catégorie'}
@@ -99,11 +99,11 @@ function ArticleRow({
         {(() => {
           const cost = getCost(article)
           return cost !== null ? (
-            <span className="inline-flex items-center rounded-full bg-[#eef2ff] px-1.5 py-0.5 text-[10px] font-medium text-[#4f46e5]">
+            <span className="inline-flex items-center rounded-full bg-brand-soft px-1.5 py-0.5 text-[10px] font-medium text-accent">
               {cost.toFixed(4)} €
             </span>
           ) : (
-            <span className="inline-flex items-center rounded-full bg-[#f0f0f2] px-1.5 py-0.5 text-[10px] font-medium text-tertiary">
+            <span className="inline-flex items-center rounded-full bg-surface-soft px-1.5 py-0.5 text-[10px] font-medium text-tertiary">
               — €
             </span>
           )
@@ -116,7 +116,7 @@ function ArticleRow({
         <button
           type="button"
           onClick={() => onEdit(article)}
-          className="flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-[8px] bg-accent px-3 text-[12px] font-medium text-white transition-colors hover:bg-accent/90"
+          className="flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-[6px] bg-primary px-3 text-[12px] font-medium text-bg transition-opacity hover:opacity-90"
           title="Éditer"
         >
           <Pencil size={12} />
@@ -124,7 +124,7 @@ function ArticleRow({
         </button>
         <select
           onChange={(e) => { if (e.target.value) { onAction(e.target.value, article); e.target.value = '' } }}
-          className="h-8 w-[82px] cursor-pointer rounded-[8px] border border-border bg-surface px-1.5 text-[11px] text-secondary transition-colors hover:bg-[#e5e5e7]"
+          className="h-8 w-[82px] cursor-pointer rounded-[6px] border border-border bg-bg px-1.5 text-[11px] text-secondary transition-colors hover:bg-surface-soft"
           defaultValue=""
           aria-label={`Actions pour ${article.title}`}
         >
@@ -439,7 +439,7 @@ export default function ArticlesPage() {
 
         {/* Action error banner */}
         {actionError && (
-          <div className="mb-4 flex items-center justify-between rounded-[10px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[13px] text-danger">
+          <div className="mb-4 flex items-center justify-between rounded-[8px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[13px] text-danger">
             <span>{actionError}</span>
             <button onClick={() => setActionError('')} className="ml-3 shrink-0 text-danger/60 hover:text-danger transition-colors">✕</button>
           </div>
@@ -481,7 +481,7 @@ export default function ArticlesPage() {
               className="w-[185px]"
             />
           ) : (
-            <div className="flex h-10 w-[185px] cursor-not-allowed select-none items-center rounded-[12px] border border-border bg-surface/50 px-3.5 text-[13px] text-tertiary">
+            <div className="flex h-10 w-[185px] cursor-not-allowed select-none items-center rounded-[6px] border border-border bg-surface-soft/50 px-3.5 text-[13px] text-tertiary">
               Auteurs indisponibles
             </div>
           )}
@@ -491,7 +491,7 @@ export default function ArticlesPage() {
         {status === 'loading' && (
           <div className="flex flex-col gap-2">
             {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 w-full rounded-[12px]" />
+              <Skeleton key={i} className="h-14 w-full rounded-[8px]" />
             ))}
           </div>
         )}
@@ -545,8 +545,8 @@ export default function ArticlesPage() {
         size="sm"
       >
         <div className="flex flex-col gap-4">
-          <div className="flex items-start gap-3 rounded-[12px] border border-warning/20 bg-warning/5 px-3.5 py-3">
-            <EyeOff size={15} className="mt-0.5 shrink-0 text-[#9B6B19]" />
+          <div className="flex items-start gap-3 rounded-[8px] border border-warning/20 bg-warning/10 px-3.5 py-3">
+            <EyeOff size={15} className="mt-0.5 shrink-0 text-warning" />
             <div>
               <p className="text-[13px] font-medium text-primary">{unpublishTarget?.title}</p>
               <p className="mt-0.5 text-[12px] text-secondary leading-snug">
@@ -573,7 +573,7 @@ export default function ArticlesPage() {
         size="sm"
       >
         <div className="flex flex-col gap-4">
-          <div className="flex items-start gap-3 rounded-[12px] border border-danger/20 bg-danger/5 px-3.5 py-3">
+          <div className="flex items-start gap-3 rounded-[8px] border border-danger/20 bg-danger/10 px-3.5 py-3">
             <Archive size={15} className="mt-0.5 shrink-0 text-danger" />
             <div>
               <p className="text-[13px] font-medium text-primary">{archiveTarget?.title}</p>
@@ -601,7 +601,7 @@ export default function ArticlesPage() {
         size="sm"
       >
         <div className="flex flex-col gap-4">
-          <div className="flex items-start gap-3 rounded-[12px] border border-danger/20 bg-danger/5 px-3.5 py-3">
+          <div className="flex items-start gap-3 rounded-[8px] border border-danger/20 bg-danger/10 px-3.5 py-3">
             <Trash2 size={15} className="mt-0.5 shrink-0 text-danger" />
             <div>
               <p className="text-[13px] font-medium text-primary">{deleteTarget?.title}</p>
@@ -630,7 +630,7 @@ export default function ArticlesPage() {
       >
         <form onSubmit={handleCreate} className="flex flex-col gap-4">
           {createError && (
-            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+            <div className="rounded-[6px] bg-danger/10 border border-danger/20 px-3.5 py-2.5 text-[13px] text-danger">
               {createError}
             </div>
           )}
@@ -676,8 +676,8 @@ export default function ArticlesPage() {
       >
         {generateResult ? (
           <div className="flex flex-col gap-4">
-            <div className="flex items-start gap-3 rounded-[12px] border border-success/20 bg-success/5 px-3.5 py-3">
-              <CheckCircle size={15} className="mt-0.5 shrink-0 text-[#1a7a3a]" />
+            <div className="flex items-start gap-3 rounded-[8px] border border-success/20 bg-success/10 px-3.5 py-3">
+              <CheckCircle size={15} className="mt-0.5 shrink-0 text-success" />
               <div>
                 <p className="text-[13px] font-medium text-primary">{generateResult.title}</p>
                 <p className="mt-0.5 text-[12px] text-secondary">Article généré avec succès</p>
@@ -695,7 +695,7 @@ export default function ArticlesPage() {
         ) : (
           <form onSubmit={handleGenerate} className="flex flex-col gap-4">
             {generateError && (
-              <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+              <div className="rounded-[6px] bg-danger/10 border border-danger/20 px-3.5 py-2.5 text-[13px] text-danger">
                 {generateError}
               </div>
             )}

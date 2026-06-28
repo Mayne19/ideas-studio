@@ -72,7 +72,7 @@ function ProjectCard({
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-accent/10 text-accent text-[15px] font-bold cursor-pointer"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] bg-accent/10 text-accent text-[15px] font-bold cursor-pointer"
           onClick={onClick}
         >
           {project.name.charAt(0).toUpperCase()}
@@ -88,7 +88,7 @@ function ProjectCard({
         </div>
         <button
           onClick={onClick}
-          className="shrink-0 flex items-center gap-1 rounded-[8px] bg-accent px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent/90 transition-colors"
+          className="shrink-0 flex items-center gap-1 rounded-[6px] bg-primary text-bg px-2.5 py-1 text-[11px] font-medium hover:opacity-90 transition-opacity"
         >
           <ExternalLink size={10} />
           Ouvrir
@@ -97,19 +97,19 @@ function ProjectCard({
 
       {/* Badges */}
       <div className="flex items-center gap-1.5 flex-wrap">
-        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-          isConnected ? 'bg-success/10 text-[#1a7a3a]' : 'bg-[#f0f0f2] text-tertiary'
+        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium border ${
+          isConnected ? 'bg-success/10 text-success border-success/20' : 'bg-surface-soft text-tertiary border-border'
         }`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-[#1a7a3a]' : 'bg-[#c8c8cc]'}`} />
+          <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-success' : 'bg-border-strong'}`} />
           {isConnected ? 'Connecté' : 'Non connecté'}
         </span>
         {project.language && (
-          <span className="rounded-full bg-[#f0f0f2] px-2 py-0.5 text-[10px] text-tertiary uppercase font-medium">
+          <span className="rounded-full bg-surface-soft border border-border px-2 py-0.5 text-[10px] text-tertiary uppercase font-medium">
             {project.language}
           </span>
         )}
         {project.country_target && (
-          <span className="rounded-full bg-[#f0f0f2] px-2 py-0.5 text-[10px] text-tertiary font-medium">
+          <span className="rounded-full bg-surface-soft px-2 py-0.5 text-[10px] text-tertiary font-medium">
             {project.country_target}
           </span>
         )}
@@ -310,7 +310,7 @@ export default function ProjectsPage() {
       >
         <form onSubmit={handleCreate} className="flex flex-col gap-4">
           {formError && (
-            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">{formError}</div>
+            <div className="rounded-[6px] bg-danger/10 border border-danger/20 px-3.5 py-2.5 text-[13px] text-danger">{formError}</div>
           )}
           <Input
             label="Nom du projet"
@@ -380,7 +380,7 @@ export default function ProjectsPage() {
             Cette action est irréversible — tous les articles, idées et données associés seront perdus.
           </p>
           {deleteError && (
-            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">{deleteError}</div>
+            <div className="rounded-[6px] bg-danger/10 border border-danger/20 px-3.5 py-2.5 text-[13px] text-danger">{deleteError}</div>
           )}
           <div className="flex gap-2 pt-1">
             <Button type="button" variant="secondary" className="flex-1 justify-center" onClick={() => setDeleteTarget(null)}>

@@ -161,9 +161,9 @@ export default function ValidationPage() {
   if (status === 'loading') {
     return (
       <div className="project-page project-page--wide">
-        <Skeleton className="mb-4 h-10 w-72 rounded-[14px]" />
+        <Skeleton className="mb-4 h-10 w-72 rounded-[8px]" />
         <div className="flex flex-col gap-2">
-          {Array.from({ length: 8 }).map((_, index) => <Skeleton key={index} className="h-16 rounded-[14px]" />)}
+          {Array.from({ length: 8 }).map((_, index) => <Skeleton key={index} className="h-16 rounded-[8px]" />)}
         </div>
       </div>
     )
@@ -187,7 +187,7 @@ export default function ValidationPage() {
         </div>
 
         {error && (
-          <div className="mb-4 rounded-[12px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[13px] text-danger">
+          <div className="mb-4 rounded-[8px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[13px] text-danger">
             {error}
           </div>
         )}
@@ -249,7 +249,7 @@ export default function ValidationPage() {
               {visibleArticles.map((article) => {
                 const criticalCount = article.critical_warnings.length
                 return (
-                  <div key={article.id} className={`grid gap-3 rounded-[14px] border border-border bg-surface px-4 py-3 transition-colors hover:bg-surface-soft lg:items-center ${GRID}`}>
+                  <div key={article.id} className={`grid gap-3 rounded-[8px] border border-border bg-surface px-4 py-3 transition-colors hover:bg-surface-soft lg:items-center ${GRID}`}>
                     <input
                       type="checkbox"
                       checked={selectedIds.has(article.id)}
@@ -285,7 +285,7 @@ export default function ValidationPage() {
                     <ScoreBadge value={getOriginalityScore(article)} label="Orig." className="w-full justify-center" />
                     <ScoreBadge value={getGeoScore(article)} label="GEO" className="w-full justify-center" />
                     <ScoreBadge value={finiteScore(article.eeat_score)} label="EEAT" className="w-full justify-center" />
-                    <span className={`inline-flex items-center justify-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium ${criticalCount > 0 ? 'bg-danger/10 text-danger' : 'bg-success/10 text-[#1f6d3d]'}`}>
+                    <span className={`inline-flex items-center justify-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium ${criticalCount > 0 ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'}`}>
                       {criticalCount > 0 ? <AlertTriangle size={11} /> : <CheckCircle size={11} />}
                       {criticalCount}
                     </span>
@@ -336,11 +336,11 @@ export default function ValidationPage() {
             </>
           ) : (
             <>
-              <div className="rounded-[12px] bg-surface-soft p-3 text-[13px] text-secondary">
+              <div className="rounded-[8px] bg-surface-soft p-3 text-[13px] text-secondary">
                 {bulkResult.scheduled_count} traité(s), {bulkResult.blocked_count} échec(s).
               </div>
               {bulkResult.blocked_articles.length > 0 && (
-                <div className="max-h-64 overflow-auto rounded-[12px] border border-border">
+                <div className="max-h-64 overflow-auto rounded-[8px] border border-border">
                   {bulkResult.blocked_articles.map((item) => (
                     <div key={item.article_id} className="border-b border-border px-3 py-2 last:border-b-0">
                       <p className="text-[12px] font-medium text-primary">{item.title}</p>

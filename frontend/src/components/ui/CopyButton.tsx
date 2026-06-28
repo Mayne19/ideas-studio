@@ -42,15 +42,15 @@ export default function CopyButton({ value, label = 'Copier', className, disable
       onClick={handleCopy}
       disabled={disabled || !value}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-[8px] px-3 py-1.5',
+        'inline-flex items-center gap-1.5 rounded-[6px] px-3 py-1.5',
         'text-[12px] font-medium transition-all duration-150',
         disabled || !value
-          ? 'cursor-not-allowed bg-[#f0f0f2] text-tertiary opacity-60'
+          ? 'cursor-not-allowed bg-surface-soft text-tertiary opacity-60'
           : isError
             ? 'bg-danger/10 text-danger'
             : isCopied
-          ? 'bg-success/10 text-[#1a7a3a]'
-          : 'bg-[#f0f0f2] text-secondary hover:bg-[#e5e5e7] hover:text-primary',
+          ? 'bg-success/10 text-success'
+          : 'bg-surface-soft text-secondary hover:bg-surface-muted hover:text-primary',
         className,
       )}
       aria-label={isError ? 'Erreur de copie' : isCopied ? 'Copié !' : label}

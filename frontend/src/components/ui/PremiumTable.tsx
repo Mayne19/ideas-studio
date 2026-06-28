@@ -40,7 +40,7 @@ export default function PremiumTable({
     return (
       <div className={cn('flex flex-col gap-2', className)}>
         {Array.from({ length: skeletonRows }).map((_, i) => (
-          <Skeleton key={i} className="h-14 w-full rounded-[12px]" />
+          <Skeleton key={i} className="h-14 w-full rounded-[8px]" />
         ))}
       </div>
     )

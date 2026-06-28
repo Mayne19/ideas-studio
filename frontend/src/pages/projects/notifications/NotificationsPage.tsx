@@ -16,8 +16,8 @@ function timeAgo(iso: string): string {
 }
 
 function levelColor(level: string): string {
-  if (level === 'success') return 'bg-success/10 text-[#1a7a3a]'
-  if (level === 'warning') return 'bg-warning/10 text-[#c07000]'
+  if (level === 'success') return 'bg-success/10 text-success'
+  if (level === 'warning') return 'bg-warning/10 text-warning'
   if (level === 'error') return 'bg-danger/10 text-danger'
   return 'bg-accent/10 text-accent'
 }
@@ -87,7 +87,7 @@ export default function NotificationsPage() {
       </div>
 
       {status === 'error' && (
-        <div className="mb-4 flex items-start justify-between gap-3 rounded-[14px] bg-danger/5 px-4 py-3 text-[13px] text-secondary">
+        <div className="mb-4 flex items-start justify-between gap-3 rounded-[8px] bg-danger/10 border border-danger/20 px-4 py-3 text-[13px] text-secondary">
           <div>
             <p className="font-medium text-primary">Notifications momentanément indisponibles</p>
             <p className="mt-0.5 text-[12px] text-secondary">La page reste accessible. Réessayez dans quelques instants.</p>
@@ -98,7 +98,7 @@ export default function NotificationsPage() {
 
       {status !== 'error' && notifications.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-20 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-[#f0f0f2] text-tertiary">
+          <div className="flex h-12 w-12 items-center justify-center rounded-[8px] bg-surface-soft text-tertiary">
             <Bell size={22} />
           </div>
           <div>
@@ -116,15 +116,15 @@ export default function NotificationsPage() {
               <div
                 key={n.id}
                 onClick={() => { if (n.link) navigate(n.link); if (!n.read_at) handleRead(n.id) }}
-                className={`flex items-start gap-3 rounded-[14px] border px-4 py-3 transition-colors ${
-                  n.link ? 'cursor-pointer hover:bg-[#f7f7f9]' : ''
+                className={`flex items-start gap-3 rounded-[8px] border px-4 py-3 transition-colors ${
+                  n.link ? 'cursor-pointer hover:bg-surface-soft' : ''
                 } ${
                   isUnread
                     ? 'border-border bg-surface'
                     : 'border-border bg-surface opacity-60'
                 }`}
               >
-                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] ${levelColor(n.level)}`}>
+                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] ${levelColor(n.level)}`}>
                   <Bell size={14} />
                 </div>
                 <div className="flex-1 min-w-0">

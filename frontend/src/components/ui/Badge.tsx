@@ -8,13 +8,15 @@ type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
   children: ReactNode
 }
 
+/* Geist badge: pill shape (9999px per spec), semantic color tokens,
+   no hardcoded hex — all values from --ds-* scale mapped via @theme  */
 const variants: Record<BadgeVariant, string> = {
-  default: 'bg-[#f0f0f2] text-secondary',
-  gray:    'bg-[#f0f0f2] text-secondary',
-  blue:    'bg-accent/10 text-accent',
-  green:   'bg-success/10 text-[#1a7a3a]',
-  orange:  'bg-warning/10 text-[#c07000]',
-  red:     'bg-danger/10 text-[#c0291f]',
+  default: 'bg-surface-soft text-secondary border border-border',
+  gray:    'bg-surface-soft text-secondary border border-border',
+  blue:    'bg-brand-soft text-accent border border-accent/20',
+  green:   'bg-success/10 text-success border border-success/20',
+  orange:  'bg-warning/10 text-warning border border-warning/20',
+  red:     'bg-danger/10 text-danger border border-danger/20',
 }
 
 export default function Badge({ variant = 'default', children, className, ...props }: BadgeProps) {

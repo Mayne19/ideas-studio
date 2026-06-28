@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models.article import Article
 from app.models.seo_analysis import SeoAnalysis
+from app.services.seo.cannibalization_service import apply_cannibalization_cap, score_cannibalization
 from app.services.seo.eeat_service import compute_eeat_score
 from app.services.seo.geo_expert_service import compute_geo_score
 from app.services.seo.llm_budget import LLMBudgetManager
@@ -650,6 +651,22 @@ def analyze_article(db: Session, article_id: str) -> SeoAnalysis:
     )
     originality_v2 = compute_originality_score(article, project_articles)
 
+    # Keyword cannibalization check — caps SEO score at 70 if detected
+    cannibalization_result = score_cannibalization(article, project_articles)
+    seo_score = apply_cannibalization_cap(seo_score, cannibalization_result)
+    if cannibalization_result["detected"]:
+        severity = "critical" if cannibalization_result["severity"] == "critical" else "warning"
+        competing_count = len(cannibalization_result["competing_articles"])
+        competing_kws = ", ".join(
+            f"« {c['keyword']} »" for c in cannibalization_result["competing_articles"][:2]
+        )
+        seo_issues.append(_issue(
+            "keyword_cannibalization", "seo", severity,
+            f"Cannibalisation détectée : {competing_count} article(s) cible(nt) des mots-clés similaires ({competing_kws}).",
+            "Différenciez l'angle éditorial ou fusionnez les articles concurrents.",
+            "content",
+        ))
+
     eeat_score_final = eeat_v2["score"] if eeat_v2["confidence"] != "low" else eeat_score
     readability_score_final = readability_v2["score"] if readability_v2.get("score") is not None else readability_score
 
@@ -700,6 +717,7 @@ def analyze_article(db: Session, article_id: str) -> SeoAnalysis:
     existing_orig_json["v2"] = originality_v2
     article.originality_report_json = existing_orig_json
 
+    article.cannibalization_check_json = cannibalization_result
     article.readiness_status = readiness_status
     article.updated_at = datetime.now(timezone.utc)
 

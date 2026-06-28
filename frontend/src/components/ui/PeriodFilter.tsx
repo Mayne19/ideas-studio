@@ -18,13 +18,13 @@ export default function PeriodFilter<T extends string>({ options, value, onChang
   return (
     <div className="flex flex-wrap items-center gap-2">
       {(onPrevious || onNext || onToday) && (
-        <div className="flex overflow-hidden rounded-[10px] border border-border bg-surface">
-          {onPrevious && <button type="button" onClick={onPrevious} className="px-2.5 py-1.5 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2]">Préc.</button>}
-          {onToday && <button type="button" onClick={onToday} className="border-x border-border px-2.5 py-1.5 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2]">Aujourd’hui</button>}
-          {onNext && <button type="button" onClick={onNext} className="px-2.5 py-1.5 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2]">Suiv.</button>}
+        <div className="flex overflow-hidden rounded-[6px] border border-border bg-bg">
+          {onPrevious && <button type="button" onClick={onPrevious} className="px-2.5 py-1.5 text-[12px] font-medium text-secondary hover:bg-surface-soft">Préc.</button>}
+          {onToday && <button type="button" onClick={onToday} className="border-x border-border px-2.5 py-1.5 text-[12px] font-medium text-secondary hover:bg-surface-soft">Aujourd'hui</button>}
+          {onNext && <button type="button" onClick={onNext} className="px-2.5 py-1.5 text-[12px] font-medium text-secondary hover:bg-surface-soft">Suiv.</button>}
         </div>
       )}
-      <div className="flex overflow-hidden rounded-[10px] border border-border bg-surface">
+      <div className="flex overflow-hidden rounded-[6px] border border-border bg-bg">
         {options.map((option) => (
           <button
             key={option.value}
@@ -33,8 +33,8 @@ export default function PeriodFilter<T extends string>({ options, value, onChang
             className={cn(
               'px-3 py-1.5 text-[12px] font-medium transition-colors',
               value === option.value
-                ? 'bg-accent text-white'
-                : 'text-secondary hover:bg-[#f0f0f2] hover:text-primary',
+                ? 'bg-primary text-bg'
+                : 'text-secondary hover:bg-surface-soft hover:text-primary',
             )}
           >
             {option.label}

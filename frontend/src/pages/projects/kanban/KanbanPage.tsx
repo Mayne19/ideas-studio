@@ -108,7 +108,7 @@ function CardContent({
   const wordCount = getWordCount(article)
   const usefulDate = getUsefulDate(article)
   return (
-    <div className={`rounded-[16px] bg-surface p-3 ${isDragging ? 'opacity-50' : 'hover:bg-white'} transition-colors`}>
+    <div className={`rounded-[8px] bg-surface p-3 ${isDragging ? 'opacity-50' : 'hover:bg-bg'} transition-colors`}>
       <div className="flex items-start justify-between gap-2 mb-1.5">
         <p
           className="text-[12px] font-medium text-primary leading-snug cursor-pointer hover:text-accent transition-colors line-clamp-2 flex-1"
@@ -118,7 +118,7 @@ function CardContent({
         </p>
         <button
           onClick={onEdit}
-          className="shrink-0 flex h-5 w-5 items-center justify-center rounded-[6px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors mt-0.5"
+          className="shrink-0 flex h-5 w-5 items-center justify-center rounded-[6px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors mt-0.5"
         >
           <ExternalLink size={10} />
         </button>
@@ -167,7 +167,7 @@ function CardContent({
             <button
               key={action.key}
               onClick={(e) => { e.stopPropagation(); onAction(action.key, article) }}
-              className="flex-1 rounded-[8px] bg-[#f0f0f2] px-2 py-1 text-[10px] font-medium text-secondary hover:bg-accent hover:text-white transition-colors"
+              className="flex-1 rounded-[6px] bg-surface-soft px-2 py-1 text-[10px] font-medium text-secondary hover:bg-primary hover:text-bg transition-colors"
             >
               {action.label}
             </button>
@@ -246,7 +246,7 @@ function KanbanColumn({
             ✕
           </button>
         )}
-        <span className="text-[11px] text-tertiary bg-[#f0f0f2] rounded-full px-1.5 py-0.5">
+        <span className="text-[11px] text-tertiary bg-surface-soft rounded-full px-1.5 py-0.5">
           {articles.length}
         </span>
       </div>
@@ -256,7 +256,7 @@ function KanbanColumn({
           className={`flex min-h-[90px] flex-col gap-2 rounded-b-[14px] transition-colors ${isOver ? 'bg-accent/5' : ''}`}
         >
           {articles.length === 0 ? (
-            <div className="flex items-center justify-center rounded-[12px] border border-dashed border-border h-20">
+            <div className="flex items-center justify-center rounded-[8px] border border-dashed border-border h-20">
               <p className="text-[11px] text-tertiary">Vide</p>
             </div>
           ) : (
@@ -272,7 +272,7 @@ function KanbanColumn({
           )}
           <button
             onClick={() => onAddArticle(column.status)}
-            className="flex items-center justify-center gap-1 rounded-[12px] border border-dashed border-border py-2 text-[11px] text-tertiary hover:border-accent/40 hover:text-accent transition-colors"
+            className="flex items-center justify-center gap-1 rounded-[8px] border border-dashed border-border py-2 text-[11px] text-tertiary hover:border-accent/40 hover:text-accent transition-colors"
           >
             <Plus size={12} /> Ajouter un article
           </button>
@@ -543,7 +543,7 @@ export default function KanbanPage() {
         </div>
 
         {actionError && (
-          <div className="mb-3 shrink-0 rounded-[10px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[13px] text-danger flex items-center justify-between">
+          <div className="mb-3 shrink-0 rounded-[6px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[13px] text-danger flex items-center justify-between">
             <span>{actionError}</span>
             <button onClick={() => setActionError('')} className="ml-3 text-danger/60 hover:text-danger">✕</button>
           </div>
@@ -601,7 +601,7 @@ export default function KanbanPage() {
               value={newColumnName}
               onChange={(event) => setNewColumnName(event.target.value)}
               placeholder="Ex. À valider client"
-              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+              className="w-full rounded-[6px] border border-border bg-bg px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
               autoFocus
             />
             <p className="text-[11px] leading-snug text-tertiary">
@@ -639,7 +639,7 @@ export default function KanbanPage() {
               value={createTitle}
               onChange={(e) => setCreateTitle(e.target.value)}
               placeholder="Titre de l'article"
-              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+              className="w-full rounded-[6px] border border-border bg-bg px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
               autoFocus
             />
           </div>
@@ -649,7 +649,7 @@ export default function KanbanPage() {
               value={createKeyword}
               onChange={(e) => setCreateKeyword(e.target.value)}
               placeholder="Mot-clé principal (optionnel)"
-              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+              className="w-full rounded-[6px] border border-border bg-bg px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -657,7 +657,7 @@ export default function KanbanPage() {
             <select
               value={createCategoryId}
               onChange={(e) => setCreateCategoryId(e.target.value)}
-              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+              className="w-full rounded-[6px] border border-border bg-bg px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
             >
               <option value="">Sans catégorie</option>
               {categories.map((cat) => (
@@ -691,7 +691,7 @@ export default function KanbanPage() {
               type="datetime-local"
               value={scheduleDate}
               onChange={(e) => setScheduleDate(e.target.value)}
-              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+              className="w-full rounded-[6px] border border-border bg-bg px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
             />
           </div>
           <div className="flex gap-2 pt-1">

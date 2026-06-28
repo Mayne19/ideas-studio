@@ -116,7 +116,7 @@ const CALCULATION_TEXT: Record<string, string> = {
 function Accordion({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="rounded-[12px] border border-border bg-surface">
+    <div className="rounded-[8px] border border-border bg-surface">
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -145,7 +145,7 @@ function ScoreSynthesisCard({
   const globalTone = scoreTone(globalScore)
 
   return (
-    <div className="rounded-[14px] border border-border bg-surface p-4">
+    <div className="rounded-[8px] border border-border bg-surface p-4">
       <p className="text-[12px] font-semibold text-primary mb-3">Synthèse des scores</p>
 
       <div className="flex items-center gap-4 mb-4">
@@ -165,7 +165,7 @@ function ScoreSynthesisCard({
               key={tile.key}
               type="button"
               onClick={() => onSelect(tile.key)}
-              className={`rounded-[10px] px-2.5 py-2 text-left transition-colors ${
+              className={`rounded-[6px] px-2.5 py-2 text-left transition-colors ${
                 selected === tile.key ? 'bg-surface-soft ring-1 ring-accent/25' : 'hover:bg-surface-soft'
               }`}
             >
@@ -352,7 +352,7 @@ function ScoreDetailPanel({
   }
 
   return (
-    <div className="rounded-[14px] border border-border bg-surface p-4">
+    <div className="rounded-[8px] border border-border bg-surface p-4">
       <div className="flex items-center gap-3 mb-4">
         <span className={`inline-flex rounded-full px-3 py-1 text-[13px] font-semibold ${scoreTone(score)}`}>
           {selected} : {score === null ? '—' : Math.round(score)}
@@ -363,7 +363,7 @@ function ScoreDetailPanel({
       </div>
 
       <div className="flex flex-col gap-3">
-        <div className="rounded-[10px] bg-[#f9f9fb] px-3 py-2">
+        <div className="rounded-[6px] bg-surface px-3 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-secondary mb-1">Comment ce score est calculé</p>
           <p className="text-[11px] leading-snug text-secondary">{CALCULATION_TEXT[selected]}</p>
         </div>
@@ -430,7 +430,7 @@ function ScoreDetailPanel({
         )}
 
         {!hasProblems && !hasActions && whatWorks.length === 0 && (
-          <div className="flex items-center gap-2 rounded-[10px] bg-[#f9f9fb] px-3 py-2.5 text-[11px] text-tertiary">
+          <div className="flex items-center gap-2 rounded-[6px] bg-surface px-3 py-2.5 text-[11px] text-tertiary">
             <HelpCircle size={12} className="shrink-0" />
             <span>Lancez une analyse pour obtenir les détails de ce score.</span>
           </div>
@@ -468,7 +468,7 @@ function ExpertReviewSection({
   onRun: () => void
 }) {
   return (
-    <div className="rounded-[12px] border border-border bg-surface">
+    <div className="rounded-[8px] border border-border bg-surface">
       <button
         type="button"
         onClick={onToggle}
@@ -511,7 +511,7 @@ function ExpertReviewSection({
                   ['EEAT Expert', expertReview.eeat_score],
                   ['Lisibilité Expert', expertReview.readability_score],
                 ] as const).map(([label, val]) => (
-                  <div key={label} className="rounded-[10px] border border-border bg-[#fafafc] p-2.5">
+                  <div key={label} className="rounded-[6px] border border-border bg-surface p-2.5">
                     <p className="text-[10px] text-tertiary">{label}</p>
                     <p className={`mt-0.5 text-[14px] font-bold ${scoreTone(val)}`}>{Math.round(val)}</p>
                   </div>
@@ -547,11 +547,11 @@ function ExpertReviewSection({
               )}
 
               <div className="grid grid-cols-2 gap-2 text-[11px]">
-                <div className="rounded-[10px] border border-border bg-[#fafafc] p-2.5">
+                <div className="rounded-[6px] border border-border bg-surface p-2.5">
                   <p className="text-[10px] text-tertiary">Contrôles validés</p>
                   <p className="mt-0.5 text-[14px] font-bold text-success">{expertReview.passed_checks.length}</p>
                 </div>
-                <div className="rounded-[10px] border border-border bg-[#fafafc] p-2.5">
+                <div className="rounded-[6px] border border-border bg-surface p-2.5">
                   <p className="text-[10px] text-tertiary">Contrôles en échec</p>
                   <p className="mt-0.5 text-[14px] font-bold text-danger">{expertReview.failed_checks.length}</p>
                 </div>

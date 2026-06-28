@@ -133,15 +133,15 @@ const ACTION_SHORT: Record<string, string> = {
 function ActionBadge({ action }: { action: string }) {
   const styles: Record<string, string> = {
     'Mettre à jour': 'bg-accent/10 text-accent',
-    'Optimiser le titre': 'bg-warning/12 text-[#a35b00]',
-    'Ajouter liens internes': 'bg-[#eef2ff] text-[#4f46e5]',
-    'Améliorer meta description': 'bg-[#f0f9ff] text-[#0369a1]',
+    'Optimiser le titre': 'bg-warning/10 text-warning',
+    'Ajouter liens internes': 'bg-brand-soft text-accent',
+    'Améliorer meta description': 'bg-brand-soft text-accent',
     'Améliorer introduction': 'bg-danger/10 text-danger',
-    Surveiller: 'bg-success/10 text-[#16723a]',
+    Surveiller: 'bg-success/10 text-success',
   }
   return (
     <span
-      className={`rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ${styles[action] ?? 'bg-[#f0f0f2] text-secondary'}`}
+      className={`rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ${styles[action] ?? 'bg-surface-soft text-secondary'}`}
       title={action}
     >
       {ACTION_SHORT[action] ?? action}
@@ -174,7 +174,7 @@ function trackingStatusMessage(status: PerformanceSummary['tracking_status'] | u
 function ChartEmpty({ message }: { message: string }) {
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-      <span className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[12px] text-secondary">
+      <span className="rounded-[6px] border border-border bg-surface px-3 py-2 text-[12px] text-secondary">
         {message}
       </span>
     </div>
@@ -244,8 +244,8 @@ function TrendList({ title, items, type }: { title: string; items: ArticleMetric
       <SectionTitle>{title}</SectionTitle>
       <div className="flex flex-col gap-2">
         {items.length ? items.map((item) => (
-          <div key={item.article.id} className="flex items-center gap-3 rounded-[12px] px-2 py-2 hover:bg-[#f9f9fb]">
-            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] ${type === 'up' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
+          <div key={item.article.id} className="flex items-center gap-3 rounded-[8px] px-2 py-2 hover:bg-surface-soft">
+            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] ${type === 'up' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
               {type === 'up' ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}
             </span>
             <div className="min-w-0 flex-1">
@@ -255,7 +255,7 @@ function TrendList({ title, items, type }: { title: string; items: ArticleMetric
             <VariationBadge value={item.variation} />
           </div>
         )) : (
-          <p className="rounded-[12px] bg-[#f9f9fb] px-3 py-3 text-[13px] text-secondary">Aucune variation fiable sur cette période.</p>
+          <p className="rounded-[8px] bg-surface px-3 py-3 text-[13px] text-secondary">Aucune variation fiable sur cette période.</p>
         )}
       </div>
     </Card>
@@ -269,7 +269,7 @@ function KeywordOpportunities() {
   return (
     <Card className="h-full">
       <SectionTitle>Mots-clés suivis</SectionTitle>
-      <p className="rounded-[12px] bg-[#f9f9fb] px-3 py-3 text-[13px] text-secondary">
+      <p className="rounded-[8px] bg-surface px-3 py-3 text-[13px] text-secondary">
         Connectez Google Search Console depuis les <a href={integrationHref} className="text-accent hover:underline">paramètres du projet</a> pour voir les mots-clés.
       </p>
     </Card>
@@ -453,7 +453,7 @@ export default function PerformanceDashboardPage() {
 
         <div className="flex flex-col gap-6">
           {showPeriodEmpty && (
-            <div className="rounded-[14px] border border-border bg-surface px-4 py-3 text-[13px] text-secondary">
+            <div className="rounded-[8px] border border-border bg-surface px-4 py-3 text-[13px] text-secondary">
               {trackingMessage}
             </div>
           )}
@@ -523,8 +523,8 @@ export default function PerformanceDashboardPage() {
               <SectionTitle>Articles à optimiser</SectionTitle>
               <div className="flex flex-col gap-2">
                 {optimizeItems.length ? optimizeItems.map((item) => (
-                  <div key={item.article.id} className="flex items-start gap-3 rounded-[12px] px-2 py-2 hover:bg-[#f9f9fb]">
-                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-warning/10 text-[#b46a00]"><Lightbulb size={15} /></span>
+                  <div key={item.article.id} className="flex items-start gap-3 rounded-[8px] px-2 py-2 hover:bg-surface-soft">
+                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-warning/10 text-warning"><Lightbulb size={15} /></span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[13px] font-medium text-primary">{item.article.title}</p>
                       <div className="mt-1"><ActionBadge action={item.recommendation} /></div>
@@ -532,7 +532,7 @@ export default function PerformanceDashboardPage() {
                     <ScoreBadge label="SEO" value={item.article.seo_score} />
                   </div>
                 )) : (
-                  <p className="rounded-[12px] bg-[#f9f9fb] px-3 py-3 text-[13px] text-secondary">Aucun article prioritaire à optimiser.</p>
+                  <p className="rounded-[8px] bg-surface px-3 py-3 text-[13px] text-secondary">Aucun article prioritaire à optimiser.</p>
                 )}
               </div>
             </Card>
@@ -548,7 +548,7 @@ export default function PerformanceDashboardPage() {
               <SectionTitle>Performance par catégorie</SectionTitle>
               <div className="flex flex-col gap-1">
                 {categoryRows.length ? categoryRows.slice(0, 6).map((row) => (
-                  <div key={row.category.id} className="rounded-[10px] px-2 py-1.5 hover:bg-[#f9f9fb]">
+                  <div key={row.category.id} className="rounded-[6px] px-2 py-1.5 hover:bg-surface-soft">
                     <div className="flex items-center justify-between gap-3">
                       <span className="flex min-w-0 items-center gap-2 truncate text-[13px] font-medium text-primary">
                         <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent" style={{ backgroundColor: categoryColor(row.category) }} />
@@ -556,13 +556,13 @@ export default function PerformanceDashboardPage() {
                       </span>
                       <span className="text-[12px] font-semibold text-secondary">{formatMetric(row.views)}</span>
                     </div>
-                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#f0f0f2]">
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-soft">
                       <div className="h-full rounded-full" style={{ width: `${percentOf(row.views, totalArticleViews)}%`, backgroundColor: categoryColor(row.category) }} />
                     </div>
                     <p className="mt-1 text-[11px] text-tertiary">{row.count} article{row.count > 1 ? 's' : ''}</p>
                   </div>
                 )) : (
-                  <p className="rounded-[12px] bg-[#f9f9fb] px-3 py-3 text-[13px] text-secondary">Aucune catégorie avec trafic pour le moment.</p>
+                  <p className="rounded-[8px] bg-surface px-3 py-3 text-[13px] text-secondary">Aucune catégorie avec trafic pour le moment.</p>
                 )}
               </div>
             </Card>

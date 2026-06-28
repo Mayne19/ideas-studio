@@ -8,6 +8,7 @@ type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
   hint?: string
 }
 
+/* Geist textarea: 6px radius, thin border, blue focus ring */
 const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
   { label, error, hint, className, id, ...props },
   ref,
@@ -25,12 +26,12 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textare
         ref={ref}
         id={inputId}
         className={cn(
-          'w-full rounded-[12px] border border-border bg-surface px-3.5 py-2.5',
+          'w-full rounded-[6px] border border-border bg-bg px-3 py-2.5',
           'text-[14px] text-primary placeholder:text-tertiary',
           'outline-none transition-all duration-150 resize-none',
           'hover:border-border-strong',
-          'focus:border-accent focus:ring-2 focus:ring-accent/10',
-          error && 'border-danger focus:border-danger focus:ring-danger/10',
+          'focus:border-accent focus:ring-2 focus:ring-accent/20',
+          error && 'border-danger focus:border-danger focus:ring-danger/20',
           className,
         )}
         {...props}

@@ -38,9 +38,9 @@ export default function ForgotPasswordPage() {
             Entrez votre email. Si un compte existe, un lien de réinitialisation sera préparé.
           </p>
         </div>
-        {error && <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">{error}</div>}
+        {error && <div className="rounded-[6px] bg-danger/10 border border-danger/20 px-3.5 py-2.5 text-[13px] text-danger">{error}</div>}
         {message && (
-          <div className="rounded-[12px] bg-success/8 px-3.5 py-3 text-[13px] text-secondary">
+          <div className="rounded-[6px] bg-success/10 border border-success/20 px-3.5 py-3 text-[13px] text-secondary">
             <p>{message}</p>
             {devLink && (
               <a href={devLink} className="mt-2 block break-all font-medium text-accent hover:underline">

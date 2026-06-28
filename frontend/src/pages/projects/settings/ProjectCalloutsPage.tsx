@@ -176,13 +176,13 @@ export default function ProjectCalloutsPage() {
         }
       >
         {callouts.length === 0 ? (
-          <div className="rounded-[14px] bg-[#f9f9fb] px-4 py-5 text-[13px] text-secondary">
+          <div className="rounded-[8px] bg-surface px-4 py-5 text-[13px] text-secondary">
             Aucun callout configuré pour ce projet. Importez-les depuis le site connecté ou créez un template manuel.
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {callouts.map((callout) => (
-              <div key={callout.id} className="rounded-[16px] border border-border bg-[#f9f9fb] p-4">
+              <div key={callout.id} className="rounded-[8px] border border-border bg-surface p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-[14px] font-semibold text-primary">{callout.label}</p>
@@ -194,7 +194,7 @@ export default function ProjectCalloutsPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-1">
-                    <button type="button" onClick={() => openEdit(callout)} className="rounded-[8px] p-2 text-secondary hover:bg-white hover:text-primary">
+                    <button type="button" onClick={() => openEdit(callout)} className="rounded-[6px] p-2 text-secondary hover:bg-surface-soft hover:text-primary">
                       <Pencil size={13} />
                     </button>
                     <button type="button" onClick={() => setDeleteTarget(callout)} className="rounded-[8px] p-2 text-secondary hover:bg-danger/10 hover:text-danger">
@@ -203,7 +203,7 @@ export default function ProjectCalloutsPage() {
                   </div>
                 </div>
                 <div
-                  className="mt-3 rounded-[12px] border px-3 py-2"
+                  className="mt-3 rounded-[8px] border px-3 py-2"
                   style={{
                     backgroundColor: callout.color_background ?? '#eff6ff',
                     borderColor: callout.color_border ?? '#3b82f6',
@@ -236,7 +236,7 @@ export default function ProjectCalloutsPage() {
             onChange={(value) => setForm((prev) => ({ ...prev, primary_color: value }))}
           />
           <div
-            className="rounded-[14px] border px-3 py-2"
+            className="rounded-[8px] border px-3 py-2"
             style={{
               backgroundColor: deriveCalloutColors(form.primary_color).color_background,
               borderColor: deriveCalloutColors(form.primary_color).color_border,

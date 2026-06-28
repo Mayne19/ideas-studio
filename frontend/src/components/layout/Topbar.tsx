@@ -117,7 +117,7 @@ export default function Topbar() {
 
   return (
     <>
-    <header className="flex h-[64px] shrink-0 items-center justify-between border-b border-border bg-surface px-6">
+    <header className="flex h-[64px] shrink-0 items-center justify-between border-b border-border bg-bg px-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-1.5 text-[13px]">
         <Link to="/projects" className="text-secondary hover:text-primary transition-colors">
@@ -150,11 +150,11 @@ export default function Topbar() {
                 onChange={(e) => handleSearchInput(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-                className="rounded-[10px] border border-border bg-[#f0f0f2] pl-7 pr-3 py-1.5 text-[13px] placeholder:text-tertiary focus:outline-none focus:ring-1 focus:ring-accent/30 focus:border-accent/50 w-44 transition-all focus:w-56"
+                className="rounded-[6px] border border-border bg-surface-soft pl-7 pr-3 py-1.5 text-[13px] placeholder:text-tertiary focus:outline-none focus:ring-1 focus:ring-accent/30 focus:border-accent/50 w-44 transition-all focus:w-56"
               />
             </div>
             {searchFocused && searchQuery && (
-              <div className="absolute right-0 top-10 z-50 w-80 rounded-[16px] border border-border bg-surface p-2 shadow-float">
+              <div className="absolute right-0 top-10 z-50 w-80 rounded-[8px] border border-border bg-bg p-2 shadow-float">
                 {searching ? (
                   <div className="flex items-center justify-center py-4">
                     <Loader2 size={16} className="animate-spin text-tertiary" />
@@ -167,7 +167,7 @@ export default function Topbar() {
                       <Link
                         key={`${result.type}-${result.id}`}
                         to={result.url}
-                        className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 hover:bg-[#f0f0f2] transition-colors"
+                        className="flex items-center gap-2.5 rounded-[6px] px-2.5 py-2 hover:bg-surface-soft transition-colors"
                         onClick={() => setSearchFocused(false)}
                       >
                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] bg-accent/10 text-accent">
@@ -193,7 +193,7 @@ export default function Topbar() {
           <div className="relative" ref={notifRef}>
             <button
               onClick={() => setNotifOpen((v) => !v)}
-              className="relative flex h-8 w-8 items-center justify-center rounded-full text-tertiary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
+              className="relative flex h-8 w-8 items-center justify-center rounded-full text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
               title="Notifications"
               aria-label="Notifications"
             >
@@ -206,7 +206,7 @@ export default function Topbar() {
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 top-10 z-50 w-80 rounded-[16px] border border-border bg-surface p-2 shadow-float">
+              <div className="absolute right-0 top-10 z-50 w-80 rounded-[8px] border border-border bg-bg p-2 shadow-float">
                 <div className="flex items-center justify-between mb-1 px-1">
                   <p className="text-[13px] font-semibold text-primary">Notifications</p>
                   <button
@@ -235,12 +235,12 @@ export default function Topbar() {
                       <button
                         key={n.id}
                         onClick={() => { setNotifOpen(false); if (n.link) navigate(n.link) }}
-                        className={`flex w-full items-start gap-2 rounded-[10px] px-2.5 py-2 text-left transition-colors ${n.link ? 'hover:bg-[#f0f0f2]' : ''}`}
+                        className={`flex w-full items-start gap-2 rounded-[6px] px-2.5 py-2 text-left transition-colors ${n.link ? 'hover:bg-surface-soft' : ''}`}
                       >
                         <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[8px] ${
                           n.level === 'error' ? 'bg-danger/10 text-danger' :
-                          n.level === 'warning' ? 'bg-warning/10 text-[#c07000]' :
-                          n.level === 'success' ? 'bg-success/10 text-[#1a7a3a]' :
+                          n.level === 'warning' ? 'bg-warning/10 text-warning' :
+                          n.level === 'success' ? 'bg-success/10 text-success' :
                           'bg-accent/10 text-accent'
                         }`}>
                           <HugeIcon icon={BellIcon} size={11} />
@@ -269,7 +269,7 @@ export default function Topbar() {
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-10 z-50 min-w-[200px] rounded-[16px] border border-border bg-surface p-1.5 shadow-float">
+            <div className="absolute right-0 top-10 z-50 min-w-[200px] rounded-[8px] border border-border bg-bg p-1.5 shadow-float">
               <div className="px-3 py-2 border-b border-border mb-1">
                 <p className="text-[13px] font-medium text-primary truncate">{user?.name}</p>
                 <p className="text-[12px] text-tertiary truncate">{user?.email}</p>
@@ -278,8 +278,8 @@ export default function Topbar() {
                 to="/account"
                 onClick={() => setMenuOpen(false)}
                 className={cn(
-                  'flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2',
-                  'text-[13px] text-secondary hover:bg-[#f0f0f2] hover:text-primary transition-colors',
+                  'flex w-full items-center gap-2.5 rounded-[6px] px-3 py-2',
+                  'text-[13px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors',
                 )}
               >
                 <User size={14} />
@@ -288,8 +288,8 @@ export default function Topbar() {
               <button
                 onClick={() => setLogoutConfirmOpen(true)}
                 className={cn(
-                  'flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2',
-                  'text-[13px] text-secondary hover:bg-[#f0f0f2] hover:text-primary transition-colors',
+                  'flex w-full items-center gap-2.5 rounded-[6px] px-3 py-2',
+                  'text-[13px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors',
                 )}
               >
                 <LogOut size={14} />

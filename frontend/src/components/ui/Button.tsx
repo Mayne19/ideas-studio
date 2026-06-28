@@ -13,21 +13,28 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   icon?: ReactNode
 }
 
+/* Geist button spec (vercel.com/design.md):
+   primary  = gray-1000 fill + inverted text (dark↔light flips in dark mode)
+   secondary = surface fill + border
+   ghost     = no fill, text-secondary, hover surface
+   danger    = red fill + white text
+   radius    = 6px (controls)
+   height    = 32px/36px/40px (sm/md/lg)                                      */
 const variants: Record<ButtonVariant, string> = {
   primary:
-    'bg-accent text-white hover:bg-accent-dark active:opacity-90 shadow-sm',
+    'bg-primary text-bg hover:opacity-90 active:opacity-80',
   secondary:
-    'bg-[#f0f0f2] text-primary hover:bg-[#e5e5e7] active:bg-[#dcdce0]',
+    'bg-surface-soft text-primary border border-border hover:bg-surface-muted active:bg-surface-muted',
   ghost:
-    'bg-transparent text-primary hover:bg-[#f0f0f2] active:bg-[#e5e5e7]',
+    'bg-transparent text-secondary hover:bg-surface-soft hover:text-primary active:bg-surface-muted',
   danger:
     'bg-danger text-white hover:opacity-90 active:opacity-80',
 }
 
 const sizes: Record<ButtonSize, string> = {
-  sm: 'h-8 px-3 text-[13px] gap-1.5 rounded-[8px]',
-  md: 'h-9 px-4 text-[14px] gap-2 rounded-[10px]',
-  lg: 'h-10 px-5 text-[15px] gap-2 rounded-[10px]',
+  sm: 'h-8 px-3 text-[13px] gap-1.5 rounded-[6px]',
+  md: 'h-9 px-4 text-[14px] gap-2 rounded-[6px]',
+  lg: 'h-10 px-5 text-[14px] gap-2 rounded-[6px]',
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
@@ -40,7 +47,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
       disabled={disabled || loading}
       className={cn(
         'inline-flex items-center justify-center font-medium transition-all duration-150',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-1',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         variants[variant],
         sizes[size],

@@ -9,9 +9,10 @@ type FormCardProps = {
   className?: string
 }
 
+/* Geist settings panel: 8px radius, border dividers, no extra shadow */
 export default function FormCard({ title, description, children, footer, className }: FormCardProps) {
   return (
-    <div className={cn('rounded-[22px] bg-surface', className)}>
+    <div className={cn('rounded-[8px] bg-surface border border-border', className)}>
       <div className="border-b border-border px-6 py-5">
         <h3 className="text-[14px] font-semibold text-primary">{title}</h3>
         {description && (
