@@ -13,7 +13,7 @@ function AppShellInner() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   return (
-    <div className="flex h-full overflow-hidden bg-bg">
+    <div className="flex h-full overflow-hidden bg-app">
       <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((v) => !v)} />
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <Topbar />

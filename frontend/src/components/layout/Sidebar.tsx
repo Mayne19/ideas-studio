@@ -63,7 +63,7 @@ function SidebarLink({ to, icon, label, disabled = false, collapsed = false }: N
           'flex items-center gap-2.5 rounded-[6px] px-3 py-2 text-[13px] font-medium transition-colors duration-150',
           collapsed ? 'justify-center px-2' : '',
           isActive
-            ? 'bg-accent/10 text-accent'
+            ? 'bg-surface-soft text-primary'
             : 'text-secondary hover:bg-surface-soft hover:text-primary',
         )
       }
@@ -132,7 +132,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
   return (
     <>
       <aside
-        className={`flex h-full ${sidebarWidth} shrink-0 flex-col border-r border-border bg-bg transition-all duration-200 overflow-hidden`}
+        className={`flex h-full ${sidebarWidth} shrink-0 flex-col border-r border-border bg-surface transition-all duration-200 overflow-hidden`}
       >
       {/* Brand + collapse toggle */}
       <div className="flex h-[64px] items-center border-b border-border px-3 justify-between shrink-0">
@@ -161,7 +161,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
             onClick={() => setProjectsOpen((v) => !v)}
             className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 hover:bg-surface-soft transition-colors text-left"
           >
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-accent/10 text-accent text-[10px] font-bold">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] border border-border bg-bg text-secondary text-[10px] font-semibold">
               {project.name.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
@@ -172,7 +172,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
           </button>
 
           {projectsOpen && (
-            <div className="absolute left-3 right-3 top-full mt-1 z-50 rounded-[8px] border border-border bg-bg shadow-float overflow-hidden">
+            <div className="absolute left-3 right-3 top-full mt-1 z-50 rounded-[8px] border border-border bg-surface shadow-float overflow-hidden">
               {projects.length === 0 ? (
                 <p className="px-4 py-3 text-[12px] text-tertiary">Aucun autre projet</p>
               ) : (
@@ -185,7 +185,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                     }}
                     className="flex w-full items-center gap-2.5 px-3 py-2.5 hover:bg-surface-soft transition-colors text-left"
                   >
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-accent/10 text-accent text-[10px] font-bold">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] border border-border bg-bg text-secondary text-[10px] font-semibold">
                       {p.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -200,7 +200,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                 <Link
                   to="/projects"
                   onClick={() => setProjectsOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2.5 text-[12px] text-accent hover:bg-surface-soft transition-colors"
+                  className="flex items-center gap-2 px-3 py-2.5 text-[12px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors"
                 >
                   <FolderOpen size={13} />
                   Voir tous les projets
@@ -249,7 +249,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                   <div
                     className={cn(
                       'flex items-center rounded-[6px] transition-colors duration-150',
-                      inSettings ? 'bg-accent/10 text-accent' : 'text-secondary hover:bg-surface-soft hover:text-primary',
+                      inSettings ? 'bg-surface-soft text-primary' : 'text-secondary hover:bg-surface-soft hover:text-primary',
                     )}
                   >
                     <NavLink
@@ -286,7 +286,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                           className={({ isActive }) =>
                             cn(
                               'rounded-[8px] px-2.5 py-1.5 text-[12px] font-medium transition-colors',
-                              isActive ? 'text-accent' : 'text-secondary hover:text-primary',
+                              isActive ? 'text-primary' : 'text-secondary hover:text-primary',
                             )
                           }
                         >

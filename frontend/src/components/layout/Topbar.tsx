@@ -117,7 +117,7 @@ export default function Topbar() {
 
   return (
     <>
-    <header className="flex h-[64px] shrink-0 items-center justify-between border-b border-border bg-bg px-6">
+    <header className="flex h-[64px] shrink-0 items-center justify-between border-b border-border bg-surface px-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-1.5 text-[13px]">
         <Link to="/projects" className="text-secondary hover:text-primary transition-colors">
@@ -150,11 +150,11 @@ export default function Topbar() {
                 onChange={(e) => handleSearchInput(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-                className="rounded-[6px] border border-border bg-surface-soft pl-7 pr-3 py-1.5 text-[13px] placeholder:text-tertiary focus:outline-none focus:ring-1 focus:ring-accent/30 focus:border-accent/50 w-44 transition-all focus:w-56"
+                className="h-8 rounded-[6px] border border-border bg-bg pl-7 pr-3 text-[13px] text-primary placeholder:text-tertiary outline-none transition-all w-44 hover:border-border-strong focus:w-56 focus:border-accent focus:ring-2 focus:ring-accent/15"
               />
             </div>
             {searchFocused && searchQuery && (
-              <div className="absolute right-0 top-10 z-50 w-80 rounded-[8px] border border-border bg-bg p-2 shadow-float">
+              <div className="absolute right-0 top-10 z-50 w-80 rounded-[8px] border border-border bg-surface p-2 shadow-float">
                 {searching ? (
                   <div className="flex items-center justify-center py-4">
                     <Loader2 size={16} className="animate-spin text-tertiary" />
@@ -170,7 +170,7 @@ export default function Topbar() {
                         className="flex items-center gap-2.5 rounded-[6px] px-2.5 py-2 hover:bg-surface-soft transition-colors"
                         onClick={() => setSearchFocused(false)}
                       >
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] bg-accent/10 text-accent">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] border border-border bg-bg text-secondary">
                           {resultIcon(result.type)}
                         </span>
                         <div className="min-w-0 flex-1">
@@ -193,7 +193,7 @@ export default function Topbar() {
           <div className="relative" ref={notifRef}>
             <button
               onClick={() => setNotifOpen((v) => !v)}
-              className="relative flex h-8 w-8 items-center justify-center rounded-full text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
+              className="relative flex h-8 w-8 items-center justify-center rounded-[6px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
               title="Notifications"
               aria-label="Notifications"
             >
@@ -206,7 +206,7 @@ export default function Topbar() {
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 top-10 z-50 w-80 rounded-[8px] border border-border bg-bg p-2 shadow-float">
+              <div className="absolute right-0 top-10 z-50 w-80 rounded-[8px] border border-border bg-surface p-2 shadow-float">
                 <div className="flex items-center justify-between mb-1 px-1">
                   <p className="text-[13px] font-semibold text-primary">Notifications</p>
                   <button
@@ -237,14 +237,12 @@ export default function Topbar() {
                         onClick={() => { setNotifOpen(false); if (n.link) navigate(n.link) }}
                         className={`flex w-full items-start gap-2 rounded-[6px] px-2.5 py-2 text-left transition-colors ${n.link ? 'hover:bg-surface-soft' : ''}`}
                       >
-                        <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[8px] ${
-                          n.level === 'error' ? 'bg-danger/10 text-danger' :
-                          n.level === 'warning' ? 'bg-warning/10 text-warning' :
-                          n.level === 'success' ? 'bg-success/10 text-success' :
-                          'bg-accent/10 text-accent'
-                        }`}>
-                          <HugeIcon icon={BellIcon} size={11} />
-                        </span>
+                        <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
+                          n.level === 'error' ? 'bg-danger' :
+                          n.level === 'warning' ? 'bg-warning' :
+                          n.level === 'success' ? 'bg-success' :
+                          'bg-accent'
+                        }`} />
                         <div className="min-w-0 flex-1">
                           <p className="text-[12px] font-medium text-primary truncate">{n.title}</p>
                           <p className="text-[11px] text-tertiary truncate">{n.message}</p>
@@ -262,14 +260,14 @@ export default function Topbar() {
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setMenuOpen((v) => !v)}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/10 text-accent text-[12px] font-semibold hover:bg-accent/20 transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-bg text-[12px] font-semibold text-secondary hover:bg-surface-soft hover:text-primary transition-colors"
             aria-label="Menu utilisateur"
           >
             {initials}
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-10 z-50 min-w-[200px] rounded-[8px] border border-border bg-bg p-1.5 shadow-float">
+            <div className="absolute right-0 top-10 z-50 min-w-[200px] rounded-[8px] border border-border bg-surface p-1.5 shadow-float">
               <div className="px-3 py-2 border-b border-border mb-1">
                 <p className="text-[13px] font-medium text-primary truncate">{user?.name}</p>
                 <p className="text-[12px] text-tertiary truncate">{user?.email}</p>

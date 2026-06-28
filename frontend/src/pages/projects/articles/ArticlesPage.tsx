@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Plus, FileText, Pencil, Trash2, Sparkles, Zap, Loader2, CheckCircle, Archive, EyeOff } from '@/components/ui/hugeIcons'
+import { Plus, FileText, Trash2, Sparkles, Zap, Loader2, CheckCircle, Archive, EyeOff, Menu } from '@/components/ui/hugeIcons'
 import { listArticles, createArticle, unpublishArticle, archiveArticle, analyzeSeoArticle, deleteArticle, generateArticle } from '@/api/articles'
 import type { CreateArticlePayload, GenerateArticleRequest } from '@/api/articles'
 import { listCategories } from '@/api/categories'
@@ -12,25 +12,19 @@ import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
 import StatusBadge from '@/components/ui/StatusBadge'
+import Badge from '@/components/ui/Badge'
 import EmptyState from '@/components/ui/EmptyState'
 import ErrorState from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import Toolbar from '@/components/ui/Toolbar'
 import ToggleSwitch from '@/components/ui/ToggleSwitch'
-import ArticleScoreBadges from '@/components/ui/ArticleScoreBadges'
+import SeoScoreIndicator from '@/components/ui/SeoScoreIndicator'
 import { finiteScore, getGeoScore, getOriginalityScore } from '@/lib/scoreBadge'
 import { useProject } from '@/context/ProjectContext'
 
 const PAGE_SIZE = 20
 
 type ScoreFilter = '' | 'global_gte_90' | 'global_lt_90' | 'seo_lt_85' | 'quality_lt_85' | 'readability_lt_80' | 'geo_lt_80' | 'originality_lt_85' | 'critical'
-
-function getCost(article: Article): number | null {
-  const costJson = article.estimated_cost_json
-  if (!costJson || typeof costJson !== 'object') return null
-  const cost = (costJson as Record<string, unknown>).estimated_cost_eur
-  return typeof cost === 'number' && Number.isFinite(cost) ? cost : null
-}
 
 function getPublicUrl(domain: string | undefined | null, slug: string): string {
   if (!domain) return ''
@@ -44,7 +38,7 @@ function getUniqueAuthors(articles: Article[]): string[] {
   return Array.from(names).sort()
 }
 
-const ARTICLE_TABLE_GRID = 'lg:grid-cols-[minmax(240px,1.2fr)_minmax(300px,auto)_80px_90px_130px]'
+const ARTICLE_TABLE_GRID = 'lg:grid-cols-[minmax(260px,1fr)_140px_130px_80px_130px_44px]'
 
 const PUBLISHED_STATUSES = new Set(['published', 'scheduled'])
 const EDITABLE_STATUSES = new Set([
@@ -67,9 +61,15 @@ function ArticleRow({
   const category = categories.find((c) => c.id === article.category_id)
   const isPublished = PUBLISHED_STATUSES.has(article.status)
   const isEditable = EDITABLE_STATUSES.has(article.status)
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  function triggerAction(key: string) {
+    setMenuOpen(false)
+    onAction(key, article)
+  }
 
   return (
-    <div className={`grid gap-2.5 rounded-[8px] px-3 py-2.5 transition-colors hover:bg-surface-soft lg:items-center ${ARTICLE_TABLE_GRID}`}>
+    <div className={`relative grid grid-cols-1 gap-2.5 border-b border-border-soft px-3 py-3 transition-colors last:border-b-0 hover:bg-surface-soft lg:items-center ${ARTICLE_TABLE_GRID}`}>
       <div className="min-w-0">
         <button
           type="button"
@@ -80,13 +80,6 @@ function ArticleRow({
           {article.title}
         </button>
         <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-tertiary">
-          <span
-            className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${category?.color ? '' : 'bg-surface-soft text-tertiary'}`}
-            style={category?.color ? { backgroundColor: `${category.color}20`, color: category.color } : undefined}
-          >
-            {category?.name ?? 'Sans catégorie'}
-          </span>
-          <span>·</span>
           <span>{article.published_at ? formatDate(article.published_at) : formatDate(article.updated_at)}</span>
           <span>·</span>
           <span>{article.author_name ?? 'Auteur —'}</span>
@@ -94,47 +87,60 @@ function ArticleRow({
           <span>{article.word_count > 0 ? `${article.word_count} mots` : '— mots'}</span>
         </div>
       </div>
-      <ArticleScoreBadges article={article} />
       <div className="flex items-center">
-        {(() => {
-          const cost = getCost(article)
-          return cost !== null ? (
-            <span className="inline-flex items-center rounded-full bg-brand-soft px-1.5 py-0.5 text-[10px] font-medium text-accent">
-              {cost.toFixed(4)} €
-            </span>
-          ) : (
-            <span className="inline-flex items-center rounded-full bg-surface-soft px-1.5 py-0.5 text-[10px] font-medium text-tertiary">
-              — €
-            </span>
-          )
-        })()}
+        <Badge variant="gray" className="max-w-[132px] truncate">
+          {category?.name ?? 'Sans catégorie'}
+        </Badge>
+      </div>
+      <div className="flex items-center">
+        <SeoScoreIndicator value={article.seo_score} compact />
+      </div>
+      <div className="flex items-center text-[12px] font-medium tabular-nums text-secondary">
+        —
       </div>
       <div className="flex items-center">
         <StatusBadge status={article.status} />
       </div>
-      <div className="flex items-center gap-3 lg:justify-end">
+      <div className="relative flex items-center lg:justify-end">
         <button
           type="button"
-          onClick={() => onEdit(article)}
-          className="flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-[6px] bg-primary px-3 text-[12px] font-medium text-bg transition-opacity hover:opacity-90"
-          title="Éditer"
-        >
-          <Pencil size={12} />
-          Éditer
-        </button>
-        <select
-          onChange={(e) => { if (e.target.value) { onAction(e.target.value, article); e.target.value = '' } }}
-          className="h-8 w-[82px] cursor-pointer rounded-[6px] border border-border bg-bg px-1.5 text-[11px] text-secondary transition-colors hover:bg-surface-soft"
-          defaultValue=""
+          onClick={() => setMenuOpen((open) => !open)}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-tertiary transition-colors hover:bg-surface-muted hover:text-primary"
+          title="Actions"
           aria-label={`Actions pour ${article.title}`}
         >
-          <option value="" disabled>Actions</option>
-          {isPublished && <option value="view-site">Voir sur le site</option>}
-          {isEditable && <option value="analyze-seo">Analyser SEO</option>}
-          {isPublished && <option value="unpublish">Dépublier</option>}
-          {!isPublished && <option value="archive">Archiver</option>}
-          <option value="delete">Supprimer</option>
-        </select>
+          <Menu size={15} />
+        </button>
+        {menuOpen && (
+          <div className="absolute right-0 top-9 z-30 min-w-[160px] rounded-[8px] border border-border bg-surface p-1.5 shadow-float">
+            <button type="button" onClick={() => { setMenuOpen(false); onEdit(article) }} className="w-full rounded-[6px] px-2.5 py-2 text-left text-[12px] text-secondary hover:bg-surface-soft hover:text-primary">
+              Éditer
+            </button>
+            {isPublished && (
+              <button type="button" onClick={() => triggerAction('view-site')} className="w-full rounded-[6px] px-2.5 py-2 text-left text-[12px] text-secondary hover:bg-surface-soft hover:text-primary">
+                Voir sur le site
+              </button>
+            )}
+            {isEditable && (
+              <button type="button" onClick={() => triggerAction('analyze-seo')} className="w-full rounded-[6px] px-2.5 py-2 text-left text-[12px] text-secondary hover:bg-surface-soft hover:text-primary">
+                Analyser SEO
+              </button>
+            )}
+            {isPublished && (
+              <button type="button" onClick={() => triggerAction('unpublish')} className="w-full rounded-[6px] px-2.5 py-2 text-left text-[12px] text-secondary hover:bg-surface-soft hover:text-primary">
+                Dépublier
+              </button>
+            )}
+            {!isPublished && (
+              <button type="button" onClick={() => triggerAction('archive')} className="w-full rounded-[6px] px-2.5 py-2 text-left text-[12px] text-secondary hover:bg-surface-soft hover:text-primary">
+                Archiver
+              </button>
+            )}
+            <button type="button" onClick={() => triggerAction('delete')} className="w-full rounded-[6px] px-2.5 py-2 text-left text-[12px] text-danger hover:bg-danger/10">
+              Supprimer
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -508,14 +514,15 @@ export default function ArticlesPage() {
         )}
         {status === 'success' && visibleArticles.length > 0 && (
           <>
-            <div className={`hidden gap-2.5 px-3 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-tertiary lg:grid ${ARTICLE_TABLE_GRID}`}>
-              <div>Titre</div>
-              <div>Scores</div>
-              <div>Coût</div>
+            <div className={`hidden gap-2.5 border-b border-border px-3 pb-2 text-[11px] font-medium text-tertiary lg:grid ${ARTICLE_TABLE_GRID}`}>
+              <div>Article</div>
+              <div>Catégorie</div>
+              <div>Score SEO</div>
+              <div>Vues</div>
               <div>Statut</div>
               <div className="text-right">Actions</div>
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="overflow-visible rounded-[8px] border border-border bg-surface shadow-card">
               {visibleArticles.map((article) => (
                 <ArticleRow
                   key={article.id}

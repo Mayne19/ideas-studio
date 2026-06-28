@@ -9,20 +9,20 @@
      red, green, amber semantic scales
   */
   --color-bg: #ffffff;
-  --color-app: #ffffff;
-  --color-surface: #fafafa;
-  --color-surface-soft: #f2f2f2;
-  --color-surface-muted: #ebebeb;
+  --color-app: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f5f5f5;
+  --color-surface-muted: #eeeeee;
   --color-primary: #171717;
   --color-secondary: #4d4d4d;
-  --color-tertiary: #9b9b9b;
-  --color-border: #d4d4d4;
-  --color-border-soft: #ebebeb;
-  --color-border-strong: #b4b4b4;
+  --color-tertiary: #777777;
+  --color-border: #e5e5e5;
+  --color-border-soft: #eeeeee;
+  --color-border-strong: #c7c7c7;
   --color-accent: #0070f3;
   --color-accent-dark: #005dd1;
   --color-brand: #0070f3;
-  --color-brand-soft: #e8f4fd;
+  --color-brand-soft: #f0f7ff;
   --color-success: #0a7a0a;
   --color-warning: #b45309;
   --color-danger: #cc0000;
@@ -96,12 +96,13 @@ body,
 
 body {
   font-family: var(--font-sans);
-  background-color: var(--color-bg);
+  background-color: var(--color-app);
   color: var(--color-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.45;
+  letter-spacing: 0;
 }
 
 .project-page {

@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   FileText, Lightbulb, BarChart2, Sparkles, Globe,
   WifiOff, ArrowRight, AlertCircle, Clock, CheckCircle, PenLine,
-  Edit3, Eye, Send, Star, BookOpen, Cpu, Zap, ClipboardList, User,
+  Edit3, Eye, Send, Star, BookOpen, Cpu, Zap, ClipboardList,
+  Menu,
 } from '@/components/ui/hugeIcons'
 import { useProject } from '@/context/ProjectContext'
 import { useAuth } from '@/context/AuthContext'
@@ -19,7 +20,8 @@ import type { AIProviderPublic } from '@/api/aiProviders'
 import { Card } from '@/components/ui/Card'
 import MetricCard from '@/components/ui/MetricCard'
 import StatusBadge from '@/components/ui/StatusBadge'
-import ArticleScoreBadges from '@/components/ui/ArticleScoreBadges'
+import Badge from '@/components/ui/Badge'
+import SeoScoreIndicator from '@/components/ui/SeoScoreIndicator'
 import LoadingState from '@/components/ui/LoadingState'
 import Modal from '@/components/ui/Modal'
 import { formatDate } from '@/utils/format'
@@ -37,10 +39,10 @@ function timeAgo(iso: string): string {
 const RECENT_ARTICLES_LIMIT = 7
 
 const TODO_ACCENT = {
-  warning: 'bg-warning/10 text-warning',
-  danger:  'bg-danger/10 text-danger',
-  accent:  'bg-accent/10 text-accent',
-  success: 'bg-success/10 text-success',
+  warning: 'text-warning',
+  danger:  'text-danger',
+  accent:  'text-accent',
+  success: 'text-success',
 } as const
 
 type TodoAccent = keyof typeof TODO_ACCENT
@@ -367,11 +369,11 @@ export default function ProjectDashboardPage() {
     <div className="mx-auto max-w-7xl">
       {/* Greeting */}
       <div className="mb-6 flex items-start gap-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-accent/10 text-accent text-[18px] font-bold">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[8px] border border-border bg-surface text-[17px] font-semibold text-secondary shadow-card">
           {project?.name.charAt(0).toUpperCase() ?? '?'}
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="text-[22px] font-semibold text-primary tracking-tight">
+          <h1 className="text-[22px] font-semibold leading-tight tracking-normal text-primary">
             {firstName ? `Bonjour, ${firstName} 👋` : 'Bonjour 👋'}
           </h1>
           <p className="mt-0.5 text-[13px] text-secondary">{summaryText}</p>
@@ -380,21 +382,19 @@ export default function ProjectDashboardPage() {
               <Globe size={11} />
               {project?.domain ?? '—'}
             </span>
-            <span
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium border ${
-                isConnected ? 'bg-success/10 text-success border-success/20' : 'bg-surface-soft text-tertiary border-border'
-              }`}
+            <Badge
+              variant={isConnected ? 'green' : 'gray'}
+              icon={<span className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-success' : 'bg-border-strong'}`} />}
             >
-              <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-success' : 'bg-border-strong'}`} />
               {isConnected ? 'Connecté' : 'Non connecté'}
-            </span>
+            </Badge>
           </div>
         </div>
       </div>
 
       {/* Onboarding */}
       {project && (!project.audience || !project.tone) && (
-        <div className="mb-5 flex items-start gap-3 rounded-[8px] border border-warning/30 bg-warning/10 px-4 py-3">
+        <div className="mb-5 flex items-start gap-3 rounded-[8px] border border-warning/25 bg-surface px-4 py-3 shadow-card">
           <AlertCircle size={16} className="mt-0.5 shrink-0 text-warning" />
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-medium text-primary">Complétez la configuration de votre projet</p>
@@ -419,6 +419,7 @@ export default function ProjectDashboardPage() {
           suffix={seoValue !== '—' ? '/10' : undefined}
           label="Score SEO moyen"
           tone="accent"
+          progress={data?.avgSeoScore ?? null}
           onClick={() => navigate(`/projects/${projectId}/performance`)}
         />
         <MetricCard
@@ -454,7 +455,7 @@ export default function ProjectDashboardPage() {
       {/* Workflow health */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card padding="sm" className="flex items-start gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-accent/10 text-accent">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] border border-border bg-bg text-secondary">
             <Cpu size={15} />
           </span>
           <div className="min-w-0 flex-1">
@@ -468,7 +469,7 @@ export default function ProjectDashboardPage() {
           </div>
         </Card>
         <Card padding="sm" className="flex items-start gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-warning/10 text-warning">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] border border-border bg-bg text-secondary">
             <ClipboardList size={15} />
           </span>
           <div className="min-w-0 flex-1">
@@ -478,7 +479,7 @@ export default function ProjectDashboardPage() {
           </div>
         </Card>
         <Card padding="sm" className="flex items-start gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-brand-soft text-accent">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] border border-border bg-bg text-secondary">
             <Zap size={15} />
           </span>
           <div className="min-w-0 flex-1">
@@ -488,7 +489,7 @@ export default function ProjectDashboardPage() {
           </div>
         </Card>
         <Card padding="sm" className="flex items-start gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-success/10 text-success">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] border border-border bg-bg text-secondary">
             <Lightbulb size={15} />
           </span>
           <div className="min-w-0 flex-1">
@@ -504,7 +505,7 @@ export default function ProjectDashboardPage() {
       {data && !hasTrackingData && (
         <Card className="mb-6">
           <div className="flex items-start gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-accent/10 text-accent">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] border border-border bg-bg text-secondary">
               <Globe size={16} />
             </span>
             <div>
@@ -518,17 +519,17 @@ export default function ProjectDashboardPage() {
       )}
 
       {/* Main 2-col layout: left=articles (65%), right=todo+activity (35%) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
         {/* Left — col-span-2 — Articles récents only */}
         <div className="lg:col-span-2">
           <Card className="flex h-full flex-col">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-[12px] font-semibold text-secondary uppercase tracking-wide">Articles récents</p>
+              <p className="text-[13px] font-semibold text-primary">Articles récents</p>
               <button
                 onClick={() => navigate(`/projects/${projectId}/articles`)}
-                className="text-[11px] text-accent hover:underline"
+                className="text-[12px] font-medium text-secondary hover:text-primary"
               >
-                Voir tout →
+                Voir tout
               </button>
             </div>
             {!data || data.recentArticles.length === 0 ? (
@@ -543,46 +544,63 @@ export default function ProjectDashboardPage() {
                 </button>
               </div>
             ) : (
-              <div className="flex flex-1 flex-col justify-between gap-1.5">
+              <div className="min-w-0 overflow-x-auto">
+                <div className="min-w-[720px]">
+                  <div className="grid grid-cols-[minmax(260px,1fr)_120px_120px_72px_116px_44px] gap-3 border-b border-border px-3 pb-2 text-[11px] font-medium text-tertiary">
+                    <div>Article</div>
+                    <div>Catégorie</div>
+                    <div>Score SEO</div>
+                    <div>Vues</div>
+                    <div>Statut</div>
+                    <div className="text-right">Actions</div>
+                  </div>
+                  <div className="flex flex-col">
                 {data.recentArticles.map((a) => {
                   const cat = data.categories.find((c) => c.id === a.category_id)
                   return (
-                    <button
+                    <div
                       key={a.id}
-                      onClick={() => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
-                      className="grid grid-cols-1 gap-2 rounded-[8px] px-2.5 py-2 text-left transition-colors hover:bg-surface-soft sm:grid-cols-[minmax(0,1fr)_112px]"
+                      className="grid grid-cols-[minmax(260px,1fr)_120px_120px_72px_116px_44px] items-center gap-3 border-b border-border-soft px-3 py-2.5 last:border-b-0 hover:bg-surface-soft"
                     >
                       <div className="min-w-0">
-                        <p className="min-w-0 text-[13px] font-medium leading-snug text-primary break-words">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
+                          className="block max-w-full truncate text-left text-[13px] font-medium leading-snug text-primary hover:text-accent"
+                          title={a.title}
+                        >
                           {a.title}
-                        </p>
-                        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1.5">
-                          <span
-                            className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${cat?.color ? '' : 'bg-surface-soft text-tertiary border border-border'}`}
-                            style={cat?.color ? { backgroundColor: `${cat.color}20`, color: cat.color } : undefined}
-                          >
-                            {cat?.name ?? 'Sans catégorie'}
-                          </span>
-                          <span className="text-[10px] text-tertiary whitespace-nowrap">
-                            {a.word_count > 0 ? `${a.word_count.toLocaleString('fr-FR')} mots` : '— mots'}
-                          </span>
-                          <ArticleScoreBadges article={a} />
-                          <StatusBadge status={a.status} />
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 flex-row items-center justify-between gap-3 text-[10px] text-tertiary sm:flex-col sm:items-end sm:justify-start sm:gap-1 sm:pt-0.5">
-                        <div className="flex items-center gap-1 whitespace-nowrap">
-                          <Clock size={9} />
+                        </button>
+                        <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] text-tertiary">
                           <span>{formatDate(getArticleDate(a))}</span>
-                        </div>
-                        <div className="flex items-center gap-1 whitespace-nowrap">
-                          <User size={9} />
-                          <span>{a.author_name ?? 'Auteur —'}</span>
+                          <span>·</span>
+                          <span className="truncate">{a.author_name ?? 'Auteur —'}</span>
+                          <span>·</span>
+                          <span>{a.word_count > 0 ? `${a.word_count.toLocaleString('fr-FR')} mots` : '— mots'}</span>
                         </div>
                       </div>
-                    </button>
+                      <div>
+                        <Badge variant="gray" className="max-w-[110px] truncate">
+                          {cat?.name ?? 'Sans catégorie'}
+                        </Badge>
+                      </div>
+                      <SeoScoreIndicator value={a.seo_score} compact />
+                      <span className="text-[12px] font-medium tabular-nums text-secondary">—</span>
+                      <StatusBadge status={a.status} />
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
+                        className="ml-auto flex h-8 w-8 items-center justify-center rounded-[6px] text-tertiary hover:bg-surface-muted hover:text-primary"
+                        aria-label={`Actions pour ${a.title}`}
+                        title="Actions"
+                      >
+                        <Menu size={15} />
+                      </button>
+                    </div>
                   )
                 })}
+                  </div>
+                </div>
               </div>
             )}
           </Card>
@@ -591,19 +609,19 @@ export default function ProjectDashboardPage() {
         <div className="flex flex-col gap-4">
           {/* À faire maintenant */}
           <Card>
-            <p className="text-[12px] font-semibold text-secondary uppercase tracking-wide mb-3">À faire maintenant</p>
+            <p className="mb-3 text-[13px] font-semibold text-primary">À faire maintenant</p>
             <div className="flex flex-col gap-1.5">
               {(!data ? [] : todoItems).slice(0, 5).map((item) => (
                 <button
                   key={item.id}
                   onClick={() => navigate(item.href)}
-                  className="flex items-start gap-2.5 rounded-[6px] p-2 text-left hover:bg-surface-soft transition-colors"
+                  className="flex items-center gap-2.5 rounded-[6px] px-2 py-2 text-left hover:bg-surface-soft transition-colors"
                 >
-                  <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${TODO_ACCENT[item.accent]}`}>
+                  <span className={`flex h-4 w-4 shrink-0 items-center justify-center ${TODO_ACCENT[item.accent]}`}>
                     {item.icon}
                   </span>
                   <span className="flex-1 text-[12px] text-primary leading-snug">{item.label}</span>
-                  <ArrowRight size={11} className="mt-0.5 shrink-0 text-tertiary" />
+                  <ArrowRight size={12} className="shrink-0 text-tertiary" />
                 </button>
               ))}
               {!data && (
@@ -615,14 +633,14 @@ export default function ProjectDashboardPage() {
           {/* Activité récente */}
           <Card className="flex-1">
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-[12px] font-semibold text-secondary uppercase tracking-wide">Activité récente</p>
+              <p className="text-[13px] font-semibold text-primary">Activité récente</p>
               {activityEvents.length > 5 && (
                 <button
                   type="button"
                   onClick={() => setActivityModalOpen(true)}
-                  className="text-[11px] text-accent hover:underline"
+                  className="text-[12px] font-medium text-secondary hover:text-primary"
                 >
-                  Voir tout →
+                  Voir tout
                 </button>
               )}
             </div>
@@ -634,16 +652,14 @@ export default function ProjectDashboardPage() {
                   <button
                     key={ev.id}
                     onClick={() => navigate(ev.href)}
-                    className="flex items-start gap-2 rounded-[8px] px-2 py-1.5 text-left hover:bg-surface-soft transition-colors"
+                    className="flex items-start gap-2 rounded-[6px] px-2 py-2 text-left hover:bg-surface-soft transition-colors"
                   >
-                    <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-brand-soft text-accent">
-                      {ev.icon}
-                    </span>
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-border-strong" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-medium text-secondary">{ev.label}</p>
-                      <p className="text-[11px] text-primary truncate">{ev.articleTitle}</p>
+                      <p className="text-[12px] font-medium text-primary">{ev.label}</p>
+                      <p className="truncate text-[11px] text-secondary">{ev.articleTitle}</p>
                     </div>
-                    <span className="text-[10px] text-tertiary shrink-0 mt-0.5">{ev.time}</span>
+                    <span className="mt-0.5 shrink-0 text-[11px] text-tertiary">{ev.time}</span>
                   </button>
                 ))}
               </div>
@@ -673,9 +689,7 @@ export default function ProjectDashboardPage() {
                   }}
                   className="flex items-start gap-2 rounded-[6px] px-2.5 py-2 text-left transition-colors hover:bg-surface-soft"
                 >
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-soft text-accent">
-                    {ev.icon}
-                  </span>
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-border-strong" />
                   <div className="min-w-0 flex-1">
                     <p className="text-[12px] font-medium text-secondary">{ev.label}</p>
                     <p className="truncate text-[12px] text-primary">{ev.articleTitle}</p>
