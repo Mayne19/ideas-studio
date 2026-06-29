@@ -2,7 +2,7 @@ import Badge from './Badge'
 import type { ArticleStatus } from '@/types'
 import { STATUS_LABELS as ARTICLE_STATUS_LABELS } from '@/utils/articleActions'
 
-type BadgeVariant = 'default' | 'blue' | 'green' | 'amber' | 'red' | 'gray'
+type BadgeVariant = 'default' | 'blue' | 'green' | 'orange' | 'red' | 'gray'
 
 const STATUS_LABELS = ARTICLE_STATUS_LABELS
 
@@ -12,20 +12,20 @@ const STATUS_VARIANTS: Record<ArticleStatus, BadgeVariant> = {
   idea_priority:        'blue',
   idea_rejected:        'red',
   outline_ready:        'blue',
-  writing_requested:    'blue',
-  writing_in_progress:  'blue',
+  writing_requested:    'orange',
+  writing_in_progress:  'orange',
   draft_ready:          'blue',
-  review_needed:        'amber',
+  review_needed:        'orange',
   correction_needed:    'red',
   scheduled:            'blue',
   published:            'green',
   ready_to_publish:     'green',
-  update_recommended:   'amber',
+  update_recommended:   'orange',
   unpublished:          'gray',
   archived:             'gray',
   failed:               'red',
-  improvement_proposed:   'amber',
-  improvement_in_progress: 'blue',
+  improvement_proposed:   'orange',
+  improvement_in_progress: 'orange',
   improvement_ready:      'blue',
 }
 

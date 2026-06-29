@@ -68,7 +68,7 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <div className="rounded-[6px] bg-danger/10 border border-danger/20 px-3.5 py-2.5 text-[13px] text-danger">
+          <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
             {error}
           </div>
         )}
@@ -98,7 +98,7 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        <Button type="submit" loading={loading} className="mt-1 w-full justify-center">
+        <Button type="submit" loading={loading} className="mt-1 w-full justify-center rounded-full">
           {loading ? 'Connexion…' : 'Se connecter'}
         </Button>
 

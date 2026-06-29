@@ -25,20 +25,20 @@ const supportEmail = 'support@ideasstudio.ai'
 function PublicNav() {
   return (
     <header className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4">
-      <Link to="/" className="flex items-center gap-2 text-[15px] font-semibold text-primary">
+      <Link to="/" className="flex items-center gap-2 text-[15px] font-semibold text-[#101114]">
         <img src="/icon.svg" alt="" className="h-7 w-7 rounded-[8px]" />
         Ideas Studio
       </Link>
-      <nav className="hidden items-center gap-6 text-[13px] font-medium text-secondary md:flex">
-        <Link to="/features" className="hover:text-primary">{t.nav.features}</Link>
-        <Link to="/documentation" className="hover:text-primary">{t.nav.documentation}</Link>
-        <Link to="/support" className="hover:text-primary">{t.nav.support}</Link>
+      <nav className="hidden items-center gap-6 text-[13px] font-medium text-[#5f6368] md:flex">
+        <Link to="/features" className="hover:text-[#101114]">{t.nav.features}</Link>
+        <Link to="/documentation" className="hover:text-[#101114]">{t.nav.documentation}</Link>
+        <Link to="/support" className="hover:text-[#101114]">{t.nav.support}</Link>
       </nav>
       <div className="flex items-center gap-2">
-        <Link to="/login" className="hidden rounded-[6px] px-3 py-2 text-[13px] font-medium text-secondary hover:bg-surface-soft sm:inline-flex">
+        <Link to="/login" className="hidden rounded-[8px] px-3 py-2 text-[13px] font-medium text-[#33363d] hover:bg-[#eef0f4] sm:inline-flex">
           {t.nav.signIn}
         </Link>
-        <Link to="/register" className="inline-flex h-9 items-center gap-1.5 rounded-[6px] bg-accent px-3.5 text-[13px] font-semibold text-bg hover:opacity-90">
+        <Link to="/register" className="inline-flex h-9 items-center gap-1.5 rounded-[8px] bg-[#2563ff] px-3.5 text-[13px] font-semibold text-white hover:bg-[#1f54d8]">
           {t.nav.start}
           <ArrowRight size={14} />
         </Link>
@@ -49,34 +49,34 @@ function PublicNav() {
 
 function PublicFooter() {
   return (
-    <footer className="border-t border-border bg-bg">
+    <footer className="border-t border-[#e5e7eb] bg-white">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 md:grid-cols-[1.2fr_2fr]">
         <div>
-          <div className="flex items-center gap-2 text-[15px] font-semibold text-primary">
+          <div className="flex items-center gap-2 text-[15px] font-semibold text-[#101114]">
             <img src="/icon.svg" alt="" className="h-7 w-7 rounded-[8px]" />
             Ideas Studio
           </div>
-          <p className="mt-3 max-w-sm text-[13px] leading-6 text-secondary">
+          <p className="mt-3 max-w-sm text-[13px] leading-6 text-[#6b7280]">
             AI editorial operations for teams that need strategy, production, SEO quality and performance in one reliable product.
           </p>
         </div>
         <div className="grid gap-6 text-[13px] sm:grid-cols-3">
           <div className="grid gap-2">
-            <p className="font-semibold text-primary">Product</p>
-            <Link to="/features" className="text-secondary hover:text-primary">Features</Link>
-            <Link to="/documentation" className="text-secondary hover:text-primary">Documentation</Link>
+            <p className="font-semibold text-[#101114]">Product</p>
+            <Link to="/features" className="text-[#6b7280] hover:text-[#101114]">Features</Link>
+            <Link to="/documentation" className="text-[#6b7280] hover:text-[#101114]">Documentation</Link>
           </div>
           <div className="grid gap-2">
-            <p className="font-semibold text-primary">Company</p>
-            <Link to="/support" className="text-secondary hover:text-primary">Support</Link>
-            <Link to="/contact" className="text-secondary hover:text-primary">Contact</Link>
-            <a href={`mailto:${supportEmail}`} className="text-secondary hover:text-primary">Email</a>
+            <p className="font-semibold text-[#101114]">Company</p>
+            <Link to="/support" className="text-[#6b7280] hover:text-[#101114]">Support</Link>
+            <Link to="/contact" className="text-[#6b7280] hover:text-[#101114]">Contact</Link>
+            <a href={`mailto:${supportEmail}`} className="text-[#6b7280] hover:text-[#101114]">Email</a>
           </div>
           <div className="grid gap-2">
-            <p className="font-semibold text-primary">Legal</p>
-            <Link to="/privacy" className="text-secondary hover:text-primary">Privacy</Link>
-            <Link to="/terms" className="text-secondary hover:text-primary">Terms</Link>
-            <Link to="/security" className="text-secondary hover:text-primary">Security</Link>
+            <p className="font-semibold text-[#101114]">Legal</p>
+            <Link to="/privacy" className="text-[#6b7280] hover:text-[#101114]">Privacy</Link>
+            <Link to="/terms" className="text-[#6b7280] hover:text-[#101114]">Terms</Link>
+            <Link to="/security" className="text-[#6b7280] hover:text-[#101114]">Security</Link>
           </div>
         </div>
       </div>
@@ -86,21 +86,21 @@ function PublicFooter() {
 
 function DashboardVisual() {
   return (
-    <div className="mx-auto w-full max-w-5xl rounded-[8px] border border-border bg-bg p-3 shadow-[0_24px_80px_rgba(17,24,39,0.16)]">
-      <div className="flex items-center justify-between border-b border-border pb-3">
+    <div className="mx-auto w-full max-w-5xl rounded-[8px] border border-[#dfe3ea] bg-white p-3 shadow-[0_24px_80px_rgba(17,24,39,0.16)]">
+      <div className="flex items-center justify-between border-b border-[#edf0f4] pb-3">
         <div className="flex items-center gap-2">
           <img src="/icon.svg" alt="" className="h-7 w-7 rounded-[8px]" />
-          <span className="text-[13px] font-semibold text-primary">Editorial Command Center</span>
+          <span className="text-[13px] font-semibold text-[#111827]">Editorial Command Center</span>
         </div>
-        <div className="hidden items-center gap-2 text-[11px] text-secondary sm:flex">
-          <span className="rounded-[6px] bg-success/10 px-2 py-1 text-success">Live SEO</span>
-          <span className="rounded-[6px] bg-brand-soft px-2 py-1 text-accent">Gemini ready</span>
+        <div className="hidden items-center gap-2 text-[11px] text-[#6b7280] sm:flex">
+          <span className="rounded-[8px] bg-[#ecfdf5] px-2 py-1 text-[#047857]">Live SEO</span>
+          <span className="rounded-[8px] bg-[#eff6ff] px-2 py-1 text-[#1d4ed8]">Gemini ready</span>
         </div>
       </div>
       <div className="grid gap-3 pt-3 lg:grid-cols-[210px_1fr_230px]">
-        <aside className="hidden rounded-[8px] bg-surface p-3 lg:block">
+        <aside className="hidden rounded-[8px] bg-[#f6f7f9] p-3 lg:block">
           {['Dashboard', 'Articles', 'Ideas', 'Production', 'Traffic'].map((item, index) => (
-            <div key={item} className={`mb-1 flex items-center gap-2 rounded-[6px] px-2 py-2 text-[12px] ${index === 3 ? 'bg-bg text-accent' : 'text-secondary'}`}>
+            <div key={item} className={`mb-1 flex items-center gap-2 rounded-[8px] px-2 py-2 text-[12px] ${index === 3 ? 'bg-white text-[#2563ff]' : 'text-[#6b7280]'}`}>
               <span className="h-2 w-2 rounded-full bg-current" />
               {item}
             </div>
@@ -113,25 +113,25 @@ function DashboardVisual() {
               ['Articles in production', '17', '+6%'],
               ['SEO score', '91', '+11%'],
             ].map(([label, value, delta]) => (
-              <div key={label} className="rounded-[8px] border border-border p-3">
-                <p className="text-[11px] text-secondary">{label}</p>
+              <div key={label} className="rounded-[8px] border border-[#e8ebf0] p-3">
+                <p className="text-[11px] text-[#6b7280]">{label}</p>
                 <div className="mt-2 flex items-end justify-between">
-                  <span className="text-[24px] font-semibold text-primary">{value}</span>
-                  <span className="text-[11px] font-semibold text-success">{delta}</span>
+                  <span className="text-[24px] font-semibold text-[#111827]">{value}</span>
+                  <span className="text-[11px] font-semibold text-[#047857]">{delta}</span>
                 </div>
               </div>
             ))}
           </div>
-          <div className="rounded-[8px] border border-border p-3">
+          <div className="rounded-[8px] border border-[#e8ebf0] p-3">
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-[12px] font-semibold text-primary">Production workflow</p>
-              <span className="text-[11px] text-secondary">Updated now</span>
+              <p className="text-[12px] font-semibold text-[#111827]">Production workflow</p>
+              <span className="text-[11px] text-[#6b7280]">Updated now</span>
             </div>
             <div className="grid gap-2 sm:grid-cols-3">
               {['Outline', 'Writing', 'SEO review'].map((stage, index) => (
-                <div key={stage} className="min-h-24 rounded-[8px] bg-surface p-2">
-                  <p className="mb-2 text-[11px] font-semibold text-secondary">{stage}</p>
-                  <div className="rounded-[6px] bg-bg p-2 text-[12px] text-primary shadow-card">
+                <div key={stage} className="min-h-24 rounded-[8px] bg-[#f6f7f9] p-2">
+                  <p className="mb-2 text-[11px] font-semibold text-[#5f6368]">{stage}</p>
+                  <div className="rounded-[8px] bg-white p-2 text-[12px] text-[#111827] shadow-[0_1px_0_rgba(17,24,39,0.04)]">
                     {['AI brief validated', 'Draft in progress', 'Meta tags ready'][index]}
                   </div>
                 </div>
@@ -140,25 +140,25 @@ function DashboardVisual() {
           </div>
         </main>
         <aside className="grid gap-3">
-          <div className="rounded-[8px] border border-border p-3">
-            <p className="text-[12px] font-semibold text-primary">Traffic sources</p>
+          <div className="rounded-[8px] border border-[#e8ebf0] p-3">
+            <p className="text-[12px] font-semibold text-[#111827]">Traffic sources</p>
             {[
               ['Organic', '62%'],
               ['Direct', '21%'],
               ['Referral', '17%'],
             ].map(([label, value]) => (
               <div key={label} className="mt-3">
-                <div className="mb-1 flex justify-between text-[11px] text-secondary"><span>{label}</span><span>{value}</span></div>
-                <div className="h-1.5 rounded-full bg-surface-soft"><div className="h-full rounded-full bg-accent" style={{ width: value }} /></div>
+                <div className="mb-1 flex justify-between text-[11px] text-[#6b7280]"><span>{label}</span><span>{value}</span></div>
+                <div className="h-1.5 rounded-full bg-[#eef0f4]"><div className="h-full rounded-full bg-[#2563ff]" style={{ width: value }} /></div>
               </div>
             ))}
           </div>
-          <div className="rounded-[8px] border border-border p-3">
-            <p className="text-[12px] font-semibold text-primary">Quality gates</p>
-            <div className="mt-3 grid gap-2 text-[12px] text-secondary">
-              <span className="flex items-center gap-2"><Check size={14} className="text-success" /> No placeholder content</span>
-              <span className="flex items-center gap-2"><Check size={14} className="text-success" /> SEO review attached</span>
-              <span className="flex items-center gap-2"><Check size={14} className="text-success" /> Ready for publish</span>
+          <div className="rounded-[8px] border border-[#e8ebf0] p-3">
+            <p className="text-[12px] font-semibold text-[#111827]">Quality gates</p>
+            <div className="mt-3 grid gap-2 text-[12px] text-[#374151]">
+              <span className="flex items-center gap-2"><Check size={14} className="text-[#047857]" /> No placeholder content</span>
+              <span className="flex items-center gap-2"><Check size={14} className="text-[#047857]" /> SEO review attached</span>
+              <span className="flex items-center gap-2"><Check size={14} className="text-[#047857]" /> Ready for publish</span>
             </div>
           </div>
         </aside>
@@ -169,28 +169,28 @@ function DashboardVisual() {
 
 function FeatureCard({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
   return (
-    <div className="rounded-[8px] border border-border bg-bg p-5">
-      <span className="mb-4 flex h-9 w-9 items-center justify-center rounded-[8px] bg-brand-soft text-accent">{icon}</span>
-      <h3 className="text-[16px] font-semibold text-primary">{title}</h3>
-      <p className="mt-2 text-[13px] leading-6 text-secondary">{children}</p>
+    <div className="rounded-[8px] border border-[#e5e7eb] bg-white p-5">
+      <span className="mb-4 flex h-9 w-9 items-center justify-center rounded-[8px] bg-[#f1f5ff] text-[#2563ff]">{icon}</span>
+      <h3 className="text-[16px] font-semibold text-[#111827]">{title}</h3>
+      <p className="mt-2 text-[13px] leading-6 text-[#6b7280]">{children}</p>
     </div>
   )
 }
 
 export function LandingPage() {
   return (
-    <div className="min-h-screen bg-surface text-primary">
+    <div className="min-h-screen bg-[#f7f8fb] text-[#111827]">
       <PublicNav />
       <main>
-        <section className="relative overflow-hidden border-y border-border bg-surface px-4 pt-16">
+        <section className="relative overflow-hidden border-y border-[#e5e7eb] bg-[#f7f8fb] px-4 pt-16">
           <div className="mx-auto flex min-h-[680px] max-w-6xl flex-col items-center">
-            <p className="rounded-full border border-border bg-bg px-3 py-1 text-center text-[12px] font-semibold text-accent">{t.hero.eyebrow}</p>
-            <h1 className="mt-5 max-w-4xl text-center text-[44px] font-semibold leading-[1.04] text-primary sm:text-[64px]">
+            <p className="rounded-full border border-[#dfe3ea] bg-white px-3 py-1 text-center text-[12px] font-semibold text-[#2563ff]">{t.hero.eyebrow}</p>
+            <h1 className="mt-5 max-w-4xl text-center text-[44px] font-semibold leading-[1.04] text-[#101114] sm:text-[64px]">
               {t.hero.title}
             </h1>
-            <p className="mt-5 max-w-2xl text-center text-[16px] leading-7 text-secondary">{t.hero.subtitle}</p>
+            <p className="mt-5 max-w-2xl text-center text-[16px] leading-7 text-[#5f6368]">{t.hero.subtitle}</p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Link to="/register" className="inline-flex h-11 items-center gap-2 rounded-[6px] bg-accent px-5 text-[14px] font-semibold text-bg hover:opacity-90">
+              <Link to="/register" className="inline-flex h-11 items-center gap-2 rounded-[8px] bg-[#2563ff] px-5 text-[14px] font-semibold text-white hover:bg-[#1f54d8]">
                 {t.hero.primary}
                 <ArrowRight size={16} />
               </Link>
@@ -213,12 +213,12 @@ export function LandingPage() {
           </FeatureCard>
         </section>
 
-        <section className="border-y border-border bg-bg px-4 py-20">
+        <section className="border-y border-[#e5e7eb] bg-white px-4 py-20">
           <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
-              <p className="text-[13px] font-semibold text-accent">Connected workflow</p>
-              <h2 className="mt-3 text-[34px] font-semibold leading-tight text-primary">No isolated AI toys. One editorial system.</h2>
-              <p className="mt-4 text-[15px] leading-7 text-secondary">
+              <p className="text-[13px] font-semibold text-[#2563ff]">Connected workflow</p>
+              <h2 className="mt-3 text-[34px] font-semibold leading-tight text-[#111827]">No isolated AI toys. One editorial system.</h2>
+              <p className="mt-4 text-[15px] leading-7 text-[#6b7280]">
                 Ideas Studio is structured around the real path from opportunity to published article: idea discovery, drafting, review, production, publishing and monitoring.
               </p>
             </div>
@@ -229,9 +229,9 @@ export function LandingPage() {
                 ['Public tracking', 'Follow views, sources, devices and countries when tracking is configured.'],
                 ['Quality controls', 'Detect placeholder content, SEO gaps and missing publishing metadata.'],
               ].map(([title, body]) => (
-                <div key={title} className="rounded-[8px] bg-surface p-4">
-                  <p className="text-[14px] font-semibold text-primary">{title}</p>
-                  <p className="mt-2 text-[13px] leading-6 text-secondary">{body}</p>
+                <div key={title} className="rounded-[8px] bg-[#f7f8fb] p-4">
+                  <p className="text-[14px] font-semibold text-[#111827]">{title}</p>
+                  <p className="mt-2 text-[13px] leading-6 text-[#6b7280]">{body}</p>
                 </div>
               ))}
             </div>
@@ -283,16 +283,16 @@ export function PricingPage() {
     <PublicShell title="Pricing" subtitle="Simple plans for editorial teams. Prices are placeholders until billing is connected.">
       <div className="grid gap-4 lg:grid-cols-3">
         {plans.map(({ name, price, intro, items }) => (
-          <div key={name} className="rounded-[8px] border border-border bg-bg p-6">
-            <p className="text-[15px] font-semibold text-primary">{name}</p>
-            <p className="mt-4 text-[34px] font-semibold text-primary">{price}</p>
-            <p className="mt-3 min-h-16 text-[13px] leading-6 text-secondary">{intro}</p>
-            <div className="mt-6 grid gap-2 text-[13px] text-secondary">
+          <div key={name} className="rounded-[8px] border border-[#e5e7eb] bg-white p-6">
+            <p className="text-[15px] font-semibold text-[#111827]">{name}</p>
+            <p className="mt-4 text-[34px] font-semibold text-[#111827]">{price}</p>
+            <p className="mt-3 min-h-16 text-[13px] leading-6 text-[#6b7280]">{intro}</p>
+            <div className="mt-6 grid gap-2 text-[13px] text-[#374151]">
               {items.map((item) => (
-                <span key={item} className="flex items-center gap-2"><Check size={14} className="text-success" /> {item}</span>
+                <span key={item} className="flex items-center gap-2"><Check size={14} className="text-[#047857]" /> {item}</span>
               ))}
             </div>
-            <Link to="/register" className="mt-6 inline-flex h-10 w-full items-center justify-center rounded-[6px] bg-accent text-[13px] font-semibold text-bg hover:opacity-90">
+            <Link to="/register" className="mt-6 inline-flex h-10 w-full items-center justify-center rounded-[8px] bg-[#2563ff] text-[13px] font-semibold text-white hover:bg-[#1f54d8]">
               Start free
             </Link>
           </div>
@@ -310,10 +310,10 @@ export function SupportPage() {
         <FeatureCard icon={<LifeBuoy size={18} />} title="Product help">Send a precise issue summary and the project context to support.</FeatureCard>
         <FeatureCard icon={<ShieldCheck size={18} />} title="Security">Report sensitive deployment, key or access issues directly by email.</FeatureCard>
       </div>
-      <div className="mt-8 rounded-[8px] border border-border bg-bg p-5">
-        <p className="text-[15px] font-semibold text-primary">Need help now?</p>
-        <p className="mt-2 text-[13px] leading-6 text-secondary">Use email until the hosted support inbox is connected.</p>
-        <a href={`mailto:${supportEmail}?subject=Ideas%20Studio%20support`} className="mt-4 inline-flex h-10 items-center gap-2 rounded-[6px] bg-accent px-4 text-[13px] font-semibold text-bg hover:opacity-90">
+      <div className="mt-8 rounded-[8px] border border-[#dfe3ea] bg-white p-5">
+        <p className="text-[15px] font-semibold text-[#111827]">Need help now?</p>
+        <p className="mt-2 text-[13px] leading-6 text-[#6b7280]">Use email until the hosted support inbox is connected.</p>
+        <a href={`mailto:${supportEmail}?subject=Ideas%20Studio%20support`} className="mt-4 inline-flex h-10 items-center gap-2 rounded-[8px] bg-[#2563ff] px-4 text-[13px] font-semibold text-white hover:bg-[#1f54d8]">
           <Mail size={15} />
           Email support
         </a>
@@ -329,7 +329,7 @@ export function ContactPage() {
         <FeatureCard icon={<Mail size={18} />} title="Email">Write to support@ideasstudio.ai for product and deployment questions.</FeatureCard>
         <FeatureCard icon={<MessageSquare size={18} />} title="Implementation">Share your CMS, hosting target, AI provider and launch deadline.</FeatureCard>
       </div>
-      <a href={`mailto:${supportEmail}?subject=Ideas%20Studio%20contact`} className="mt-8 inline-flex h-10 items-center gap-2 rounded-[6px] bg-accent px-4 text-[13px] font-semibold text-bg hover:opacity-90">
+      <a href={`mailto:${supportEmail}?subject=Ideas%20Studio%20contact`} className="mt-8 inline-flex h-10 items-center gap-2 rounded-[8px] bg-[#2563ff] px-4 text-[13px] font-semibold text-white hover:bg-[#1f54d8]">
         <Mail size={15} />
         Contact us
       </a>
@@ -346,11 +346,11 @@ export function LegalPage({ kind }: { kind: 'privacy' | 'terms' | 'security' }) 
 
   return (
     <PublicShell title={content[0]} subtitle="Plain-language product policy draft for launch readiness.">
-      <div className="rounded-[8px] border border-border bg-bg p-6">
-        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[8px] bg-brand-soft text-accent">
+      <div className="rounded-[8px] border border-[#e5e7eb] bg-white p-6">
+        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#f1f5ff] text-[#2563ff]">
           {kind === 'security' ? <Lock size={18} /> : <ShieldCheck size={18} />}
         </div>
-        <p className="text-[14px] leading-7 text-secondary">{content[1]}</p>
+        <p className="text-[14px] leading-7 text-[#4b5563]">{content[1]}</p>
       </div>
     </PublicShell>
   )
@@ -358,12 +358,12 @@ export function LegalPage({ kind }: { kind: 'privacy' | 'terms' | 'security' }) 
 
 function PublicShell({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-surface text-primary">
+    <div className="min-h-screen bg-[#f7f8fb] text-[#111827]">
       <PublicNav />
       <main className="mx-auto max-w-6xl px-4 py-16">
         <div className="mb-10 max-w-3xl">
-          <h1 className="text-[42px] font-semibold leading-tight text-primary">{title}</h1>
-          <p className="mt-4 text-[16px] leading-7 text-secondary">{subtitle}</p>
+          <h1 className="text-[42px] font-semibold leading-tight text-[#101114]">{title}</h1>
+          <p className="mt-4 text-[16px] leading-7 text-[#6b7280]">{subtitle}</p>
         </div>
         {children}
       </main>

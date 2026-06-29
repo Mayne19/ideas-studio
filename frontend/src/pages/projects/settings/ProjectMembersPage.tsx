@@ -117,7 +117,7 @@ function MemberRow({
   const isOwnerMember = member.role === 'owner'
 
   return (
-    <div className="flex items-center gap-3 rounded-[8px] bg-surface px-4 py-3">
+    <div className="flex items-center gap-3 rounded-[14px] bg-[#f9f9fb] px-4 py-3">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent text-[12px] font-semibold">
         {displayName.charAt(0).toUpperCase()}
       </div>
@@ -137,7 +137,7 @@ function MemberRow({
         <div className="flex items-center gap-1">
           <button
             onClick={() => onEditRole(member)}
-            className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
+            className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors"
             title="Modifier le rôle"
           >
             <Edit2 size={13} />
@@ -313,7 +313,7 @@ export default function ProjectMembersPage() {
         {status === 'loading' && (
           <div className="flex flex-col gap-2">
             {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 w-full rounded-[8px]" />
+              <Skeleton key={i} className="h-14 w-full rounded-[14px]" />
             ))}
           </div>
         )}
@@ -343,7 +343,7 @@ export default function ProjectMembersPage() {
       </FormCard>
 
       {revokeSuccess && (
-        <div className="rounded-[6px] bg-success/10 px-3.5 py-2.5 text-[13px] text-success">
+        <div className="rounded-[10px] bg-success/10 px-3.5 py-2.5 text-[13px] text-[#1a7a3a]">
           {revokeSuccess}
         </div>
       )}
@@ -361,7 +361,7 @@ export default function ProjectMembersPage() {
               return (
                 <div
                   key={invitation.id}
-                  className="flex items-center gap-3 rounded-[8px] bg-surface px-4 py-3"
+                  className="flex items-center gap-3 rounded-[14px] bg-[#f9f9fb] px-4 py-3"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-medium text-primary truncate">
@@ -380,10 +380,10 @@ export default function ProjectMembersPage() {
                   <span
                     className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
                       accepted
-                        ? 'bg-success/10 text-success'
+                        ? 'bg-success/10 text-[#1a7a3a]'
                         : expired
                           ? 'bg-danger/10 text-danger'
-                          : 'bg-warning/10 text-warning'
+                          : 'bg-warning/10 text-[#c07000]'
                     }`}
                   >
                     {accepted
@@ -400,7 +400,7 @@ export default function ProjectMembersPage() {
                             `${window.location.origin}/invitations/${invitation.token}`,
                           )
                         }}
-                        className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
+                        className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors"
                         title="Copier le lien d'invitation"
                       >
                         <Link size={13} />
@@ -430,9 +430,9 @@ export default function ProjectMembersPage() {
             const RoleIcon = item.icon
 
             return (
-              <div key={item.role} className="flex flex-col rounded-[8px] bg-surface px-3 py-2.5">
+              <div key={item.role} className="flex flex-col rounded-[14px] bg-[#f9f9fb] px-3 py-2.5">
                 <div className="flex items-center gap-1.5">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-bg text-tertiary">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[8px] bg-white text-tertiary">
                     <RoleIcon size={13} />
                   </span>
                   <p className="text-[12px] font-semibold text-primary">{item.title}</p>
@@ -458,13 +458,13 @@ export default function ProjectMembersPage() {
         {activityStatus === 'loading' && (
           <div className="flex flex-col gap-2">
             {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full rounded-[6px]" />
+              <Skeleton key={i} className="h-10 w-full rounded-[10px]" />
             ))}
           </div>
         )}
         {activityStatus === 'error' && (
-          <div className="flex items-start gap-3 rounded-[8px] bg-surface px-4 py-4">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-surface-soft text-tertiary">
+          <div className="flex items-start gap-3 rounded-[16px] bg-[#f9f9fb] px-4 py-4">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-[#f0f0f2] text-tertiary">
               <Activity size={16} />
             </span>
             <div>
@@ -476,8 +476,8 @@ export default function ProjectMembersPage() {
           </div>
         )}
         {activityStatus === 'success' && activityLogs.length === 0 && (
-          <div className="flex items-start gap-3 rounded-[8px] bg-surface px-4 py-4">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-surface-soft text-tertiary">
+          <div className="flex items-start gap-3 rounded-[16px] bg-[#f9f9fb] px-4 py-4">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-[#f0f0f2] text-tertiary">
               <Activity size={16} />
             </span>
             <div>
@@ -491,7 +491,7 @@ export default function ProjectMembersPage() {
         {activityStatus === 'success' && activityLogs.length > 0 && (
           <div className="flex flex-col gap-1.5">
             {activityLogs.map((log) => (
-              <div key={log.id} className="flex items-start gap-3 rounded-[6px] bg-surface px-3 py-2.5">
+              <div key={log.id} className="flex items-start gap-3 rounded-[10px] bg-[#f9f9fb] px-3 py-2.5">
                 <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent text-[9px] font-bold">
                   {(log.user_name || '?').charAt(0).toUpperCase()}
                 </div>
@@ -517,20 +517,20 @@ export default function ProjectMembersPage() {
       >
         <form onSubmit={handleAdd} className="flex flex-col gap-4">
           {addError && (
-            <div className="rounded-[6px] bg-danger/10 border border-danger/20 px-3.5 py-2.5 text-[13px] text-danger">
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
               {addError}
             </div>
           )}
 
           {/* Toggle between username and email */}
-          <div className="flex rounded-[6px] border border-border overflow-hidden">
+          <div className="flex rounded-[10px] border border-border overflow-hidden">
             <button
               type="button"
               onClick={() => setAddType('username')}
               className={`flex-1 px-3 py-2 text-[12px] font-medium transition-colors ${
                 addType === 'username'
-                  ? 'bg-primary text-bg'
-                  : 'bg-surface-soft text-tertiary hover:text-secondary'
+                  ? 'bg-accent text-white'
+                  : 'bg-[#f5f5f7] text-tertiary hover:text-secondary'
               }`}
             >
               <AtSign size={13} className="inline mr-1" />
@@ -541,8 +541,8 @@ export default function ProjectMembersPage() {
               onClick={() => setAddType('email')}
               className={`flex-1 px-3 py-2 text-[12px] font-medium transition-colors ${
                 addType === 'email'
-                  ? 'bg-primary text-bg'
-                  : 'bg-surface-soft text-tertiary hover:text-secondary'
+                  ? 'bg-accent text-white'
+                  : 'bg-[#f5f5f7] text-tertiary hover:text-secondary'
               }`}
             >
               <Mail size={13} className="inline mr-1" />
@@ -611,7 +611,7 @@ export default function ProjectMembersPage() {
       >
         <form onSubmit={handleEditRole} className="flex flex-col gap-4">
           {editError && (
-            <div className="rounded-[6px] bg-danger/10 border border-danger/20 px-3.5 py-2.5 text-[13px] text-danger">
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
               {editError}
             </div>
           )}

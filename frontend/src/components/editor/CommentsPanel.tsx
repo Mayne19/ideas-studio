@@ -49,11 +49,11 @@ function CommentItem({
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') onSelect?.(comment)
       }}
-      className={`rounded-[8px] border p-3 text-left transition-colors ${
+      className={`rounded-[10px] border p-3 text-left transition-colors ${
         selected
           ? 'border-accent bg-accent/6'
           : comment.resolved
-            ? 'border-border bg-surface opacity-65'
+            ? 'border-border bg-[#f9f9fb] opacity-65'
             : 'border-border bg-surface'
       } ${onSelect ? 'cursor-pointer hover:border-accent/50' : ''}`}
     >
@@ -69,8 +69,8 @@ function CommentItem({
             disabled={toggling}
             className={`flex h-5 w-5 items-center justify-center rounded-full transition-colors ${
               comment.resolved
-                ? 'bg-success/10 text-success'
-                : 'text-tertiary hover:bg-success/10 hover:text-success'
+                ? 'bg-success/10 text-[#1a7a3a]'
+                : 'text-tertiary hover:bg-success/10 hover:text-[#1a7a3a]'
             }`}
             title={comment.resolved ? 'Resolu' : 'Valider le commentaire'}
           >
@@ -96,7 +96,7 @@ function CommentItem({
       )}
       <p className="text-[12px] leading-snug text-primary">{comment.text}</p>
       {comment.resolved && (
-        <span className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-success">
+        <span className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-[#1a7a3a]">
           <Check size={9} />
           Resolu
         </span>
@@ -161,7 +161,7 @@ export default function CommentsPanel({
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="rounded-[6px] bg-surface px-2.5 py-2 text-[11px] leading-snug text-secondary">
+      <p className="rounded-[8px] bg-[#f9f9fb] px-2.5 py-2 text-[11px] leading-snug text-secondary">
         Pour ajouter un commentaire, passez en mode Commentaire et selectionnez un passage dans l'article.
       </p>
 

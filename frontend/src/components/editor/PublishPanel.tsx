@@ -178,18 +178,18 @@ export default function PublishPanel({
         )}
 
         {scheduleOpen && (
-          <div className="rounded-[6px] border border-border bg-surface p-3 flex flex-col gap-2">
+          <div className="rounded-[10px] border border-border bg-[#f9f9fb] p-3 flex flex-col gap-2">
             <label className="text-[11px] text-secondary">Date et heure de publication</label>
             <input
               type="datetime-local"
               value={scheduleDate}
               onChange={(e) => setScheduleDate(e.target.value)}
-              className="w-full rounded-[6px] border border-border bg-bg px-2.5 py-1.5 text-[12px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+              className="w-full rounded-[8px] border border-border bg-white px-2.5 py-1.5 text-[12px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
             />
             <div className="flex gap-1.5">
               <button
                 onClick={() => { setScheduleOpen(false); setScheduleDate('') }}
-                className="flex-1 rounded-[6px] border border-border py-1.5 text-[11px] text-secondary hover:bg-surface-soft transition-colors"
+                className="flex-1 rounded-[8px] border border-border py-1.5 text-[11px] text-secondary hover:bg-[#e5e5e7] transition-colors"
               >
                 Annuler
               </button>

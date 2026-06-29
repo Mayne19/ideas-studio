@@ -78,7 +78,7 @@ export default function EditorialSetupAssistant({ projectId, open, onClose, onAp
     <Modal open={open} onClose={handleClose} title="Assistant de configuration éditoriale" size="lg">
       <div className="flex flex-col gap-4">
         {error && (
-          <div className="rounded-[6px] bg-danger/10 border border-danger/20 px-3.5 py-2.5 text-[13px] text-danger flex items-start gap-2">
+          <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger flex items-start gap-2">
             <AlertCircle size={14} className="mt-0.5 shrink-0" />
             <span>{error}</span>
           </div>
@@ -86,7 +86,7 @@ export default function EditorialSetupAssistant({ projectId, open, onClose, onAp
 
         {step === 'idle' && (
           <div className="flex flex-col gap-4">
-            <div className="rounded-[8px] bg-surface p-5 flex flex-col items-center gap-3 text-center">
+            <div className="rounded-[16px] bg-[#f9f9fb] p-5 flex flex-col items-center gap-3 text-center">
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent">
                 <Wand2 size={22} />
               </span>
@@ -118,19 +118,19 @@ export default function EditorialSetupAssistant({ projectId, open, onClose, onAp
         {step === 'done' && (
           <div className="flex flex-col gap-4 max-h-[60vh] overflow-y-auto pr-1">
             {source === 'llm' ? (
-              <div className="flex items-center gap-2 rounded-[6px] bg-brand-soft px-3.5 py-2.5 text-[12px] text-accent font-medium">
+              <div className="flex items-center gap-2 rounded-[10px] bg-accent/8 px-3.5 py-2.5 text-[12px] text-accent font-medium">
                 <Sparkles size={13} />
                 Suggéré par l'intelligence artificielle
               </div>
             ) : (
-              <div className="flex items-center gap-2 rounded-[6px] bg-surface-soft px-3.5 py-2.5 text-[12px] text-secondary font-medium">
+              <div className="flex items-center gap-2 rounded-[10px] bg-[#f0f0f2] px-3.5 py-2.5 text-[12px] text-secondary font-medium">
                 <Info size={13} />
                 Suggestions basées sur l'analyse du site
               </div>
             )}
 
             {/* Sources */}
-            <details className="rounded-[8px] border border-border bg-surface px-3 py-2.5">
+            <details className="rounded-[12px] border border-border bg-[#f9f9fb] px-3 py-2.5">
               <summary className="cursor-pointer text-[12px] font-medium text-secondary hover:text-primary">
                 Sources utilisées
               </summary>

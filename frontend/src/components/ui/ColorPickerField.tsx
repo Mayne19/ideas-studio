@@ -19,7 +19,7 @@ export default function ColorPickerField({
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
         <label className="text-[13px] font-medium text-primary">{label}</label>
-        <div className="flex items-center gap-2 rounded-[6px] border border-border bg-surface px-2 py-1">
+        <div className="flex items-center gap-2 rounded-[10px] border border-border bg-[#f9f9fb] px-2 py-1">
           <span
             className="h-4 w-4 rounded-full border border-black/10"
             style={{ backgroundColor: selected }}
@@ -44,7 +44,7 @@ export default function ColorPickerField({
               key={color.value}
               type="button"
               onClick={() => onChange(color.value)}
-              className={`flex h-8 items-center justify-center rounded-[6px] border bg-white transition-all ${
+              className={`flex h-8 items-center justify-center rounded-[10px] border bg-white transition-all ${
                 selected.toLowerCase() === color.value.toLowerCase()
                   ? 'border-primary ring-2 ring-accent/20'
                   : 'border-black/5 hover:scale-[1.03]'
@@ -68,7 +68,7 @@ export default function ColorPickerField({
           value={rawValue}
           onChange={(event) => onChange(event.target.value)}
           placeholder="#2563eb"
-          className={`h-10 rounded-[6px] border bg-bg px-3 font-mono text-[13px] uppercase outline-none transition-colors ${
+          className={`h-10 rounded-[12px] border bg-white px-3 font-mono text-[13px] uppercase outline-none transition-colors ${
             isManualValid || rawValue.trim() === ''
               ? 'border-border text-primary focus:border-accent/60 focus:ring-1 focus:ring-accent/25'
               : 'border-danger/40 text-danger focus:border-danger/50 focus:ring-1 focus:ring-danger/20'

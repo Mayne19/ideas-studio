@@ -56,7 +56,7 @@ function InfoRow({
   mono?: boolean
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 rounded-[8px] bg-surface px-4 py-3">
+    <div className="flex items-start justify-between gap-3 rounded-[12px] bg-[#f9f9fb] px-4 py-3">
       <div className="min-w-0 flex-1">
         <p className="text-[11px] font-medium uppercase tracking-wider text-tertiary">{label}</p>
         <p className={`mt-0.5 truncate text-[13px] text-primary ${mono ? 'font-mono' : ''}`}>{value}</p>
@@ -187,16 +187,16 @@ export default function ProjectIntegrationPage() {
       <FormCard title="Statut de connexion">
         <div className="flex flex-col gap-3">
           <div
-            className={`flex flex-wrap items-center justify-between gap-3 rounded-[8px] px-4 py-3 ${
-              isConnected ? 'bg-success/10' : 'bg-surface'
+            className={`flex flex-wrap items-center justify-between gap-3 rounded-[14px] px-4 py-3 ${
+              isConnected ? 'bg-success/8' : 'bg-[#f9f9fb]'
             }`}
           >
             <div className="flex min-w-0 items-center gap-3">
-              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] ${isConnected ? 'bg-success/10 text-success' : 'bg-surface-soft text-tertiary'}`}>
+              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] ${isConnected ? 'bg-success/10 text-success' : 'bg-[#f0f0f2] text-tertiary'}`}>
                 {isConnected ? <Wifi size={18} /> : <WifiOff size={18} />}
               </span>
               <div className="min-w-0">
-                <p className={`text-[14px] font-semibold ${isConnected ? 'text-success' : 'text-primary'}`}>
+                <p className={`text-[14px] font-semibold ${isConnected ? 'text-[#1a7a3a]' : 'text-primary'}`}>
                   {isConnected ? 'Site connecté' : 'En attente de connexion'}
                 </p>
                 <p className="text-[12px] text-secondary">
@@ -220,7 +220,7 @@ export default function ProjectIntegrationPage() {
               <button
                 onClick={() => loadInfo({ quiet: true })}
                 disabled={isRefreshing}
-                className="inline-flex items-center gap-1.5 rounded-[6px] bg-surface-soft px-3 py-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-muted hover:text-primary disabled:cursor-wait disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 rounded-[8px] bg-[#f0f0f2] px-3 py-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-[#e5e5e7] hover:text-primary disabled:cursor-wait disabled:opacity-60"
               >
                 <RefreshCw size={12} className={isRefreshing ? 'animate-spin' : ''} />
                 Rafraîchir le statut
@@ -228,7 +228,7 @@ export default function ProjectIntegrationPage() {
               {isConnected && (
                 <button
                   onClick={() => setDisconnectOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-[6px] bg-danger/10 px-3 py-1.5 text-[12px] font-medium text-danger hover:bg-danger/20 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-[8px] bg-danger/8 px-3 py-1.5 text-[12px] font-medium text-danger hover:bg-danger/12 transition-colors"
                 >
                   <Power size={12} />
                   Déconnecter
@@ -274,7 +274,7 @@ export default function ProjectIntegrationPage() {
       {isConnected && (
         <button
           onClick={() => setShowInstructions((visible) => !visible)}
-          className="inline-flex w-fit items-center gap-2 rounded-[6px] bg-primary px-4 py-2.5 text-[13px] font-semibold text-bg transition-colors hover:opacity-90"
+          className="inline-flex w-fit items-center gap-2 rounded-[12px] bg-accent px-4 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-accent/90"
         >
           <Code2 size={14} />
           {showInstructions ? 'Masquer les instructions d’installation' : 'Voir les instructions d’installation'}
@@ -312,14 +312,14 @@ export default function ProjectIntegrationPage() {
           >
             <div className="flex flex-col gap-3">
               <div className="relative">
-                <div className="flex items-center justify-between rounded-t-[8px] bg-surface-soft px-3.5 py-2">
+                <div className="flex items-center justify-between rounded-t-[12px] bg-[#f0f0f2] px-3.5 py-2">
                   <div className="flex items-center gap-2 text-[12px] text-secondary">
                     <Code2 size={13} />
                     HTML
                   </div>
                   <CopyButton value={info?.snippet ?? ''} disabled={!info?.snippet} />
                 </div>
-                <pre className="overflow-x-auto rounded-b-[8px] bg-[#1d1d1f] p-4 text-[12px] leading-relaxed text-[#e5e5e7]">
+                <pre className="overflow-x-auto rounded-b-[12px] bg-[#1d1d1f] p-4 text-[12px] leading-relaxed text-[#e5e5e7]">
                   <code>{info?.snippet}</code>
                 </pre>
               </div>
@@ -338,7 +338,7 @@ export default function ProjectIntegrationPage() {
             {Object.entries(info.public_api_endpoints).map(([key, url]) => (
               <div
                 key={key}
-                className="flex items-start justify-between gap-3 rounded-[8px] bg-surface px-4 py-3"
+                className="flex items-start justify-between gap-3 rounded-[12px] bg-[#f9f9fb] px-4 py-3"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-tertiary">
@@ -376,7 +376,7 @@ export default function ProjectIntegrationPage() {
                   })
                 }}
                 placeholder="https://www.votresite.com"
-                className="rounded-[6px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
               />
             </label>
             <label className="flex flex-col gap-1.5">
@@ -391,7 +391,7 @@ export default function ProjectIntegrationPage() {
                   }))
                 }}
                 placeholder="https://www.votresite.com/api/ideas-studio/revalidate"
-                className="rounded-[6px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
               />
               {!revalidateForm.revalidate_url && (
                 <span className="text-[11px] text-tertiary">
@@ -409,7 +409,7 @@ export default function ProjectIntegrationPage() {
               onChange={(event) => setRevalidateForm((form) => ({ ...form, revalidate_secret: event.target.value }))}
               placeholder={info?.revalidate_secret_configured ? 'Laisser vide pour conserver le secret actuel' : 'Secret partagé avec le site public'}
               type="password"
-              className="rounded-[6px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+              className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
             />
           </label>
           <div className="grid gap-2 lg:grid-cols-3">
@@ -426,7 +426,7 @@ export default function ProjectIntegrationPage() {
             <button
               type="submit"
               disabled={savingRevalidate}
-              className="inline-flex items-center gap-2 rounded-[6px] bg-primary px-4 py-2 text-[12px] font-semibold text-bg hover:opacity-90 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-[10px] bg-accent px-4 py-2 text-[12px] font-semibold text-white hover:bg-accent/90 disabled:opacity-50"
             >
               {savingRevalidate ? 'Sauvegarde...' : 'Sauvegarder la revalidation'}
             </button>
@@ -434,7 +434,7 @@ export default function ProjectIntegrationPage() {
               type="button"
               disabled={manualRevalidating}
               onClick={handleManualRevalidate}
-              className="inline-flex items-center gap-2 rounded-[6px] bg-surface-soft px-4 py-2 text-[12px] font-semibold text-secondary hover:text-primary disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-[10px] bg-surface-soft px-4 py-2 text-[12px] font-semibold text-secondary hover:text-primary disabled:opacity-50"
             >
               <RefreshCw size={13} className={manualRevalidating ? 'animate-spin' : ''} />
               Relancer la revalidation
@@ -444,7 +444,7 @@ export default function ProjectIntegrationPage() {
       </FormCard>
 
       {/* Key notice */}
-      <div className="flex items-start gap-2.5 rounded-[8px] bg-surface px-4 py-3">
+      <div className="flex items-start gap-2.5 rounded-[16px] bg-[#f9f9fb] px-4 py-3">
         <Key size={14} className="mt-0.5 shrink-0 text-tertiary" />
         <p className="text-[12px] text-secondary leading-relaxed">
           La clé API secrète n'est jamais renvoyée en clair au frontend. Utilisez uniquement les valeurs publiques pour le tracking et contactez un administrateur si une rotation de clé est nécessaire.

@@ -70,7 +70,7 @@ function RouteErrorFallback() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-app px-4">
-      <div className="w-full max-w-md rounded-[8px] border border-border bg-surface p-6 text-center shadow-soft">
+      <div className="w-full max-w-md rounded-[18px] border border-border bg-surface p-6 text-center shadow-soft">
         <p className="text-[15px] font-semibold text-primary">
           {isChunkError ? "L'application vient d'être mise à jour." : 'Impossible de charger cette page.'}
         </p>
@@ -85,7 +85,7 @@ function RouteErrorFallback() {
             window.sessionStorage.removeItem(`ideas-studio:chunk-reload:${window.location.pathname}`)
             window.location.reload()
           }}
-          className="mt-4 rounded-[6px] bg-primary px-4 py-2 text-[13px] font-medium text-bg transition-colors hover:opacity-90"
+          className="mt-4 rounded-[10px] bg-accent px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-accent/90"
         >
           Rafraîchir
         </button>

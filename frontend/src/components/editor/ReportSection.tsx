@@ -37,7 +37,7 @@ export function ReportSection({ title, data }: { title: string; data: unknown })
   const entries = Object.entries(parsed).filter(([k]) => !k.startsWith('_'))
 
   return (
-    <details className="group rounded-[6px] border border-border bg-surface">
+    <details className="group rounded-[10px] border border-border bg-surface">
       <summary className="flex cursor-pointer items-center justify-between px-3 py-2 text-[11px] font-medium text-secondary hover:text-primary">
         <span>{title}</span>
         <span className="text-[10px] text-tertiary">{entries.length} champs</span>

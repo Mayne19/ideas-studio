@@ -1142,7 +1142,7 @@ export default function ArticleEditorPage() {
           </span>
           <div className="flex items-center gap-2">
             <button onClick={() => blocker.reset?.()} className="rounded-[6px] px-2.5 py-1 text-[11px] font-medium text-warning hover:bg-warning/10">Rester</button>
-            <button onClick={() => blocker.proceed?.()} className="rounded-[6px] px-2.5 py-1 text-[11px] font-medium text-danger hover:bg-danger/10">Quitter</button>
+            <button onClick={() => blocker.proceed?.()} className="rounded-[6px] px-2.5 py-1 text-[11px] font-medium text-danger hover:bg-danger/8">Quitter</button>
           </div>
         </div>
       )}
@@ -1151,7 +1151,7 @@ export default function ArticleEditorPage() {
       {(isGenerating || generationTimedOut) && (
         <div className="flex flex-1 items-center justify-center">
           <div className="flex flex-col items-center gap-4 text-center max-w-xs">
-            <div className={`flex h-12 w-12 items-center justify-center rounded-[8px] ${generationTimedOut ? 'bg-danger/10' : 'bg-accent/10'}`}>
+            <div className={`flex h-12 w-12 items-center justify-center rounded-[16px] ${generationTimedOut ? 'bg-danger/8' : 'bg-accent/10'}`}>
               {generationTimedOut
                 ? <AlertCircle size={22} className="text-danger" />
                 : <Loader2 size={22} className="animate-spin text-accent" />
@@ -1170,8 +1170,8 @@ export default function ArticleEditorPage() {
             </div>
             <button
               onClick={handleRefreshGeneration}
-              className={`flex items-center gap-1.5 rounded-[6px] px-4 py-2 text-[13px] font-medium transition-colors ${
-                generationTimedOut ? 'bg-primary text-bg hover:opacity-90' : 'bg-surface-soft text-secondary hover:bg-surface-muted'
+              className={`flex items-center gap-1.5 rounded-[10px] px-4 py-2 text-[13px] font-medium transition-colors ${
+                generationTimedOut ? 'bg-accent text-white hover:bg-accent/90' : 'bg-[#f0f0f2] text-secondary hover:bg-[#e5e5e7]'
               }`}
             >
               <RefreshCw size={13} />
@@ -1189,7 +1189,7 @@ export default function ArticleEditorPage() {
         <div className="grid min-h-0 flex-1 grid-cols-[56px_minmax(0,1fr)_300px] items-start gap-4 overflow-y-auto overflow-x-hidden p-4 max-xl:grid-cols-[52px_minmax(0,1fr)_280px]">
 
           {/* ── LEFT: Toolbar card ── */}
-          <div className="sticky top-0 flex max-h-[calc(100vh-112px)] min-w-0 flex-col overflow-y-auto rounded-[8px] border border-border bg-surface">
+          <div className="sticky top-0 flex max-h-[calc(100vh-112px)] min-w-0 flex-col overflow-y-auto rounded-[14px] border border-border bg-surface">
             <EditorToolbar
               editor={editor}
               projectId={projectId}
@@ -1201,13 +1201,13 @@ export default function ArticleEditorPage() {
           </div>
 
           {/* ── CENTER: Article card ── */}
-          <div className={`flex min-w-0 flex-col overflow-hidden rounded-[8px] border border-border ${!isEditable ? 'bg-app' : 'bg-surface'}`}>
+          <div className={`flex min-w-0 flex-col overflow-hidden rounded-[14px] border border-border ${!isEditable ? 'bg-app' : 'bg-surface'}`}>
 
             {/* Internal bar */}
             <div className="flex items-center justify-between gap-2 px-4 py-2 border-b border-border shrink-0 bg-surface">
               {/* Left: back + autosave */}
               <div className="flex items-center gap-2 min-w-0">
-                <div className="flex rounded-[6px] bg-surface-soft p-1">
+                <div className="flex rounded-[10px] bg-[#f0f0f2] p-1">
                   {([
                     { mode: 'read' as ViewMode, label: 'Lecture', icon: <BookOpen size={12} /> },
                     { mode: 'edit' as ViewMode, label: 'Édition', icon: <PencilLine size={12} /> },
@@ -1247,8 +1247,8 @@ export default function ArticleEditorPage() {
                       onClick={() => setViewMode(mode)}
                       className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium transition-colors ${
                         viewMode === mode
-                          ? 'bg-primary text-bg'
-                          : 'text-secondary hover:text-primary hover:bg-surface-soft'
+                          ? 'bg-accent text-white'
+                          : 'text-secondary hover:text-primary hover:bg-[#f0f0f2]'
                       }`}
                     >
                       {icon}
@@ -1264,7 +1264,7 @@ export default function ArticleEditorPage() {
 
                 <button
                   onClick={() => navigate(`/projects/${projectId}/articles/${articleId}/preview`)}
-                  className="flex items-center gap-1 text-[11px] text-secondary hover:text-primary transition-colors rounded-[6px] px-2 py-1 hover:bg-surface-soft"
+                  className="flex items-center gap-1 text-[11px] text-secondary hover:text-primary transition-colors rounded-[6px] px-2 py-1 hover:bg-[#f0f0f2]"
                 >
                   <Eye size={12} />
                   Prévisualiser
@@ -1272,7 +1272,7 @@ export default function ArticleEditorPage() {
                 <button
                   onClick={() => editor?.chain().focus().undo().run()}
                   disabled={!editor?.can().undo()}
-                  className="flex h-7 w-7 items-center justify-center rounded-[7px] text-secondary transition-colors hover:bg-surface-soft hover:text-primary disabled:opacity-35"
+                  className="flex h-7 w-7 items-center justify-center rounded-[7px] text-secondary transition-colors hover:bg-[#f0f0f2] hover:text-primary disabled:opacity-35"
                   title="Annuler"
                 >
                   <Undo2 size={13} />
@@ -1280,7 +1280,7 @@ export default function ArticleEditorPage() {
                 <button
                   onClick={() => editor?.chain().focus().redo().run()}
                   disabled={!editor?.can().redo()}
-                  className="flex h-7 w-7 items-center justify-center rounded-[7px] text-secondary transition-colors hover:bg-surface-soft hover:text-primary disabled:opacity-35"
+                  className="flex h-7 w-7 items-center justify-center rounded-[7px] text-secondary transition-colors hover:bg-[#f0f0f2] hover:text-primary disabled:opacity-35"
                   title="Refaire"
                 >
                   <Redo2 size={13} />
@@ -1335,7 +1335,7 @@ export default function ArticleEditorPage() {
                 {faqOpen && (
                   <div className="mt-3 flex flex-col gap-3">
                     {faqItems.map((item, i) => (
-                      <div key={i} className="rounded-[6px] border border-border bg-surface p-3 flex flex-col gap-2">
+                      <div key={i} className="rounded-[10px] border border-border bg-[#f9f9fb] p-3 flex flex-col gap-2">
                         <div className="flex items-start gap-2">
                           <input
                             type="text"
@@ -1353,7 +1353,7 @@ export default function ArticleEditorPage() {
                           value={item.answer}
                           onChange={(e) => handleFaqChange(i, 'answer', e.target.value)}
                           placeholder="Réponse…"
-                          className="w-full bg-bg rounded-[6px] border border-border px-2.5 py-1.5 text-[13px] text-primary placeholder:text-tertiary resize-none outline-none focus:ring-1 focus:ring-accent/50 focus:border-accent/60 transition-colors"
+                          className="w-full bg-white rounded-[8px] border border-border px-2.5 py-1.5 text-[13px] text-primary placeholder:text-tertiary resize-none outline-none focus:ring-1 focus:ring-accent/50 focus:border-accent/60 transition-colors"
                         />
                       </div>
                     ))}
@@ -1390,7 +1390,7 @@ export default function ArticleEditorPage() {
           </div>
 
           {/* ── RIGHT: Panel card ── */}
-          <div className="sticky top-0 flex max-h-[calc(100vh-112px)] min-w-0 flex-col overflow-hidden rounded-[8px] border border-border bg-surface">
+          <div className="sticky top-0 flex max-h-[calc(100vh-112px)] min-w-0 flex-col overflow-hidden rounded-[14px] border border-border bg-surface">
 
             {/* Tab bar */}
             <div className="flex border-b border-border shrink-0">
@@ -1504,7 +1504,7 @@ export default function ArticleEditorPage() {
                             handleMetaChange('slug', s)
                             slugManuallyEditedRef.current = false
                           }}
-                          className="shrink-0 rounded-[8px] border border-border bg-surface px-2 text-[11px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors"
+                          className="shrink-0 rounded-[8px] border border-border bg-surface px-2 text-[11px] text-secondary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
                           title="Régénérer depuis le titre"
                         >
                           ↻
@@ -1612,7 +1612,7 @@ export default function ArticleEditorPage() {
                         <button
                           onClick={() => void handlePromote()}
                           disabled={busy || actionLoading === 'promote'}
-                          className="w-full rounded-[6px] bg-primary py-2 text-[12px] font-medium text-bg hover:opacity-90 disabled:opacity-40 transition-colors"
+                          className="w-full rounded-[8px] bg-accent py-2 text-[12px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
                         >
                           {actionLoading === 'promote' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
                           Mettre à jour
@@ -1625,7 +1625,7 @@ export default function ArticleEditorPage() {
                       <button
                         onClick={() => doAction('unpublish')}
                         disabled={busy}
-                        className="w-full rounded-[8px] border border-border py-2 text-[12px] font-medium text-secondary hover:bg-surface-soft transition-colors disabled:opacity-40"
+                        className="w-full rounded-[8px] border border-border py-2 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2] transition-colors disabled:opacity-40"
                       >
                         Dépublier
                       </button>
@@ -1641,13 +1641,13 @@ export default function ArticleEditorPage() {
                       <div className="flex rounded-[8px] border border-border overflow-hidden">
                         <button
                           onClick={() => setPublishMode('now')}
-                          className={`flex-1 py-1.5 text-[11px] font-medium transition-colors ${publishMode === 'now' ? 'bg-primary text-bg' : 'text-secondary hover:bg-surface-soft'}`}
+                          className={`flex-1 py-1.5 text-[11px] font-medium transition-colors ${publishMode === 'now' ? 'bg-accent text-white' : 'text-secondary hover:bg-[#f0f0f2]'}`}
                         >
                           Maintenant
                         </button>
                         <button
                           onClick={() => setPublishMode('schedule')}
-                          className={`flex-1 py-1.5 text-[11px] font-medium transition-colors ${publishMode === 'schedule' ? 'bg-primary text-bg' : 'text-secondary hover:bg-surface-soft'}`}
+                          className={`flex-1 py-1.5 text-[11px] font-medium transition-colors ${publishMode === 'schedule' ? 'bg-accent text-white' : 'text-secondary hover:bg-[#f0f0f2]'}`}
                         >
                           Programmer
                         </button>
@@ -1658,7 +1658,7 @@ export default function ArticleEditorPage() {
                           <button
                             onClick={() => doAction('publish')}
                             disabled={busy}
-                            className="w-full rounded-[6px] bg-primary py-2 text-[12px] font-medium text-bg hover:opacity-90 disabled:opacity-40 transition-colors"
+                            className="w-full rounded-[8px] bg-accent py-2 text-[12px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
                           >
                             {actionLoading === 'publish' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
                             Publier maintenant
@@ -1667,7 +1667,7 @@ export default function ArticleEditorPage() {
                       )}
 
                       {publishMode === 'schedule' && (
-                        <div className="flex flex-col gap-2 rounded-[6px] bg-surface border border-border p-3">
+                        <div className="flex flex-col gap-2 rounded-[10px] bg-[#f9f9fb] border border-border p-3">
                           <Field label="Date">
                             <input
                               type="date"
@@ -1687,7 +1687,7 @@ export default function ArticleEditorPage() {
                           <button
                             onClick={handleSchedule}
                             disabled={!scheduleDate || !scheduleTime || busy}
-                            className="w-full rounded-[6px] bg-primary py-1.5 text-[11px] font-medium text-bg hover:opacity-90 disabled:opacity-40 transition-colors"
+                            className="w-full rounded-[8px] bg-accent py-1.5 text-[11px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
                           >
                             {actionLoading === 'schedule' ? '…' : 'Programmer la publication'}
                           </button>
@@ -1703,7 +1703,7 @@ export default function ArticleEditorPage() {
                       Commentaires éditoriaux
                     </p>
                     {selectedCommentId && (
-                      <p className="mb-2 rounded-[7px] bg-brand-soft px-2 py-1 text-[10px] text-accent">
+                      <p className="mb-2 rounded-[7px] bg-accent/6 px-2 py-1 text-[10px] text-accent">
                         Commentaire selectionne dans le texte.
                       </p>
                     )}
@@ -1734,7 +1734,7 @@ export default function ArticleEditorPage() {
                     <button
                       onClick={handleSaveNow}
                       disabled={busy}
-                      className="w-full flex items-center justify-center gap-1.5 rounded-[8px] border border-border py-2 text-[12px] font-medium text-secondary hover:bg-surface-soft transition-colors disabled:opacity-40"
+                      className="w-full flex items-center justify-center gap-1.5 rounded-[8px] border border-border py-2 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2] transition-colors disabled:opacity-40"
                     >
                       {autosaveStatus === 'saved' ? <Check size={13} className="text-success" /> : null}
                       Sauvegarder
@@ -1743,7 +1743,7 @@ export default function ArticleEditorPage() {
                       <button
                         onClick={() => doAction('mark-ready')}
                         disabled={busy}
-                        className="w-full rounded-[8px] border border-border py-2 text-[12px] font-medium text-secondary hover:bg-surface-soft transition-colors disabled:opacity-40"
+                        className="w-full rounded-[8px] border border-border py-2 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2] transition-colors disabled:opacity-40"
                       >
                         {actionLoading === 'mark-ready' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
                         Marquer prêt
@@ -1856,7 +1856,7 @@ export default function ArticleEditorPage() {
         <div
           ref={commentPopoverRef}
           style={{ top: commentAnchor.top, left: commentAnchor.left, boxShadow: '0 20px 60px rgba(0,0,0,0.14)' }}
-          className="fixed z-50 w-[256px] rounded-[8px] border border-border bg-surface p-3 flex flex-col gap-2"
+          className="fixed z-50 w-[256px] rounded-[14px] border border-border bg-surface p-3 flex flex-col gap-2"
         >
           <p className="text-[10px] text-secondary leading-snug">
             Sur :{' '}
@@ -1873,19 +1873,19 @@ export default function ArticleEditorPage() {
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handleSendInlineComment() }
             }}
             placeholder="Votre commentaire…"
-            className="w-full rounded-[6px] border border-border bg-surface px-2.5 py-1.5 text-[12px] text-primary placeholder:text-tertiary resize-none focus:outline-none focus:ring-1 focus:ring-accent/50 focus:border-accent/60 transition-colors"
+            className="w-full rounded-[8px] border border-border bg-[#f9f9fb] px-2.5 py-1.5 text-[12px] text-primary placeholder:text-tertiary resize-none focus:outline-none focus:ring-1 focus:ring-accent/50 focus:border-accent/60 transition-colors"
           />
           <div className="flex gap-1.5">
             <button
               onClick={() => { setCommentAnchor(null); setCommentInput('') }}
-              className="flex-1 rounded-[6px] border border-border py-1.5 text-[11px] text-secondary hover:bg-surface-soft transition-colors"
+              className="flex-1 rounded-[8px] border border-border py-1.5 text-[11px] text-secondary hover:bg-[#e5e5e7] transition-colors"
             >
               Annuler
             </button>
             <button
               onClick={handleSendInlineComment}
               disabled={!commentInput.trim() || sendingComment}
-              className="flex-1 flex items-center justify-center gap-1 rounded-[6px] bg-primary py-1.5 text-[11px] font-medium text-bg hover:opacity-90 disabled:opacity-40 transition-colors"
+              className="flex-1 flex items-center justify-center gap-1 rounded-[8px] bg-accent py-1.5 text-[11px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
             >
               {sendingComment ? <Loader2 size={11} className="animate-spin" /> : <Send size={11} />}
               Commenter
@@ -1897,10 +1897,10 @@ export default function ArticleEditorPage() {
       {selectedComment && selectedCommentPopup && (
         <div
           style={{ top: selectedCommentPopup.top, left: selectedCommentPopup.left, boxShadow: '0 20px 60px rgba(0,0,0,0.14)' }}
-          className="fixed z-50 w-[280px] rounded-[8px] border border-border bg-surface p-3"
+          className="fixed z-50 w-[280px] rounded-[14px] border border-border bg-surface p-3"
         >
           {selectedComment.selected_text && (
-            <p className="mb-2 rounded-[8px] bg-brand-soft px-2 py-1 text-[10px] leading-snug text-secondary">
+            <p className="mb-2 rounded-[8px] bg-accent/6 px-2 py-1 text-[10px] leading-snug text-secondary">
               «{selectedComment.selected_text.slice(0, 110)}{selectedComment.selected_text.length > 110 ? '…' : ''}»
             </p>
           )}
@@ -1908,7 +1908,7 @@ export default function ArticleEditorPage() {
           <div className="mt-3 flex gap-1.5">
             <button
               onClick={() => void handleResolveInlineComment(selectedComment.id, true)}
-              className="flex flex-1 items-center justify-center gap-1 rounded-[8px] bg-success/10 py-1.5 text-[11px] font-medium text-success transition-colors hover:bg-success/20"
+              className="flex flex-1 items-center justify-center gap-1 rounded-[8px] bg-success/10 py-1.5 text-[11px] font-medium text-success transition-colors hover:bg-success/15"
             >
               <Check size={11} />
               Valider

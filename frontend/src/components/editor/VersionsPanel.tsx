@@ -71,12 +71,12 @@ export default function VersionsPanel({
   return (
     <>
       <div className="flex flex-col gap-1.5">
-        {message && <p className="rounded-[6px] bg-success/10 px-2 py-1.5 text-[11px] text-success">{message}</p>}
-        {error && <p className="rounded-[6px] bg-danger/10 px-2 py-1.5 text-[11px] text-danger">{error}</p>}
+        {message && <p className="rounded-[8px] bg-success/8 px-2 py-1.5 text-[11px] text-success">{message}</p>}
+        {error && <p className="rounded-[8px] bg-danger/8 px-2 py-1.5 text-[11px] text-danger">{error}</p>}
         {versions.map((v) => (
           <div
             key={v.id}
-            className="flex items-center gap-2 rounded-[8px] border border-transparent px-2 py-1.5 hover:border-border hover:bg-surface-soft"
+            className="flex items-center gap-2 rounded-[8px] border border-transparent px-2 py-1.5 hover:border-border hover:bg-[#f0f0f2]"
           >
             <div className="flex-1 min-w-0">
               <p className="text-[11px] font-medium text-primary truncate">v{v.version_number} — {v.title}</p>
@@ -88,7 +88,7 @@ export default function VersionsPanel({
             <button
               onClick={() => setRestoreTarget(v)}
               disabled={restoring === v.id}
-              className="flex h-6 w-6 items-center justify-center rounded-[6px] text-tertiary transition-colors hover:bg-surface-soft hover:text-primary disabled:opacity-40"
+              className="flex h-6 w-6 items-center justify-center rounded-[6px] text-tertiary transition-colors hover:bg-[#e5e5e7] hover:text-primary disabled:opacity-40"
               title="Restaurer cette version"
             >
               <RotateCcw size={12} />

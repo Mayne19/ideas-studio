@@ -1,35 +1,32 @@
 import type { HTMLAttributes, ReactNode } from 'react'
 import { cn } from '@/utils/cn'
 
-type BadgeVariant = 'default' | 'blue' | 'green' | 'amber' | 'orange' | 'red' | 'gray'
+type BadgeVariant = 'default' | 'blue' | 'green' | 'orange' | 'red' | 'gray'
 
 type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
   variant?: BadgeVariant
   children: ReactNode
-  icon?: ReactNode
 }
 
 const variants: Record<BadgeVariant, string> = {
-  default: 'bg-surface text-secondary border-border',
-  gray:    'bg-surface text-secondary border-border',
-  blue:    'bg-brand-soft text-accent border-accent/20',
-  green:   'bg-success/10 text-success border-success/20',
-  amber:   'bg-warning/10 text-warning border-warning/25',
-  orange:  'bg-warning/10 text-warning border-warning/25',
-  red:     'bg-danger/10 text-danger border-danger/20',
+  default: 'bg-[#f0f0f2] text-secondary',
+  gray:    'bg-[#f0f0f2] text-secondary',
+  blue:    'bg-accent/10 text-accent',
+  green:   'bg-success/10 text-[#1a7a3a]',
+  orange:  'bg-warning/10 text-[#c07000]',
+  red:     'bg-danger/10 text-[#c0291f]',
 }
 
-export default function Badge({ variant = 'default', icon, children, className, ...props }: BadgeProps) {
+export default function Badge({ variant = 'default', children, className, ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex h-6 items-center gap-1 rounded-full border px-2 text-[11px] font-medium leading-none',
+        'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium',
         variants[variant],
         className,
       )}
       {...props}
     >
-      {icon && <span className="flex shrink-0 items-center">{icon}</span>}
       {children}
     </span>
   )

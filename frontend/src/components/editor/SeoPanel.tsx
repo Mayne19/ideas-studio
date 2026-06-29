@@ -43,7 +43,7 @@ function ScoreRing({ label, score }: { label: string; score: number | null }) {
   const dash = (val / 100) * circ
 
   return (
-    <div className="flex flex-col items-center gap-1.5 rounded-[8px] border border-border bg-surface px-2 py-3">
+    <div className="flex flex-col items-center gap-1.5 rounded-[12px] border border-border bg-surface px-2 py-3">
       <svg width="112" height="112" viewBox="0 0 112 112" aria-label={`${label} ${Math.round(val)}`} className="text-primary">
         <circle cx="56" cy="56" r={r} fill="none" className="stroke-border" strokeWidth="9" />
         <circle
@@ -80,9 +80,9 @@ function finiteScore(value: unknown): number | null {
 }
 
 function scoreTone(score: number | null) {
-  if (score === null) return 'bg-surface-soft text-tertiary'
-  if (score >= 85) return 'bg-success/10 text-success'
-  if (score >= 65) return 'bg-warning/10 text-warning'
+  if (score === null) return 'bg-[#f0f0f2] text-tertiary'
+  if (score >= 85) return 'bg-success/10 text-[#16723a]'
+  if (score >= 65) return 'bg-warning/12 text-[#a35b00]'
   return 'bg-danger/10 text-danger'
 }
 
@@ -121,7 +121,7 @@ function ScoreSummary({
   const current = rows.find((row) => row.label === selected) ?? rows[0]
 
   return (
-    <div className="rounded-[8px] border border-border bg-surface p-3">
+    <div className="rounded-[12px] border border-border bg-surface p-3">
       <p className="text-[12px] font-semibold text-primary">Synthèse des scores</p>
       <div className="mt-3 grid grid-cols-2 gap-2">
         {rows.map((row) => (
@@ -129,7 +129,7 @@ function ScoreSummary({
             key={row.label}
             type="button"
             onClick={() => onSelect(row.label)}
-            className={`rounded-[6px] px-2.5 py-2 text-left transition-colors ${selected === row.label ? 'bg-surface-soft ring-1 ring-accent/25' : 'hover:bg-surface-soft'}`}
+            className={`rounded-[10px] px-2.5 py-2 text-left transition-colors ${selected === row.label ? 'bg-surface-soft ring-1 ring-accent/25' : 'hover:bg-surface-soft'}`}
           >
             <span className="block text-[10px] font-medium uppercase tracking-wide text-tertiary">{row.label}</span>
             <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${scoreTone(row.value)}`}>
@@ -138,7 +138,7 @@ function ScoreSummary({
           </button>
         ))}
       </div>
-      <div className="mt-3 rounded-[6px] bg-surface px-3 py-2 text-[11px] leading-snug text-secondary">
+      <div className="mt-3 rounded-[10px] bg-[#f9f9fb] px-3 py-2 text-[11px] leading-snug text-secondary">
         <span className="font-semibold text-primary">{current.label}</span> : {current.detail}
       </div>
     </div>
@@ -203,10 +203,10 @@ function ReadinessBlock({ check, hasTitleH1 }: { check: ReadyCheck; hasTitleH1: 
   const hasBlocking = blockingIssues.length > 0 || criticalWarnings.length > 0 || check.global_score_valid === false
   const config = check.can_publish || !hasBlocking
     ? { icon: <CheckCircle size={13} />, label: 'Publication readiness: pret ou a verifier', cls: 'bg-success/10 text-success' }
-    : { icon: <XCircle size={13} />, label: 'Publication readiness: bloque', cls: 'bg-danger/10 text-danger' }
+    : { icon: <XCircle size={13} />, label: 'Publication readiness: bloque', cls: 'bg-danger/8 text-danger' }
 
   return (
-    <div className={`rounded-[6px] px-3 py-2.5 ${config.cls}`}>
+    <div className={`rounded-[10px] px-3 py-2.5 ${config.cls}`}>
       <p className="flex items-center gap-1.5 text-[12px] font-medium">
         {hasBlocking ? config.icon : <MinusCircle size={13} />}
         {config.label}
@@ -335,7 +335,7 @@ export default function SeoPanel({
 
       {readiness && <ReadinessBlock check={readiness} hasTitleH1={hasTitleH1} />}
 
-      <div className="rounded-[8px] border border-border bg-surface p-3">
+      <div className="rounded-[12px] border border-border bg-surface p-3">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[12px] font-semibold text-primary">SEO Expert</p>
@@ -397,11 +397,11 @@ export default function SeoPanel({
             )}
 
             <div className="grid grid-cols-2 gap-3 text-[11px]">
-              <div className="rounded-[6px] border border-border bg-surface p-2.5">
+              <div className="rounded-[10px] border border-border bg-[#fafafc] p-2.5">
                 <p className="font-medium text-secondary">Checks valides</p>
                 <p className="mt-1 text-primary">{expertReview.passed_checks.length}</p>
               </div>
-              <div className="rounded-[6px] border border-border bg-surface p-2.5">
+              <div className="rounded-[10px] border border-border bg-[#fafafc] p-2.5">
                 <p className="font-medium text-secondary">Checks en echec</p>
                 <p className="mt-1 text-primary">{expertReview.failed_checks.length}</p>
               </div>

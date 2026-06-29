@@ -24,12 +24,12 @@ const IDEA_STATUSES_TO_FETCH = [
 
 const IDEA_STATI: { key: string; label: string; color: string }[] = [
   { key: '', label: 'Tous', color: '' },
-  { key: 'idea_proposed', label: 'Proposée', color: 'bg-brand-soft text-accent' },
-  { key: 'idea_priority', label: 'Prioritaire', color: 'bg-warning/10 text-warning' },
-  { key: 'idea_rejected', label: 'Rejetée', color: 'bg-danger/10 text-danger' },
-  { key: 'writing_requested', label: 'Rédaction demandée', color: 'bg-accent/10 text-accent' },
-  { key: 'writing_in_progress', label: 'En rédaction', color: 'bg-accent/10 text-accent' },
-  { key: 'draft_ready', label: 'Brouillon prêt', color: 'bg-success/10 text-success' },
+  { key: 'idea_proposed', label: 'Proposée', color: 'bg-blue-100 text-blue-700' },
+  { key: 'idea_priority', label: 'Prioritaire', color: 'bg-orange-100 text-orange-700' },
+  { key: 'idea_rejected', label: 'Rejetée', color: 'bg-red-100 text-red-700' },
+  { key: 'writing_requested', label: 'Rédaction demandée', color: 'bg-purple-100 text-purple-700' },
+  { key: 'writing_in_progress', label: 'En rédaction', color: 'bg-purple-100 text-purple-700' },
+  { key: 'draft_ready', label: 'Brouillon prêt', color: 'bg-green-100 text-green-700' },
 ]
 
 function translateIdeaError(err: unknown, context: 'action' | 'generate' | 'reject'): string {
@@ -345,7 +345,7 @@ export default function IdeasPipelinePage() {
         </div>
 
         {/* Info banner */}
-        <div className="mb-4 flex items-start gap-2.5 rounded-[8px] border border-border bg-surface px-4 py-3 shrink-0">
+        <div className="mb-4 flex items-start gap-2.5 rounded-[12px] border border-border bg-[#f9f9fb] px-4 py-3 shrink-0">
           <Info size={14} className="mt-0.5 shrink-0 text-tertiary" />
           <p className="text-[13px] text-secondary leading-snug">
             Les idées sont générées par les agents IA de planification. Validez une idée pour l'envoyer en{' '}
@@ -357,7 +357,7 @@ export default function IdeasPipelinePage() {
 
         {/* Filters */}
         <div className="mb-3 flex flex-wrap items-center gap-2 shrink-0">
-          <div className="flex items-center gap-1.5 rounded-[6px] border border-border bg-bg px-3 py-1.5">
+          <div className="flex items-center gap-1.5 rounded-[10px] border border-border bg-surface px-3 py-1.5">
             <Search size={12} className="text-tertiary" />
             <input
               type="text"
@@ -371,7 +371,7 @@ export default function IdeasPipelinePage() {
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="rounded-[6px] border border-border bg-bg px-3 py-1.5 text-[12px] text-secondary cursor-pointer"
+              className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-[12px] text-secondary cursor-pointer"
             >
               <option value="">Toutes catégories</option>
               {categories.map((c) => (
@@ -382,7 +382,7 @@ export default function IdeasPipelinePage() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="rounded-[6px] border border-border bg-surface px-3 py-1.5 text-[12px] text-secondary cursor-pointer"
+            className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-[12px] text-secondary cursor-pointer"
           >
             {IDEA_STATI.map((s) => (
               <option key={s.key} value={s.key}>{s.label}</option>
@@ -391,7 +391,7 @@ export default function IdeasPipelinePage() {
           <select
             value={filterMinScore}
             onChange={(e) => setFilterMinScore(Number(e.target.value))}
-            className="rounded-[6px] border border-border bg-surface px-3 py-1.5 text-[12px] text-secondary cursor-pointer"
+            className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-[12px] text-secondary cursor-pointer"
           >
             <option value={0}>Tous scores</option>
             <option value={70}>Score ≥ 70</option>
@@ -410,7 +410,7 @@ export default function IdeasPipelinePage() {
 
         {/* Batch actions */}
         {selectedIdeas.size > 0 && (
-          <div className="mb-3 flex items-center gap-2 rounded-[8px] bg-accent/5 px-3 py-2 shrink-0">
+          <div className="mb-3 flex items-center gap-2 rounded-[10px] bg-accent/5 px-3 py-2 shrink-0">
             <span className="text-[12px] font-medium text-secondary">{selectedIdeas.size} sélectionnée(s)</span>
             <div className="flex gap-1.5 ml-2">
               <Button size="sm" variant="secondary" className="text-[11px] h-7 px-2" onClick={() => handleBatchAction('prioritize')}>
@@ -431,7 +431,7 @@ export default function IdeasPipelinePage() {
 
         {/* Action error */}
         {actionError && (
-          <div className="mb-3 flex items-center justify-between rounded-[8px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[13px] text-danger shrink-0">
+          <div className="mb-3 flex items-center justify-between rounded-[10px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[13px] text-danger shrink-0">
             <span>{actionError}</span>
             <button onClick={() => setActionError('')} className="ml-3 shrink-0 text-danger/60 hover:text-danger transition-colors">✕</button>
           </div>
@@ -441,7 +441,7 @@ export default function IdeasPipelinePage() {
         {loadStatus === 'loading' && (
           <div className="flex flex-col gap-2">
             {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full rounded-[8px]" />
+              <Skeleton key={i} className="h-12 w-full rounded-[10px]" />
             ))}
           </div>
         )}
@@ -452,7 +452,7 @@ export default function IdeasPipelinePage() {
 
         {loadStatus === 'success' && allIdeas.length === 0 && (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-[8px] bg-surface-soft text-tertiary">
+            <div className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-[#f0f0f2] text-tertiary">
               <Lightbulb size={22} />
             </div>
             <p className="text-[15px] font-medium text-primary">Aucune idée pour l'instant</p>
@@ -500,7 +500,7 @@ export default function IdeasPipelinePage() {
                   return (
                     <tr
                       key={article.id}
-                      className={`border-b border-border/50 hover:bg-surface-soft transition-colors ${isRejected ? 'opacity-60' : ''}`}
+                      className={`border-b border-border/50 hover:bg-[#f9f9fb] transition-colors ${isRejected ? 'opacity-60' : ''}`}
                     >
                       <td className="px-2 py-2.5">
                         <input
@@ -515,7 +515,7 @@ export default function IdeasPipelinePage() {
                       </td>
                       <td className="px-2 py-2.5">
                         {article.priority > 0 ? (
-                          <Star size={13} className="text-warning fill-warning" />
+                          <Star size={13} className="text-orange-500 fill-orange-500" />
                         ) : (
                           <span className="text-tertiary text-[11px]">—</span>
                         )}
@@ -540,7 +540,7 @@ export default function IdeasPipelinePage() {
                       </td>
                       <td className="px-2 py-2.5 hidden lg:table-cell">
                         {article.keyword ? (
-                          <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] text-accent">{article.keyword}</span>
+                          <span className="rounded-full bg-accent/8 px-2 py-0.5 text-[10px] text-accent">{article.keyword}</span>
                         ) : (
                           <span className="text-[12px] text-tertiary">—</span>
                         )}
@@ -564,7 +564,7 @@ export default function IdeasPipelinePage() {
                               {article.status === 'idea_proposed' && (
                                 <button
                                   onClick={() => handleAction('prioritize', article)}
-                                  className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-warning/10 hover:text-warning transition-colors"
+                                  className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-orange-50 hover:text-orange-600 transition-colors"
                                   title="Prioriser"
                                 >
                                   <Star size={12} />
@@ -572,7 +572,7 @@ export default function IdeasPipelinePage() {
                               )}
                               <button
                                 onClick={() => handleAction('start-writing', article)}
-                                className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
+                                className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-purple-50 hover:text-purple-600 transition-colors"
                                 title="Lancer la rédaction"
                               >
                                 <Pencil size={12} />
@@ -595,7 +595,7 @@ export default function IdeasPipelinePage() {
                           )}
                           <button
                             onClick={() => setPreviewIdea(article)}
-                            className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
+                            className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors"
                             title="Voir le brief"
                           >
                             <Eye size={12} />
@@ -637,7 +637,7 @@ export default function IdeasPipelinePage() {
               <OpportunityBadge score={previewIdea.opportunity_score} />
               <StatusBadgeSmall status={previewIdea.status} />
               {previewIdea.priority > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-medium text-warning">
+                <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-orange-700">
                   <Star size={10} className="fill-orange-500" /> Prioritaire
                 </span>
               )}
@@ -760,7 +760,7 @@ export default function IdeasPipelinePage() {
               } catch { console.error('Failed to parse secondary_keywords_json') }
                     return sk
                   })().map((kw, i) => (
-                    <span key={i} className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] text-accent">{kw}</span>
+                    <span key={i} className="rounded-full bg-accent/8 px-2 py-0.5 text-[10px] text-accent">{kw}</span>
                   ))}
                 </div>
               </div>
@@ -772,7 +772,7 @@ export default function IdeasPipelinePage() {
                 <summary className="cursor-pointer text-[11px] text-secondary hover:text-primary transition-colors">
                   Sorties des agents
                 </summary>
-                <pre className="mt-1 max-h-40 overflow-auto rounded-[6px] bg-surface-soft p-2 text-[10px] leading-relaxed text-primary">
+                <pre className="mt-1 max-h-40 overflow-auto rounded-[6px] bg-[#f0f0f2] p-2 text-[10px] leading-relaxed text-primary">
                   {JSON.stringify(previewIdea.agent_outputs_json, null, 2)}
                 </pre>
               </details>
@@ -784,7 +784,7 @@ export default function IdeasPipelinePage() {
                 <summary className="cursor-pointer text-[11px] text-secondary hover:text-primary transition-colors">
                   Brief planning
                 </summary>
-                <pre className="mt-1 max-h-40 overflow-auto rounded-[6px] bg-surface-soft p-2 text-[10px] leading-relaxed text-primary">
+                <pre className="mt-1 max-h-40 overflow-auto rounded-[6px] bg-[#f0f0f2] p-2 text-[10px] leading-relaxed text-primary">
                   {JSON.stringify(previewIdea.planning_brief_json, null, 2)}
                 </pre>
               </details>
@@ -843,7 +843,7 @@ export default function IdeasPipelinePage() {
       >
         <form onSubmit={handleGenerate} className="flex flex-col gap-4">
           {generateError && (
-            <div className="rounded-[6px] bg-danger/10 border border-danger/20 px-3.5 py-2.5 text-[13px] text-danger">
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
               {generateError}
             </div>
           )}
@@ -881,7 +881,7 @@ export default function IdeasPipelinePage() {
       >
         <div className="flex flex-col gap-4">
           {autoError && (
-            <div className="rounded-[6px] bg-danger/10 border border-danger/20 px-3.5 py-2.5 text-[13px] text-danger">
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
               {autoError}
             </div>
           )}
@@ -893,10 +893,10 @@ export default function IdeasPipelinePage() {
               </div>
               <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
                 {autoResult.ideas.map((idea) => (
-                  <div key={idea.id} className="rounded-[8px] border border-border bg-surface p-3">
+                  <div key={idea.id} className="rounded-[10px] border border-border bg-[#f9f9fb] p-3">
                     <p className="text-[13px] font-medium text-primary">{idea.title}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                      {idea.keyword && <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] text-accent">{idea.keyword}</span>}
+                      {idea.keyword && <span className="rounded-full bg-accent/8 px-2 py-0.5 text-[10px] text-accent">{idea.keyword}</span>}
                       {normalizeOpportunityScore(idea.opportunity_score) !== null && (
                         <span className="text-[10px] text-tertiary">Score: {normalizeOpportunityScore(idea.opportunity_score)}%</span>
                       )}
@@ -915,7 +915,7 @@ export default function IdeasPipelinePage() {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              <div className="flex items-start gap-3 rounded-[8px] border border-border bg-surface px-3.5 py-3">
+              <div className="flex items-start gap-3 rounded-[12px] border border-border bg-[#f9f9fb] px-3.5 py-3">
                 <Sparkles size={15} className="mt-0.5 shrink-0 text-accent" />
                 <div>
                   <p className="text-[13px] font-medium text-primary">Génération automatique</p>
@@ -929,7 +929,7 @@ export default function IdeasPipelinePage() {
                 <select
                   value={autoCount}
                   onChange={(e) => setAutoCount(Number(e.target.value))}
-                  className="w-full rounded-[6px] border border-border bg-bg px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+                  className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
                 >
                   <option value={1}>1 idée</option>
                   <option value={3}>3 idées</option>
@@ -959,7 +959,7 @@ export default function IdeasPipelinePage() {
       >
         <form onSubmit={handleReject} className="flex flex-col gap-4">
           {rejectError && (
-            <div className="rounded-[6px] bg-danger/10 border border-danger/20 px-3.5 py-2.5 text-[13px] text-danger">
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
               {rejectError}
             </div>
           )}

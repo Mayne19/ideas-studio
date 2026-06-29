@@ -162,7 +162,7 @@ function trackingStatusMessage(status: PerformanceSummary['tracking_status'] | u
 function ChartEmpty({ message }: { message: string }) {
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-      <span className="rounded-[6px] border border-border bg-surface px-3 py-2 text-[12px] text-secondary">
+      <span className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[12px] text-secondary">
         {message}
       </span>
     </div>
@@ -170,7 +170,7 @@ function ChartEmpty({ message }: { message: string }) {
 }
 
 function InlineEmpty({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-[8px] bg-surface px-3 py-3 text-[13px] text-secondary">{children}</p>
+  return <p className="rounded-[12px] bg-[#f9f9fb] px-3 py-3 text-[13px] text-secondary">{children}</p>
 }
 
 function VisualRow({
@@ -192,9 +192,9 @@ function VisualRow({
 }) {
   const pct = percentOf(value, total)
   return (
-    <div className="flex items-center gap-2.5 rounded-[6px] px-2 py-1 hover:bg-surface-soft">
+    <div className="flex items-center gap-2.5 rounded-[10px] px-2 py-1 hover:bg-[#f9f9fb]">
       {rank !== undefined && <span className="w-4 shrink-0 text-[11px] font-medium text-tertiary">{rank}</span>}
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] bg-surface-soft text-secondary">{leading}</span>
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-[#f0f0f2] text-secondary">{leading}</span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-3">
           {href ? (
@@ -207,7 +207,7 @@ function VisualRow({
           <span className="shrink-0 text-[12px] font-semibold text-secondary">{formatMetric(value)}</span>
         </div>
         <div className="mt-1 flex items-center gap-2">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-soft">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#f0f0f2]">
             <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
           </div>
           <span className="w-8 text-right text-[11px] text-tertiary">{pct}%</span>
@@ -347,7 +347,7 @@ export default function TrafficPage() {
 
         <div className="flex flex-col gap-6">
           {showPeriodEmpty && (
-            <div className="rounded-[8px] border border-border bg-surface px-4 py-3 text-[13px] text-secondary">
+            <div className="rounded-[14px] border border-border bg-surface px-4 py-3 text-[13px] text-secondary">
               {trackingMessage}
             </div>
           )}
@@ -449,7 +449,7 @@ export default function TrafficPage() {
             </Card>
             <Card>
               <SectionTitle>Trafic organique / mots-clés</SectionTitle>
-              <p className="rounded-[8px] bg-surface px-3 py-3 text-[13px] text-secondary">
+              <p className="rounded-[12px] bg-[#f9f9fb] px-3 py-3 text-[13px] text-secondary">
                 Connectez Google Search Console depuis les <a href={`/projects/${projectId}/settings/integration`} className="text-accent hover:underline">paramètres du projet</a> pour voir les mots-clés organiques.
               </p>
             </Card>
@@ -485,7 +485,7 @@ export default function TrafficPage() {
                 />
               ))}
               {!sources.some((source) => source.channel === 'Referral' || source.channel === 'Social') && (
-                <p className="rounded-[8px] bg-surface px-3 py-3 text-[13px] text-secondary">Aucun référent externe disponible sur cette période.</p>
+                <p className="rounded-[12px] bg-[#f9f9fb] px-3 py-3 text-[13px] text-secondary">Aucun référent externe disponible sur cette période.</p>
               )}
             </Card>
           </div>
@@ -499,7 +499,7 @@ export default function TrafficPage() {
                 </div>
                 {sources.length ? sources.slice(0, 8).map((source) => (
                   <div key={source.key} className="grid grid-cols-[1.4fr_1fr_0.8fr_0.8fr] gap-3 border-b border-border px-2 py-3 text-[12px] last:border-0">
-                    <span className="flex min-w-0 items-center gap-2 font-medium text-primary"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-surface-soft"><SourceMark referrer={source.raw} /></span><span className="truncate">{source.label}</span></span>
+                    <span className="flex min-w-0 items-center gap-2 font-medium text-primary"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[8px] bg-[#f0f0f2]"><SourceMark referrer={source.raw} /></span><span className="truncate">{source.label}</span></span>
                     <span className="text-secondary">{source.channel}</span>
                     <span>{formatMetric(source.visits)}</span>
                     <span>{source.share}%</span>

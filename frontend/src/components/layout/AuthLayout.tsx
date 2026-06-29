@@ -15,7 +15,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
           CMS headless SEO assisté par IA
         </p>
       </div>
-      <div className="w-full max-w-sm rounded-[8px] border border-border bg-bg p-8 shadow-card">
+      <div className="w-full max-w-sm rounded-[24px] border border-border bg-surface p-8 shadow-card">
         {children}
       </div>
     </div>

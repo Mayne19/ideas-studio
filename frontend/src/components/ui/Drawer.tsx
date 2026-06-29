@@ -34,7 +34,7 @@ export default function Drawer({
       />
       <div
         className={cn(
-          'absolute top-0 h-full w-full max-w-md bg-bg border-l border-border shadow-float animate-in duration-200',
+          'absolute top-0 h-full w-full max-w-md bg-surface shadow-float animate-in duration-200',
           side === 'right' ? 'right-0 slide-in-from-right-4' : 'left-0 slide-in-from-left-4',
           className,
         )}
@@ -44,7 +44,7 @@ export default function Drawer({
             <h2 className="text-[15px] font-semibold text-primary">{title}</h2>
             <button
               onClick={onClose}
-              className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-tertiary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
               aria-label="Fermer"
             >
               <X size={15} />

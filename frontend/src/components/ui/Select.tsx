@@ -16,7 +16,6 @@ type SelectProps = SelectHTMLAttributes<HTMLSelectElement> & {
   placeholder?: string
 }
 
-/* Geist select: 6px radius, 40px height, thin border, blue focus ring */
 const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
   { label, error, hint, options, placeholder, className, id, ...props },
   ref,
@@ -35,12 +34,12 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
           ref={ref}
           id={inputId}
           className={cn(
-            'h-10 w-full appearance-none rounded-[6px] border border-border bg-bg px-3 pr-9',
+            'h-10 w-full appearance-none rounded-[12px] border border-border bg-surface px-3.5 pr-9',
             'text-[14px] text-primary',
             'outline-none transition-all duration-150 cursor-pointer',
             'hover:border-border-strong',
-            'focus:border-accent focus:ring-2 focus:ring-accent/20',
-            error && 'border-danger focus:border-danger focus:ring-danger/20',
+            'focus:border-accent focus:ring-2 focus:ring-accent/10',
+            error && 'border-danger focus:border-danger focus:ring-danger/10',
             className,
           )}
           {...props}

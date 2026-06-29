@@ -4,9 +4,7 @@ import re
 from typing import Any
 
 from app.services.seo.format_expectations import get_format
-from app.services.seo.geo_llm_layer import blend_geo_with_llm, call_geo_llm
 from app.services.seo.helpers import strip_html
-from app.services.seo.llm_budget import LLMBudgetManager
 
 
 QUESTION_WORDS = ["comment", "pourquoi", "qu'est-ce", "quand", "où", "qui", "quels", "quelle", "combien"]
@@ -149,7 +147,7 @@ def score_semantic_density(text: str, target_keyword: str | None, related_terms:
     return round((covered / max(len(related_terms), 1)) * 100)
 
 
-def compute_geo_score(article: Any, budget: LLMBudgetManager | None = None) -> dict:
+def compute_geo_score(article: Any) -> dict:
     if isinstance(article, dict):
         content = article.get("content") or ""
         keyword = article.get("keyword") or ""

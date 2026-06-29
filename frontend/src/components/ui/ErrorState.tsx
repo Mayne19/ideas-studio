@@ -17,7 +17,7 @@ export default function ErrorState({
 }: ErrorStateProps) {
   return (
     <div className={cn('flex flex-col items-center justify-center gap-3 py-16 text-center', className)}>
-      <div className="flex h-12 w-12 items-center justify-center rounded-[8px] bg-danger/10 text-danger">
+      <div className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-danger/8 text-danger">
         <AlertCircle size={22} />
       </div>
       <div className="flex flex-col gap-1">

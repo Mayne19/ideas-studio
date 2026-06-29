@@ -19,7 +19,6 @@ const sizes: Record<ModalSize, string> = {
   lg: 'max-w-2xl',
 }
 
-/* Geist modal: 12px radius (menus/dialogs), layered shadow, thin border */
 export default function Modal({ open, onClose, title, size = 'md', children }: ModalProps) {
   useEffect(() => {
     if (!open) return
@@ -39,25 +38,25 @@ export default function Modal({ open, onClose, title, size = 'md', children }: M
       role="dialog"
     >
       <div
-        className="absolute inset-0 bg-black/30 backdrop-blur-[2px] animate-in fade-in duration-200"
+        className="absolute inset-0 bg-black/25 backdrop-blur-[2px] animate-in fade-in duration-200"
         onClick={onClose}
       />
       <div
         className={cn(
-          'relative w-full rounded-[8px] bg-bg border border-border shadow-float',
+          'relative w-full rounded-[24px] bg-surface shadow-float',
           'animate-in zoom-in-95 fade-in duration-200',
           sizes[size],
         )}
       >
         {title && (
           <div className="flex items-center justify-between border-b border-border px-6 py-4">
-            <h2 className="text-[14px] font-semibold text-primary">{title}</h2>
+            <h2 className="text-[15px] font-semibold text-primary">{title}</h2>
             <button
               onClick={onClose}
-              className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-tertiary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
               aria-label="Fermer"
             >
-              <X size={14} />
+              <X size={15} />
             </button>
           </div>
         )}

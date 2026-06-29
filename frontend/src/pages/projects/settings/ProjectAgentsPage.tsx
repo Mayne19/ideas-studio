@@ -132,7 +132,7 @@ export default function ProjectAgentsPage() {
     return (
       <div className="flex flex-col gap-4">
         <ErrorState message={error} onRetry={fetchAll} />
-        <div className="rounded-[8px] border border-border bg-surface p-4 text-[13px] text-secondary">
+        <div className="rounded-[14px] border border-border bg-surface p-4 text-[13px] text-secondary">
           La page reste accessible aux owners/admins. Déployez le backend à jour si le registry agents n’est pas exposé.
         </div>
       </div>
@@ -152,7 +152,7 @@ export default function ProjectAgentsPage() {
         </div>
         <div className="flex items-center gap-2">
           {successMsg && (
-            <span className="flex items-center gap-1 text-[13px] text-success">
+            <span className="flex items-center gap-1 text-[13px] text-green-600">
               <CheckCircle size={14} /> {successMsg}
             </span>
           )}
@@ -163,18 +163,18 @@ export default function ProjectAgentsPage() {
       </div>
 
       {error && (
-        <div className="rounded-[8px] border border-warning/20 bg-warning/5 px-4 py-3 text-[13px] text-secondary">
+        <div className="rounded-[12px] border border-warning/20 bg-warning/5 px-4 py-3 text-[13px] text-secondary">
           {error}
         </div>
       )}
 
-      <div className="rounded-[8px] border border-border bg-surface px-4 py-3 text-[13px] text-secondary leading-relaxed">
+      <div className="rounded-[14px] border border-border bg-[#f8f9fc] px-4 py-3 text-[13px] text-secondary leading-relaxed">
         <strong className="text-primary">Ordre de résolution :</strong>{' '}
         Assignment du projet &gt; provider par défaut du projet &gt; variable d&apos;environnement.
         Les agents désactivés sont ignorés par le routage IA.
       </div>
 
-      <div className="overflow-x-auto rounded-[8px] bg-surface">
+      <div className="overflow-x-auto rounded-[16px] bg-surface">
         <div className="min-w-[980px]">
           <div className="grid grid-cols-[1.1fr_0.65fr_1.6fr_0.7fr_1.1fr_0.75fr_0.9fr] gap-3 border-b border-border px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-tertiary">
             <span>Agent</span>
@@ -225,7 +225,7 @@ export default function ProjectAgentsPage() {
                   {agent.has_implementation ? (
                     <span className="rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">Implémenté</span>
                   ) : (
-                    <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning">Heuristique</span>
+                    <span className="rounded-full bg-warning/12 px-2 py-0.5 text-[11px] font-medium text-[#a35b00]">Heuristique</span>
                   )}
                 </span>
               </div>

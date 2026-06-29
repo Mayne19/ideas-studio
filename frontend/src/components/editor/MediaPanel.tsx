@@ -35,7 +35,7 @@ export default function MediaPanel({
     <div className="flex flex-col gap-3">
       {coverImageUrl ? (
         <div className="relative">
-          <img src={coverImageUrl} alt="" className="h-32 w-full rounded-[8px] object-cover" />
+          <img src={coverImageUrl} alt="" className="h-32 w-full rounded-[10px] object-cover" />
           <button
             type="button"
             onClick={() => onChange('')}
@@ -49,7 +49,7 @@ export default function MediaPanel({
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="flex flex-col items-center gap-2 rounded-[8px] border border-dashed border-border py-6 transition-colors hover:border-accent/50 hover:bg-accent/3"
+          className="flex flex-col items-center gap-2 rounded-[10px] border border-dashed border-border py-6 transition-colors hover:border-accent/50 hover:bg-accent/3"
           disabled={uploading}
         >
           {uploading ? (
@@ -81,7 +81,7 @@ export default function MediaPanel({
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
-        className="flex items-center justify-center gap-1.5 rounded-[6px] border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary"
+        className="flex items-center justify-center gap-1.5 rounded-[8px] border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-[#f0f0f2] hover:text-primary"
         disabled={uploading}
       >
         <Image size={12} />

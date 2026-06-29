@@ -46,7 +46,7 @@ function SidebarLink({ to, icon, label, disabled = false, collapsed = false }: N
     return (
       <span
         title={label}
-        className="flex items-center gap-2.5 rounded-[6px] px-3 py-2 text-[13px] font-medium text-tertiary cursor-not-allowed opacity-50"
+        className="flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-[13px] font-medium text-tertiary cursor-not-allowed opacity-50"
       >
         <span className="shrink-0">{icon}</span>
         {!collapsed && label}
@@ -60,11 +60,11 @@ function SidebarLink({ to, icon, label, disabled = false, collapsed = false }: N
       title={collapsed ? label : undefined}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-2.5 rounded-[6px] px-3 py-2 text-[13px] font-medium transition-colors duration-150',
+          'flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-[13px] font-medium transition-colors duration-150',
           collapsed ? 'justify-center px-2' : '',
           isActive
-            ? 'bg-surface-soft text-primary'
-            : 'text-secondary hover:bg-surface-soft hover:text-primary',
+            ? 'bg-accent/10 text-accent'
+            : 'text-secondary hover:bg-[#f0f0f2] hover:text-primary',
         )
       }
     >
@@ -145,7 +145,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
         <button
           onClick={onToggle}
           className={cn(
-            'flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors',
+            'flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#f0f0f2] hover:text-primary transition-colors',
             collapsed ? 'mx-auto' : 'ml-auto',
           )}
           title={collapsed ? 'Ouvrir la sidebar' : 'Fermer la sidebar'}
@@ -159,9 +159,9 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
         <div className="border-b border-border px-4 py-3 relative" ref={dropRef}>
           <button
             onClick={() => setProjectsOpen((v) => !v)}
-            className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 hover:bg-surface-soft transition-colors text-left"
+            className="flex w-full items-center gap-2 rounded-[10px] px-2 py-1.5 hover:bg-[#f0f0f2] transition-colors text-left"
           >
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] border border-border bg-bg text-secondary text-[10px] font-semibold">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-accent/10 text-accent text-[10px] font-bold">
               {project.name.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
@@ -172,7 +172,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
           </button>
 
           {projectsOpen && (
-            <div className="absolute left-3 right-3 top-full mt-1 z-50 rounded-[8px] border border-border bg-surface shadow-float overflow-hidden">
+            <div className="absolute left-3 right-3 top-full mt-1 z-50 rounded-[14px] border border-border bg-surface shadow-float overflow-hidden">
               {projects.length === 0 ? (
                 <p className="px-4 py-3 text-[12px] text-tertiary">Aucun autre projet</p>
               ) : (
@@ -183,9 +183,9 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                       setProjectsOpen(false)
                       navigate(`/projects/${p.id}/dashboard`)
                     }}
-                    className="flex w-full items-center gap-2.5 px-3 py-2.5 hover:bg-surface-soft transition-colors text-left"
+                    className="flex w-full items-center gap-2.5 px-3 py-2.5 hover:bg-[#f0f0f2] transition-colors text-left"
                   >
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] border border-border bg-bg text-secondary text-[10px] font-semibold">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-accent/10 text-accent text-[10px] font-bold">
                       {p.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -200,7 +200,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                 <Link
                   to="/projects"
                   onClick={() => setProjectsOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2.5 text-[12px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors"
+                  className="flex items-center gap-2 px-3 py-2.5 text-[12px] text-accent hover:bg-[#f0f0f2] transition-colors"
                 >
                   <FolderOpen size={13} />
                   Voir tous les projets
@@ -248,8 +248,8 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                 <>
                   <div
                     className={cn(
-                      'flex items-center rounded-[6px] transition-colors duration-150',
-                      inSettings ? 'bg-surface-soft text-primary' : 'text-secondary hover:bg-surface-soft hover:text-primary',
+                      'flex items-center rounded-[10px] transition-colors duration-150',
+                      inSettings ? 'bg-accent/10 text-accent' : 'text-secondary hover:bg-[#f0f0f2] hover:text-primary',
                     )}
                   >
                     <NavLink
@@ -267,7 +267,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                         event.stopPropagation()
                         setSettingsOpen((open) => !open)
                       }}
-                      className="mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] text-current hover:bg-surface-soft/50"
+                      className="mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] text-current hover:bg-white/50"
                       aria-label={settingsOpen ? 'Replier les paramètres' : 'Déplier les paramètres'}
                     >
                       <ChevronDown
@@ -286,7 +286,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                           className={({ isActive }) =>
                             cn(
                               'rounded-[8px] px-2.5 py-1.5 text-[12px] font-medium transition-colors',
-                              isActive ? 'text-primary' : 'text-secondary hover:text-primary',
+                              isActive ? 'text-accent' : 'text-secondary hover:text-primary',
                             )
                           }
                         >
@@ -307,7 +307,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                 onClick={() => setLogoutConfirmOpen(true)}
                 title={collapsed ? 'Se déconnecter' : undefined}
                 className={cn(
-                  'flex items-center gap-2.5 rounded-[6px] px-3 py-2 text-[13px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary',
+                  'flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-[13px] font-medium text-secondary transition-colors hover:bg-[#f0f0f2] hover:text-primary',
                   collapsed && 'justify-center px-2',
                 )}
               >

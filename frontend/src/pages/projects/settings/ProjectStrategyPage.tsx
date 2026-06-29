@@ -186,7 +186,7 @@ export default function ProjectStrategyPage() {
   return (
     <form onSubmit={handleSave} className="flex flex-col gap-6">
       {error && (
-        <div className="rounded-[6px] bg-danger/10 border border-danger/20 px-3.5 py-2.5 text-[13px] text-danger">{error}</div>
+        <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">{error}</div>
       )}
 
       {/* Assistant button */}
@@ -275,7 +275,7 @@ export default function ProjectStrategyPage() {
         <Button type="submit" size="sm" loading={saving} icon={<Save size={13} />}>
           Enregistrer
         </Button>
-        {saved && <span className="text-[12px] text-success">Sauvegardé ✓</span>}
+        {saved && <span className="text-[12px] text-[#1a7a3a]">Sauvegardé ✓</span>}
       </div>
     </form>
   )
