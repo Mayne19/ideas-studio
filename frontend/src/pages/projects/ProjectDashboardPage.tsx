@@ -150,17 +150,20 @@ function SeoRadialCard({ score, changePts }: { score: number; changePts: number 
         Score SEO moyen
         <HelpCircle size={12} className="text-tertiary" />
       </div>
-      <div className="flex items-center justify-between gap-3">
-        <ResponsiveContainer width={80} height={80}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[20px] font-semibold leading-none text-primary">{score || '—'}</div>
+        <span className="text-[12px] font-semibold tabular-nums" style={{ color: changeColor }}>{changeLabel}</span>
+      </div>
+      <div className="mt-2 -mx-1">
+        <ResponsiveContainer width="100%" height={72}>
           <RadialBarChart
             data={[{ v: score, fill: fillColor }]}
             startAngle={90}
             endAngle={endAngle}
-            outerRadius={36}
-            innerRadius={26}
-            margin={{ top: 4, right: 4, bottom: 4, left: 4 }}
+            outerRadius={32}
+            innerRadius={22}
           >
-            <PolarGrid gridType="circle" radialLines={false} stroke="none" polarRadius={[36, 26]} />
+            <PolarGrid gridType="circle" radialLines={false} stroke="none" polarRadius={[32, 22]} />
             <RadialBar dataKey="v" background={{ fill: 'var(--color-surface-muted, #f1f5f9)' }} cornerRadius={6} />
             <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
               <Label
@@ -168,7 +171,7 @@ function SeoRadialCard({ score, changePts }: { score: number; changePts: number 
                   if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
                     return (
                       <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                        <tspan x={viewBox.cx} y={viewBox.cy} style={{ fontSize: '14px', fontWeight: '700', fill: 'var(--color-primary, #111)' }}>
+                        <tspan x={viewBox.cx} y={viewBox.cy} style={{ fontSize: '13px', fontWeight: '700', fill: 'var(--color-primary, #111)' }}>
                           {score}
                         </tspan>
                       </text>
@@ -179,7 +182,6 @@ function SeoRadialCard({ score, changePts }: { score: number; changePts: number 
             </PolarRadiusAxis>
           </RadialBarChart>
         </ResponsiveContainer>
-        <span className="text-[13px] font-semibold tabular-nums" style={{ color: changeColor }}>{changeLabel}</span>
       </div>
     </article>
   )
