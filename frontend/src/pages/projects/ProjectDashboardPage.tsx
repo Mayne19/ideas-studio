@@ -145,22 +145,22 @@ function SeoRadialCard({ score, changePts, data }: { score: number; changePts: n
   const endAngle = 90 - (score / 100) * 280
 
   return (
-    <article className="flex h-[128px] flex-col rounded-[8px] border border-border bg-surface px-5 py-3.5 shadow-none">
+    <article className="flex h-[148px] flex-col rounded-[10px] border border-border bg-surface px-5 py-4 shadow-none">
       <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
         <span className="truncate whitespace-nowrap">Score SEO moyen</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
       <div className="mt-3 flex h-8 items-center justify-between gap-3">
-        <ResponsiveContainer width={42} height={42}>
+        <ResponsiveContainer width={72} height={72}>
           <RadialBarChart
             data={[{ v: score, fill: fillColor }]}
             startAngle={90}
             endAngle={endAngle}
-            outerRadius={19}
-            innerRadius={14}
+            outerRadius={34}
+            innerRadius={24}
             margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
           >
-            <PolarGrid gridType="circle" radialLines={false} stroke="none" polarRadius={[19, 14]} />
+            <PolarGrid gridType="circle" radialLines={false} stroke="none" polarRadius={[34, 24]} />
             <RadialBar dataKey="v" background={{ fill: 'var(--color-surface-muted, #f1f5f9)' }} cornerRadius={6} />
             <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
               <Label
@@ -168,7 +168,7 @@ function SeoRadialCard({ score, changePts, data }: { score: number; changePts: n
                   if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
                     return (
                       <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                        <tspan x={viewBox.cx} y={viewBox.cy} style={{ fontSize: '11px', fontWeight: '700', fill: 'var(--color-primary, #111)' }}>
+                        <tspan x={viewBox.cx} y={viewBox.cy} style={{ fontSize: '14px', fontWeight: '700', fill: 'var(--color-primary, #111)' }}>
                           {score}
                         </tspan>
                       </text>
@@ -179,9 +179,9 @@ function SeoRadialCard({ score, changePts, data }: { score: number; changePts: n
             </PolarRadiusAxis>
           </RadialBarChart>
         </ResponsiveContainer>
-        <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{changeLabel}</span>
+        <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{changeLabel}</span>
       </div>
-      <div className="mt-2 h-[50px] -mx-1">
+      <div className="mt-2 h-[60px] -mx-1">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 5, right: 6, bottom: 6, left: 6 }}>
             <Area
@@ -218,16 +218,16 @@ function SparkMetricCard({
   data: MonthPoint[]
 }) {
   return (
-    <article className="flex h-[128px] flex-col rounded-[8px] border border-border bg-surface px-5 py-3.5 shadow-none">
+    <article className="flex h-[148px] flex-col rounded-[10px] border border-border bg-surface px-5 py-4 shadow-none">
       <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
         <span className="truncate whitespace-nowrap">{title}</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
       <div className="mt-3 flex h-8 items-center justify-between gap-3">
-        <div className="text-[20px] font-semibold leading-none text-primary">{value}</div>
-        <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{change}</span>
+        <div className="text-[22px] font-semibold leading-none text-primary">{value}</div>
+        <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{change}</span>
       </div>
-      <div className="mt-2 h-[50px] -mx-1">
+      <div className="mt-2 h-[60px] -mx-1">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 5, right: 6, bottom: 6, left: 6 }}>
             <Line
@@ -262,16 +262,16 @@ function AreaMetricCard({
   data: MonthPoint[]
 }) {
   return (
-    <article className="flex h-[128px] flex-col rounded-[8px] border border-border bg-surface px-5 py-3.5 shadow-none">
+    <article className="flex h-[148px] flex-col rounded-[10px] border border-border bg-surface px-5 py-4 shadow-none">
       <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
         <span className="truncate whitespace-nowrap">{title}</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
       <div className="mt-3 flex h-8 items-center justify-between gap-3">
-        <div className="text-[20px] font-semibold leading-none text-primary">{value}</div>
-        <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{change}</span>
+        <div className="text-[22px] font-semibold leading-none text-primary">{value}</div>
+        <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{change}</span>
       </div>
-      <div className="mt-2 h-[50px] -mx-1">
+      <div className="mt-2 h-[60px] -mx-1">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 5, right: 6, bottom: 6, left: 6 }}>
             <Area
@@ -308,16 +308,16 @@ function BarMetricCard({
   data: MonthPoint[]
 }) {
   return (
-    <article className="flex h-[128px] flex-col rounded-[8px] border border-border bg-surface px-5 py-3.5 shadow-none">
+    <article className="flex h-[148px] flex-col rounded-[10px] border border-border bg-surface px-5 py-4 shadow-none">
       <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
         <span className="truncate whitespace-nowrap">{title}</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
       <div className="mt-3 flex h-8 items-center justify-between gap-3">
-        <div className="text-[20px] font-semibold leading-none text-primary">{value}</div>
-        <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{change}</span>
+        <div className="text-[22px] font-semibold leading-none text-primary">{value}</div>
+        <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{change}</span>
       </div>
-      <div className="mt-2 h-[50px] -mx-1">
+      <div className="mt-2 h-[60px] -mx-1">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 5, right: 6, bottom: 6, left: 6 }} barSize={5}>
             <Bar dataKey="v" fill={color} radius={[2, 2, 0, 0]} />
@@ -342,11 +342,15 @@ function PipelineSummaryItem({
   description: string
 }) {
   return (
-    <div className="flex h-[52px] min-w-0 items-center gap-2.5 px-5">
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center text-secondary">{icon}</span>
-      <span className="min-w-0 truncate text-[13px] font-medium text-secondary">{title}</span>
-      <strong className="shrink-0 text-[18px] font-semibold leading-none tabular-nums text-primary">{value}</strong>
-      <span className="min-w-0 truncate text-[12px] text-tertiary">{description}</span>
+    <div className="flex min-w-0 flex-col justify-center gap-1 px-6 py-4">
+      <div className="flex items-center gap-2">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-surface-soft text-secondary">{icon}</span>
+        <span className="min-w-0 truncate text-[12px] font-medium text-secondary">{title}</span>
+      </div>
+      <div className="flex items-baseline gap-2 pl-0.5">
+        <strong className="shrink-0 text-[26px] font-bold leading-none tabular-nums text-primary">{value}</strong>
+        <span className="min-w-0 truncate text-[12px] text-tertiary">{description}</span>
+      </div>
     </div>
   )
 }
@@ -569,36 +573,36 @@ export default function ProjectDashboardPage() {
     : []
 
   return (
-    <div className="mx-auto flex w-full max-w-none flex-col gap-4">
-      <section className="flex items-start justify-between gap-6 px-6 pb-4 pt-2">
+    <div className="mx-auto flex w-full max-w-none flex-col gap-5">
+      <section className="flex items-start justify-between gap-6 px-6 pb-2 pt-3">
         <div>
-          <h1 className="text-[20px] font-semibold leading-tight text-primary">
+          <h1 className="text-[22px] font-semibold leading-tight text-primary">
             {firstName ? `Bonjour, ${firstName} 👋` : 'Bonjour 👋'}
           </h1>
-          <p className="mt-1 text-[13px] text-secondary">
+          <p className="mt-1.5 text-[13px] text-secondary">
             Vue d'ensemble de votre pipeline éditorial et de vos performances.
           </p>
         </div>
       </section>
 
-      <section className="flex h-[44px] items-center overflow-hidden rounded-[8px] border border-border bg-surface text-[13px] text-secondary">
+      <section className="flex h-[48px] items-center overflow-hidden rounded-[10px] border border-border bg-surface text-[13px] text-secondary">
         {/* Statut connecté */}
-        <div className="flex h-full shrink-0 items-center border-r border-border px-4">
-          <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[13px] font-medium text-white">
+        <div className="flex h-full shrink-0 items-center border-r border-border px-5">
+          <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[13px] font-semibold text-white">
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-accent">
-              <ArrowUp size={10} />
+              <ArrowUp size={11} />
             </span>
             {isConnected ? 'Connecté' : 'Non connecté'}
           </span>
         </div>
         {/* Domain */}
         <div className="flex h-full min-w-[240px] shrink-0 items-center gap-2 border-r border-border px-6 font-medium text-primary">
-          <Globe size={13} className="shrink-0 text-secondary" />
+          <Globe size={15} className="shrink-0 text-secondary" />
           {project?.domain ?? '—'}
         </div>
         {/* Pipeline + runs */}
         <div className="flex h-full min-w-[188px] shrink-0 items-center gap-2 border-r border-border px-6">
-          <Clock size={13} className="shrink-0" />
+          <Clock size={15} className="shrink-0" />
           Pipeline : <strong className="text-primary">{pipelineActive ? 'Actif' : 'Inactif'}</strong>
         </div>
         <div className="flex h-full min-w-[170px] shrink-0 items-center border-r border-border px-6">
@@ -641,27 +645,27 @@ export default function ProjectDashboardPage() {
         />
       </section>
 
-      <section className="grid grid-cols-4 divide-x divide-border overflow-hidden rounded-[8px] border border-border bg-surface shadow-none">
+      <section className="grid grid-cols-4 divide-x divide-border overflow-hidden rounded-[10px] border border-border bg-surface shadow-none">
         <PipelineSummaryItem
-          icon={<ClipboardList size={16} />}
+          icon={<ClipboardList size={20} />}
           title="Production"
           value={data?.activeProductionCount ?? 0}
           description="Articles en rédaction"
         />
         <PipelineSummaryItem
-          icon={<ShieldCheck size={16} />}
+          icon={<ShieldCheck size={20} />}
           title="À valider"
           value={data?.reviewNeededCount ?? 0}
           description="En attente"
         />
         <PipelineSummaryItem
-          icon={<Lightbulb size={16} />}
+          icon={<Lightbulb size={20} />}
           title="Idées prêtes"
           value={data?.ideasReadyForProductionCount ?? data?.ideasCount ?? 0}
           description={enabledProviders.length > 0 ? 'Qualifiées' : '0 provider IA actif'}
         />
         <PipelineSummaryItem
-          icon={<Edit3 size={16} />}
+          icon={<Edit3 size={20} />}
           title="En cours"
           value={data?.inProgressCount ?? 0}
           description="Actifs"
@@ -669,15 +673,15 @@ export default function ProjectDashboardPage() {
       </section>
 
       <section className="grid items-stretch gap-4 lg:grid-cols-[1.62fr_1fr]">
-        <Card padding="none" className="flex min-h-[500px] flex-col overflow-hidden">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <h2 className="text-[13px] font-semibold text-primary">Articles récents</h2>
+        <Card padding="none" className="flex min-h-[500px] flex-col overflow-hidden rounded-[10px]">
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+            <h2 className="text-[14px] font-semibold text-primary">Articles récents</h2>
             <button
               type="button"
               onClick={() => navigate(`/projects/${projectId}/articles`)}
-              className="flex items-center gap-1 text-[11px] font-medium text-secondary hover:text-primary transition-colors"
+              className="flex items-center gap-1.5 rounded-[6px] px-2.5 py-1 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary"
             >
-              Voir tout <ArrowRight size={11} />
+              Voir tout <ArrowRight size={13} />
             </button>
           </div>
           <div className="grid grid-cols-[minmax(0,1fr)_120px_56px_110px_96px] gap-6 border-b border-border px-5 py-2 text-[12px] font-medium text-tertiary">
@@ -697,7 +701,7 @@ export default function ProjectDashboardPage() {
                   key={article.id}
                   type="button"
                   onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
-                  className="grid grid-cols-[minmax(0,1fr)_120px_56px_110px_96px] items-center gap-6 px-5 py-2.5 text-left transition-colors hover:bg-surface-soft"
+                  className="grid grid-cols-[minmax(0,1fr)_120px_56px_110px_96px] items-center gap-6 px-5 py-3 text-left transition-colors hover:bg-surface-soft"
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-[13px] font-medium text-primary">{article.title}</span>
@@ -712,7 +716,7 @@ export default function ProjectDashboardPage() {
                     <span className="w-6 shrink-0 text-right text-[13px] font-semibold tabular-nums text-primary">
                       {score ?? '—'}
                     </span>
-                    <span className="h-[5px] w-[60px] shrink-0 overflow-hidden rounded-full bg-surface-muted">
+                    <span className="h-[6px] w-[60px] shrink-0 overflow-hidden rounded-full bg-surface-muted">
                       <span
                         className="block h-full rounded-full transition-all"
                         style={{ width: `${Math.min(score ?? 0, 100)}%`, backgroundColor: scoreColor }}
@@ -726,8 +730,8 @@ export default function ProjectDashboardPage() {
                   <span className="flex shrink-0">
                     {category ? (
                       <span
-                        className="inline-flex h-5 items-center rounded-full px-2 text-[11px] font-medium whitespace-nowrap"
-                        style={{ backgroundColor: `${category.color ?? '#0066ff'}18`, color: category.color ?? '#0066ff' }}
+                        className="inline-flex h-[22px] items-center rounded-full px-2.5 text-[11px] font-semibold whitespace-nowrap"
+                        style={{ backgroundColor: `${category.color ?? '#0066ff'}22`, color: category.color ?? '#0066ff' }}
                       >
                         {category.name}
                       </span>
@@ -745,8 +749,8 @@ export default function ProjectDashboardPage() {
         </Card>
 
         <div className="flex flex-col gap-4">
-          <Card padding="none" className="overflow-hidden">
-            <h2 className="border-b border-border px-6 py-4 text-[13px] font-semibold text-primary">À faire maintenant</h2>
+          <Card padding="none" className="overflow-hidden rounded-[10px]">
+            <h2 className="border-b border-border px-6 py-4 text-[14px] font-semibold text-primary">À faire maintenant</h2>
             <div className="flex flex-col divide-y divide-border-soft">
               {todoRows.map((row) => (
                 <button
@@ -762,13 +766,13 @@ export default function ProjectDashboardPage() {
             </div>
           </Card>
 
-          <Card padding="none" className="overflow-hidden">
-            <h2 className="border-b border-border px-6 py-4 text-[13px] font-semibold text-primary">Activité récente</h2>
+          <Card padding="none" className="overflow-hidden rounded-[10px]">
+            <h2 className="border-b border-border px-6 py-4 text-[14px] font-semibold text-primary">Activité récente</h2>
             <div className="flex flex-col divide-y divide-border-soft">
               {visibleActivityEvents.length === 0
                 ? Array.from({ length: 5 }).map((_, i) => (
                     <div key={`empty-${i}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 py-2.5">
-                      <span className="h-2 w-2 rounded-full bg-transparent" />
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-transparent" />
                       <span className="text-[13px] text-tertiary">—</span>
                       <span />
                     </div>
@@ -782,7 +786,7 @@ export default function ProjectDashboardPage() {
                         onClick={() => navigate(event.href)}
                         className="grid h-10 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 text-left transition-colors hover:bg-surface-soft"
                       >
-                        <span className={`h-2 w-2 rounded-full ${['bg-[#00c950]', 'bg-[#0066ff]', 'bg-[#ffa51f]', 'bg-[#ff3b1f]'][index % 4]}`} />
+                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${['bg-[#00c950]', 'bg-[#0066ff]', 'bg-[#ffa51f]', 'bg-[#ff3b1f]'][index % 4]}`} />
                         <span className="truncate text-[13px] font-medium text-primary">
                           {event.label} : {event.articleTitle}
                         </span>
@@ -791,7 +795,7 @@ export default function ProjectDashboardPage() {
                     ))}
                     {Array.from({ length: Math.max(0, 5 - visibleActivityEvents.length) }).map((_, i) => (
                       <div key={`pad-${i}`} className="grid h-10 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6">
-                        <span className="h-2 w-2 rounded-full bg-transparent" />
+                        <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-transparent" />
                         <span />
                         <span />
                       </div>
