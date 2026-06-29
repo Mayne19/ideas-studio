@@ -543,7 +543,7 @@ export default function ProjectDashboardPage() {
       </section>
 
       <section className="grid items-stretch gap-4 lg:grid-cols-[1.62fr_1fr]">
-        <Card padding="none" className="flex min-h-[430px] flex-col overflow-hidden">
+        <Card padding="none" className="flex min-h-[500px] flex-col overflow-hidden">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <h2 className="text-[13px] font-semibold text-primary">Articles récents</h2>
             <button
@@ -618,8 +618,8 @@ export default function ProjectDashboardPage() {
           </div>
         </Card>
 
-        <div className="flex min-h-[430px] flex-col gap-4">
-          <Card padding="none" className="overflow-hidden">
+        <div className="grid h-full grid-rows-[5fr_7fr] gap-4">
+          <Card padding="none" className="flex min-h-0 flex-col overflow-hidden">
             <h2 className="border-b border-border px-6 py-4 text-[13px] font-semibold text-primary">À faire maintenant</h2>
             <div className="flex flex-col divide-y divide-border-soft">
               {todoRows.map((row) => (
@@ -640,9 +640,9 @@ export default function ProjectDashboardPage() {
             </div>
           </Card>
 
-          <Card padding="none" className="flex flex-1 flex-col overflow-hidden">
+          <Card padding="none" className="flex min-h-0 flex-col overflow-hidden">
             <h2 className="border-b border-border px-6 py-4 text-[13px] font-semibold text-primary">Activité récente</h2>
-            <div className="flex flex-1 flex-col divide-y divide-border-soft">
+            <div className="flex flex-1 flex-col divide-y divide-border-soft overflow-y-auto">
               {visibleActivityEvents.map((event, index) => (
                 <button
                   key={event.id}
