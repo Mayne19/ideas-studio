@@ -3,7 +3,7 @@ import { Bar, BarChart, Label, Line, LineChart, PolarGrid, PolarRadiusAxis, Radi
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Lightbulb, Globe,
-  ArrowRight, AlertCircle, Clock,
+  ArrowRight, ArrowUp, AlertCircle, Clock,
   Edit3, Eye, Send, Star, ClipboardList, HelpCircle,
   ShieldCheck,
 } from '@/components/ui/hugeIcons'
@@ -531,34 +531,30 @@ export default function ProjectDashboardPage() {
       </section>
 
       <section className="flex h-[44px] items-center overflow-hidden rounded-[8px] border border-border bg-surface text-[13px] text-secondary">
-        {/* Badge Production + indicateur Connecté */}
-        <div className="flex h-full shrink-0 items-center gap-3 border-r border-border px-4">
+        {/* Statut connecté */}
+        <div className="flex h-full shrink-0 items-center border-r border-border px-4">
           <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[13px] font-medium text-white">
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-accent">
-              <ArrowRight size={10} className="-rotate-90" />
+              <ArrowUp size={10} />
             </span>
-            Production
-          </span>
-          <span className="flex items-center gap-1.5 font-medium text-primary">
-            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${isConnected ? 'bg-[#00c950]' : 'bg-tertiary'}`} />
             {isConnected ? 'Connecté' : 'Non connecté'}
           </span>
         </div>
         {/* Domain */}
-        <div className="flex h-full shrink-0 items-center gap-2 border-r border-border px-5 font-medium text-primary">
+        <div className="flex h-full min-w-[240px] shrink-0 items-center gap-2 border-r border-border px-6 font-medium text-primary">
           <Globe size={13} className="shrink-0 text-secondary" />
           {project?.domain ?? '—'}
         </div>
         {/* Pipeline + runs */}
-        <div className="flex h-full flex-1 items-center gap-5 px-5">
-          <span className="flex items-center gap-2">
-            <Clock size={13} className="shrink-0" />
-            Pipeline : <strong className="text-primary">{pipelineActive ? 'Actif' : 'Inactif'}</strong>
-          </span>
-          <span className="h-4 w-px bg-border" />
-          <span>Dernier run : <strong className="text-primary">{lastRunLabel}</strong></span>
-          <span className="h-4 w-px bg-border" />
-          <span>Prochain run : <strong className="text-primary">—</strong></span>
+        <div className="flex h-full min-w-[188px] shrink-0 items-center gap-2 border-r border-border px-6">
+          <Clock size={13} className="shrink-0" />
+          Pipeline : <strong className="text-primary">{pipelineActive ? 'Actif' : 'Inactif'}</strong>
+        </div>
+        <div className="flex h-full min-w-[170px] shrink-0 items-center border-r border-border px-6">
+          Dernier run : <strong className="ml-1 text-primary">{lastRunLabel}</strong>
+        </div>
+        <div className="flex h-full min-w-[170px] shrink-0 items-center px-6">
+          Prochain run : <strong className="ml-1 text-primary">—</strong>
         </div>
       </section>
 
@@ -706,14 +702,13 @@ export default function ProjectDashboardPage() {
                   key={row.label}
                   type="button"
                   onClick={() => navigate(row.href)}
-                  className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 px-6 py-3 text-left transition-colors hover:bg-surface-soft"
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 py-2.5 text-left transition-colors hover:bg-surface-soft"
                 >
                   <span>
                     <span className="block text-[13px] font-medium text-primary">{row.label}</span>
                     <span className="block text-[11px] text-secondary">{row.detail}</span>
                   </span>
-                  <span className="inline-flex h-6 min-w-9 items-center justify-center rounded-full bg-blue-50 px-2 text-[13px] font-semibold text-blue-700">{row.count}</span>
-                  <ArrowRight size={14} className="text-tertiary" />
+                  <span className="shrink-0 pl-6 text-[13px] font-semibold tabular-nums text-primary">{row.count}</span>
                 </button>
               ))}
             </div>
@@ -722,23 +717,39 @@ export default function ProjectDashboardPage() {
           <Card padding="none" className="overflow-hidden">
             <h2 className="border-b border-border px-6 py-4 text-[13px] font-semibold text-primary">Activité récente</h2>
             <div className="flex flex-col divide-y divide-border-soft">
-              {visibleActivityEvents.map((event, index) => (
-                <button
-                  key={event.id}
-                  type="button"
-                  onClick={() => navigate(event.href)}
-                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 py-2.5 text-left transition-colors hover:bg-surface-soft"
-                >
-                  <span className={`h-2 w-2 rounded-full ${['bg-[#00c950]', 'bg-[#0066ff]', 'bg-[#ffa51f]', 'bg-[#ff3b1f]'][index % 4]}`} />
-                  <span className="truncate text-[13px] font-medium text-primary">
-                    {event.label} : {event.articleTitle}
-                  </span>
-                  <span className="shrink-0 pl-6 text-[13px] font-medium text-secondary">{event.time}</span>
-                </button>
-              ))}
-              {visibleActivityEvents.length === 0 && (
-                <div className="px-6 py-10 text-[13px] text-secondary">Aucune activité récente.</div>
-              )}
+              {visibleActivityEvents.length === 0
+                ? Array.from({ length: 5 }).map((_, i) => (
+                    <div key={`empty-${i}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 py-2.5">
+                      <span className="h-2 w-2 rounded-full bg-transparent" />
+                      <span className="text-[13px] text-tertiary">—</span>
+                      <span />
+                    </div>
+                  ))
+                : (
+                  <>
+                    {visibleActivityEvents.map((event, index) => (
+                      <button
+                        key={event.id}
+                        type="button"
+                        onClick={() => navigate(event.href)}
+                        className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 py-2.5 text-left transition-colors hover:bg-surface-soft"
+                      >
+                        <span className={`h-2 w-2 rounded-full ${['bg-[#00c950]', 'bg-[#0066ff]', 'bg-[#ffa51f]', 'bg-[#ff3b1f]'][index % 4]}`} />
+                        <span className="truncate text-[13px] font-medium text-primary">
+                          {event.label} : {event.articleTitle}
+                        </span>
+                        <span className="shrink-0 pl-6 text-[13px] font-medium text-secondary">{event.time}</span>
+                      </button>
+                    ))}
+                    {Array.from({ length: Math.max(0, 5 - visibleActivityEvents.length) }).map((_, i) => (
+                      <div key={`pad-${i}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 py-2.5">
+                        <span className="h-2 w-2 rounded-full bg-transparent" />
+                        <span />
+                        <span />
+                      </div>
+                    ))}
+                  </>
+                )}
             </div>
           </Card>
         </div>

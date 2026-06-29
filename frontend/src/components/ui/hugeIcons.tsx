@@ -10,6 +10,7 @@ import {
   ArrowDownRight01Icon,
   ArrowLeft01Icon,
   ArrowRight01Icon,
+  ArrowUp01Icon,
   ArrowUpRight01Icon,
   BarChartIcon,
   BellIcon,
@@ -151,6 +152,7 @@ export const Archive = createHugeIcon(ArchiveIcon)
 export const ArrowDownRight = createHugeIcon(ArrowDownRight01Icon)
 export const ArrowLeft = createHugeIcon(ArrowLeft01Icon)
 export const ArrowRight = createHugeIcon(ArrowRight01Icon)
+export const ArrowUp = createHugeIcon(ArrowUp01Icon)
 export const ArrowUpRight = createHugeIcon(ArrowUpRight01Icon)
 export const AtSign = createHugeIcon(MailAtSign01Icon)
 export const BarChart2 = createHugeIcon(BarChartIcon)
