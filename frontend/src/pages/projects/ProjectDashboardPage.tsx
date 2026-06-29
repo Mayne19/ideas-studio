@@ -138,7 +138,7 @@ function buildMonthlyMetric(articles: Article[], getValue: (arts: Article[]) => 
   })
 }
 
-function SeoRadialCard({ score, changePts }: { score: number; changePts: number }) {
+function SeoRadialCard({ score, changePts, data }: { score: number; changePts: number; data: MonthPoint[] }) {
   const changeColor = changePts >= 0 ? '#00c950' : '#ff3b1f'
   const changeLabel = changePts >= 0 ? `+${changePts} pts` : `${changePts} pts`
   const fillColor = score >= 75 ? '#00c950' : score >= 50 ? '#ffa51f' : '#ff3b1f'
@@ -151,19 +151,16 @@ function SeoRadialCard({ score, changePts }: { score: number; changePts: number 
         <HelpCircle size={12} className="text-tertiary" />
       </div>
       <div className="flex items-center justify-between gap-2">
-        <div className="text-[20px] font-semibold leading-none text-primary">{score || '—'}</div>
-        <span className="text-[12px] font-semibold tabular-nums" style={{ color: changeColor }}>{changeLabel}</span>
-      </div>
-      <div className="mt-2 -mx-1">
-        <ResponsiveContainer width="100%" height={72}>
+        <ResponsiveContainer width={64} height={64}>
           <RadialBarChart
             data={[{ v: score, fill: fillColor }]}
             startAngle={90}
             endAngle={endAngle}
-            outerRadius={32}
-            innerRadius={22}
+            outerRadius={30}
+            innerRadius={21}
+            margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
           >
-            <PolarGrid gridType="circle" radialLines={false} stroke="none" polarRadius={[32, 22]} />
+            <PolarGrid gridType="circle" radialLines={false} stroke="none" polarRadius={[30, 21]} />
             <RadialBar dataKey="v" background={{ fill: 'var(--color-surface-muted, #f1f5f9)' }} cornerRadius={6} />
             <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
               <Label
@@ -181,6 +178,17 @@ function SeoRadialCard({ score, changePts }: { score: number; changePts: number 
               />
             </PolarRadiusAxis>
           </RadialBarChart>
+        </ResponsiveContainer>
+        <span className="text-[12px] font-semibold tabular-nums" style={{ color: changeColor }}>{changeLabel}</span>
+      </div>
+      <div className="mt-2 -mx-1">
+        <ResponsiveContainer width="100%" height={44}>
+          <LineChart data={data} margin={{ top: 8, right: 6, bottom: 4, left: 6 }}>
+            <Line type="natural" dataKey="v" stroke={fillColor} strokeWidth={1.5}
+              dot={{ r: 1.5, fill: fillColor, strokeWidth: 0 }}
+              activeDot={{ r: 2.5, fill: fillColor, strokeWidth: 0 }}
+              isAnimationActive={false} />
+          </LineChart>
         </ResponsiveContainer>
       </div>
     </article>
@@ -558,6 +566,7 @@ export default function ProjectDashboardPage() {
         <SeoRadialCard
           score={seoScore || 0}
           changePts={data?.seoChangePts ?? 0}
+          data={data?.seoMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
         />
         <SparkMetricCard
           title="Vues du mois"
