@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Bar, BarChart, Line, LineChart, ResponsiveContainer } from 'recharts'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  Lightbulb, BarChart2, Globe,
+  Lightbulb, Globe,
   ArrowRight, AlertCircle, Clock,
   Edit3, Eye, Send, Star, ClipboardList, HelpCircle, Play,
   Plus, ShieldCheck,
@@ -558,13 +558,7 @@ export default function ProjectDashboardPage() {
         />
       </section>
 
-      <section className="grid grid-cols-5 gap-4">
-        <PipelineInfoCard
-          icon={<BarChart2 size={24} />}
-          title="Pipeline"
-          value={pipelineActive ? data?.activeProductionCount ?? 0 : 0}
-          description={pipelineActive ? 'Pipeline actif' : 'Aucun pipeline actif'}
-        />
+      <section className="grid grid-cols-4 gap-4">
         <PipelineInfoCard
           icon={<ClipboardList size={24} />}
           title="Production en cours"
