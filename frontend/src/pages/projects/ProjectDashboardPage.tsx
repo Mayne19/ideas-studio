@@ -175,7 +175,7 @@ function SeoGauge({ value }: { value: number }) {
           strokeLinecap="round"
         />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-[16px] font-semibold text-primary">{value}</span>
+      <span className="absolute inset-0 flex items-center justify-center text-[13px] font-semibold text-primary">{value}</span>
     </div>
   )
 }
@@ -195,13 +195,13 @@ function MetricBox({
 }) {
   return (
     <article className="rounded-[8px] border border-border bg-surface px-5 py-4 shadow-none">
-      <div className="mb-3 flex items-center gap-1.5 text-[13px] font-semibold text-primary">
+      <div className="mb-2.5 flex items-center gap-1.5 text-[12px] font-medium text-secondary">
         {title}
-        <HelpCircle size={13} className="text-tertiary" />
+        <HelpCircle size={12} className="text-tertiary" />
       </div>
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <div className="text-[26px] font-semibold leading-none text-primary">{value}</div>
+          <div className="text-[20px] font-semibold leading-none text-primary">{value}</div>
           {children}
         </div>
         {change && <span className="text-[14px] font-medium" style={{ color }}>{change}</span>}
@@ -222,12 +222,12 @@ function PipelineInfoCard({
   description: string
 }) {
   return (
-    <Card padding="sm" className="flex min-h-[104px] items-center gap-5 px-7 py-5">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center text-primary">{icon}</span>
+    <Card padding="sm" className="flex min-h-[96px] items-center gap-4 px-5 py-4">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center text-secondary">{icon}</span>
       <div>
-        <p className="text-[14px] font-semibold text-primary">{title}</p>
-        <p className="mt-1 text-[28px] font-semibold leading-none text-primary">{value}</p>
-        <p className="mt-2 text-[13px] text-secondary">{description}</p>
+        <p className="text-[12px] font-medium text-secondary">{title}</p>
+        <p className="mt-0.5 text-[20px] font-semibold leading-none text-primary">{value}</p>
+        <p className="mt-1.5 text-[12px] text-tertiary">{description}</p>
       </div>
     </Card>
   )
@@ -422,13 +422,13 @@ export default function ProjectDashboardPage() {
     <div className="mx-auto flex w-full max-w-none flex-col gap-4">
       <section className="flex items-start justify-between gap-6 px-6 pb-4 pt-2">
         <div>
-          <h1 className="text-[24px] font-semibold leading-tight text-primary">
+          <h1 className="text-[20px] font-semibold leading-tight text-primary">
             {firstName ? `Bonjour, ${firstName} 👋` : 'Bonjour 👋'}
           </h1>
-          <p className="mt-2 text-[16px] leading-6 text-secondary">
+          <p className="mt-1 text-[13px] text-secondary">
             Vue d'ensemble de votre pipeline éditorial et de vos performances.
           </p>
-          <div className="mt-5 flex flex-wrap items-center gap-5 text-[13px] font-medium">
+          <div className="mt-4 flex flex-wrap items-center gap-5 text-[13px] font-medium">
             <span className="flex items-center gap-2 text-primary">
               <Globe size={14} />
               {project?.domain ?? '—'}
@@ -444,23 +444,23 @@ export default function ProjectDashboardPage() {
           <button
             type="button"
             onClick={() => navigate(`/projects/${projectId}/articles`)}
-            className="inline-flex h-10 items-center gap-2 rounded-[6px] border border-border bg-surface px-5 text-[14px] font-medium text-primary transition-colors hover:bg-surface-soft"
+            className="inline-flex h-9 items-center gap-2 rounded-[6px] border border-border bg-surface px-4 text-[13px] font-medium text-primary transition-colors hover:bg-surface-soft"
           >
             Créer un article
-            <Plus size={15} />
+            <Plus size={13} />
           </button>
           <button
             type="button"
             onClick={() => navigate(`/projects/${projectId}/pipeline`)}
-            className="inline-flex h-10 items-center gap-2 rounded-[6px] border border-primary bg-primary px-5 text-[14px] font-medium text-white transition-opacity hover:opacity-90"
+            className="inline-flex h-9 items-center gap-2 rounded-[6px] border border-accent bg-accent px-4 text-[13px] font-medium text-white transition-opacity hover:opacity-90"
           >
             Lancer le pipeline
-            <Play size={15} />
+            <Play size={13} />
           </button>
         </div>
       </section>
 
-      <section className="grid h-[50px] grid-cols-[160px_1fr_1.25fr_1.25fr_1.25fr] overflow-hidden rounded-[8px] border border-border bg-surface text-[14px] text-secondary">
+      <section className="grid h-[44px] grid-cols-[160px_1fr_1.25fr_1.25fr_1.25fr] overflow-hidden rounded-[8px] border border-border bg-surface text-[13px] text-secondary">
         <div className="flex items-center justify-center border-r border-border">
           <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[13px] font-medium text-white">
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-accent">
@@ -489,9 +489,9 @@ export default function ProjectDashboardPage() {
 
       <section className="grid grid-cols-5 gap-4">
         <article className="rounded-[8px] border border-border bg-surface px-5 py-4 shadow-none">
-          <div className="mb-3 flex items-center gap-1.5 text-[13px] font-semibold text-primary">
+          <div className="mb-2.5 flex items-center gap-1.5 text-[12px] font-medium text-secondary">
             Score SEO moyen
-            <HelpCircle size={13} className="text-tertiary" />
+            <HelpCircle size={12} className="text-tertiary" />
           </div>
           <div className="flex items-center gap-4">
             <SeoGauge value={seoScore || 0} />
@@ -544,7 +544,7 @@ export default function ProjectDashboardPage() {
 
       <section className="grid items-stretch gap-4 lg:grid-cols-[1.62fr_1fr]">
         <Card padding="none" className="flex min-h-[430px] flex-col overflow-hidden">
-          <h2 className="border-b border-border px-6 py-4 text-[22px] font-semibold text-primary">Articles récents</h2>
+          <h2 className="border-b border-border px-6 py-4 text-[13px] font-semibold text-primary">Articles récents</h2>
           <div className="grid grid-cols-[minmax(0,1fr)_120px_90px_120px_130px] border-b border-border px-5 py-3 text-[13px] font-medium text-secondary">
             <span>Article</span>
             <span>Score SEO</span>
@@ -564,8 +564,8 @@ export default function ProjectDashboardPage() {
                   className="grid grid-cols-[minmax(0,1fr)_120px_90px_120px_130px] items-center px-5 py-3 text-left transition-colors hover:bg-surface-soft"
                 >
                   <span className="min-w-0">
-                    <span className="block truncate text-[14px] font-semibold text-primary">{article.title}</span>
-                    <span className="mt-1 flex items-center gap-2 text-[13px] font-medium text-secondary">
+                    <span className="block truncate text-[13px] font-medium text-primary">{article.title}</span>
+                    <span className="mt-0.5 flex items-center gap-2 text-[11px] text-secondary">
                       <span>{formatDate(getArticleDate(article))}</span>
                       <span className="h-1 w-1 rounded-full bg-tertiary" />
                       <span>{article.author_name ?? 'Auteur'}</span>
@@ -573,16 +573,16 @@ export default function ProjectDashboardPage() {
                       <span>{article.word_count > 0 ? `${article.word_count.toLocaleString('fr-FR')} mots` : '— mots'}</span>
                     </span>
                   </span>
-                  <span className="flex items-center gap-3 text-[14px] font-semibold text-primary">
+                  <span className="flex items-center gap-2.5 text-[13px] font-medium text-primary">
                     {score ?? '—'}
-                    <span className="h-1.5 w-16 overflow-hidden rounded-full bg-surface-muted">
+                    <span className="h-1.5 w-14 overflow-hidden rounded-full bg-surface-muted">
                       <span
                         className={`block h-full rounded-full ${(score ?? 0) >= 75 ? 'bg-[#00c950]' : 'bg-[#ffa51f]'}`}
                         style={{ width: `${Math.min(score ?? 0, 100)}%` }}
                       />
                     </span>
                   </span>
-                  <span className="text-[14px] font-semibold text-primary">—</span>
+                  <span className="text-[13px] font-medium text-primary">—</span>
                   <StatusBadge status={article.status} />
                   <span
                     className="inline-flex h-6 w-fit items-center rounded-full border border-blue-100 bg-blue-50 px-3 text-[13px] font-medium text-blue-700"
@@ -594,14 +594,14 @@ export default function ProjectDashboardPage() {
               )
             })}
             {data && data.recentArticles.length === 0 && (
-              <div className="px-6 py-10 text-[14px] text-secondary">Aucun article récent.</div>
+              <div className="px-6 py-10 text-[13px] text-secondary">Aucun article récent.</div>
             )}
           </div>
         </Card>
 
         <div className="flex min-h-[430px] flex-col gap-4">
           <Card padding="none" className="overflow-hidden">
-            <h2 className="border-b border-border px-6 py-4 text-[22px] font-semibold text-primary">À faire maintenant</h2>
+            <h2 className="border-b border-border px-6 py-4 text-[13px] font-semibold text-primary">À faire maintenant</h2>
             <div className="flex flex-col divide-y divide-border-soft">
               {todoRows.map((row) => (
                 <button
@@ -611,8 +611,8 @@ export default function ProjectDashboardPage() {
                   className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 px-6 py-3 text-left transition-colors hover:bg-surface-soft"
                 >
                   <span>
-                    <span className="block text-[14px] font-semibold text-primary">{row.label}</span>
-                    <span className="block text-[13px] text-secondary">{row.detail}</span>
+                    <span className="block text-[13px] font-medium text-primary">{row.label}</span>
+                    <span className="block text-[11px] text-secondary">{row.detail}</span>
                   </span>
                   <span className="inline-flex h-6 min-w-9 items-center justify-center rounded-full bg-blue-50 px-2 text-[13px] font-semibold text-blue-700">{row.count}</span>
                   <ArrowRight size={14} className="text-tertiary" />
@@ -622,7 +622,7 @@ export default function ProjectDashboardPage() {
           </Card>
 
           <Card padding="none" className="flex flex-1 flex-col overflow-hidden">
-            <h2 className="border-b border-border px-6 py-4 text-[22px] font-semibold text-primary">Activité récente</h2>
+            <h2 className="border-b border-border px-6 py-4 text-[13px] font-semibold text-primary">Activité récente</h2>
             <div className="flex flex-1 flex-col divide-y divide-border-soft">
               {visibleActivityEvents.map((event, index) => (
                 <button
@@ -639,7 +639,7 @@ export default function ProjectDashboardPage() {
                 </button>
               ))}
               {visibleActivityEvents.length === 0 && (
-                <div className="px-6 py-10 text-[14px] text-secondary">Aucune activité récente.</div>
+                <div className="px-6 py-10 text-[13px] text-secondary">Aucune activité récente.</div>
               )}
             </div>
           </Card>
