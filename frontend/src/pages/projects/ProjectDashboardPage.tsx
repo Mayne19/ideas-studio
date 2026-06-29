@@ -704,11 +704,8 @@ export default function ProjectDashboardPage() {
                   onClick={() => navigate(row.href)}
                   className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 py-2.5 text-left transition-colors hover:bg-surface-soft"
                 >
-                  <span>
-                    <span className="block text-[13px] font-medium text-primary">{row.label}</span>
-                    <span className="block text-[11px] text-secondary">{row.detail}</span>
-                  </span>
-                  <span className="shrink-0 pl-6 text-[13px] font-semibold tabular-nums text-primary">{row.count}</span>
+                  <span className="text-[13px] font-medium text-primary">{row.label}</span>
+                  <span className="shrink-0 pl-6 text-[13px] text-secondary">{row.detail}</span>
                 </button>
               ))}
             </div>
