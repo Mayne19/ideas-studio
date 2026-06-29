@@ -705,7 +705,7 @@ export default function ProjectDashboardPage() {
                   className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 py-2.5 text-left transition-colors hover:bg-surface-soft"
                 >
                   <span className="text-[13px] font-medium text-primary">{row.label}</span>
-                  <span className="shrink-0 pl-6 text-[13px] text-secondary">{row.detail}</span>
+                  <span className="shrink-0 pl-6 text-[12px] text-secondary">{row.detail}</span>
                 </button>
               ))}
             </div>
@@ -735,7 +735,7 @@ export default function ProjectDashboardPage() {
                         <span className="truncate text-[13px] font-medium text-primary">
                           {event.label} : {event.articleTitle}
                         </span>
-                        <span className="shrink-0 pl-6 text-[13px] font-medium text-secondary">{event.time}</span>
+                        <span className="shrink-0 pl-6 text-[12px] font-medium text-secondary">{event.time}</span>
                       </button>
                     ))}
                     {Array.from({ length: Math.max(0, 5 - visibleActivityEvents.length) }).map((_, i) => (
