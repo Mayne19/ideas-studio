@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Line, LineChart, ResponsiveContainer } from 'recharts'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Lightbulb, BarChart2, Globe,
@@ -43,6 +44,8 @@ type ActivityEvent = {
   href: string
 }
 
+type MonthPoint = { v: number }
+
 type DashboardData = {
   recentArticles: Article[]
   activityArticles: Article[]
@@ -61,6 +64,11 @@ type DashboardData = {
   totalViews: number | null
   avgSeoScore: number | null
   avgReadingTime: number | null
+  seoMonthly: MonthPoint[]
+  viewsMonthly: MonthPoint[]
+  timeMonthly: MonthPoint[]
+  seoChangePts: number
+  timeChangeMins: number
 }
 
 const IN_PROGRESS_STATUSES = new Set<Article['status']>([
@@ -116,28 +124,62 @@ function getArticleDate(article: Article): string {
   return article.published_at ?? article.scheduled_at ?? article.updated_at ?? article.created_at
 }
 
-function MiniLineChart({ values, color }: { values: number[]; color: string }) {
-  const width = 160
-  const height = 42
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  const range = Math.max(max - min, 1)
-  const points = values.map((value, index) => {
-    const x = (index / Math.max(values.length - 1, 1)) * width
-    const y = height - ((value - min) / range) * (height - 10) - 5
-    return { x, y }
+function buildMonthlyMetric(articles: Article[], getValue: (arts: Article[]) => number): MonthPoint[] {
+  const now = new Date()
+  let lastValue = 0
+  return Array.from({ length: 12 }, (_, i) => {
+    const start = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1)
+    const end = new Date(now.getFullYear(), now.getMonth() - (11 - i) + 1, 1)
+    const month = articles.filter((a) => { const d = new Date(getArticleDate(a)); return d >= start && d < end })
+    if (month.length > 0) lastValue = getValue(month)
+    return { v: lastValue }
   })
-  const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ')
+}
 
+function SparkMetricCard({
+  title,
+  value,
+  change,
+  changeColor,
+  color,
+  data,
+}: {
+  title: string
+  value: string | number
+  change: string
+  changeColor: string
+  color: string
+  data: MonthPoint[]
+}) {
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="h-10 w-full overflow-visible" aria-hidden="true">
-      <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      {points.map((point, index) => (
-        <circle key={index} cx={point.x} cy={point.y} r="2" fill={color} />
-      ))}
-    </svg>
+    <article className="rounded-[8px] border border-border bg-surface px-5 py-4 shadow-none">
+      <div className="mb-2 flex items-center gap-1.5 text-[12px] font-medium text-secondary">
+        {title}
+        <HelpCircle size={12} className="text-tertiary" />
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[20px] font-semibold leading-none text-primary">{value}</div>
+        <span className="text-[12px] font-semibold tabular-nums" style={{ color: changeColor }}>{change}</span>
+      </div>
+      <div className="mt-2 -mx-1">
+        <ResponsiveContainer width="100%" height={36}>
+          <LineChart data={data} margin={{ top: 2, right: 4, bottom: 2, left: 4 }}>
+            <Line
+              type="natural"
+              dataKey="v"
+              stroke={color}
+              strokeWidth={1.5}
+              dot={{ r: 1.5, fill: color, strokeWidth: 0 }}
+              activeDot={{ r: 2.5, fill: color, strokeWidth: 0 }}
+              isAnimationActive={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </article>
   )
 }
+
 
 function MiniBarChart({ values, color }: { values: number[]; color: string }) {
   const max = Math.max(...values, 1)
@@ -154,31 +196,6 @@ function MiniBarChart({ values, color }: { values: number[]; color: string }) {
   )
 }
 
-function SeoGauge({ value }: { value: number }) {
-  const radius = 18
-  const circumference = 2 * Math.PI * radius
-  const offset = circumference - (Math.min(Math.max(value, 0), 100) / 100) * circumference
-
-  return (
-    <div className="relative h-14 w-14 shrink-0">
-      <svg viewBox="0 0 48 48" className="-rotate-90">
-        <circle cx="24" cy="24" r={radius} fill="none" stroke="var(--color-surface-muted)" strokeWidth="3" />
-        <circle
-          cx="24"
-          cy="24"
-          r={radius}
-          fill="none"
-          stroke="#00c950"
-          strokeWidth="3"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-        />
-      </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-[13px] font-semibold text-primary">{value}</span>
-    </div>
-  )
-}
 
 function MetricBox({
   title,
@@ -355,6 +372,23 @@ export default function ProjectDashboardPage() {
       const avgReadingTime = worded.length > 0
         ? Math.ceil(worded.reduce((s, a) => s + a.word_count, 0) / worded.length / 200)
         : null
+
+      // Monthly data (12 derniers mois)
+      const seoMonthly = buildMonthlyMetric(
+        scored,
+        (arts) => Math.round(arts.reduce((s, a) => s + scoreOnHundred(a.seo_score)!, 0) / arts.length),
+      )
+      const timeMonthly = buildMonthlyMetric(
+        worded,
+        (arts) => Math.ceil(arts.reduce((s, a) => s + a.word_count, 0) / arts.length / 200),
+      )
+      const viewsMonthly = buildMonthlyMetric(
+        contentArticles,
+        (arts) => arts.length,
+      )
+      const seoChangePts = seoMonthly[11].v - seoMonthly[10].v
+      const timeChangeMins = timeMonthly[11].v - timeMonthly[10].v
+
       setData({
         recentArticles,
         activityArticles,
@@ -377,6 +411,11 @@ export default function ProjectDashboardPage() {
         totalViews: perf.status === 'fulfilled' ? perf.value.total_views : null,
         avgSeoScore,
         avgReadingTime,
+        seoMonthly,
+        viewsMonthly,
+        timeMonthly,
+        seoChangePts,
+        timeChangeMins,
       })
     })
   }, [projectId])
@@ -488,25 +527,30 @@ export default function ProjectDashboardPage() {
       </section>
 
       <section className="grid grid-cols-5 gap-4">
-        <article className="rounded-[8px] border border-border bg-surface px-5 py-4 shadow-none">
-          <div className="mb-2.5 flex items-center gap-1.5 text-[12px] font-medium text-secondary">
-            Score SEO moyen
-            <HelpCircle size={12} className="text-tertiary" />
-          </div>
-          <div className="flex items-center gap-4">
-            <SeoGauge value={seoScore || 0} />
-            <div className="min-w-0 flex-1">
-              <div className="text-[15px] font-semibold text-[#00c950]">+6 pts</div>
-              <MiniLineChart values={[54, 58, 57, 62, 64, 61, 66, 65, 70, 72, 75, 78]} color="#00c950" />
-            </div>
-          </div>
-        </article>
-        <MetricBox title="Vues du mois" value={totalViews} change="+12%" color="#00c950">
-          <MiniLineChart values={[24, 27, 29, 21, 25, 17, 19, 12, 22, 20, 10, 14].reverse()} color="#0066ff" />
-        </MetricBox>
-        <MetricBox title="Temps moyen" value={data?.avgReadingTime != null ? `${data.avgReadingTime}:32` : '—'} change="-12%" color="#ff3b1f">
-          <MiniLineChart values={[18, 14, 28, 22, 31, 24, 29, 26, 34, 28, 35, 30]} color="#ff3b1f" />
-        </MetricBox>
+        <SparkMetricCard
+          title="Score SEO moyen"
+          value={seoScore || '—'}
+          change={data ? (data.seoChangePts >= 0 ? `+${data.seoChangePts} pts` : `${data.seoChangePts} pts`) : '—'}
+          changeColor={!data || data.seoChangePts >= 0 ? '#00c950' : '#ff3b1f'}
+          color="#00c950"
+          data={data?.seoMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
+        />
+        <SparkMetricCard
+          title="Vues du mois"
+          value={totalViews}
+          change={data ? (() => { const d = data.viewsMonthly; const diff = d[11].v - d[10].v; return diff >= 0 ? `+${diff}` : `${diff}` })() : '—'}
+          changeColor={!data || (data.viewsMonthly[11].v - data.viewsMonthly[10].v) >= 0 ? '#00c950' : '#ff3b1f'}
+          color="#0066ff"
+          data={data?.viewsMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
+        />
+        <SparkMetricCard
+          title="Temps moyen"
+          value={data?.avgReadingTime != null ? `${data.avgReadingTime} min` : '—'}
+          change={data ? (data.timeChangeMins >= 0 ? `+${data.timeChangeMins} min` : `${data.timeChangeMins} min`) : '—'}
+          changeColor={!data || data.timeChangeMins <= 0 ? '#00c950' : '#ff3b1f'}
+          color="#ff3b1f"
+          data={data?.timeMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
+        />
         <MetricBox title="Publiés" value={data?.publishedCount ?? '—'} change="+9%" color="#00c950">
           <MiniBarChart values={[13, 15, 16, 17, 22, 15, 28, 19, 25, 34, 23, 29, 38, 31, 35, 27, 31, 28]} color="#00c950" />
         </MetricBox>
