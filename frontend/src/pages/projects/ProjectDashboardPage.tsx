@@ -183,12 +183,19 @@ function SeoRadialCard({ score, changePts, data }: { score: number; changePts: n
       </div>
       <div className="mt-2 h-[50px] -mx-1">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 5, right: 6, bottom: 6, left: 6 }}>
-            <Line type="natural" dataKey="v" stroke={fillColor} strokeWidth={1.5}
+          <AreaChart data={data} margin={{ top: 5, right: 6, bottom: 6, left: 6 }}>
+            <Area
+              type="natural"
+              dataKey="v"
+              stroke={fillColor}
+              strokeWidth={1.5}
+              fill={fillColor}
+              fillOpacity={0.4}
               dot={{ r: 1.5, fill: fillColor, strokeWidth: 0 }}
               activeDot={{ r: 2.5, fill: fillColor, strokeWidth: 0 }}
-              isAnimationActive={false} />
-          </LineChart>
+              isAnimationActive={false}
+            />
+          </AreaChart>
         </ResponsiveContainer>
       </div>
     </article>
