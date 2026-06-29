@@ -466,17 +466,6 @@ export default function ProjectDashboardPage() {
           <p className="mt-1 text-[13px] text-secondary">
             Vue d'ensemble de votre pipeline éditorial et de vos performances.
           </p>
-          <div className="mt-4 flex flex-wrap items-center gap-5 text-[13px] font-medium">
-            <span className="flex items-center gap-2 text-primary">
-              <Globe size={14} />
-              {project?.domain ?? '—'}
-            </span>
-            <span className="h-5 w-px bg-border" />
-            <span className="flex items-center gap-2 text-primary">
-              <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-[#00c950]' : 'bg-tertiary'}`} />
-              {isConnected ? 'Connecté' : 'Non connecté'}
-            </span>
-          </div>
         </div>
         <div className="flex shrink-0 items-center gap-3 pt-4">
           <button
@@ -498,8 +487,8 @@ export default function ProjectDashboardPage() {
         </div>
       </section>
 
-      <section className="grid h-[44px] grid-cols-[160px_1fr] overflow-hidden rounded-[8px] border border-border bg-surface text-[13px] text-secondary">
-        <div className="flex items-center justify-center border-r border-border">
+      <section className="flex h-[44px] items-center gap-0 overflow-hidden rounded-[8px] border border-border bg-surface text-[13px] text-secondary">
+        <div className="flex h-full shrink-0 items-center justify-center border-r border-border px-4">
           <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[13px] font-medium text-white">
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-accent">
               <ArrowRight size={10} />
@@ -507,9 +496,21 @@ export default function ProjectDashboardPage() {
             Production
           </span>
         </div>
-        <div className="flex items-center justify-center gap-2">
-          <Clock size={14} />
-          Pipeline : <strong className="text-primary">{pipelineActive ? 'Actif' : 'Inactif'}</strong>
+        <div className="flex h-full flex-1 items-center gap-5 px-5">
+          <span className="flex items-center gap-2 font-medium text-primary">
+            <Globe size={13} className="shrink-0 text-secondary" />
+            {project?.domain ?? '—'}
+          </span>
+          <span className="h-4 w-px bg-border" />
+          <span className="flex items-center gap-1.5 font-medium text-primary">
+            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${isConnected ? 'bg-[#00c950]' : 'bg-tertiary'}`} />
+            {isConnected ? 'Connecté' : 'Non connecté'}
+          </span>
+          <span className="h-4 w-px bg-border" />
+          <span className="flex items-center gap-2">
+            <Clock size={13} className="shrink-0" />
+            Pipeline : <strong className="text-primary">{pipelineActive ? 'Actif' : 'Inactif'}</strong>
+          </span>
         </div>
       </section>
 
