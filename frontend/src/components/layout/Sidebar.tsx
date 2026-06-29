@@ -290,34 +290,35 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
             </div>
           )}
 
-          {/* Settings + Logout */}
-          <div className={cn('flex items-center gap-1', collapsed && 'flex-col')}>
+          {/* Settings + Logout — deux lignes cohérentes */}
+          <div className="flex flex-col gap-0.5">
             {projectId && (
               <NavLink
                 to={`/projects/${projectId}/settings`}
                 title={collapsed ? 'Paramètres' : undefined}
                 className={({ isActive }) =>
                   cn(
-                    'flex h-7 items-center gap-1.5 rounded-[6px] px-2 text-[12px] font-medium transition-colors',
-                    collapsed ? 'w-7 justify-center' : 'flex-1',
+                    'flex h-7 w-full items-center gap-2 rounded-[6px] px-2 text-[12px] font-medium transition-colors',
+                    collapsed && 'justify-center',
                     isActive ? 'bg-surface-muted text-primary' : 'text-secondary hover:bg-surface-soft hover:text-primary',
                   )
                 }
               >
-                <HugeIcon icon={Setting06Icon} size={14} className="shrink-0" />
+                <HugeIcon icon={Setting06Icon} size={13} className="shrink-0" />
                 {!collapsed && <span>Paramètres</span>}
               </NavLink>
             )}
             <button
               type="button"
               onClick={() => setLogoutConfirmOpen(true)}
-              title="Se déconnecter"
+              title={collapsed ? 'Se déconnecter' : undefined}
               className={cn(
-                'flex h-7 items-center justify-center rounded-[6px] text-secondary transition-colors hover:bg-surface-soft hover:text-primary',
-                collapsed ? 'w-7' : 'w-7',
+                'flex h-7 w-full items-center gap-2 rounded-[6px] px-2 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary',
+                collapsed && 'justify-center',
               )}
             >
-              <HugeIcon icon={Logout01Icon} size={14} />
+              <HugeIcon icon={Logout01Icon} size={13} className="shrink-0" />
+              {!collapsed && <span>Déconnexion</span>}
             </button>
           </div>
         </div>
