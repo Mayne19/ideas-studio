@@ -31,6 +31,8 @@ class CategoryCreate(BaseModel):
     editorial_goal: Optional[str] = None
     target_audience: Optional[str] = None
     internal_notes: Optional[str] = None
+    vertical: Optional[str] = None
+    niche: Optional[str] = None
 
     @field_validator("color")
     @classmethod
@@ -51,6 +53,8 @@ class CategoryUpdate(BaseModel):
     editorial_goal: Optional[str] = None
     target_audience: Optional[str] = None
     internal_notes: Optional[str] = None
+    vertical: Optional[str] = None
+    niche: Optional[str] = None
 
     @field_validator("color")
     @classmethod
@@ -75,5 +79,7 @@ class CategoryPublic(BaseModel):
     editorial_goal: Optional[str] = None
     target_audience: Optional[str] = None
     internal_notes: Optional[str] = None
+    vertical: Optional[str] = None
+    niche: Optional[str] = None
     created_at: datetime
     updated_at: datetime

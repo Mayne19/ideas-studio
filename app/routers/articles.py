@@ -9,7 +9,7 @@ from app.models.user import User
 from app.models.project_member import ProjectMember
 from app.models.article import Article, WRITER_EDITABLE_STATUSES
 from app.models.project import Project
-from app.schemas.article import ArticleCreate, ArticleUpdate, ArticlePublic, ArticleScheduleRequest, PromoteResponse, BulkValidateRequest, BulkValidateResponse
+from app.schemas.article import ArticleCreate, ArticleUpdate, ArticlePublic, ArticleScheduleRequest, PromoteResponse, BulkValidateRequest, BulkValidateResponse, BulkValidateByScoreRequest, BulkValidateByScoreResponse
 
 logger = logging.getLogger(__name__)
 from app.services.article_service import (
@@ -389,6 +389,29 @@ def bulk_validate_articles_route(
 ):
     from app.services.validation_service import validate_bulk_articles
     return validate_bulk_articles(db, project_id, data.article_ids)
+
+
+@router.post("/projects/{project_id}/articles/bulk/validate-by-score", response_model=BulkValidateByScoreResponse)
+def bulk_validate_by_score_route(
+    project_id: str,
+    data: BulkValidateByScoreRequest,
+    member: ProjectMember = Depends(require_project_role(*_MANAGE_ROLES)),
+    db: Session = Depends(get_db),
+):
+    from app.services.validation_service import validate_bulk_articles
+    eligible_articles = db.query(Article).filter(
+        Article.project_id == project_id,
+        Article.status.in_(data.statuses),
+        Article.global_score >= data.min_score,
+    ).all()
+    total_eligible = len(eligible_articles)
+    eligible_ids = [a.id for a in eligible_articles]
+    result = validate_bulk_articles(db, project_id, eligible_ids)
+    return {
+        **result,
+        "score_threshold_applied": data.min_score,
+        "total_eligible": total_eligible,
+    }
 
 
 @router.post("/projects/{project_id}/articles/bulk/publish", response_model=BulkValidateResponse)

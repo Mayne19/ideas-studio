@@ -34,30 +34,75 @@ def _distribute_dates(
     month_start: datetime,
     days_in_month: int,
     category_frequencies: dict[str, int],
+    category_niches: dict[str, str | None] | None = None,
 ) -> dict[str, list[datetime]]:
-    """Distribute ideas across the month, avoiding same-day and respecting category frequencies."""
+    """Distribute ideas across the month avoiding same-category and same-niche on the same day."""
     import random
     rng = random.Random(42)  # deterministic for reproducibility
 
-    # Build a pool of dates (skip first 2 days for planning)
     available_dates = [
         month_start + timedelta(days=d)
         for d in range(2, days_in_month - 1)
     ]
     rng.shuffle(available_dates)
 
+    niches = category_niches or {}
+    # day_key -> set of categories assigned that day
+    day_categories: dict[str, set[str]] = {}
+    # day_key -> set of niches assigned that day
+    day_niches: dict[str, set[str]] = {}
+
     result: dict[str, list[datetime]] = {}
-    idx = 0
 
     for category_id, freq in sorted(category_frequencies.items(), key=lambda x: -x[1]):
-        dates = []
+        niche = niches.get(category_id)
+        dates: list[datetime] = []
+        remaining_pool = list(available_dates)
+
         for _ in range(freq):
-            if idx < len(available_dates):
-                dates.append(available_dates[idx])
-                idx += 1
+            assigned = False
+            # Try to find a date with no niche conflict (ideal: 0 per niche per day)
+            for date in remaining_pool:
+                day_key = date.strftime("%Y-%m-%d")
+                used_cats = day_categories.get(day_key, set())
+                used_niches = day_niches.get(day_key, set())
+                if category_id in used_cats:
+                    continue
+                if niche and niche in used_niches:
+                    continue
+                # Accept this date
+                dates.append(date)
+                day_categories.setdefault(day_key, set()).add(category_id)
+                if niche:
+                    day_niches.setdefault(day_key, set()).add(niche)
+                remaining_pool.remove(date)
+                assigned = True
+                break
+
+            if not assigned:
+                # All dates have a niche conflict; accept the first available without category conflict
+                for date in remaining_pool:
+                    day_key = date.strftime("%Y-%m-%d")
+                    if category_id not in day_categories.get(day_key, set()):
+                        dates.append(date)
+                        day_categories.setdefault(day_key, set()).add(category_id)
+                        if niche:
+                            day_niches.setdefault(day_key, set()).add(niche)
+                        remaining_pool.remove(date)
+                        assigned = True
+                        logger.warning(
+                            "Niche conflict unavoidable for category %s (niche=%s) — assigning anyway",
+                            category_id, niche,
+                        )
+                        break
+
+            if not assigned:
+                logger.warning(
+                    "No available dates left for category %s — skipping assignment", category_id
+                )
+
         result[category_id] = dates
 
-    # If we still have unassigned dates, assign remaining ideas to uncategorized
     return result
 
 
@@ -107,8 +152,15 @@ def generate_monthly_plan(
         for cat in categories:
             category_frequencies[cat.id] = 1
 
+    # Build niche map for anti-collision
+    category_niches: dict[str, str | None] = {
+        cat.id: getattr(cat, "niche", None) for cat in categories
+    }
+
     # Distribute dates
-    date_distribution = _distribute_dates(total_ideas, month_start, days_in_month, category_frequencies)
+    date_distribution = _distribute_dates(
+        total_ideas, month_start, days_in_month, category_frequencies, category_niches
+    )
 
     # Generate ideas
     ideas_generated = 0

@@ -14,6 +14,7 @@ def build_internal_link_plan(
     category_id: str | None = None,
     exclude_article_id: str | None = None,
     limit: int = 5,
+    cannibalization_hints: list[dict] | None = None,
 ) -> InternalLinkPlan:
     plan = InternalLinkPlan()
 
@@ -28,7 +29,27 @@ def build_internal_link_plan(
     normalized_keyword = normalize_text(keyword)
     scored = []
 
+    # Priority IDs from cannibalization hints (section overlap detected)
+    hint_ids: set[str] = set()
+    if cannibalization_hints:
+        for hint in cannibalization_hints:
+            aid = hint.get("article_id")
+            if aid:
+                hint_ids.add(aid)
+                # Add hint entries directly with high relevance
+                scored.append({
+                    "target_article_id": aid,
+                    "target_url": f"/articles/{hint.get('article_id', aid)}",
+                    "anchor_text": hint.get("title") or "Article connexe",
+                    "placement": "auto",
+                    "reason": "section overlap detected",
+                    "relevance_score": 20,
+                    "category": hint.get("category"),
+                })
+
     for a in articles:
+        if a.id in hint_ids:
+            continue
         score = 0
         a_title = normalize_text(a.title or "")
         a_keyword = normalize_text(a.keyword or "")
@@ -72,5 +93,8 @@ def build_internal_link_plan_dict(
     category_id: str | None = None,
     exclude_article_id: str | None = None,
     limit: int = 5,
+    cannibalization_hints: list[dict] | None = None,
 ) -> dict:
-    return asdict(build_internal_link_plan(db, project_id, keyword, category_id, exclude_article_id, limit))
+    return asdict(build_internal_link_plan(
+        db, project_id, keyword, category_id, exclude_article_id, limit, cannibalization_hints
+    ))

@@ -11,9 +11,19 @@ import logging
 from typing import Any
 
 from app.services.agents.agent_router import AgentRouter, get_agent_router
-from app.services.agents.agent_registry import get_agent
+from app.services.agents.agent_registry import get_agent, AgentStatus
 
 logger = logging.getLogger(__name__)
+
+_NOT_IMPLEMENTED_RESULT: dict[str, Any] = {"status": "not_implemented", "result": None}
+
+
+def _check_not_implemented(agent_id: str) -> dict[str, Any] | None:
+    """Return a standard not_implemented response if the agent has no real implementation."""
+    agent = get_agent(agent_id)
+    if agent and agent.status == AgentStatus.not_implemented:
+        return _NOT_IMPLEMENTED_RESULT
+    return None
 
 
 def _get_router(db=None) -> AgentRouter:

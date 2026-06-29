@@ -217,6 +217,25 @@ class SEOGenerationOrchestrator:
         self.context["outline"] = outline
         self._step("ArticleOutline")
 
+        # 9b. CannibalizationCheckOutline (after plan)
+        cannibalization_outline = check_cannibalization_dict(
+            self.db, self.project_id, final_title, final_keyword, chosen_category
+        )
+        self.context["cannibalization_outline"] = cannibalization_outline
+        if cannibalization_outline.get("risk_level") != "none":
+            self._log(
+                f"Post-outline cannibalization risk: {cannibalization_outline.get('recommendation')} "
+                f"({len(cannibalization_outline.get('similar_articles', []))} articles similaires)",
+                level="warning", step="CannibalizationCheckOutline",
+            )
+        self._step("CannibalizationCheckOutline")
+
+        cannibalization_hints = (
+            cannibalization_outline.get("similar_articles")
+            if cannibalization_outline.get("risk_level") != "none"
+            else None
+        )
+
         # 10. ImagePlan
         image_plan_result = build_image_plan_dict(final_keyword, outline)
         self.context["image_plan"] = image_plan_result.get("image_plan", {})
@@ -241,7 +260,8 @@ class SEOGenerationOrchestrator:
 
         # 13. InternalLinkPlan
         internal_links = build_internal_link_plan_dict(
-            self.db, self.project_id, final_keyword, chosen_category
+            self.db, self.project_id, final_keyword, chosen_category,
+            cannibalization_hints=cannibalization_hints,
         )
         self.context["internal_links"] = internal_links
         self._step("InternalLinkPlan")
@@ -275,6 +295,7 @@ class SEOGenerationOrchestrator:
         article.category_strategy_json = category_strategy
         article.idea_discovery_json = idea_discovery
         article.cannibalization_check_json = cannibalization
+        article.cannibalization_outline_json = cannibalization_outline
         article.intent_analysis_json = intent_analysis
         article.research_brief_json = research_brief
         article.keyword_brief_json = keyword_brief
@@ -286,11 +307,30 @@ class SEOGenerationOrchestrator:
         article.internal_links_json = safe_json_dump(internal_links)
         article.external_links_json = safe_json_dump(external_links)
 
+        # Infer content_format from target_word_count if not already set
+        if not getattr(article, "content_format", None):
+            from app.services.seo.format_expectations import infer_format
+            target_wc = getattr(article, "target_word_count", None)
+            article.content_format = infer_format(target_wc)
+            self._log(
+                f"content_format inféré : {article.content_format} (target_word_count={target_wc})",
+                step="content_format_init",
+            )
+
         self.db.add(article)
         self.db.flush()
 
         self._log(f"Draft article created: {article.id}", level="info", step="create_article", article_id=article.id)
         self._step("DraftWriting")
+
+        # 14b. Pre-writing context validation
+        ctx_ready, ctx_missing = self._validate_writing_context(article)
+        if not ctx_ready:
+            self._log(
+                f"Context incomplet avant rédaction — champs manquants : {', '.join(ctx_missing)}",
+                level="warning", step="PreWritingContextCheck",
+            )
+            self.limitations.append(f"incomplete_context: {', '.join(ctx_missing)}")
 
         # 15. Writing
         try:
@@ -445,7 +485,7 @@ class SEOGenerationOrchestrator:
             if self.agent_router is not None:
                 from app.services.agents.agent_services import fact_check_article
                 fact_check = fact_check_article(article.content or "", article.title, article.keyword, db=self.db)
-                article.sources_json = fact_check
+                article.fact_check_report_json = fact_check
                 self._step("FactCheckPass")
         except Exception as exc:
             self._error("FactCheckPass", str(exc))
@@ -499,6 +539,21 @@ class SEOGenerationOrchestrator:
         self._log(f"Article generation completed in {int((perf_counter() - self.started_at) * 1000)}ms", level="info", step="orchestrator", article_id=article.id)
 
         return article
+
+    def _validate_writing_context(self, article: Article) -> tuple[bool, list[str]]:
+        """Check that critical fields are populated before launching the writer."""
+        required = [
+            ("outline_json", "Plan de l'article"),
+            ("keyword_brief_json", "Brief mots-clés"),
+            ("intent_analysis_json", "Analyse d'intention"),
+            ("editorial_angle_json", "Angle éditorial"),
+        ]
+        missing = []
+        for field, label in required:
+            value = getattr(article, field, None)
+            if not value or value in ({}, "{}"):
+                missing.append(label)
+        return len(missing) == 0, missing
 
     def _get_agent_provider(self, agent_id: str, fallback: LLMProvider | None = None) -> LLMProvider:
         if self.agent_router is not None:

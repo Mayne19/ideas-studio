@@ -138,8 +138,21 @@ def send_to_production(db: Session, article_id: str) -> Article | None:
     return article
 
 
+_FIELDS_TO_COPY = [
+    "content", "word_count", "reading_time_minutes", "meta_title", "meta_description",
+    "excerpt", "faq_json", "slug", "outline_json", "keyword_brief_json",
+    "intent_analysis_json", "editorial_angle_json", "research_brief_json",
+    "image_plan_json", "callout_plan_json", "internal_links_json", "external_links_json",
+    "language_quality_report_json", "originality_report_json", "humanization_report_json",
+    "eeat_checklist_json", "editorial_quality_report_json", "seo_final_checklist_json",
+    "generation_report_json", "seo_review_json", "fact_check_report_json",
+    "geo_optimization_json", "structured_data_json", "cannibalization_outline_json",
+    "global_score", "seo_score", "quality_score", "eeat_score", "readability_score",
+]
+
+
 def process_queue(db: Session, project_id: str, max_articles: int = 1) -> list[Article]:
-    """Process the production queue sequentially. Processes up to max_articles at a time (default 1)."""
+    """Process the production queue. For articles with next_agent_key, runs the full orchestrator."""
     pending = (
         db.execute(
             select(Article)
@@ -158,8 +171,52 @@ def process_queue(db: Session, project_id: str, max_articles: int = 1) -> list[A
     processed = []
     for article in pending:
         try:
-            advanced = advance_workflow(db, article)
-            processed.append(advanced)
+            if article.next_agent_key:
+                from app.services.seo.seo_generation_orchestrator import SEOGenerationOrchestrator
+                from app.services.providers.llm_provider import get_llm_provider
+                from app.services.providers.search_provider import get_search_provider
+
+                llm = get_llm_provider()
+                search = get_search_provider()
+                orchestrator = SEOGenerationOrchestrator(db, project_id, llm, search)
+
+                generated = orchestrator.generate_full_article(
+                    preferred_title=article.title,
+                    keyword=article.keyword,
+                    category_id=article.category_id,
+                    audience=article.audience,
+                    angle=article.angle,
+                    search_intent=article.search_intent,
+                )
+
+                if generated.status not in ("failed",):
+                    for field in _FIELDS_TO_COPY:
+                        val = getattr(generated, field, None)
+                        if val is not None:
+                            setattr(article, field, val)
+                    article.status = "draft_ready"
+                    article.workflow_status = "completed"
+                    article.next_agent_key = None
+                    article.updated_at = datetime.now(timezone.utc)
+                    db.flush()
+                    # Remove the temporary article created by the orchestrator
+                    db.delete(generated)
+                    db.flush()
+                    log_step(
+                        db, project_id,
+                        f"Génération orchestrateur terminée : {article.title}",
+                        level="info", step="production_queue", article_id=article.id,
+                    )
+                else:
+                    log_step(
+                        db, project_id,
+                        f"Orchestrateur en échec pour {article.title}",
+                        level="error", step="production_queue", article_id=article.id,
+                    )
+                processed.append(article)
+            else:
+                advanced = advance_workflow(db, article)
+                processed.append(advanced)
         except Exception as exc:
             logger.exception("Failed to process article %s in queue", article.id)
             log_step(

@@ -152,6 +152,11 @@ class BulkValidateRequest(BaseModel):
     article_ids: list[str]
 
 
+class BulkValidateByScoreRequest(BaseModel):
+    min_score: int
+    statuses: list[str] = ["idea_proposed", "idea_priority"]
+
+
 class BlockedArticleInfo(BaseModel):
     article_id: str
     title: str
@@ -165,6 +170,11 @@ class BulkValidateResponse(BaseModel):
     not_found_count: int = 0
     not_found_ids: list[str] = []
     blocked_articles: list[BlockedArticleInfo] = []
+
+
+class BulkValidateByScoreResponse(BulkValidateResponse):
+    score_threshold_applied: int
+    total_eligible: int
 
 
 # Response schema for the public blog API

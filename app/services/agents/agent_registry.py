@@ -16,6 +16,7 @@ class AgentStatus(str, Enum):
     partial = "partial"
     planned = "planned"
     disabled = "disabled"
+    not_implemented = "not_implemented"
 
 
 @dataclass
@@ -142,8 +143,8 @@ AGENTS: list[AgentDef] = [
         category=AgentCategory.research,
         phase="research",
         icon="shield",
-        status=AgentStatus.heuristic,
-        output_json_field="source_quality_report_json",
+        status=AgentStatus.not_implemented,
+        output_json_field=None,
     ),
     AgentDef(
         agent_id="evidence_pack_builder",
@@ -152,8 +153,8 @@ AGENTS: list[AgentDef] = [
         category=AgentCategory.research,
         phase="research",
         icon="briefcase",
-        status=AgentStatus.heuristic,
-        output_json_field="evidence_pack_json",
+        status=AgentStatus.not_implemented,
+        output_json_field=None,
     ),
     # ═══════════════════════════════════════════════════════════════════════
     # Phase 3 — Strategic Understanding
@@ -260,8 +261,8 @@ AGENTS: list[AgentDef] = [
         category=AgentCategory.creation,
         phase="writing",
         icon="book",
-        status=AgentStatus.heuristic,
-        output_json_field="style_guide_json",
+        status=AgentStatus.not_implemented,
+        output_json_field=None,
     ),
     AgentDef(
         agent_id="writer",
@@ -388,8 +389,8 @@ AGENTS: list[AgentDef] = [
         category=AgentCategory.review,
         phase="seo",
         icon="heart",
-        status=AgentStatus.planned,
-        output_json_field="engagement_report_json",
+        status=AgentStatus.not_implemented,
+        output_json_field=None,
     ),
     AgentDef(
         agent_id="reader_retention_checker",
@@ -398,8 +399,8 @@ AGENTS: list[AgentDef] = [
         category=AgentCategory.review,
         phase="seo",
         icon="users",
-        status=AgentStatus.planned,
-        output_json_field="reader_retention_report_json",
+        status=AgentStatus.not_implemented,
+        output_json_field=None,
     ),
     # ═══════════════════════════════════════════════════════════════════════
     # Phase 7 — Quality Control
@@ -444,8 +445,8 @@ AGENTS: list[AgentDef] = [
         category=AgentCategory.research,
         phase="quality",
         icon="check-square",
-        status=AgentStatus.heuristic,
-        output_json_field="claims_json",
+        status=AgentStatus.not_implemented,
+        output_json_field=None,
     ),
     AgentDef(
         agent_id="fact_checker",

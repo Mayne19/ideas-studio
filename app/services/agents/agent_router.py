@@ -76,6 +76,12 @@ class AgentRouter:
             self._cache[cache_key] = provider
             return provider
 
+        from app.services.agents.agent_registry import AgentStatus
+        if agent and agent.status == AgentStatus.not_implemented:
+            provider = MockLLMProvider()
+            self._cache[cache_key] = provider
+            return provider
+
         provider = self._resolve_provider(agent_id, project_id)
         if provider is None:
             from app.services.providers.llm_provider import get_llm_provider
