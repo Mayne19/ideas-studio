@@ -700,7 +700,7 @@ export default function ProjectDashboardPage() {
                   key={row.label}
                   type="button"
                   onClick={() => navigate(row.href)}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 py-2.5 text-left transition-colors hover:bg-surface-soft"
+                  className="grid h-10 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 text-left transition-colors hover:bg-surface-soft"
                 >
                   <span className="text-[13px] font-medium text-primary">{row.label}</span>
                   <span className="shrink-0 pl-6 text-[12px] text-secondary">{row.detail}</span>
@@ -727,7 +727,7 @@ export default function ProjectDashboardPage() {
                         key={event.id}
                         type="button"
                         onClick={() => navigate(event.href)}
-                        className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 py-2.5 text-left transition-colors hover:bg-surface-soft"
+                        className="grid h-10 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 text-left transition-colors hover:bg-surface-soft"
                       >
                         <span className={`h-2 w-2 rounded-full ${['bg-[#00c950]', 'bg-[#0066ff]', 'bg-[#ffa51f]', 'bg-[#ff3b1f]'][index % 4]}`} />
                         <span className="truncate text-[13px] font-medium text-primary">
@@ -737,7 +737,7 @@ export default function ProjectDashboardPage() {
                       </button>
                     ))}
                     {Array.from({ length: Math.max(0, 5 - visibleActivityEvents.length) }).map((_, i) => (
-                      <div key={`pad-${i}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 py-2.5">
+                      <div key={`pad-${i}`} className="grid h-10 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6">
                         <span className="h-2 w-2 rounded-full bg-transparent" />
                         <span />
                         <span />
