@@ -7,7 +7,7 @@ export type SettingsSectionKey =
   | 'providers'
   | 'agents'
   | 'pipeline'
-  | 'profile'
+  | 'ia'
 
 export type SettingsSection = {
   key: SettingsSectionKey
@@ -18,7 +18,7 @@ export type SettingsSection = {
   adminOnly?: boolean
 }
 
-const ADMIN_ONLY_KEYS: SettingsSectionKey[] = ['providers', 'agents', 'pipeline']
+const ADMIN_ONLY_KEYS: SettingsSectionKey[] = ['providers', 'agents', 'pipeline', 'ia']
 
 export function getSettingsSections(
   projectId: string | undefined,
@@ -36,7 +36,7 @@ export function getSettingsSections(
     { key: 'providers', label: 'Providers', description: 'Services IA connectés', path: `${projectBase}/providers`, adminOnly: true },
     { key: 'agents', label: 'Agents', description: 'Routage des agents IA', path: `${projectBase}/agents`, adminOnly: true },
     { key: 'pipeline', label: 'Pipeline', description: 'Automatisations éditoriales', path: `${projectBase}/pipeline`, adminOnly: true },
-    { key: 'profile', label: 'Profil', description: 'Compte utilisateur', path: `${projectBase}/profile` },
+    { key: 'ia', label: 'IA & Workflows', description: 'Providers, agents, pipeline IA', path: `${projectBase}/ia`, adminOnly: true },
   ]
 
   if (!showAdminOnly) {

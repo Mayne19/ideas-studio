@@ -27,16 +27,12 @@ import {
 
 const ArticleEditorPage = lazy(() => import('@/pages/projects/editor/ArticleEditorPage'))
 const ArchivesPage = lazy(() => import('@/pages/projects/articles/ArchivesPage'))
-const IdeasPipelinePage = lazy(() => import('@/pages/projects/ideas/IdeasPipelinePage'))
-const KanbanPage = lazy(() => import('@/pages/projects/kanban/KanbanPage'))
-const PerformanceDashboardPage = lazy(() => import('@/pages/projects/performance/PerformanceDashboardPage'))
-const PerformanceArticlesPage = lazy(() => import('@/pages/projects/performance/PerformanceArticlesPage'))
-const ArticlePerformancePage = lazy(() => import('@/pages/projects/performance/ArticlePerformancePage'))
+const PipelinePage = lazy(() => import('@/pages/projects/pipeline/PipelinePage'))
+const AnalyticsPage = lazy(() => import('@/pages/projects/analytics/AnalyticsPage'))
 const RecommendationsPage = lazy(() => import('@/pages/projects/recommendations/RecommendationsPage'))
-const ValidationPage = lazy(() => import('@/pages/projects/validation/ValidationPage'))
 const GeneratePage = lazy(() => import('@/pages/projects/generate/GeneratePage'))
 const CalendarPage = lazy(() => import('@/pages/projects/calendar/CalendarPage'))
-const TrafficPage = lazy(() => import('@/pages/projects/traffic/TrafficPage'))
+
 const NotificationsPage = lazy(() => import('@/pages/projects/notifications/NotificationsPage'))
 const ProjectStrategyPage = lazy(() => import('@/pages/projects/settings/ProjectStrategyPage'))
 const ProjectProvidersPage = lazy(() => import('@/pages/projects/settings/ProjectProvidersPage'))
@@ -246,6 +242,14 @@ export const router = createBrowserRouter([
               </Suspense>
             ),
           },
+          {
+            path: 'ia',
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <GeneratePage />
+              </Suspense>
+            ),
+          },
         ],
       },
       /* Convenience alias for integration */
@@ -282,57 +286,29 @@ export const router = createBrowserRouter([
         element: <CategoriesPage />,
       },
       {
-        path: 'projects/:projectId/ideas',
+        path: 'projects/:projectId/pipeline',
         element: (
           <Suspense fallback={<LoadingState />}>
-            <IdeasPipelinePage />
+            <PipelinePage />
           </Suspense>
         ),
       },
       {
-        path: 'projects/:projectId/kanban',
-        element: <Navigate to="../production" replace />,
-      },
-      {
-        path: 'projects/:projectId/production',
+        path: 'projects/:projectId/analytics',
         element: (
           <Suspense fallback={<LoadingState />}>
-            <KanbanPage />
+            <AnalyticsPage />
           </Suspense>
         ),
       },
-      {
-        path: 'projects/:projectId/validation',
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <ValidationPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: 'projects/:projectId/performance',
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <PerformanceDashboardPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: 'projects/:projectId/performance/articles',
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <PerformanceArticlesPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: 'projects/:projectId/performance/:articleId',
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <ArticlePerformancePage />
-          </Suspense>
-        ),
-      },
+      { path: 'projects/:projectId/ideas', element: <Navigate to="../pipeline" replace /> },
+      { path: 'projects/:projectId/kanban', element: <Navigate to="../pipeline" replace /> },
+      { path: 'projects/:projectId/production', element: <Navigate to="../pipeline?tab=writing" replace /> },
+      { path: 'projects/:projectId/validation', element: <Navigate to="../pipeline?tab=validate" replace /> },
+      { path: 'projects/:projectId/performance', element: <Navigate to="../analytics" replace /> },
+      { path: 'projects/:projectId/performance/articles', element: <Navigate to="../analytics" replace /> },
+      { path: 'projects/:projectId/performance/:articleId', element: <Navigate to="../../analytics" replace /> },
+      { path: 'projects/:projectId/traffic', element: <Navigate to="../analytics" replace /> },
       {
         path: 'projects/:projectId/recommendations',
         element: (
@@ -358,14 +334,6 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<LoadingState />}>
             <CalendarPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: 'projects/:projectId/traffic',
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <TrafficPage />
           </Suspense>
         ),
       },

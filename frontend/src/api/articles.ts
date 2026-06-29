@@ -111,6 +111,22 @@ export function bulkPublishArticles(projectId: string, articleIds: string[]): Pr
   return api.post<BulkValidateResponse>(`/projects/${projectId}/articles/bulk/publish`, { article_ids: articleIds })
 }
 
+export type BulkValidateByScoreResponse = BulkValidateResponse & {
+  score_threshold_applied: number
+  total_eligible: number
+}
+
+export function bulkValidateByScore(
+  projectId: string,
+  minScore: number,
+  statuses: string[],
+): Promise<BulkValidateByScoreResponse> {
+  return api.post<BulkValidateByScoreResponse>(`/projects/${projectId}/articles/bulk/validate-by-score`, {
+    min_score: minScore,
+    statuses,
+  })
+}
+
 export type GenerateArticleRequest = {
   preferred_title?: string | null
   keyword?: string | null

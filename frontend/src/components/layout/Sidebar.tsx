@@ -6,16 +6,10 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Check,
-  Archive,
 } from '@/components/ui/hugeIcons'
 import {
-  AiBrain01Icon,
-  BellIcon,
-  BulbIcon,
   Calendar03Icon,
   ChartBarLineIcon,
-  CheckListIcon,
-  ClipboardListIcon,
   DashboardSquare01Icon,
   File01Icon,
   Folder01Icon,
@@ -225,22 +219,16 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
             </SidebarSection>
 
             <SidebarSection title="Éditorial" collapsed={collapsed}>
+              <SidebarLink to={`/projects/${projectId}/pipeline`} icon={<HugeIcon icon={WorkflowCircle03Icon} size={16} />} label="Pipeline" collapsed={collapsed} />
               <SidebarLink to={`/projects/${projectId}/articles`} icon={<HugeIcon icon={File01Icon} size={16} />} label="Articles" collapsed={collapsed} />
               <SidebarLink to={`/projects/${projectId}/categories`} icon={<HugeIcon icon={Folder01Icon} size={16} />} label="Catégories" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/ideas`} icon={<HugeIcon icon={BulbIcon} size={16} />} label="Idées" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/production`} icon={<HugeIcon icon={ClipboardListIcon} size={16} />} label="Production" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/validation`} icon={<HugeIcon icon={CheckListIcon} size={16} />} label="Validation" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/archives`} icon={<Archive size={16} />} label="Archives" collapsed={collapsed} />
               <SidebarLink to={`/projects/${projectId}/media`} icon={<HugeIcon icon={Image01Icon} size={16} />} label="Médias" collapsed={collapsed} />
               <SidebarLink to={`/projects/${projectId}/calendar`} icon={<HugeIcon icon={Calendar03Icon} size={16} />} label="Calendrier" collapsed={collapsed} />
             </SidebarSection>
 
-            <SidebarSection title="Intelligence" collapsed={collapsed}>
-              <SidebarLink to={`/projects/${projectId}/performance`} icon={<HugeIcon icon={ChartBarLineIcon} size={16} />} label="Performance" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/traffic`} icon={<HugeIcon icon={WorkflowCircle03Icon} size={16} />} label="Trafic" collapsed={collapsed} />
+            <SidebarSection title="Analytics" collapsed={collapsed}>
+              <SidebarLink to={`/projects/${projectId}/analytics`} icon={<HugeIcon icon={ChartBarLineIcon} size={16} />} label="Analytics" collapsed={collapsed} />
               <SidebarLink to={`/projects/${projectId}/recommendations`} icon={<HugeIcon icon={MagicWand01Icon} size={16} />} label="Optimisations" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/generate`} icon={<HugeIcon icon={AiBrain01Icon} size={16} />} label="Génération IA" collapsed={collapsed} />
-              <SidebarLink to={`/projects/${projectId}/notifications`} icon={<HugeIcon icon={BellIcon} size={16} />} label="Notifications" collapsed={collapsed} />
             </SidebarSection>
 
             <SidebarSection title="Projet" collapsed={collapsed}>
