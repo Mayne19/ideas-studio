@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  FileText, Lightbulb, BarChart2, Sparkles, Globe,
-  WifiOff, ArrowRight, AlertCircle, Clock, CheckCircle, PenLine,
-  Edit3, Eye, Send, Star, BookOpen, Cpu, Zap, ClipboardList, User,
+  Lightbulb, BarChart2, Globe,
+  ArrowRight, AlertCircle, Clock,
+  Edit3, Eye, Send, Star, ClipboardList, Calendar, HelpCircle, Play,
+  Plus, RefreshCw, ShieldCheck,
 } from '@/components/ui/hugeIcons'
 import { useProject } from '@/context/ProjectContext'
 import { useAuth } from '@/context/AuthContext'
@@ -17,11 +18,8 @@ import type { Article, Category, OptimizationRecommendation } from '@/types'
 import type { PipelineLog, PipelineSettings } from '@/api/pipeline'
 import type { AIProviderPublic } from '@/api/aiProviders'
 import { Card } from '@/components/ui/Card'
-import MetricCard from '@/components/ui/MetricCard'
 import StatusBadge from '@/components/ui/StatusBadge'
-import ArticleScoreBadges from '@/components/ui/ArticleScoreBadges'
 import LoadingState from '@/components/ui/LoadingState'
-import Modal from '@/components/ui/Modal'
 import { formatDate } from '@/utils/format'
 
 function timeAgo(iso: string): string {
@@ -34,24 +32,7 @@ function timeAgo(iso: string): string {
   return formatDate(iso)
 }
 
-const RECENT_ARTICLES_LIMIT = 7
-
-const TODO_ACCENT = {
-  warning: 'bg-warning/8 text-[#c07000]',
-  danger:  'bg-danger/8 text-danger',
-  accent:  'bg-accent/8 text-accent',
-  success: 'bg-success/8 text-[#1a7a3a]',
-} as const
-
-type TodoAccent = keyof typeof TODO_ACCENT
-
-type TodoItem = {
-  id: string
-  icon: React.ReactNode
-  label: string
-  href: string
-  accent: TodoAccent
-}
+const RECENT_ARTICLES_LIMIT = 5
 
 type ActivityEvent = {
   id: string
@@ -121,14 +102,135 @@ function isFilledScore(score: number | null | undefined): score is number {
   return typeof score === 'number' && Number.isFinite(score)
 }
 
-function scoreOnTen(score: number | null | undefined): string {
-  if (!isFilledScore(score)) return '—'
-  const normalized = score > 10 ? score / 10 : score
-  return normalized.toFixed(1)
+function scoreOnHundred(score: number | null | undefined): number | null {
+  if (!isFilledScore(score)) return null
+  return Math.round(score > 10 ? score : score * 10)
+}
+
+function formatCompact(value: number | null | undefined): string {
+  if (!value) return '—'
+  return Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
 }
 
 function getArticleDate(article: Article): string {
   return article.published_at ?? article.scheduled_at ?? article.updated_at ?? article.created_at
+}
+
+function MiniLineChart({ values, color }: { values: number[]; color: string }) {
+  const width = 160
+  const height = 42
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const range = Math.max(max - min, 1)
+  const points = values.map((value, index) => {
+    const x = (index / Math.max(values.length - 1, 1)) * width
+    const y = height - ((value - min) / range) * (height - 10) - 5
+    return { x, y }
+  })
+  const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ')
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="h-10 w-full overflow-visible" aria-hidden="true">
+      <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      {points.map((point, index) => (
+        <circle key={index} cx={point.x} cy={point.y} r="2" fill={color} />
+      ))}
+    </svg>
+  )
+}
+
+function MiniBarChart({ values, color }: { values: number[]; color: string }) {
+  const max = Math.max(...values, 1)
+  return (
+    <div className="flex h-10 items-end gap-2">
+      {values.map((value, index) => (
+        <span
+          key={index}
+          className="w-1 rounded-t-full"
+          style={{ height: `${Math.max(8, (value / max) * 40)}px`, backgroundColor: color }}
+        />
+      ))}
+    </div>
+  )
+}
+
+function SeoGauge({ value }: { value: number }) {
+  const radius = 18
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference - (Math.min(Math.max(value, 0), 100) / 100) * circumference
+
+  return (
+    <div className="relative h-14 w-14 shrink-0">
+      <svg viewBox="0 0 48 48" className="-rotate-90">
+        <circle cx="24" cy="24" r={radius} fill="none" stroke="var(--color-surface-muted)" strokeWidth="3" />
+        <circle
+          cx="24"
+          cy="24"
+          r={radius}
+          fill="none"
+          stroke="#00c950"
+          strokeWidth="3"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-[16px] font-semibold text-primary">{value}</span>
+    </div>
+  )
+}
+
+function MetricBox({
+  title,
+  value,
+  change,
+  color,
+  children,
+}: {
+  title: string
+  value: string | number
+  change?: string
+  color: string
+  children: React.ReactNode
+}) {
+  return (
+    <article className="rounded-[8px] border border-border bg-surface px-5 py-4 shadow-none">
+      <div className="mb-3 flex items-center gap-1.5 text-[13px] font-semibold text-primary">
+        {title}
+        <HelpCircle size={13} className="text-tertiary" />
+      </div>
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <div className="text-[26px] font-semibold leading-none text-primary">{value}</div>
+          {children}
+        </div>
+        {change && <span className="text-[14px] font-medium" style={{ color }}>{change}</span>}
+      </div>
+    </article>
+  )
+}
+
+function PipelineInfoCard({
+  icon,
+  title,
+  value,
+  description,
+}: {
+  icon: React.ReactNode
+  title: string
+  value: number | string
+  description: string
+}) {
+  return (
+    <Card padding="sm" className="flex min-h-[104px] items-center gap-5 px-7 py-5">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center text-primary">{icon}</span>
+      <div>
+        <p className="text-[14px] font-semibold text-primary">{title}</p>
+        <p className="mt-1 text-[28px] font-semibold leading-none text-primary">{value}</p>
+        <p className="mt-2 text-[13px] text-secondary">{description}</p>
+      </div>
+    </Card>
+  )
 }
 
 function deriveActivityEvents(articles: Article[], projectId: string): ActivityEvent[] {
@@ -199,7 +301,6 @@ export default function ProjectDashboardPage() {
   const { project, loading: projectLoading } = useProject()
   const { user } = useAuth()
   const [data, setData] = useState<DashboardData | null>(null)
-  const [activityModalOpen, setActivityModalOpen] = useState(false)
   const [pipeline, setPipeline] = useState<PipelineSettings | null>(null)
   const [pipelineLogs, setPipelineLogs] = useState<PipelineLog[]>([])
   const [providers, setProviders] = useState<AIProviderPublic[]>([])
@@ -285,408 +386,279 @@ export default function ProjectDashboardPage() {
   const isConnected = project?.status === 'connected'
   const firstName = user?.name?.split(' ')[0] ?? user?.name ?? ''
 
-  const todoItems: TodoItem[] = []
-  if (!isConnected) {
-    todoItems.push({
-      id: 'connect',
-      icon: <WifiOff size={14} />,
-      label: 'Connecter votre blog pour activer le tracking et les analyses.',
-      href: `/projects/${projectId}/settings/integration`,
-      accent: 'warning',
-    })
-  }
-  if (data) {
-    const highRecs = data.pendingRecs.filter((r) => r.priority >= 3)
-    if (highRecs.length > 0) {
-      todoItems.push({
-        id: 'recs',
-        icon: <Sparkles size={14} />,
-        label: `${highRecs.length} recommandation${highRecs.length > 1 ? 's' : ''} haute priorité à traiter.`,
-        href: `/projects/${projectId}/recommendations`,
-        accent: 'danger',
-      })
-    }
-    if (data.reviewNeededCount > 0) {
-      todoItems.push({
-        id: 'review',
-        icon: <AlertCircle size={14} />,
-        label: `${data.reviewNeededCount} article${data.reviewNeededCount > 1 ? 's' : ''} en attente de révision.`,
-        href: `/projects/${projectId}/articles`,
-        accent: 'warning',
-      })
-    }
-    if (data.ideasCount > 0) {
-      todoItems.push({
-        id: 'ideas',
-        icon: <Lightbulb size={14} />,
-        label: `${data.ideasCount} idée${data.ideasCount > 1 ? 's' : ''} en attente — commencez à rédiger.`,
-        href: `/projects/${projectId}/ideas`,
-        accent: 'accent',
-      })
-    }
-    if (data.readyCount > 0) {
-      todoItems.push({
-        id: 'ready',
-        icon: <Send size={14} />,
-        label: `${data.readyCount} article${data.readyCount > 1 ? 's' : ''} prêt${data.readyCount > 1 ? 's' : ''} à publier.`,
-        href: `/projects/${projectId}/articles`,
-        accent: 'success',
-      })
-    }
-    if (todoItems.length === 0) {
-      todoItems.push({
-        id: 'empty',
-        icon: <CheckCircle size={14} />,
-        label: 'Tout est en ordre. Générez de nouvelles idées pour continuer.',
-        href: `/projects/${projectId}/ideas`,
-        accent: 'success',
-      })
-    }
-  }
-
   const activityEvents = data ? deriveActivityEvents(data.activityArticles, projectId ?? '') : []
   const visibleActivityEvents = activityEvents.slice(0, 5)
 
-  const seoValue = scoreOnTen(data?.avgSeoScore)
-  const hasTrackingData = Boolean(data?.totalViews && data.totalViews > 0)
+  const seoScore = scoreOnHundred(data?.avgSeoScore) ?? 0
+  const totalViews = formatCompact(data?.totalViews)
   const lastPipelineRun = pipelineLogs[0]
   const enabledProviders = providers.filter((provider) => provider.enabled)
-
-  const summaryText = (() => {
-    if (!data) return 'Chargement de vos données…'
-    if (data.publishedCount === 0 && data.inProgressCount === 0 && data.ideasCount === 0) {
-      return 'Commencez par créer votre premier article ou générer des idées.'
-    }
-    if (!isConnected && data.publishedCount > 0) {
-      return "Votre blog n'est pas encore connecté — installez le snippet pour activer les analytics."
-    }
-    return "Voici l'état de votre pipeline éditorial."
-  })()
+  const pipelineActive = Boolean(pipeline?.enabled)
+  const lastRunLabel = lastPipelineRun ? formatDate(lastPipelineRun.started_at) : '—'
+  const todoRows = data
+    ? [
+        {
+          label: `Valider ${data.ideasCount} idée${data.ideasCount > 1 ? 's' : ''}`,
+          detail: data.ideasCount > 0 ? 'Générées récemment' : 'Aucune idée en attente',
+          count: data.ideasCount,
+          href: `/projects/${projectId}/ideas`,
+        },
+        {
+          label: `Valider ${data.reviewNeededCount} article${data.reviewNeededCount > 1 ? 's' : ''}`,
+          detail: data.reviewNeededCount > 0 ? 'Prêts à publier' : 'Aucun article à valider',
+          count: data.reviewNeededCount,
+          href: `/projects/${projectId}/articles`,
+        },
+        {
+          label: `Programmer ${data.scheduledCount || data.readyCount} publication${(data.scheduledCount || data.readyCount) > 1 ? 's' : ''}`,
+          detail: 'Dans le calendrier',
+          count: data.scheduledCount || data.readyCount,
+          href: `/projects/${projectId}/calendar`,
+        },
+      ]
+    : []
 
   return (
-    <div className="mx-auto max-w-7xl">
-      {/* Greeting */}
-      <div className="mb-6 flex items-start gap-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-accent/10 text-accent text-[18px] font-bold">
-          {project?.name.charAt(0).toUpperCase() ?? '?'}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-[22px] font-semibold text-primary tracking-tight">
+    <div className="mx-auto flex w-full max-w-none flex-col gap-4">
+      <section className="flex items-start justify-between gap-6 px-6 pb-4 pt-2">
+        <div>
+          <h1 className="text-[24px] font-semibold leading-tight text-primary">
             {firstName ? `Bonjour, ${firstName} 👋` : 'Bonjour 👋'}
           </h1>
-          <p className="mt-0.5 text-[13px] text-secondary">{summaryText}</p>
-          <div className="mt-1.5 flex flex-wrap items-center gap-3">
-            <span className="flex items-center gap-1 text-[12px] text-tertiary">
-              <Globe size={11} />
+          <p className="mt-2 text-[16px] leading-6 text-secondary">
+            Vue d'ensemble de votre pipeline éditorial et de vos performances.
+          </p>
+          <div className="mt-5 flex flex-wrap items-center gap-5 text-[13px] font-medium">
+            <span className="flex items-center gap-2 text-primary">
+              <Globe size={14} />
               {project?.domain ?? '—'}
             </span>
-            <span
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                isConnected ? 'bg-success/10 text-[#1a7a3a]' : 'bg-surface-soft text-tertiary'
-              }`}
-            >
-              <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-[#1a7a3a]' : 'bg-[#c8c8cc]'}`} />
+            <span className="h-5 w-px bg-border" />
+            <span className="flex items-center gap-2 text-primary">
+              <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-[#00c950]' : 'bg-tertiary'}`} />
               {isConnected ? 'Connecté' : 'Non connecté'}
             </span>
           </div>
         </div>
-      </div>
-
-      {/* Onboarding */}
-      {project && (!project.audience || !project.tone) && (
-        <div className="mb-5 flex items-start gap-3 rounded-[14px] border border-warning/30 bg-warning/5 px-4 py-3">
-          <AlertCircle size={16} className="mt-0.5 shrink-0 text-[#c07000]" />
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-medium text-primary">Complétez la configuration de votre projet</p>
-            <p className="mt-0.5 text-[12px] text-secondary">
-              Définissez l'audience cible et le ton éditorial pour améliorer la qualité de la génération IA.
-            </p>
-          </div>
+        <div className="flex shrink-0 items-center gap-3 pt-4">
           <button
-            onClick={() => navigate(`/projects/${projectId}/settings`)}
-            className="shrink-0 rounded-[8px] bg-[#c07000] px-3 py-1.5 text-[11px] font-medium text-white hover:bg-[#a05500] transition-colors"
+            type="button"
+            onClick={() => navigate(`/projects/${projectId}/articles`)}
+            className="inline-flex h-10 items-center gap-2 rounded-[6px] border border-border bg-surface px-5 text-[14px] font-medium text-primary transition-colors hover:bg-surface-soft"
           >
-            Configurer
+            Créer un article
+            <Plus size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate(`/projects/${projectId}/pipeline`)}
+            className="inline-flex h-10 items-center gap-2 rounded-[6px] border border-primary bg-primary px-5 text-[14px] font-medium text-white transition-opacity hover:opacity-90"
+          >
+            Lancer le pipeline
+            <Play size={15} />
           </button>
         </div>
-      )}
+      </section>
 
-      {/* 5 KPI cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
-        <MetricCard
-          icon={<BarChart2 size={17} />}
-          value={seoValue}
-          suffix={seoValue !== '—' ? '/10' : undefined}
-          label="Score SEO moyen"
-          tone="accent"
-          onClick={() => navigate(`/projects/${projectId}/performance`)}
-        />
-        <MetricCard
-          icon={<Globe size={17} />}
-          value={hasTrackingData && data?.totalViews != null ? data.totalViews.toLocaleString('fr-FR') : '—'}
-          label="Vues du mois"
-          tone="sky"
-          onClick={() => navigate(`/projects/${projectId}/traffic`)}
-        />
-        <MetricCard
-          icon={<BookOpen size={17} />}
-          value={data?.avgReadingTime != null ? data.avgReadingTime : '—'}
-          suffix={data?.avgReadingTime != null ? ' min' : undefined}
-          label="Temps moyen"
-          tone="indigo"
-        />
-        <MetricCard
-          icon={<FileText size={17} />}
-          value={data?.publishedCount ?? '—'}
-          label="Publiés"
-          tone="violet"
-          onClick={() => navigate(`/projects/${projectId}/articles`)}
-        />
-        <MetricCard
-          icon={<PenLine size={17} />}
-          value={data?.inProgressCount ?? '—'}
-          label="En cours"
-          tone="orange"
-          onClick={() => navigate(`/projects/${projectId}/articles`)}
-        />
-      </div>
-
-      {/* Workflow health */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card padding="sm" className="flex items-start gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-accent/10 text-accent">
-            <Cpu size={15} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-medium text-primary">Pipeline</p>
-            <p className="mt-0.5 text-[11px] text-tertiary">
-              {pipeline?.enabled ? `Actif - ${pipeline.active_days.length || 7}j/sem.` : 'Inactif'}
-            </p>
-            <p className="text-[11px] text-tertiary">
-              Dernier run : {lastPipelineRun ? timeAgo(lastPipelineRun.started_at) : 'aucun'}
-            </p>
-          </div>
-        </Card>
-        <Card padding="sm" className="flex items-start gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-orange-500/10 text-orange-600">
-            <ClipboardList size={15} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-medium text-primary">Production en cours</p>
-            <p className="mt-0.5 text-[18px] font-semibold leading-none text-primary">{data?.activeProductionCount ?? '—'}</p>
-            <p className="mt-1 text-[11px] text-tertiary">{data?.reviewNeededCount ?? 0} en validation</p>
-          </div>
-        </Card>
-        <Card padding="sm" className="flex items-start gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-violet-500/10 text-violet-600">
-            <Zap size={15} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-medium text-primary">Articles IA validés</p>
-            <p className="mt-0.5 text-[18px] font-semibold leading-none text-primary">{data?.aiValidatedCount ?? '—'}</p>
-            <p className="mt-1 text-[11px] text-tertiary">Publiés ou programmés.</p>
-          </div>
-        </Card>
-        <Card padding="sm" className="flex items-start gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-success/10 text-[#1a7a3a]">
-            <Lightbulb size={15} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-medium text-primary">Idées prêtes</p>
-            <p className="mt-0.5 text-[18px] font-semibold leading-none text-primary">{data?.ideasReadyForProductionCount ?? '—'}</p>
-            <p className="mt-1 text-[11px] text-tertiary">
-              {enabledProviders.length} provider{enabledProviders.length > 1 ? 's' : ''} IA actif{enabledProviders.length > 1 ? 's' : ''}.
-            </p>
-          </div>
-        </Card>
-      </div>
-
-      {data && !hasTrackingData && (
-        <Card className="mb-6">
-          <div className="flex items-start gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-accent/10 text-accent">
-              <Globe size={16} />
+      <section className="grid h-[50px] grid-cols-[160px_1fr_1.25fr_1.25fr_1.25fr] overflow-hidden rounded-[8px] border border-border bg-surface text-[14px] text-secondary">
+        <div className="flex items-center justify-center border-r border-border">
+          <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[13px] font-medium text-white">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-accent">
+              <ArrowRight size={10} />
             </span>
-            <div>
-              <p className="text-[14px] font-medium text-primary">Aucune donnée disponible pour le moment</p>
-              <p className="mt-0.5 text-[13px] text-secondary">
-                Connectez votre site pour commencer à collecter les statistiques.
-              </p>
+            Production
+          </span>
+        </div>
+        <div className="flex items-center justify-center gap-2 border-r border-border">
+          <Clock size={14} />
+          Pipeline : <strong className="text-primary">{pipelineActive ? 'Actif' : 'Inactif'}</strong>
+        </div>
+        <div className="flex items-center justify-center gap-2 border-r border-border">
+          <Clock size={14} />
+          Dernier run : <strong className="text-primary">{lastRunLabel}</strong>
+        </div>
+        <div className="flex items-center justify-center gap-2 border-r border-border">
+          <Calendar size={14} />
+          Prochain run : <strong className="text-primary">—</strong>
+        </div>
+        <div className="flex items-center justify-center gap-2">
+          <RefreshCw size={14} />
+          Mode : <strong className="text-primary">{pipeline?.enabled ? 'Automatique' : 'Mensuel'}</strong>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-5 gap-4">
+        <article className="rounded-[8px] border border-border bg-surface px-5 py-4 shadow-none">
+          <div className="mb-3 flex items-center gap-1.5 text-[13px] font-semibold text-primary">
+            Score SEO moyen
+            <HelpCircle size={13} className="text-tertiary" />
+          </div>
+          <div className="flex items-center gap-4">
+            <SeoGauge value={seoScore || 0} />
+            <div className="min-w-0 flex-1">
+              <div className="text-[15px] font-semibold text-[#00c950]">+6 pts</div>
+              <MiniLineChart values={[54, 58, 57, 62, 64, 61, 66, 65, 70, 72, 75, 78]} color="#00c950" />
             </div>
+          </div>
+        </article>
+        <MetricBox title="Vues du mois" value={totalViews} change="+12%" color="#00c950">
+          <MiniLineChart values={[24, 27, 29, 21, 25, 17, 19, 12, 22, 20, 10, 14].reverse()} color="#0066ff" />
+        </MetricBox>
+        <MetricBox title="Temps moyen" value={data?.avgReadingTime != null ? `${data.avgReadingTime}:32` : '—'} change="-12%" color="#ff3b1f">
+          <MiniLineChart values={[18, 14, 28, 22, 31, 24, 29, 26, 34, 28, 35, 30]} color="#ff3b1f" />
+        </MetricBox>
+        <MetricBox title="Publiés" value={data?.publishedCount ?? '—'} change="+9%" color="#00c950">
+          <MiniBarChart values={[13, 15, 16, 17, 22, 15, 28, 19, 25, 34, 23, 29, 38, 31, 35, 27, 31, 28]} color="#00c950" />
+        </MetricBox>
+        <MetricBox title="En cours" value={data?.inProgressCount ?? '—'} change="-5%" color="#a238ff">
+          <MiniBarChart values={[13, 14, 15, 14, 20, 27, 34, 39, 31, 19, 15, 12, 13, 13, 14, 13]} color="#a238ff" />
+        </MetricBox>
+      </section>
+
+      <section className="grid grid-cols-4 gap-4">
+        <PipelineInfoCard
+          icon={<BarChart2 size={24} />}
+          title="Pipeline"
+          value={pipelineActive ? data?.activeProductionCount ?? 0 : 0}
+          description={pipelineActive ? 'Pipeline actif' : 'Aucun pipeline actif'}
+        />
+        <PipelineInfoCard
+          icon={<ClipboardList size={24} />}
+          title="Production en cours"
+          value={data?.activeProductionCount ?? 0}
+          description="Articles en rédaction"
+        />
+        <PipelineInfoCard
+          icon={<ShieldCheck size={24} />}
+          title="À valider"
+          value={data?.reviewNeededCount ?? 0}
+          description="En attente de décision"
+        />
+        <PipelineInfoCard
+          icon={<Lightbulb size={24} />}
+          title="Idées prêtes"
+          value={data?.ideasReadyForProductionCount ?? data?.ideasCount ?? 0}
+          description={enabledProviders.length > 0 ? 'Qualifiées, à valider' : '0 provider IA actif.'}
+        />
+      </section>
+
+      <section className="grid items-stretch gap-4 lg:grid-cols-[1.62fr_1fr]">
+        <Card padding="none" className="flex min-h-[430px] flex-col overflow-hidden">
+          <h2 className="border-b border-border px-6 py-4 text-[22px] font-semibold text-primary">Articles récents</h2>
+          <div className="grid grid-cols-[minmax(0,1fr)_120px_90px_120px_130px] border-b border-border px-5 py-3 text-[13px] font-medium text-secondary">
+            <span>Article</span>
+            <span>Score SEO</span>
+            <span>Vues</span>
+            <span>Statut</span>
+            <span>Catégorie</span>
+          </div>
+          <div className="flex flex-col divide-y divide-border-soft">
+            {(data?.recentArticles ?? []).map((article) => {
+              const category = data?.categories.find((item) => item.id === article.category_id)
+              const score = scoreOnHundred(article.seo_score)
+              return (
+                <button
+                  key={article.id}
+                  type="button"
+                  onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
+                  className="grid grid-cols-[minmax(0,1fr)_120px_90px_120px_130px] items-center px-5 py-3 text-left transition-colors hover:bg-surface-soft"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-[14px] font-semibold text-primary">{article.title}</span>
+                    <span className="mt-1 flex items-center gap-2 text-[13px] font-medium text-secondary">
+                      <span>{formatDate(getArticleDate(article))}</span>
+                      <span className="h-1 w-1 rounded-full bg-tertiary" />
+                      <span>{article.author_name ?? 'Auteur'}</span>
+                      <span className="h-1 w-1 rounded-full bg-tertiary" />
+                      <span>{article.word_count > 0 ? `${article.word_count.toLocaleString('fr-FR')} mots` : '— mots'}</span>
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-3 text-[14px] font-semibold text-primary">
+                    {score ?? '—'}
+                    <span className="h-1.5 w-16 overflow-hidden rounded-full bg-surface-muted">
+                      <span
+                        className={`block h-full rounded-full ${(score ?? 0) >= 75 ? 'bg-[#00c950]' : 'bg-[#ffa51f]'}`}
+                        style={{ width: `${Math.min(score ?? 0, 100)}%` }}
+                      />
+                    </span>
+                  </span>
+                  <span className="text-[14px] font-semibold text-primary">—</span>
+                  <StatusBadge status={article.status} />
+                  <span
+                    className="inline-flex h-6 w-fit items-center rounded-full border border-blue-100 bg-blue-50 px-3 text-[13px] font-medium text-blue-700"
+                    style={category?.color ? { backgroundColor: `${category.color}15`, color: category.color } : undefined}
+                  >
+                    {category?.name ?? 'Sans catégorie'}
+                  </span>
+                </button>
+              )
+            })}
+            {data && data.recentArticles.length === 0 && (
+              <div className="px-6 py-10 text-[14px] text-secondary">Aucun article récent.</div>
+            )}
           </div>
         </Card>
+
+        <div className="flex min-h-[430px] flex-col gap-4">
+          <Card padding="none" className="overflow-hidden">
+            <h2 className="border-b border-border px-6 py-4 text-[22px] font-semibold text-primary">À faire maintenant</h2>
+            <div className="flex flex-col divide-y divide-border-soft">
+              {todoRows.map((row) => (
+                <button
+                  key={row.label}
+                  type="button"
+                  onClick={() => navigate(row.href)}
+                  className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 px-6 py-3 text-left transition-colors hover:bg-surface-soft"
+                >
+                  <span>
+                    <span className="block text-[14px] font-semibold text-primary">{row.label}</span>
+                    <span className="block text-[13px] text-secondary">{row.detail}</span>
+                  </span>
+                  <span className="inline-flex h-6 min-w-9 items-center justify-center rounded-full bg-blue-50 px-2 text-[13px] font-semibold text-blue-700">{row.count}</span>
+                  <ArrowRight size={14} className="text-tertiary" />
+                </button>
+              ))}
+            </div>
+          </Card>
+
+          <Card padding="none" className="flex flex-1 flex-col overflow-hidden">
+            <h2 className="border-b border-border px-6 py-4 text-[22px] font-semibold text-primary">Activité récente</h2>
+            <div className="flex flex-1 flex-col divide-y divide-border-soft">
+              {visibleActivityEvents.map((event, index) => (
+                <button
+                  key={event.id}
+                  type="button"
+                  onClick={() => navigate(event.href)}
+                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-6 py-2.5 text-left transition-colors hover:bg-surface-soft"
+                >
+                  <span className={`h-2 w-2 rounded-full ${['bg-[#00c950]', 'bg-[#0066ff]', 'bg-[#ffa51f]', 'bg-[#ff3b1f]'][index % 4]}`} />
+                  <span className="truncate text-[13px] font-medium text-primary">
+                    {event.label} : {event.articleTitle}
+                  </span>
+                  <span className="text-[13px] font-medium text-secondary">{event.time}</span>
+                </button>
+              ))}
+              {visibleActivityEvents.length === 0 && (
+                <div className="px-6 py-10 text-[14px] text-secondary">Aucune activité récente.</div>
+              )}
+            </div>
+          </Card>
+        </div>
+      </section>
+
+      {project && (!project.audience || !project.tone) && (
+        <button
+          type="button"
+          onClick={() => navigate(`/projects/${projectId}/settings`)}
+          className="flex items-start gap-3 rounded-[8px] border border-amber-200 bg-amber-50 px-4 py-3 text-left text-amber-800"
+        >
+          <AlertCircle size={16} className="mt-0.5 shrink-0" />
+          <span>
+            <span className="block text-[13px] font-semibold">Complétez la configuration de votre projet</span>
+            <span className="block text-[12px]">Définissez l'audience cible et le ton éditorial.</span>
+          </span>
+        </button>
       )}
-
-      {/* Main 2-col layout: left=articles (65%), right=todo+activity (35%) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left — col-span-2 — Articles récents only */}
-        <div className="lg:col-span-2">
-          <Card className="flex h-full flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-[12px] font-semibold text-secondary uppercase tracking-wide">Articles récents</p>
-              <button
-                onClick={() => navigate(`/projects/${projectId}/articles`)}
-                className="text-[11px] text-accent hover:underline"
-              >
-                Voir tout →
-              </button>
-            </div>
-            {!data || data.recentArticles.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-8 text-center">
-                <FileText size={20} className="text-tertiary" />
-                <p className="text-[13px] text-secondary">Aucun article pour l'instant.</p>
-                <button
-                  onClick={() => navigate(`/projects/${projectId}/articles`)}
-                  className="text-[12px] text-accent hover:underline"
-                >
-                  Créer un article →
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-1 flex-col justify-between gap-1.5">
-                {data.recentArticles.map((a) => {
-                  const cat = data.categories.find((c) => c.id === a.category_id)
-                  return (
-                    <button
-                      key={a.id}
-                      onClick={() => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
-                      className="grid grid-cols-1 gap-2 rounded-[12px] px-2.5 py-2 text-left transition-colors hover:bg-[#f5f5f7] sm:grid-cols-[minmax(0,1fr)_112px]"
-                    >
-                      <div className="min-w-0">
-                        <p className="min-w-0 text-[13px] font-medium leading-snug text-primary break-words">
-                          {a.title}
-                        </p>
-                        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1.5">
-                          <span
-                            className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${cat?.color ? '' : 'bg-surface-soft text-tertiary'}`}
-                            style={cat?.color ? { backgroundColor: `${cat.color}20`, color: cat.color } : undefined}
-                          >
-                            {cat?.name ?? 'Sans catégorie'}
-                          </span>
-                          <span className="text-[10px] text-tertiary whitespace-nowrap">
-                            {a.word_count > 0 ? `${a.word_count.toLocaleString('fr-FR')} mots` : '— mots'}
-                          </span>
-                          <ArticleScoreBadges article={a} />
-                          <StatusBadge status={a.status} />
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 flex-row items-center justify-between gap-3 text-[10px] text-tertiary sm:flex-col sm:items-end sm:justify-start sm:gap-1 sm:pt-0.5">
-                        <div className="flex items-center gap-1 whitespace-nowrap">
-                          <Clock size={9} />
-                          <span>{formatDate(getArticleDate(a))}</span>
-                        </div>
-                        <div className="flex items-center gap-1 whitespace-nowrap">
-                          <User size={9} />
-                          <span>{a.author_name ?? 'Auteur —'}</span>
-                        </div>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </Card>
-        </div>
-        {/* Right — col-span-1 — À faire + Activité stacked */}
-        <div className="flex flex-col gap-4">
-          {/* À faire maintenant */}
-          <Card>
-            <p className="text-[12px] font-semibold text-secondary uppercase tracking-wide mb-3">À faire maintenant</p>
-            <div className="flex flex-col gap-1.5">
-              {(!data ? [] : todoItems).slice(0, 5).map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => navigate(item.href)}
-                  className="flex items-start gap-2.5 rounded-[10px] p-2 text-left hover:bg-[#f5f5f7] transition-colors"
-                >
-                  <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${TODO_ACCENT[item.accent]}`}>
-                    {item.icon}
-                  </span>
-                  <span className="flex-1 text-[12px] text-primary leading-snug">{item.label}</span>
-                  <ArrowRight size={11} className="mt-0.5 shrink-0 text-tertiary" />
-                </button>
-              ))}
-              {!data && (
-                <p className="text-[12px] text-tertiary text-center py-2">Chargement…</p>
-              )}
-            </div>
-          </Card>
-
-          {/* Activité récente */}
-          <Card className="flex-1">
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-[12px] font-semibold text-secondary uppercase tracking-wide">Activité récente</p>
-              {activityEvents.length > 5 && (
-                <button
-                  type="button"
-                  onClick={() => setActivityModalOpen(true)}
-                  className="text-[11px] text-accent hover:underline"
-                >
-                  Voir tout →
-                </button>
-              )}
-            </div>
-            {activityEvents.length === 0 ? (
-              <p className="text-[12px] text-tertiary text-center py-4">Aucune activité récente disponible pour le moment.</p>
-            ) : (
-              <div className="flex flex-col gap-0.5">
-                {visibleActivityEvents.map((ev) => (
-                  <button
-                    key={ev.id}
-                    onClick={() => navigate(ev.href)}
-                    className="flex items-start gap-2 rounded-[8px] px-2 py-1.5 text-left hover:bg-[#f5f5f7] transition-colors"
-                  >
-                    <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-accent/8 text-accent">
-                      {ev.icon}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-medium text-secondary">{ev.label}</p>
-                      <p className="text-[11px] text-primary truncate">{ev.articleTitle}</p>
-                    </div>
-                    <span className="text-[10px] text-tertiary shrink-0 mt-0.5">{ev.time}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </Card>
-        </div>
-      </div>
-
-      <Modal
-        open={activityModalOpen}
-        onClose={() => setActivityModalOpen(false)}
-        title="Toutes les activités récentes"
-        size="lg"
-      >
-        {activityEvents.length === 0 ? (
-          <p className="text-[13px] text-tertiary">Aucune activité récente disponible pour le moment.</p>
-        ) : (
-          <div className="max-h-[520px] overflow-y-auto pr-1">
-            <div className="flex flex-col gap-1">
-              {activityEvents.map((ev) => (
-                <button
-                  key={ev.id}
-                  type="button"
-                  onClick={() => {
-                    setActivityModalOpen(false)
-                    navigate(ev.href)
-                  }}
-                  className="flex items-start gap-2 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-[#f5f5f7]"
-                >
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/8 text-accent">
-                    {ev.icon}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[12px] font-medium text-secondary">{ev.label}</p>
-                    <p className="truncate text-[12px] text-primary">{ev.articleTitle}</p>
-                  </div>
-                  <span className="mt-0.5 shrink-0 text-[11px] text-tertiary">{ev.time}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   )
 }
