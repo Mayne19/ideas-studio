@@ -597,7 +597,7 @@ export default function ProjectDashboardPage() {
               Voir tout <ArrowRight size={11} />
             </button>
           </div>
-          <div className="grid grid-cols-[minmax(0,260px)_110px_52px_100px_84px] gap-4 border-b border-border px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-tertiary">
+          <div className="grid grid-cols-[minmax(0,1fr)_140px_56px_110px_96px] gap-4 border-b border-border px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-tertiary">
             <span>Article</span>
             <span>Score SEO</span>
             <span>Vues</span>
@@ -614,7 +614,7 @@ export default function ProjectDashboardPage() {
                   key={article.id}
                   type="button"
                   onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
-                  className="grid grid-cols-[minmax(0,260px)_110px_52px_100px_84px] items-center gap-4 px-4 py-2.5 text-left transition-colors hover:bg-surface-soft"
+                  className="grid grid-cols-[minmax(0,1fr)_140px_56px_110px_96px] items-center gap-4 px-4 py-2.5 text-left transition-colors hover:bg-surface-soft"
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-[13px] font-medium text-primary">{article.title}</span>
@@ -625,11 +625,11 @@ export default function ProjectDashboardPage() {
                       {article.word_count > 0 && <><span>·</span><span>{article.word_count.toLocaleString('fr-FR')} mots</span></>}
                     </span>
                   </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-[22px] shrink-0 text-right text-[12px] font-semibold tabular-nums text-primary">
+                  <span className="flex items-center gap-2">
+                    <span className="w-6 shrink-0 text-right text-[13px] font-semibold tabular-nums text-primary">
                       {score ?? '—'}
                     </span>
-                    <span className="h-[5px] w-[52px] shrink-0 overflow-hidden rounded-full bg-surface-muted">
+                    <span className="h-[5px] min-w-0 flex-1 overflow-hidden rounded-full bg-surface-muted">
                       <span
                         className="block h-full rounded-full transition-all"
                         style={{ width: `${Math.min(score ?? 0, 100)}%`, backgroundColor: scoreColor }}
