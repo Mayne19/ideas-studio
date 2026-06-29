@@ -47,10 +47,27 @@ const INDUSTRY_OPTIONS = [
   { value: '__custom__', label: 'Autre / personnalisé' },
 ]
 
+const VERTICAL_OPTIONS = [
+  { value: '', label: 'Non défini' },
+  { value: 'IA & Tech', label: 'IA & Tech' },
+  { value: 'Finance & Crypto', label: 'Finance & Crypto' },
+  { value: 'Marketing Digital', label: 'Marketing Digital' },
+  { value: 'Santé & Bien-être', label: 'Santé & Bien-être' },
+  { value: 'Immobilier', label: 'Immobilier' },
+  { value: 'Voyage & Tourisme', label: 'Voyage & Tourisme' },
+  { value: 'Mode & Lifestyle', label: 'Mode & Lifestyle' },
+  { value: 'Éducation & Formation', label: 'Éducation & Formation' },
+  { value: 'Juridique & Compliance', label: 'Juridique & Compliance' },
+  { value: 'RH & Management', label: 'RH & Management' },
+  { value: 'Développement logiciel', label: 'Développement logiciel' },
+  { value: 'Autre', label: 'Autre' },
+]
+
 type FormState = {
   name: string
   domain: string
   language: string
+  vertical: string
   country_target: string
   timezone: string
   description: string
@@ -67,6 +84,7 @@ export default function ProjectSettingsPage() {
     name: '',
     domain: '',
     language: 'fr',
+    vertical: '',
     country_target: '',
     timezone: 'Europe/Paris',
     description: '',
@@ -86,6 +104,7 @@ export default function ProjectSettingsPage() {
       name: project.name ?? '',
       domain: project.domain ?? '',
       language: project.language ?? 'fr',
+      vertical: project.vertical ?? '',
       country_target: project.country_target ?? '',
       timezone: project.timezone ?? 'Europe/Paris',
       description: project.description ?? '',
@@ -113,6 +132,7 @@ export default function ProjectSettingsPage() {
         name: form.name.trim(),
         domain: form.domain.trim() || undefined,
         language: form.language || undefined,
+        vertical: form.vertical || undefined,
         country_target: form.country_target.trim() || undefined,
         timezone: form.timezone.trim() || undefined,
         description: form.description.trim() || undefined,
@@ -185,21 +205,29 @@ export default function ProjectSettingsPage() {
               onChange={set('timezone')}
             />
           </div>
-          <div className="flex flex-col gap-2">
-            <Select
-              label="Secteur / niche"
-              options={INDUSTRY_OPTIONS}
-              value={form.industry}
-              onChange={set('industry')}
-            />
-            {isCustomIndustry && (
-              <Input
-                label="Secteur personnalisé"
-                value={form.industry_custom}
-                onChange={set('industry_custom')}
-                placeholder="Ex. Crypto, Immobilier, Santé…"
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <Select
+                label="Secteur / niche"
+                options={INDUSTRY_OPTIONS}
+                value={form.industry}
+                onChange={set('industry')}
               />
-            )}
+              {isCustomIndustry && (
+                <Input
+                  label="Secteur personnalisé"
+                  value={form.industry_custom}
+                  onChange={set('industry_custom')}
+                  placeholder="Ex. Crypto, Immobilier, Santé…"
+                />
+              )}
+            </div>
+            <Select
+              label="Vertical éditorial"
+              options={VERTICAL_OPTIONS}
+              value={form.vertical}
+              onChange={set('vertical')}
+            />
           </div>
           <Textarea
             label="Description courte du projet"

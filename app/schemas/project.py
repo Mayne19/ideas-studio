@@ -7,6 +7,7 @@ class ProjectCreate(BaseModel):
     name: str
     domain: Optional[str] = None
     language: Optional[str] = None
+    vertical: Optional[str] = None
     country_target: Optional[str] = None
     timezone: Optional[str] = None
     description: Optional[str] = None
@@ -35,6 +36,7 @@ class ProjectUpdate(BaseModel):
     name: Optional[str] = None
     domain: Optional[str] = None
     language: Optional[str] = None
+    vertical: Optional[str] = None
     country_target: Optional[str] = None
     timezone: Optional[str] = None
     description: Optional[str] = None
@@ -70,6 +72,7 @@ class ProjectPublic(BaseModel):
     name: str
     domain: Optional[str]
     language: Optional[str]
+    vertical: Optional[str] = None
     country_target: Optional[str]
     timezone: Optional[str] = None
     description: Optional[str] = None

@@ -1417,128 +1417,125 @@ export default function ArticleEditorPage() {
               {activeRightTab === 'publish' && (
                 <div className="flex flex-col divide-y divide-border">
 
-                  {/* 1. Catégorie */}
-                  <div className="p-3 flex flex-col gap-2">
-                    {categories.length > 0 && (
-                      <Field label="Catégorie">
-                        <select
-                          value={metaFields.category_id}
-                          onChange={(e) => handleMetaChange('category_id', e.target.value)}
-                          className={INPUT}
-                        >
-                          <option value="">— Aucune —</option>
-                          {categories.map((cat) => (
-                            <option key={cat.id} value={cat.id}>{cat.name}</option>
-                          ))}
-                        </select>
-                      </Field>
-                    )}
-                    <Field label="Sous-niche" hint="Filtre public Fiindt">
-                      <input
-                        type="text"
-                        value={metaFields.sub_niche}
-                        onChange={(e) => handleMetaChange('sub_niche', e.target.value)}
-                        className={INPUT}
-                        placeholder="ex: comparateurs IA"
-                      />
-                    </Field>
-                    <label className="flex items-center justify-between rounded-[8px] border border-border bg-surface px-3 py-2 text-[12px]">
-                      <span className="font-medium text-secondary">Mis en avant</span>
-                      <input
-                        type="checkbox"
-                        checked={featured}
-                        onChange={(e) => handleFeaturedChange(e.target.checked)}
-                        className="h-4 w-4 accent-accent"
-                      />
-                    </label>
-                    <Field label="Mot-clé principal" hint="Pour l'analyse SEO">
-                      <input
-                        type="text"
-                        value={metaFields.keyword}
-                        onChange={(e) => handleMetaChange('keyword', e.target.value)}
-                        className={INPUT}
-                        placeholder="ex: marketing digital"
-                      />
-                    </Field>
-                    <Field label="Format de contenu" hint="Calibre le scoring v2.1">
-                      <select
-                        value={metaFields.content_format}
-                        onChange={(e) => handleMetaChange('content_format', e.target.value)}
-                        className={INPUT}
-                      >
-                        <option value="">— Inféré depuis le volume —</option>
-                        <option value="short">Court (400–800 mots)</option>
-                        <option value="medium">Moyen (800–1500 mots)</option>
-                        <option value="long">Long (1500–2500 mots)</option>
-                        <option value="pillar">Pilier (2500+ mots)</option>
-                      </select>
-                    </Field>
-                    <Field label="Volume cible (mots)" hint="Optionnel si format déclaré">
-                      <input
-                        type="number"
-                        min={100}
-                        step={100}
-                        value={metaFields.target_word_count}
-                        onChange={(e) => handleMetaChange('target_word_count', e.target.value)}
-                        className={INPUT}
-                        placeholder="ex: 1200"
-                      />
-                    </Field>
-                  </div>
-
-                  {/* 2. Slug */}
-                  <div className="p-3">
-                    <Field label="Slug" hint="URL de l'article">
-                      <div className="flex gap-1.5">
-                        <input
-                          type="text"
-                          value={metaFields.slug}
-                          onChange={(e) => handleMetaChange('slug', e.target.value)}
-                          className={INPUT}
-                          placeholder="/mon-article"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const s = slugify(metaFields.title || 'item')
-                            handleMetaChange('slug', s)
-                            slugManuallyEditedRef.current = false
-                          }}
-                          className="shrink-0 rounded-[8px] border border-border bg-surface px-2 text-[11px] text-secondary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
-                          title="Régénérer depuis le titre"
-                        >
-                          ↻
-                        </button>
-                      </div>
-                    </Field>
-                  </div>
-
-                  {/* 3. Statut */}
+                  {/* Zone 1 — Statut */}
                   <div className="p-3 flex items-center justify-between">
                     <span className="text-[11px] font-medium text-secondary">Statut</span>
                     <StatusBadge status={article.status} />
                   </div>
 
-                  {/* 3. Couverture */}
+                  {/* Zone 1 — Actions de publication */}
+                  {article.status === 'published' ? (
+                    <div className="p-3 flex flex-col gap-2">
+                      {showUpdateButton ? (
+                        <button
+                          onClick={() => void handlePromote()}
+                          disabled={busy || actionLoading === 'promote'}
+                          className="w-full rounded-[8px] bg-accent py-2 text-[12px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
+                        >
+                          {actionLoading === 'promote' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
+                          Mettre à jour
+                        </button>
+                      ) : (
+                        <div className="w-full rounded-[8px] border border-success/20 bg-success/8 py-2 text-center text-[12px] font-medium text-success">
+                          Publié
+                        </div>
+                      )}
+                      <button
+                        onClick={() => doAction('unpublish')}
+                        disabled={busy}
+                        className="w-full rounded-[8px] border border-border py-2 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2] transition-colors disabled:opacity-40"
+                      >
+                        Dépublier
+                      </button>
+                      {showUpdateButton && (
+                        <p className="text-[10px] text-tertiary text-center">
+                          Les modifications locales seront sauvegardees sans depublier l'article.
+                        </p>
+                      )}
+                    </div>
+                  ) : article.status !== 'archived' ? (
+                    <div className="p-3 flex flex-col gap-3">
+                      <div className="flex rounded-[8px] border border-border overflow-hidden">
+                        <button
+                          onClick={() => setPublishMode('now')}
+                          className={`flex-1 py-1.5 text-[11px] font-medium transition-colors ${publishMode === 'now' ? 'bg-accent text-white' : 'text-secondary hover:bg-[#f0f0f2]'}`}
+                        >
+                          Maintenant
+                        </button>
+                        <button
+                          onClick={() => setPublishMode('schedule')}
+                          className={`flex-1 py-1.5 text-[11px] font-medium transition-colors ${publishMode === 'schedule' ? 'bg-accent text-white' : 'text-secondary hover:bg-[#f0f0f2]'}`}
+                        >
+                          Programmer
+                        </button>
+                      </div>
+                      {publishMode === 'now' && (
+                        <button
+                          onClick={() => doAction('publish')}
+                          disabled={busy}
+                          className="w-full rounded-[8px] bg-accent py-2 text-[12px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
+                        >
+                          {actionLoading === 'publish' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
+                          Publier maintenant
+                        </button>
+                      )}
+                      {publishMode === 'schedule' && (
+                        <div className="flex flex-col gap-2 rounded-[10px] bg-[#f9f9fb] border border-border p-3">
+                          <Field label="Date">
+                            <input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} className={INPUT} />
+                          </Field>
+                          <Field label="Heure">
+                            <input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} className={INPUT} />
+                          </Field>
+                          <button
+                            onClick={handleSchedule}
+                            disabled={!scheduleDate || !scheduleTime || busy}
+                            className="w-full rounded-[8px] bg-accent py-1.5 text-[11px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
+                          >
+                            {actionLoading === 'schedule' ? '…' : 'Programmer la publication'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+
+                  {/* Actions secondaires */}
+                  <div className="p-3 flex flex-col gap-1.5">
+                    <button
+                      onClick={handleSaveNow}
+                      disabled={busy}
+                      className="w-full flex items-center justify-center gap-1.5 rounded-[8px] border border-border py-2 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2] transition-colors disabled:opacity-40"
+                    >
+                      {autosaveStatus === 'saved' ? <Check size={13} className="text-success" /> : null}
+                      Sauvegarder
+                    </button>
+                    {!['ready_to_publish', 'published', 'archived'].includes(article.status) && (
+                      <button
+                        onClick={() => doAction('mark-ready')}
+                        disabled={busy}
+                        className="w-full rounded-[8px] border border-border py-2 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2] transition-colors disabled:opacity-40"
+                      >
+                        {actionLoading === 'mark-ready' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
+                        Marquer prêt
+                      </button>
+                    )}
+                    {article.status !== 'archived' && (
+                      <button
+                        onClick={() => doAction('archive')}
+                        disabled={busy}
+                        className="w-full rounded-[8px] py-2 text-[12px] font-medium text-danger/70 hover:text-danger hover:bg-danger/5 transition-colors disabled:opacity-40"
+                      >
+                        Archiver
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Zone 2 — À compléter */}
                   <div className="p-3 flex flex-col gap-2">
                     <span className="text-[11px] font-medium text-secondary">Image de couverture</span>
                     <MediaPanel coverImageUrl={coverImageUrl} onChange={handleCoverChange} projectId={projectId!} />
                   </div>
 
-                  {/* 4. Meta description */}
-                  <div className="p-3">
-                    <Field label="Meta description">
-                      <textarea
-                        rows={3}
-                        value={metaFields.meta_description}
-                        onChange={(e) => handleMetaChange('meta_description', e.target.value)}
-                        className={`${INPUT} resize-none`}
-                        placeholder="Description pour les moteurs de recherche…"
-                      />
-                    </Field>
-                  </div>
-
-                  {/* 5. Auteur (public) + Temps de lecture */}
                   <div className="p-3 flex flex-col gap-2">
                     <div className="flex items-center justify-between text-[12px]">
                       <span className="text-secondary">Auteur (publication)</span>
@@ -1581,8 +1578,7 @@ export default function ArticleEditorPage() {
                     </div>
                   </div>
 
-                  {/* 6. Dates */}
-                  {(article.published_at || article.updated_at) && (
+                  {article.scheduled_at && (
                     <div className="p-3 flex flex-col gap-1.5">
                       {article.published_at && (
                         <div className="flex items-center justify-between text-[12px]">
@@ -1590,113 +1586,127 @@ export default function ArticleEditorPage() {
                           <span className="text-primary">{formatDate(article.published_at)}</span>
                         </div>
                       )}
-                      {article.status === 'published' && (
-                        <div className="flex items-center justify-between text-[12px]">
-                          <span className="text-secondary">Mis à jour</span>
-                          <span className="text-primary">{formatDate(article.updated_at)}</span>
-                        </div>
-                      )}
-                      {article.scheduled_at && article.status === 'scheduled' && (
-                        <div className="flex items-center justify-between text-[12px]">
-                          <span className="text-secondary">Programmé le</span>
-                          <span className="text-primary">{formatDate(article.scheduled_at)}</span>
-                        </div>
-                      )}
+                      <div className="flex items-center justify-between text-[12px]">
+                        <span className="text-secondary">Date programmée</span>
+                        <span className="text-primary font-medium">{formatDate(article.scheduled_at)}</span>
+                      </div>
                     </div>
                   )}
 
-                  {/* 7. Publier maintenant / Programmer */}
-                  {article.status === 'published' ? (
-                    <div className="p-3 flex flex-col gap-2">
-                      {showUpdateButton ? (
-                        <button
-                          onClick={() => void handlePromote()}
-                          disabled={busy || actionLoading === 'promote'}
-                          className="w-full rounded-[8px] bg-accent py-2 text-[12px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
-                        >
-                          {actionLoading === 'promote' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
-                          Mettre à jour
-                        </button>
-                      ) : (
-                        <div className="w-full rounded-[8px] border border-success/20 bg-success/8 py-2 text-center text-[12px] font-medium text-success">
-                          Publié
-                        </div>
-                      )}
-                      <button
-                        onClick={() => doAction('unpublish')}
-                        disabled={busy}
-                        className="w-full rounded-[8px] border border-border py-2 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2] transition-colors disabled:opacity-40"
-                      >
-                        Dépublier
-                      </button>
-                      {showUpdateButton && (
-                        <p className="text-[10px] text-tertiary text-center">
-                          Les modifications locales seront sauvegardees sans depublier l'article.
-                        </p>
-                      )}
-                    </div>
-                  ) : article.status !== 'archived' ? (
-                    <div className="p-3 flex flex-col gap-3">
-                      {/* Mode toggle */}
-                      <div className="flex rounded-[8px] border border-border overflow-hidden">
-                        <button
-                          onClick={() => setPublishMode('now')}
-                          className={`flex-1 py-1.5 text-[11px] font-medium transition-colors ${publishMode === 'now' ? 'bg-accent text-white' : 'text-secondary hover:bg-[#f0f0f2]'}`}
-                        >
-                          Maintenant
-                        </button>
-                        <button
-                          onClick={() => setPublishMode('schedule')}
-                          className={`flex-1 py-1.5 text-[11px] font-medium transition-colors ${publishMode === 'schedule' ? 'bg-accent text-white' : 'text-secondary hover:bg-[#f0f0f2]'}`}
-                        >
-                          Programmer
-                        </button>
+                  {/* Zone 3 — Paramètres SEO (collapsible) */}
+                  <details className="group">
+                    <summary className="flex cursor-pointer list-none select-none items-center justify-between p-3 text-[11px] font-medium text-secondary hover:text-primary">
+                      <span>Paramètres SEO</span>
+                      <ChevronDown size={12} className="transition-transform group-open:rotate-180" />
+                    </summary>
+                    <div className="flex flex-col divide-y divide-border border-t border-border">
+                      <div className="p-3 flex flex-col gap-2">
+                        {categories.length > 0 && (
+                          <Field label="Catégorie">
+                            <select
+                              value={metaFields.category_id}
+                              onChange={(e) => handleMetaChange('category_id', e.target.value)}
+                              className={INPUT}
+                            >
+                              <option value="">— Aucune —</option>
+                              {categories.map((cat) => (
+                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                              ))}
+                            </select>
+                          </Field>
+                        )}
+                        <Field label="Sous-niche" hint="Filtre public Fiindt">
+                          <input
+                            type="text"
+                            value={metaFields.sub_niche}
+                            onChange={(e) => handleMetaChange('sub_niche', e.target.value)}
+                            className={INPUT}
+                            placeholder="ex: comparateurs IA"
+                          />
+                        </Field>
+                        <label className="flex items-center justify-between rounded-[8px] border border-border bg-surface px-3 py-2 text-[12px]">
+                          <span className="font-medium text-secondary">Mis en avant</span>
+                          <input
+                            type="checkbox"
+                            checked={featured}
+                            onChange={(e) => handleFeaturedChange(e.target.checked)}
+                            className="h-4 w-4 accent-accent"
+                          />
+                        </label>
+                        <Field label="Mot-clé principal" hint="Pour l'analyse SEO">
+                          <input
+                            type="text"
+                            value={metaFields.keyword}
+                            onChange={(e) => handleMetaChange('keyword', e.target.value)}
+                            className={INPUT}
+                            placeholder="ex: marketing digital"
+                          />
+                        </Field>
+                        <Field label="Format de contenu" hint="Calibre le scoring v2.1">
+                          <select
+                            value={metaFields.content_format}
+                            onChange={(e) => handleMetaChange('content_format', e.target.value)}
+                            className={INPUT}
+                          >
+                            <option value="">— Inféré depuis le volume —</option>
+                            <option value="short">Court (400–800 mots)</option>
+                            <option value="medium">Moyen (800–1500 mots)</option>
+                            <option value="long">Long (1500–2500 mots)</option>
+                            <option value="pillar">Pilier (2500+ mots)</option>
+                          </select>
+                        </Field>
+                        <Field label="Volume cible (mots)" hint="Optionnel si format déclaré">
+                          <input
+                            type="number"
+                            min={100}
+                            step={100}
+                            value={metaFields.target_word_count}
+                            onChange={(e) => handleMetaChange('target_word_count', e.target.value)}
+                            className={INPUT}
+                            placeholder="ex: 1200"
+                          />
+                        </Field>
                       </div>
-
-                      {publishMode === 'now' && (
-                        <div className="flex flex-col gap-1.5">
-                          <button
-                            onClick={() => doAction('publish')}
-                            disabled={busy}
-                            className="w-full rounded-[8px] bg-accent py-2 text-[12px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
-                          >
-                            {actionLoading === 'publish' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
-                            Publier maintenant
-                          </button>
-                        </div>
-                      )}
-
-                      {publishMode === 'schedule' && (
-                        <div className="flex flex-col gap-2 rounded-[10px] bg-[#f9f9fb] border border-border p-3">
-                          <Field label="Date">
+                      <div className="p-3">
+                        <Field label="Slug" hint="URL de l'article">
+                          <div className="flex gap-1.5">
                             <input
-                              type="date"
-                              value={scheduleDate}
-                              onChange={(e) => setScheduleDate(e.target.value)}
+                              type="text"
+                              value={metaFields.slug}
+                              onChange={(e) => handleMetaChange('slug', e.target.value)}
                               className={INPUT}
+                              placeholder="/mon-article"
                             />
-                          </Field>
-                          <Field label="Heure">
-                            <input
-                              type="time"
-                              value={scheduleTime}
-                              onChange={(e) => setScheduleTime(e.target.value)}
-                              className={INPUT}
-                            />
-                          </Field>
-                          <button
-                            onClick={handleSchedule}
-                            disabled={!scheduleDate || !scheduleTime || busy}
-                            className="w-full rounded-[8px] bg-accent py-1.5 text-[11px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
-                          >
-                            {actionLoading === 'schedule' ? '…' : 'Programmer la publication'}
-                          </button>
-                        </div>
-                      )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const s = slugify(metaFields.title || 'item')
+                                handleMetaChange('slug', s)
+                                slugManuallyEditedRef.current = false
+                              }}
+                              className="shrink-0 rounded-[8px] border border-border bg-surface px-2 text-[11px] text-secondary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
+                              title="Régénérer depuis le titre"
+                            >
+                              ↻
+                            </button>
+                          </div>
+                        </Field>
+                      </div>
+                      <div className="p-3">
+                        <Field label="Meta description">
+                          <textarea
+                            rows={3}
+                            value={metaFields.meta_description}
+                            onChange={(e) => handleMetaChange('meta_description', e.target.value)}
+                            className={`${INPUT} resize-none`}
+                            placeholder="Description pour les moteurs de recherche…"
+                          />
+                        </Field>
+                      </div>
                     </div>
-                  ) : null}
+                  </details>
 
-                  {/* 8. Comments */}
+                  {/* Commentaires éditoriaux */}
                   <div className="p-3">
                     <p className="text-[11px] font-medium text-secondary mb-2 flex items-center gap-1.5">
                       <MessageCircle size={12} className="text-tertiary" />
@@ -1728,37 +1738,6 @@ export default function ArticleEditorPage() {
                       <span>{actionError}</span>
                     </div>
                   )}
-
-                  {/* 9. Secondary actions */}
-                  <div className="p-3 flex flex-col gap-1.5">
-                    <button
-                      onClick={handleSaveNow}
-                      disabled={busy}
-                      className="w-full flex items-center justify-center gap-1.5 rounded-[8px] border border-border py-2 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2] transition-colors disabled:opacity-40"
-                    >
-                      {autosaveStatus === 'saved' ? <Check size={13} className="text-success" /> : null}
-                      Sauvegarder
-                    </button>
-                    {!['ready_to_publish', 'published', 'archived'].includes(article.status) && (
-                      <button
-                        onClick={() => doAction('mark-ready')}
-                        disabled={busy}
-                        className="w-full rounded-[8px] border border-border py-2 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2] transition-colors disabled:opacity-40"
-                      >
-                        {actionLoading === 'mark-ready' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
-                        Marquer prêt
-                      </button>
-                    )}
-                    {article.status !== 'archived' && (
-                      <button
-                        onClick={() => doAction('archive')}
-                        disabled={busy}
-                        className="w-full rounded-[8px] py-2 text-[12px] font-medium text-danger/70 hover:text-danger hover:bg-danger/5 transition-colors disabled:opacity-40"
-                      >
-                        Archiver
-                      </button>
-                    )}
-                  </div>
                 </div>
               )}
 

@@ -45,6 +45,7 @@ export type UpdateProjectPayload = {
   name?: string
   domain?: string
   language?: string
+  vertical?: string
   country_target?: string
   timezone?: string
   description?: string

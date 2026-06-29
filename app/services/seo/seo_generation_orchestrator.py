@@ -587,28 +587,31 @@ class SEOGenerationOrchestrator:
         outline_sections = outline.get("sections", [])
 
         prompt_parts = [
-            f"Rédige un article de blog SEO en français, complet et utile.",
+            f"Rédige un article de blog SEO en français, complet et utile.",
             f"Titre : {article.title}",
-            f"Mot-clé principal : {article.keyword}",
-            f"Mot(s)-clé(s) secondaire(s) : {', '.join(keyword_brief.get('secondary_keywords', []))}",
+            f"Mot-clé principal : {article.keyword}",
+            f"Mot(s)-clé(s) secondaire(s) : {', '.join(keyword_brief.get('secondary_keywords', []))}",
             f"Intention de recherche : {article.search_intent or 'informational'}",
-            f"Angle éditorial : {article.angle or 'Informatif et pratique'}",
+            f"Angle éditorial : {article.angle or 'Informatif et pratique'}",
             f"Audience : {article.audience or 'Grand public'}",
             "",
-            "Règles strictes :",
-            "- Rédige en HTML compatible TipTap : <h1>, <h2>, <h3>, <p>, <ul>, <ol>, <li>, <blockquote>, <table>, <strong>, <em>",
+            "Règles strictes :",
+            "- Rédige en HTML compatible TipTap : <h1>, <h2>, <h3>, <p>, <ul>, <ol>, <li>, <blockquote>, <table>, <strong>, <em>",
             "- Pas de Markdown brut visible, pas de ## visibles, pas de [Mock]",
             "- Pas de H5/H6",
             "- Pas de H2 suivi directement par H3 (mets une phrase entre les deux)",
-            "- Introduction courte et efficace",
-            "- Début qui satisfait rapidement l'intention du lecteur",
+            "- Introduction courte et efficace (2-3 phrases max)",
+            "- Après l'introduction, insère un callout résumé (blockquote HTML) récapitulant les 2-3 points clés en 1-2 phrases",
+            "- Début qui satisfait rapidement l'intention du lecteur",
             "- Ton humain, direct, concret — pas de texte robotique",
             "- Pas de paraphrase faible",
-            "- Inclus une liste à puces si pertinent",
-            "- Tableau seulement si utile pour comparer ou résumer",
-            "- Conclusion avec titre SEO naturel, pas forcément 'Conclusion'",
+            "- Inclus une liste à puces si pertinent",
+            "- Tableau seulement si utile pour comparer ou résumer",
+            "- Ne crée PAS de section 'Conclusion', 'En résumé' ou 'Pour conclure' séparée",
+            "- Termine l'article dans la dernière section du plan sans H2 supplémentaire",
+            "- Si un résumé est utile, intègre-le dans la dernière section existante",
             "",
-            "Plan à suivre :",
+            "Plan à suivre :",
         ]
 
         for section in outline_sections:
@@ -621,9 +624,9 @@ class SEOGenerationOrchestrator:
 
         prompt_parts.append("")
         if include_callouts:
-            prompt_parts.append("Prévois 1-2 callouts pertinents sous forme de paragraphes introduits naturellement.")
-        prompt_parts.append("La FAQ sera générée séparément — ne l'inclus pas dans le contenu principal.")
-        prompt_parts.append("Sois précis, original et utile.")
+            prompt_parts.append("Prévois 1-2 callouts pertinents sous forme de paragraphes introduits naturellement.")
+        prompt_parts.append("La FAQ sera générée séparément — ne l'inclus pas dans le contenu principal.")
+        prompt_parts.append("Sois précis, original et utile.")
 
         content_prompt = "\n".join(prompt_parts)
         if self.agent_router is not None:
@@ -643,7 +646,7 @@ class SEOGenerationOrchestrator:
             content = writer_llm.generate_text(content_prompt, temperature=0.7)
 
         if not content or not content.strip():
-            raise GenerationFailedError("Le provider IA n'a pas retourné de contenu exploitable pour la rédaction.")
+            raise GenerationFailedError("Le provider IA n'a pas retourné de contenu exploitable pour la rédaction.")
 
         article.content = content
         article.word_count = calculate_word_count(content)
@@ -651,7 +654,7 @@ class SEOGenerationOrchestrator:
         self._ensure_slug(article)
 
         if not article.meta_title:
-            meta_prompt = f"Écris un meta title SEO (max 60 car.) pour : {article.title}. Mot-clé : {article.keyword}"
+            meta_prompt = f"Écris un meta title SEO (max 60 car.) pour : {article.title}. Mot-clé : {article.keyword}"
             if self.agent_router is not None:
                 from app.services.agents.agent_router import call_agent
                 meta_title, result = call_agent(
@@ -669,7 +672,7 @@ class SEOGenerationOrchestrator:
                 article.meta_title = (title_llm.generate_text(meta_prompt, temperature=0.3) or article.title)[:255]
 
         if not article.meta_description:
-            desc_prompt = f"Écris une meta description SEO (140-160 car.) pour : {article.title}. Mot-clé : {article.keyword}"
+            desc_prompt = f"Écris une meta description SEO (140-160 car.) pour : {article.title}. Mot-clé : {article.keyword}"
             if self.agent_router is not None:
                 from app.services.agents.agent_router import call_agent
                 meta_description, result = call_agent(
@@ -696,16 +699,34 @@ class SEOGenerationOrchestrator:
         article.updated_at = datetime.now(timezone.utc)
         self.db.flush()
 
+        # AutoScoring post-génération
+        try:
+            from app.services.seo.seo_review_service import run_and_store_seo_review
+            run_and_store_seo_review(article)
+            from app.services.scoring_service import compute_global_score
+            scoring = compute_global_score(article)
+            article.global_score = scoring.get("global_score")
+            article.global_score_valid = bool(scoring.get("global_score_valid", False))
+            self.db.flush()
+            self._step("AutoScoring")
+        except Exception as exc:
+            self._error("AutoScoring", str(exc))
+
     def _generate_faq(self, article: Article):
         faq_llm = self._get_agent_provider("faq_generator", self.llm)
         if faq_llm.is_mock:
             return
         faq_prompt = (
-            f"À partir de l'article suivant, génère 3 à 5 questions fréquentes utiles.\n"
+            f"Génère 3 à 5 questions fréquentes (FAQ) à partir de cet article.\n"
             f"Titre : {article.title}\n"
-            f"Mot-clé principal : {article.keyword}\n"
-            f"Contenu HTML :\n{article.content[:3000]}\n\n"
-            'Réponds uniquement avec un objet JSON au format {"faq":[{"question":"...","answer":"..."}]}.'
+            f"Mot-clé principal : {article.keyword}\n"
+            f"Extrait du contenu :\n{article.content[:1500]}\n\n"
+            "Règles strictes :\n"
+            "- Chaque réponse : 1 à 4 phrases maximum\n"
+            "- Les questions ne doivent pas répéter les titres H2 de l'article\n"
+            "- Questions variées : définition, cas d'usage, comparaison, conseil\n"
+            "- Réponses directes, sans formule introductive\n\n"
+            'Réponds uniquement avec un objet JSON au format {"faq":[{"question":"...","answer":"..."}]}.'
         )
         try:
             faq_data = faq_llm.generate_json(

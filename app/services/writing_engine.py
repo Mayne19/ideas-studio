@@ -93,10 +93,15 @@ def _generate_faq_json(article: Article, llm: LLMProvider, agent_router=None) ->
     if provider.is_mock:
         return article.faq_json
     faq_prompt = (
-        f"À partir de l'article suivant, génère 3 à 5 questions fréquentes utiles.\n"
+        f"Génère 3 à 5 questions fréquentes (FAQ) à partir de cet article.\n"
         f"Titre : {article.title}\n"
         f"Mot-clé principal : {article.keyword}\n"
-        f"Contenu HTML :\n{article.content}\n\n"
+        f"Extrait du contenu :\n{article.content[:1500]}\n\n"
+        "Règles strictes :\n"
+        "- Chaque réponse : 1 à 4 phrases maximum\n"
+        "- Les questions ne doivent pas répéter les titres H2 de l'article\n"
+        "- Questions variées : définition, cas d'usage, comparaison, conseil\n"
+        "- Réponses directes, sans formule introductive\n\n"
         "Réponds uniquement avec un objet JSON au format "
         '{"faq":[{"question":"...","answer":"..."}]}.'
     )
@@ -207,13 +212,15 @@ def start_writing_from_idea(
         for section in outline:
             content_prompt += f"- {section.get('heading', '')}: {section.get('notes', '')}\n"
         content_prompt += (
-            "\nRédige l'article en Markdown, avec une introduction développée, "
-            "plusieurs sections détaillées (H2/H3), des paragraphes riches, "
+            "\nRédige l'article en Markdown, avec une introduction courte (2-3 phrases), "
+            "suivie immédiatement d'un encadré résumé (blockquote Markdown) des points clés, "
+            "puis plusieurs sections détaillées (H2/H3), des paragraphes riches, "
             "des exemples concrets, des listes si pertinent, des blockquotes si utile "
             "et des tableaux Markdown si cela apporte une vraie valeur. "
             f"Minimum {settings.MIN_GENERATED_ARTICLE_WORDS} mots. "
             "N'inclus pas de section FAQ dans le contenu principal : la FAQ sera générée séparément. "
-            f"{'Prévois 1 ou 2 encadrés callout pertinents sous forme de paragraphes introduits naturellement.' if include_callouts else ''} "
+            "Ne crée PAS de section 'Conclusion' séparée : termine dans la dernière section du plan. "
+            f"{'Prévois 1 ou 2 callouts pertinents sous forme de blockquotes naturellement intégrés.' if include_callouts else ''} "
             "Sois précis, utile et original."
         )
 

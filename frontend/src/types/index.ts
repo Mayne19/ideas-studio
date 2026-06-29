@@ -15,6 +15,7 @@ export type Project = {
   name: string
   domain: string | null
   language: string | null
+  vertical: string | null
   country_target: string | null
   timezone: string | null
   description: string | null

@@ -200,6 +200,15 @@ def autosave_article(
     db.commit()
     db.refresh(article)
 
+    try:
+        from app.services.scoring_service import compute_global_score
+        scoring = compute_global_score(article)
+        article.global_score = scoring.get("global_score")
+        article.global_score_valid = bool(scoring.get("global_score_valid", False))
+        db.commit()
+    except Exception:
+        pass
+
     return AutosaveResponse(
         id=article.id,
         word_count=article.word_count,

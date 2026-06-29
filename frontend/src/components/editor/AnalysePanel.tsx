@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   AlertCircle, AlertTriangle, Info, RefreshCw, CheckCircle,
   HelpCircle, ChevronDown, ChevronRight, Download,
@@ -602,6 +602,16 @@ export default function AnalysePanel({
   const brief = analysis ?? article.latest_analysis
   const expertReview = expertReviewOverride ?? article.seo_review_json ?? null
 
+  const autoTriggeredRef = useRef(false)
+  useEffect(() => {
+    if (autoTriggeredRef.current) return
+    if (brief) return
+    if (!article.content || article.content.length < 100) return
+    autoTriggeredRef.current = true
+    void runAnalysis()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function runAnalysis() {
     setLoading(true)
     setError('')
@@ -722,16 +732,6 @@ export default function AnalysePanel({
       <div className="flex gap-2 pt-1">
         <Button
           size="sm"
-          variant="secondary"
-          icon={<RefreshCw size={12} />}
-          loading={loading}
-          className="flex-1 justify-center"
-          onClick={runAnalysis}
-        >
-          {brief ? 'Réanalyser l\'article' : 'Analyser'}
-        </Button>
-        <Button
-          size="sm"
           variant="ghost"
           icon={<Download size={12} />}
           className="flex-1 justify-center"
@@ -741,11 +741,11 @@ export default function AnalysePanel({
         </Button>
       </div>
 
-      {!brief && !loading && !error && (
-        <p className="text-center text-[11px] text-tertiary pt-1">
-          Lancez une analyse pour obtenir les scores SEO, lisibilité, qualité et EEAT.
-        </p>
-      )}
+      <p className="text-center text-[11px] text-tertiary pt-1">
+        {loading
+          ? 'Analyse en cours…'
+          : 'Les scores se mettent à jour automatiquement à chaque sauvegarde.'}
+      </p>
     </div>
   )
 }

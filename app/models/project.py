@@ -13,6 +13,7 @@ class Project(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     domain: Mapped[str | None] = mapped_column(String(255), nullable=True)
     language: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    vertical: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     country_target: Mapped[str | None] = mapped_column(String(10), nullable=True)
     timezone: Mapped[str | None] = mapped_column(String(80), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
