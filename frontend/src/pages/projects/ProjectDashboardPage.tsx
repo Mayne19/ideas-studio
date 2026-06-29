@@ -633,7 +633,7 @@ export default function ProjectDashboardPage() {
               Voir tout <ArrowRight size={11} />
             </button>
           </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_120px_56px_110px_96px] gap-6 border-b border-border px-5 py-2 text-[11px] font-medium uppercase tracking-wide text-tertiary">
+          <div className="grid grid-cols-[minmax(0,1fr)_120px_56px_110px_96px] gap-6 border-b border-border px-5 py-2 text-[12px] font-medium text-tertiary">
             <span>Article</span>
             <span>Score SEO</span>
             <span>Vues</span>
