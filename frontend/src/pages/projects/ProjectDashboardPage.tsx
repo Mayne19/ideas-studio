@@ -544,57 +544,76 @@ export default function ProjectDashboardPage() {
 
       <section className="grid items-stretch gap-4 lg:grid-cols-[1.62fr_1fr]">
         <Card padding="none" className="flex min-h-[430px] flex-col overflow-hidden">
-          <h2 className="border-b border-border px-6 py-4 text-[13px] font-semibold text-primary">Articles récents</h2>
-          <div className="grid grid-cols-[minmax(0,1fr)_120px_90px_120px_130px] border-b border-border px-5 py-3 text-[13px] font-medium text-secondary">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <h2 className="text-[13px] font-semibold text-primary">Articles récents</h2>
+            <button
+              type="button"
+              onClick={() => navigate(`/projects/${projectId}/articles`)}
+              className="flex items-center gap-1 text-[11px] font-medium text-secondary hover:text-primary transition-colors"
+            >
+              Voir tout <ArrowRight size={11} />
+            </button>
+          </div>
+          <div className="grid grid-cols-[minmax(0,1fr)_150px_60px_auto_auto] border-b border-border px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-tertiary">
             <span>Article</span>
             <span>Score SEO</span>
             <span>Vues</span>
             <span>Statut</span>
-            <span>Catégorie</span>
+            <span className="pl-3">Catégorie</span>
           </div>
-          <div className="flex flex-col divide-y divide-border-soft">
+          <div className="flex flex-col divide-y divide-border">
             {(data?.recentArticles ?? []).map((article) => {
               const category = data?.categories.find((item) => item.id === article.category_id)
               const score = scoreOnHundred(article.seo_score)
+              const scoreColor = (score ?? 0) >= 75 ? '#00c950' : (score ?? 0) >= 50 ? '#ffa51f' : '#ff3b1f'
               return (
                 <button
                   key={article.id}
                   type="button"
                   onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
-                  className="grid grid-cols-[minmax(0,1fr)_120px_90px_120px_130px] items-center px-5 py-3 text-left transition-colors hover:bg-surface-soft"
+                  className="grid grid-cols-[minmax(0,1fr)_150px_60px_auto_auto] items-center gap-2 px-4 py-2.5 text-left transition-colors hover:bg-surface-soft"
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-[13px] font-medium text-primary">{article.title}</span>
-                    <span className="mt-0.5 flex items-center gap-2 text-[11px] text-secondary">
+                    <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-tertiary">
                       <span>{formatDate(getArticleDate(article))}</span>
-                      <span className="h-1 w-1 rounded-full bg-tertiary" />
+                      <span>·</span>
                       <span>{article.author_name ?? 'Auteur'}</span>
-                      <span className="h-1 w-1 rounded-full bg-tertiary" />
-                      <span>{article.word_count > 0 ? `${article.word_count.toLocaleString('fr-FR')} mots` : '— mots'}</span>
+                      {article.word_count > 0 && <><span>·</span><span>{article.word_count.toLocaleString('fr-FR')} mots</span></>}
                     </span>
                   </span>
-                  <span className="flex items-center gap-2.5 text-[13px] font-medium text-primary">
-                    {score ?? '—'}
-                    <span className="h-1.5 w-14 overflow-hidden rounded-full bg-surface-muted">
+                  <span className="flex items-center gap-2">
+                    <span className="w-6 shrink-0 text-right text-[13px] font-semibold tabular-nums text-primary">
+                      {score ?? '—'}
+                    </span>
+                    <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-surface-muted">
                       <span
-                        className={`block h-full rounded-full ${(score ?? 0) >= 75 ? 'bg-[#00c950]' : 'bg-[#ffa51f]'}`}
-                        style={{ width: `${Math.min(score ?? 0, 100)}%` }}
+                        className="block h-full rounded-full transition-all"
+                        style={{ width: `${Math.min(score ?? 0, 100)}%`, backgroundColor: scoreColor }}
                       />
                     </span>
                   </span>
-                  <span className="text-[13px] font-medium text-primary">—</span>
-                  <StatusBadge status={article.status} />
-                  <span
-                    className="inline-flex h-6 w-fit items-center rounded-full border border-blue-100 bg-blue-50 px-3 text-[13px] font-medium text-blue-700"
-                    style={category?.color ? { backgroundColor: `${category.color}15`, color: category.color } : undefined}
-                  >
-                    {category?.name ?? 'Sans catégorie'}
+                  <span className="text-[12px] text-tertiary">—</span>
+                  <span className="flex shrink-0">
+                    <StatusBadge status={article.status} />
+                  </span>
+                  <span className="flex shrink-0 pl-3">
+                    {category ? (
+                      <span
+                        className="inline-flex h-5 items-center rounded-full px-2.5 text-[11px] font-medium whitespace-nowrap"
+                        style={{ backgroundColor: `${category.color ?? '#0066ff'}18`, color: category.color ?? '#0066ff' }}
+                      >
+                        {category.name}
+                      </span>
+                    ) : (
+                      <span className="text-[12px] text-tertiary">—</span>
+                    )}
                   </span>
                 </button>
               )
             })}
             {data && data.recentArticles.length === 0 && (
-              <div className="px-6 py-10 text-[13px] text-secondary">Aucun article récent.</div>
+              <div className="px-4 py-10 text-[13px] text-secondary">Aucun article récent.</div>
             )}
           </div>
         </Card>
