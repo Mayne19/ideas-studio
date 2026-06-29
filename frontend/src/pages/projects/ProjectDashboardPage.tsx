@@ -145,22 +145,22 @@ function SeoRadialCard({ score, changePts, data }: { score: number; changePts: n
   const endAngle = 90 - (score / 100) * 280
 
   return (
-    <article className="rounded-[8px] border border-border bg-surface px-5 py-4 shadow-none">
-      <div className="mb-2 flex items-center gap-1.5 text-[12px] font-medium text-secondary">
-        Score SEO moyen
-        <HelpCircle size={12} className="text-tertiary" />
+    <article className="flex h-[118px] flex-col rounded-[8px] border border-border bg-surface px-5 py-3.5 shadow-none">
+      <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
+        <span className="truncate whitespace-nowrap">Score SEO moyen</span>
+        <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
-      <div className="flex items-center justify-between gap-2">
-        <ResponsiveContainer width={64} height={64}>
+      <div className="mt-3 flex h-8 items-center justify-between gap-3">
+        <ResponsiveContainer width={42} height={42}>
           <RadialBarChart
             data={[{ v: score, fill: fillColor }]}
             startAngle={90}
             endAngle={endAngle}
-            outerRadius={30}
-            innerRadius={21}
+            outerRadius={19}
+            innerRadius={14}
             margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
           >
-            <PolarGrid gridType="circle" radialLines={false} stroke="none" polarRadius={[30, 21]} />
+            <PolarGrid gridType="circle" radialLines={false} stroke="none" polarRadius={[19, 14]} />
             <RadialBar dataKey="v" background={{ fill: 'var(--color-surface-muted, #f1f5f9)' }} cornerRadius={6} />
             <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
               <Label
@@ -168,7 +168,7 @@ function SeoRadialCard({ score, changePts, data }: { score: number; changePts: n
                   if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
                     return (
                       <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                        <tspan x={viewBox.cx} y={viewBox.cy} style={{ fontSize: '13px', fontWeight: '700', fill: 'var(--color-primary, #111)' }}>
+                        <tspan x={viewBox.cx} y={viewBox.cy} style={{ fontSize: '11px', fontWeight: '700', fill: 'var(--color-primary, #111)' }}>
                           {score}
                         </tspan>
                       </text>
@@ -179,11 +179,11 @@ function SeoRadialCard({ score, changePts, data }: { score: number; changePts: n
             </PolarRadiusAxis>
           </RadialBarChart>
         </ResponsiveContainer>
-        <span className="text-[12px] font-semibold tabular-nums" style={{ color: changeColor }}>{changeLabel}</span>
+        <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{changeLabel}</span>
       </div>
-      <div className="mt-2 -mx-1">
-        <ResponsiveContainer width="100%" height={44}>
-          <LineChart data={data} margin={{ top: 8, right: 6, bottom: 4, left: 6 }}>
+      <div className="mt-2 h-[42px] -mx-1">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 5, right: 6, bottom: 2, left: 6 }}>
             <Line type="natural" dataKey="v" stroke={fillColor} strokeWidth={1.5}
               dot={{ r: 1.5, fill: fillColor, strokeWidth: 0 }}
               activeDot={{ r: 2.5, fill: fillColor, strokeWidth: 0 }}
@@ -211,18 +211,18 @@ function SparkMetricCard({
   data: MonthPoint[]
 }) {
   return (
-    <article className="rounded-[8px] border border-border bg-surface px-5 py-4 shadow-none">
-      <div className="mb-2 flex items-center gap-1.5 text-[12px] font-medium text-secondary">
-        {title}
-        <HelpCircle size={12} className="text-tertiary" />
+    <article className="flex h-[118px] flex-col rounded-[8px] border border-border bg-surface px-5 py-3.5 shadow-none">
+      <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
+        <span className="truncate whitespace-nowrap">{title}</span>
+        <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
-      <div className="flex items-center justify-between gap-2">
+      <div className="mt-3 flex h-8 items-center justify-between gap-3">
         <div className="text-[20px] font-semibold leading-none text-primary">{value}</div>
-        <span className="text-[12px] font-semibold tabular-nums" style={{ color: changeColor }}>{change}</span>
+        <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{change}</span>
       </div>
-      <div className="mt-2 -mx-1">
-        <ResponsiveContainer width="100%" height={44}>
-          <LineChart data={data} margin={{ top: 8, right: 6, bottom: 4, left: 6 }}>
+      <div className="mt-2 h-[42px] -mx-1">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 5, right: 6, bottom: 2, left: 6 }}>
             <Line
               type="natural"
               dataKey="v"
@@ -255,18 +255,18 @@ function BarMetricCard({
   data: MonthPoint[]
 }) {
   return (
-    <article className="rounded-[8px] border border-border bg-surface px-5 py-4 shadow-none">
-      <div className="mb-2 flex items-center gap-1.5 text-[12px] font-medium text-secondary">
-        {title}
-        <HelpCircle size={12} className="text-tertiary" />
+    <article className="flex h-[118px] flex-col rounded-[8px] border border-border bg-surface px-5 py-3.5 shadow-none">
+      <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
+        <span className="truncate whitespace-nowrap">{title}</span>
+        <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
-      <div className="flex items-center justify-between gap-2">
+      <div className="mt-3 flex h-8 items-center justify-between gap-3">
         <div className="text-[20px] font-semibold leading-none text-primary">{value}</div>
-        <span className="text-[12px] font-semibold tabular-nums" style={{ color: changeColor }}>{change}</span>
+        <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{change}</span>
       </div>
-      <div className="mt-2 -mx-1">
-        <ResponsiveContainer width="100%" height={44}>
-          <BarChart data={data} margin={{ top: 8, right: 6, bottom: 4, left: 6 }} barSize={5}>
+      <div className="mt-2 h-[42px] -mx-1">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 5, right: 6, bottom: 2, left: 6 }} barSize={5}>
             <Bar dataKey="v" fill={color} radius={[2, 2, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
@@ -535,7 +535,7 @@ export default function ProjectDashboardPage() {
         <div className="flex h-full shrink-0 items-center gap-3 border-r border-border px-4">
           <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[13px] font-medium text-white">
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-accent">
-              <ArrowRight size={10} />
+              <ArrowRight size={10} className="-rotate-90" />
             </span>
             Production
           </span>
@@ -562,7 +562,7 @@ export default function ProjectDashboardPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-5 gap-4">
+      <section className="grid grid-cols-4 gap-4">
         <SeoRadialCard
           score={seoScore || 0}
           changePts={data?.seoChangePts ?? 0}
