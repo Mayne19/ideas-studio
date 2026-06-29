@@ -697,8 +697,8 @@ export default function ProjectDashboardPage() {
           </div>
         </Card>
 
-        <div className="grid h-full grid-rows-[5fr_7fr] gap-4">
-          <Card padding="none" className="flex min-h-0 flex-col overflow-hidden">
+        <div className="flex flex-col gap-4">
+          <Card padding="none" className="overflow-hidden">
             <h2 className="border-b border-border px-6 py-4 text-[13px] font-semibold text-primary">À faire maintenant</h2>
             <div className="flex flex-col divide-y divide-border-soft">
               {todoRows.map((row) => (
@@ -719,9 +719,9 @@ export default function ProjectDashboardPage() {
             </div>
           </Card>
 
-          <Card padding="none" className="flex min-h-0 flex-col overflow-hidden">
+          <Card padding="none" className="overflow-hidden">
             <h2 className="border-b border-border px-6 py-4 text-[13px] font-semibold text-primary">Activité récente</h2>
-            <div className="flex flex-1 flex-col divide-y divide-border-soft overflow-y-auto">
+            <div className="flex flex-col divide-y divide-border-soft">
               {visibleActivityEvents.map((event, index) => (
                 <button
                   key={event.id}
