@@ -554,12 +554,12 @@ export default function ProjectDashboardPage() {
               Voir tout <ArrowRight size={11} />
             </button>
           </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_100px_44px_auto_auto] border-b border-border px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-tertiary">
+          <div className="grid grid-cols-[minmax(0,260px)_110px_52px_100px_84px] gap-4 border-b border-border px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-tertiary">
             <span>Article</span>
             <span>Score SEO</span>
             <span>Vues</span>
             <span>Statut</span>
-            <span className="pl-3">Catégorie</span>
+            <span>Catégorie</span>
           </div>
           <div className="flex flex-col divide-y divide-border">
             {(data?.recentArticles ?? []).map((article) => {
@@ -571,7 +571,7 @@ export default function ProjectDashboardPage() {
                   key={article.id}
                   type="button"
                   onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
-                  className="grid grid-cols-[minmax(0,1fr)_100px_44px_auto_auto] items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-surface-soft"
+                  className="grid grid-cols-[minmax(0,260px)_110px_52px_100px_84px] items-center gap-4 px-4 py-2.5 text-left transition-colors hover:bg-surface-soft"
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-[13px] font-medium text-primary">{article.title}</span>
@@ -597,7 +597,7 @@ export default function ProjectDashboardPage() {
                   <span className="flex shrink-0">
                     <StatusBadge status={article.status} />
                   </span>
-                  <span className="flex shrink-0 pl-3">
+                  <span className="flex shrink-0">
                     {category ? (
                       <span
                         className="inline-flex h-5 items-center rounded-full px-2 text-[11px] font-medium whitespace-nowrap"
