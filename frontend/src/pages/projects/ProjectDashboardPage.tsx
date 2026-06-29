@@ -4,8 +4,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   Lightbulb, Globe,
   ArrowRight, AlertCircle, Clock,
-  Edit3, Eye, Send, Star, ClipboardList, HelpCircle, Play,
-  Plus, ShieldCheck,
+  Edit3, Eye, Send, Star, ClipboardList, HelpCircle,
+  ShieldCheck,
 } from '@/components/ui/hugeIcons'
 import { useProject } from '@/context/ProjectContext'
 import { useAuth } from '@/context/AuthContext'
@@ -470,24 +470,6 @@ export default function ProjectDashboardPage() {
           <p className="mt-1 text-[13px] text-secondary">
             Vue d'ensemble de votre pipeline éditorial et de vos performances.
           </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-3 pt-4">
-          <button
-            type="button"
-            onClick={() => navigate(`/projects/${projectId}/articles`)}
-            className="inline-flex h-9 items-center gap-2 rounded-[6px] border border-border bg-surface px-4 text-[13px] font-medium text-primary transition-colors hover:bg-surface-soft"
-          >
-            Créer un article
-            <Plus size={13} />
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate(`/projects/${projectId}/pipeline`)}
-            className="inline-flex h-9 items-center gap-2 rounded-[6px] border border-accent bg-accent px-4 text-[13px] font-medium text-white transition-opacity hover:opacity-90"
-          >
-            Lancer le pipeline
-            <Play size={13} />
-          </button>
         </div>
       </section>
 
