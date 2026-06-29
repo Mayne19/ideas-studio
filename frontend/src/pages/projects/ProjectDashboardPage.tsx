@@ -277,7 +277,7 @@ function BarMetricCard({
 
 
 
-function PipelineInfoCard({
+function PipelineSummaryItem({
   icon,
   title,
   value,
@@ -289,14 +289,12 @@ function PipelineInfoCard({
   description: string
 }) {
   return (
-    <Card padding="sm" className="flex min-h-[96px] items-center gap-4 px-5 py-4">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center text-secondary">{icon}</span>
-      <div>
-        <p className="text-[12px] font-medium text-secondary">{title}</p>
-        <p className="mt-0.5 text-[20px] font-semibold leading-none text-primary">{value}</p>
-        <p className="mt-1.5 text-[12px] text-tertiary">{description}</p>
-      </div>
-    </Card>
+    <div className="flex h-[52px] min-w-0 items-center gap-2.5 px-5">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center text-secondary">{icon}</span>
+      <span className="min-w-0 truncate text-[13px] font-medium text-secondary">{title}</span>
+      <strong className="shrink-0 text-[18px] font-semibold leading-none tabular-nums text-primary">{value}</strong>
+      <span className="min-w-0 truncate text-[12px] text-tertiary">{description}</span>
+    </div>
   )
 }
 
@@ -590,30 +588,30 @@ export default function ProjectDashboardPage() {
         />
       </section>
 
-      <section className="grid grid-cols-4 gap-4">
-        <PipelineInfoCard
-          icon={<ClipboardList size={24} />}
-          title="Production en cours"
+      <section className="grid grid-cols-4 divide-x divide-border overflow-hidden rounded-[8px] border border-border bg-surface shadow-none">
+        <PipelineSummaryItem
+          icon={<ClipboardList size={16} />}
+          title="Production"
           value={data?.activeProductionCount ?? 0}
           description="Articles en rédaction"
         />
-        <PipelineInfoCard
-          icon={<ShieldCheck size={24} />}
+        <PipelineSummaryItem
+          icon={<ShieldCheck size={16} />}
           title="À valider"
           value={data?.reviewNeededCount ?? 0}
-          description="En attente de décision"
+          description="En attente"
         />
-        <PipelineInfoCard
-          icon={<Lightbulb size={24} />}
+        <PipelineSummaryItem
+          icon={<Lightbulb size={16} />}
           title="Idées prêtes"
           value={data?.ideasReadyForProductionCount ?? data?.ideasCount ?? 0}
-          description={enabledProviders.length > 0 ? 'Qualifiées, à valider' : '0 provider IA actif.'}
+          description={enabledProviders.length > 0 ? 'Qualifiées' : '0 provider IA actif'}
         />
-        <PipelineInfoCard
-          icon={<Edit3 size={24} />}
+        <PipelineSummaryItem
+          icon={<Edit3 size={16} />}
           title="En cours"
           value={data?.inProgressCount ?? 0}
-          description="Articles en rédaction ou révision"
+          description="Actifs"
         />
       </section>
 
