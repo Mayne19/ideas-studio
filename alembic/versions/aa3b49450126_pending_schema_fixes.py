@@ -29,22 +29,24 @@ def upgrade() -> None:
     _try_create_unique_constraint('uq_project_agent_assignment', 'agent_assignments', ['project_id', 'agent_id'])
     _try_create_unique_constraint('uq_project_provider', 'ai_provider_configs', ['project_id', 'provider'])
 
-    # FK auto-référentes : use_alter=True évite les deadlocks sur tables peuplées
+    # FK auto-référentes : NOT VALID — instantané, ne scanne pas les lignes existantes
     try:
-        op.create_foreign_key(
-            'fk_articles_original_article_id', 'articles', 'articles',
-            ['original_article_id'], ['id'],
-            use_alter=True,
-        )
+        op.execute("""
+            ALTER TABLE articles
+            ADD CONSTRAINT fk_articles_original_article_id
+            FOREIGN KEY (original_article_id) REFERENCES articles(id)
+            NOT VALID
+        """)
     except Exception:
         pass
 
     try:
-        op.create_foreign_key(
-            'fk_articles_revision_of_article_id', 'articles', 'articles',
-            ['revision_of_article_id'], ['id'],
-            use_alter=True,
-        )
+        op.execute("""
+            ALTER TABLE articles
+            ADD CONSTRAINT fk_articles_revision_of_article_id
+            FOREIGN KEY (revision_of_article_id) REFERENCES articles(id)
+            NOT VALID
+        """)
     except Exception:
         pass
 
@@ -76,11 +78,11 @@ def downgrade() -> None:
         pass
     op.drop_column('notifications', 'link')
     try:
-        op.drop_constraint('fk_articles_revision_of_article_id', 'articles', type_='foreignkey')
+        op.execute("ALTER TABLE articles DROP CONSTRAINT IF EXISTS fk_articles_original_article_id")
     except Exception:
         pass
     try:
-        op.drop_constraint('fk_articles_original_article_id', 'articles', type_='foreignkey')
+        op.execute("ALTER TABLE articles DROP CONSTRAINT IF EXISTS fk_articles_revision_of_article_id")
     except Exception:
         pass
     try:
