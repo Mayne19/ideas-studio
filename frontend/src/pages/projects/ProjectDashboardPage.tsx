@@ -145,7 +145,7 @@ function SeoRadialCard({ score, changePts, data }: { score: number; changePts: n
   const endAngle = 90 - (score / 100) * 280
 
   return (
-    <article className="flex h-[118px] flex-col rounded-[8px] border border-border bg-surface px-5 py-3.5 shadow-none">
+    <article className="flex h-[128px] flex-col rounded-[8px] border border-border bg-surface px-5 py-3.5 shadow-none">
       <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
         <span className="truncate whitespace-nowrap">Score SEO moyen</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
@@ -181,9 +181,9 @@ function SeoRadialCard({ score, changePts, data }: { score: number; changePts: n
         </ResponsiveContainer>
         <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{changeLabel}</span>
       </div>
-      <div className="mt-2 h-[42px] -mx-1">
+      <div className="mt-2 h-[50px] -mx-1">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 5, right: 6, bottom: 2, left: 6 }}>
+          <LineChart data={data} margin={{ top: 5, right: 6, bottom: 6, left: 6 }}>
             <Line type="natural" dataKey="v" stroke={fillColor} strokeWidth={1.5}
               dot={{ r: 1.5, fill: fillColor, strokeWidth: 0 }}
               activeDot={{ r: 2.5, fill: fillColor, strokeWidth: 0 }}
@@ -211,7 +211,7 @@ function SparkMetricCard({
   data: MonthPoint[]
 }) {
   return (
-    <article className="flex h-[118px] flex-col rounded-[8px] border border-border bg-surface px-5 py-3.5 shadow-none">
+    <article className="flex h-[128px] flex-col rounded-[8px] border border-border bg-surface px-5 py-3.5 shadow-none">
       <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
         <span className="truncate whitespace-nowrap">{title}</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
@@ -220,9 +220,9 @@ function SparkMetricCard({
         <div className="text-[20px] font-semibold leading-none text-primary">{value}</div>
         <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{change}</span>
       </div>
-      <div className="mt-2 h-[42px] -mx-1">
+      <div className="mt-2 h-[50px] -mx-1">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 5, right: 6, bottom: 2, left: 6 }}>
+          <LineChart data={data} margin={{ top: 5, right: 6, bottom: 6, left: 6 }}>
             <Line
               type="natural"
               dataKey="v"
@@ -255,7 +255,7 @@ function BarMetricCard({
   data: MonthPoint[]
 }) {
   return (
-    <article className="flex h-[118px] flex-col rounded-[8px] border border-border bg-surface px-5 py-3.5 shadow-none">
+    <article className="flex h-[128px] flex-col rounded-[8px] border border-border bg-surface px-5 py-3.5 shadow-none">
       <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
         <span className="truncate whitespace-nowrap">{title}</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
@@ -264,9 +264,9 @@ function BarMetricCard({
         <div className="text-[20px] font-semibold leading-none text-primary">{value}</div>
         <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{change}</span>
       </div>
-      <div className="mt-2 h-[42px] -mx-1">
+      <div className="mt-2 h-[50px] -mx-1">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 5, right: 6, bottom: 2, left: 6 }} barSize={5}>
+          <BarChart data={data} margin={{ top: 5, right: 6, bottom: 6, left: 6 }} barSize={5}>
             <Bar dataKey="v" fill={color} radius={[2, 2, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
@@ -727,13 +727,13 @@ export default function ProjectDashboardPage() {
                   key={event.id}
                   type="button"
                   onClick={() => navigate(event.href)}
-                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-6 py-2.5 text-left transition-colors hover:bg-surface-soft"
+                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 py-2.5 text-left transition-colors hover:bg-surface-soft"
                 >
                   <span className={`h-2 w-2 rounded-full ${['bg-[#00c950]', 'bg-[#0066ff]', 'bg-[#ffa51f]', 'bg-[#ff3b1f]'][index % 4]}`} />
                   <span className="truncate text-[13px] font-medium text-primary">
                     {event.label} : {event.articleTitle}
                   </span>
-                  <span className="text-[13px] font-medium text-secondary">{event.time}</span>
+                  <span className="shrink-0 pl-6 text-[13px] font-medium text-secondary">{event.time}</span>
                 </button>
               ))}
               {visibleActivityEvents.length === 0 && (
