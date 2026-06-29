@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import Toolbar from '@/components/ui/Toolbar'
 import ToggleSwitch from '@/components/ui/ToggleSwitch'
 import ArticleScoreBadges from '@/components/ui/ArticleScoreBadges'
+import { TableRoot, Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/Table'
 import { finiteScore, getGeoScore, getOriginalityScore } from '@/lib/scoreBadge'
 import { useProject } from '@/context/ProjectContext'
 
@@ -44,8 +45,6 @@ function getUniqueAuthors(articles: Article[]): string[] {
   return Array.from(names).sort()
 }
 
-const ARTICLE_TABLE_GRID = 'lg:grid-cols-[minmax(240px,1.2fr)_minmax(300px,auto)_80px_90px_130px]'
-
 const PUBLISHED_STATUSES = new Set(['published', 'scheduled'])
 const EDITABLE_STATUSES = new Set([
   'draft', 'outline_ready', 'writing_requested', 'writing_in_progress',
@@ -67,10 +66,11 @@ function ArticleRow({
   const category = categories.find((c) => c.id === article.category_id)
   const isPublished = PUBLISHED_STATUSES.has(article.status)
   const isEditable = EDITABLE_STATUSES.has(article.status)
+  const cost = getCost(article)
 
   return (
-    <div className={`grid gap-2.5 rounded-[12px] px-3 py-2.5 transition-colors hover:bg-[#f5f5f7] lg:items-center ${ARTICLE_TABLE_GRID}`}>
-      <div className="min-w-0">
+    <TableRow>
+      <TableCell className="min-w-0 max-w-[280px]">
         <button
           type="button"
           className="block w-full truncate text-left text-[13px] font-medium leading-snug text-primary transition-colors hover:text-accent"
@@ -93,50 +93,50 @@ function ArticleRow({
           <span>·</span>
           <span>{article.word_count > 0 ? `${article.word_count} mots` : '— mots'}</span>
         </div>
-      </div>
-      <ArticleScoreBadges article={article} />
-      <div className="flex items-center">
-        {(() => {
-          const cost = getCost(article)
-          return cost !== null ? (
-            <span className="inline-flex items-center rounded-full bg-[#eef2ff] px-1.5 py-0.5 text-[10px] font-medium text-[#4f46e5]">
-              {cost.toFixed(4)} €
-            </span>
-          ) : (
-            <span className="inline-flex items-center rounded-full bg-surface-soft px-1.5 py-0.5 text-[10px] font-medium text-tertiary">
-              — €
-            </span>
-          )
-        })()}
-      </div>
-      <div className="flex items-center">
+      </TableCell>
+      <TableCell>
+        <ArticleScoreBadges article={article} />
+      </TableCell>
+      <TableCell className="w-[80px]">
+        {cost !== null ? (
+          <span className="inline-flex items-center rounded-full bg-[#eef2ff] px-1.5 py-0.5 text-[10px] font-medium text-[#4f46e5]">
+            {cost.toFixed(4)} €
+          </span>
+        ) : (
+          <span className="inline-flex items-center rounded-full bg-surface-soft px-1.5 py-0.5 text-[10px] font-medium text-tertiary">
+            — €
+          </span>
+        )}
+      </TableCell>
+      <TableCell className="w-[100px]">
         <StatusBadge status={article.status} />
-      </div>
-      <div className="flex items-center gap-3 lg:justify-end">
-        <button
-          type="button"
-          onClick={() => onEdit(article)}
-          className="flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-[8px] bg-accent px-3 text-[12px] font-medium text-white transition-colors hover:bg-accent/90"
-          title="Éditer"
-        >
-          <Pencil size={12} />
-          Éditer
-        </button>
-        <select
-          onChange={(e) => { if (e.target.value) { onAction(e.target.value, article); e.target.value = '' } }}
-          className="h-8 w-[82px] cursor-pointer rounded-[8px] border border-border bg-surface px-1.5 text-[11px] text-secondary transition-colors hover:bg-surface-muted"
-          defaultValue=""
-          aria-label={`Actions pour ${article.title}`}
-        >
-          <option value="" disabled>Actions</option>
-          {isPublished && <option value="view-site">Voir sur le site</option>}
-          {isEditable && <option value="analyze-seo">Analyser SEO</option>}
-          {isPublished && <option value="unpublish">Dépublier</option>}
-          {!isPublished && <option value="archive">Archiver</option>}
-          <option value="delete">Supprimer</option>
-        </select>
-      </div>
-    </div>
+      </TableCell>
+      <TableCell className="w-[130px]">
+        <div className="flex items-center gap-2 justify-end">
+          <Button
+            size="sm"
+            icon={<Pencil size={12} />}
+            onClick={() => onEdit(article)}
+            title="Éditer"
+          >
+            Éditer
+          </Button>
+          <select
+            onChange={(e) => { if (e.target.value) { onAction(e.target.value, article); e.target.value = '' } }}
+            className="h-8 w-[82px] cursor-pointer rounded-[8px] border border-border bg-surface px-1.5 text-[11px] text-secondary transition-colors hover:bg-surface-muted"
+            defaultValue=""
+            aria-label={`Actions pour ${article.title}`}
+          >
+            <option value="" disabled>Actions</option>
+            {isPublished && <option value="view-site">Voir sur le site</option>}
+            {isEditable && <option value="analyze-seo">Analyser SEO</option>}
+            {isPublished && <option value="unpublish">Dépublier</option>}
+            {!isPublished && <option value="archive">Archiver</option>}
+            <option value="delete">Supprimer</option>
+          </select>
+        </div>
+      </TableCell>
+    </TableRow>
   )
 }
 
@@ -508,24 +508,30 @@ export default function ArticlesPage() {
         )}
         {status === 'success' && visibleArticles.length > 0 && (
           <>
-            <div className={`hidden gap-2.5 px-3 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-tertiary lg:grid ${ARTICLE_TABLE_GRID}`}>
-              <div>Titre</div>
-              <div>Scores</div>
-              <div>Coût</div>
-              <div>Statut</div>
-              <div className="text-right">Actions</div>
-            </div>
-            <div className="flex flex-col gap-1">
-              {visibleArticles.map((article) => (
-                <ArticleRow
-                  key={article.id}
-                  article={article}
-                  categories={categories}
-                  onEdit={(a) => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
-                  onAction={handleAction}
-                />
-              ))}
-            </div>
+            <TableRoot>
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>Titre</TableHead>
+                    <TableHead>Scores</TableHead>
+                    <TableHead className="w-[80px]">Coût</TableHead>
+                    <TableHead className="w-[100px]">Statut</TableHead>
+                    <TableHead className="w-[130px] text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody bordered>
+                  {visibleArticles.map((article) => (
+                    <ArticleRow
+                      key={article.id}
+                      article={article}
+                      categories={categories}
+                      onEdit={(a) => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
+                      onAction={handleAction}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </TableRoot>
             {hasMore && (
               <div className="mt-4 flex justify-center">
                 <Button variant="secondary" size="sm" loading={loadingMore} onClick={loadMore}>
