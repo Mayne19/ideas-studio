@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Bar, BarChart, Line, LineChart, ResponsiveContainer } from 'recharts'
+import { Bar, BarChart, Label, Line, LineChart, PolarGrid, PolarRadiusAxis, RadialBar, RadialBarChart, ResponsiveContainer } from 'recharts'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Lightbulb, Globe,
@@ -136,6 +136,53 @@ function buildMonthlyMetric(articles: Article[], getValue: (arts: Article[]) => 
     if (month.length > 0) lastValue = getValue(month)
     return { v: lastValue }
   })
+}
+
+function SeoRadialCard({ score, changePts }: { score: number; changePts: number }) {
+  const changeColor = changePts >= 0 ? '#00c950' : '#ff3b1f'
+  const changeLabel = changePts >= 0 ? `+${changePts} pts` : `${changePts} pts`
+  const fillColor = score >= 75 ? '#00c950' : score >= 50 ? '#ffa51f' : '#ff3b1f'
+  const endAngle = 90 - (score / 100) * 280
+
+  return (
+    <article className="rounded-[8px] border border-border bg-surface px-5 py-4 shadow-none">
+      <div className="mb-2 flex items-center gap-1.5 text-[12px] font-medium text-secondary">
+        Score SEO moyen
+        <HelpCircle size={12} className="text-tertiary" />
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <ResponsiveContainer width={80} height={80}>
+          <RadialBarChart
+            data={[{ v: score, fill: fillColor }]}
+            startAngle={90}
+            endAngle={endAngle}
+            outerRadius={36}
+            innerRadius={26}
+            margin={{ top: 4, right: 4, bottom: 4, left: 4 }}
+          >
+            <PolarGrid gridType="circle" radialLines={false} stroke="none" polarRadius={[36, 26]} />
+            <RadialBar dataKey="v" background={{ fill: 'var(--color-surface-muted, #f1f5f9)' }} cornerRadius={6} />
+            <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
+              <Label
+                content={({ viewBox }) => {
+                  if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
+                    return (
+                      <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
+                        <tspan x={viewBox.cx} y={viewBox.cy} style={{ fontSize: '14px', fontWeight: '700', fill: 'var(--color-primary, #111)' }}>
+                          {score}
+                        </tspan>
+                      </text>
+                    )
+                  }
+                }}
+              />
+            </PolarRadiusAxis>
+          </RadialBarChart>
+        </ResponsiveContainer>
+        <span className="text-[13px] font-semibold tabular-nums" style={{ color: changeColor }}>{changeLabel}</span>
+      </div>
+    </article>
+  )
 }
 
 function SparkMetricCard({
@@ -506,13 +553,9 @@ export default function ProjectDashboardPage() {
       </section>
 
       <section className="grid grid-cols-5 gap-4">
-        <SparkMetricCard
-          title="Score SEO moyen"
-          value={seoScore || '—'}
-          change={data ? (data.seoChangePts >= 0 ? `+${data.seoChangePts} pts` : `${data.seoChangePts} pts`) : '—'}
-          changeColor={!data || data.seoChangePts >= 0 ? '#00c950' : '#ff3b1f'}
-          color="#00c950"
-          data={data?.seoMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
+        <SeoRadialCard
+          score={seoScore || 0}
+          changePts={data?.seoChangePts ?? 0}
         />
         <SparkMetricCard
           title="Vues du mois"
@@ -579,7 +622,7 @@ export default function ProjectDashboardPage() {
               Voir tout <ArrowRight size={11} />
             </button>
           </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_140px_56px_110px_96px] gap-4 border-b border-border px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-tertiary">
+          <div className="grid grid-cols-[minmax(0,1fr)_120px_56px_110px_96px] gap-6 border-b border-border px-5 py-2 text-[11px] font-medium uppercase tracking-wide text-tertiary">
             <span>Article</span>
             <span>Score SEO</span>
             <span>Vues</span>
@@ -596,7 +639,7 @@ export default function ProjectDashboardPage() {
                   key={article.id}
                   type="button"
                   onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
-                  className="grid grid-cols-[minmax(0,1fr)_140px_56px_110px_96px] items-center gap-4 px-4 py-2.5 text-left transition-colors hover:bg-surface-soft"
+                  className="grid grid-cols-[minmax(0,1fr)_120px_56px_110px_96px] items-center gap-6 px-5 py-2.5 text-left transition-colors hover:bg-surface-soft"
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-[13px] font-medium text-primary">{article.title}</span>
@@ -611,7 +654,7 @@ export default function ProjectDashboardPage() {
                     <span className="w-6 shrink-0 text-right text-[13px] font-semibold tabular-nums text-primary">
                       {score ?? '—'}
                     </span>
-                    <span className="h-[5px] min-w-0 flex-1 overflow-hidden rounded-full bg-surface-muted">
+                    <span className="h-[5px] w-[60px] shrink-0 overflow-hidden rounded-full bg-surface-muted">
                       <span
                         className="block h-full rounded-full transition-all"
                         style={{ width: `${Math.min(score ?? 0, 100)}%`, backgroundColor: scoreColor }}
