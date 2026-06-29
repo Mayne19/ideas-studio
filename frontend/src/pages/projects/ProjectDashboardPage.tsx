@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Bar, BarChart, Label, Line, LineChart, PolarGrid, PolarRadiusAxis, RadialBar, RadialBarChart, ResponsiveContainer } from 'recharts'
+import { Area, AreaChart, Bar, BarChart, Label, Line, LineChart, PolarGrid, PolarRadiusAxis, RadialBar, RadialBarChart, ResponsiveContainer } from 'recharts'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Lightbulb, Globe,
@@ -233,6 +233,52 @@ function SparkMetricCard({
               isAnimationActive={false}
             />
           </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </article>
+  )
+}
+
+function AreaMetricCard({
+  title,
+  value,
+  change,
+  changeColor,
+  color,
+  data,
+}: {
+  title: string
+  value: string | number
+  change: string
+  changeColor: string
+  color: string
+  data: MonthPoint[]
+}) {
+  return (
+    <article className="flex h-[128px] flex-col rounded-[8px] border border-border bg-surface px-5 py-3.5 shadow-none">
+      <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
+        <span className="truncate whitespace-nowrap">{title}</span>
+        <HelpCircle size={12} className="shrink-0 text-tertiary" />
+      </div>
+      <div className="mt-3 flex h-8 items-center justify-between gap-3">
+        <div className="text-[20px] font-semibold leading-none text-primary">{value}</div>
+        <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{change}</span>
+      </div>
+      <div className="mt-2 h-[50px] -mx-1">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 5, right: 6, bottom: 6, left: 6 }}>
+            <Area
+              type="linear"
+              dataKey="v"
+              stroke={color}
+              strokeWidth={1.5}
+              fill={color}
+              fillOpacity={0.15}
+              dot={{ r: 1.5, fill: color, strokeWidth: 0 }}
+              activeDot={{ r: 2.5, fill: color, strokeWidth: 0 }}
+              isAnimationActive={false}
+            />
+          </AreaChart>
         </ResponsiveContainer>
       </div>
     </article>
@@ -562,7 +608,7 @@ export default function ProjectDashboardPage() {
           changePts={data?.seoChangePts ?? 0}
           data={data?.seoMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
         />
-        <SparkMetricCard
+        <AreaMetricCard
           title="Vues du mois"
           value={totalViews}
           change={data ? (() => { const d = data.viewsMonthly; const diff = d[11].v - d[10].v; return diff >= 0 ? `+${diff}` : `${diff}` })() : '—'}
