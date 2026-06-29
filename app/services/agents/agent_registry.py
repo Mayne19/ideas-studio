@@ -378,7 +378,7 @@ AGENTS: list[AgentDef] = [
         phase="seo",
         requires_llm=False,
         icon="globe",
-        implementation_ref="geo_optimizer",
+        implementation_ref="geo_expert_service",
         status=AgentStatus.active,
         output_json_field="geo_optimization_json",
     ),

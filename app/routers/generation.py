@@ -12,7 +12,7 @@ from app.models.user import User
 from app.services.idea_engine import generate_idea
 from app.services.writing_engine import start_writing_from_idea
 from app.services.seo.seo_generation_orchestrator import generate_full_article
-from app.services.seo.helpers import safe_json_dump
+from app.services.seo.helpers import safe_json_dump, safe_json_load
 from app.services.providers.llm_provider import (
     GenerationFailedError,
     ProviderUnavailableError,
@@ -332,20 +332,6 @@ def discover_ideas_route(
         generated=len(ideas),
         strategy=strategy,
     )
-
-
-def safe_json_load(value, default=None):
-    if value is None:
-        return default
-    if isinstance(value, (dict, list)):
-        return value
-    if isinstance(value, str):
-        import json
-        try:
-            return json.loads(value)
-        except (json.JSONDecodeError, TypeError):
-            return default
-    return default
 
 
 class MonthlyPlanRequest(BaseModel):

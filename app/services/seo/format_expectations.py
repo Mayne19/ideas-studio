@@ -58,14 +58,6 @@ FORMAT_EXPECTATIONS: dict[str, FormatExpectations] = {
     ),
 }
 
-_WORD_COUNT_THRESHOLDS = [
-    (400, "short"),
-    (800, "short"),
-    (1500, "medium"),
-    (2500, "long"),
-]
-
-
 def infer_format(target_word_count: int | None) -> str:
     if not target_word_count:
         return "medium"

@@ -376,6 +376,17 @@ class SEOGenerationOrchestrator:
             self._error("HumanizationPass", str(exc))
             humanization = None
 
+        # 18b. ReadabilityV2
+        try:
+            from app.services.seo.readability_service import compute_readability_score
+            readability_result = compute_readability_score(article)
+            article.readability_report_json = readability_result
+            if readability_result.get("score") is not None:
+                article.readability_score = float(readability_result["score"])
+            self._step("ReadabilityV2")
+        except Exception as exc:
+            self._error("ReadabilityV2", str(exc))
+
         # 19. EEATPass
         try:
             eeat = check_eeat_dict(article.content, sources_list, article.author_name)
@@ -420,14 +431,8 @@ class SEOGenerationOrchestrator:
                 self._error("StructuredDataBuilder", str(exc))
 
             try:
-                from app.services.geo_optimizer import analyze_geo_readiness
-                article.geo_optimization_json = analyze_geo_readiness(
-                    content=article.content,
-                    title=article.title,
-                    keyword=article.keyword,
-                    faq_json=article.faq_json,
-                    sources_json=article.sources_json,
-                )
+                from app.services.seo.geo_expert_service import compute_geo_score
+                article.geo_optimization_json = compute_geo_score(article)
                 self._step("GEOOptimizer")
             except Exception as exc:
                 self._error("GEOOptimizer", str(exc))

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Integer, Float, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import String, Integer, Float, Boolean, DateTime, ForeignKey, Text, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
@@ -56,7 +56,7 @@ class Article(Base):
     serp_summary_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     opportunity_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     priority: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    featured: Mapped[bool] = mapped_column(Integer, default=False, nullable=False, index=True)
+    featured: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     meta_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     meta_description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     cover_image_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
@@ -82,6 +82,7 @@ class Article(Base):
     originality_report_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     humanization_report_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     eeat_checklist_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    readability_report_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     editorial_quality_report_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     seo_final_checklist_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     generation_report_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)

@@ -219,10 +219,6 @@ export const router = createBrowserRouter([
             element: <ProjectMembersPage />,
           },
           {
-            path: 'team',
-            element: <ProjectMembersPage />,
-          },
-          {
             path: 'integration',
             element: <ProjectIntegrationPage />,
           },
@@ -247,14 +243,6 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<LoadingState />}>
                 <ProjectAgentsPage />
-              </Suspense>
-            ),
-          },
-          {
-            path: 'profile',
-            element: (
-              <Suspense fallback={<LoadingState />}>
-                <AccountPage />
               </Suspense>
             ),
           },
