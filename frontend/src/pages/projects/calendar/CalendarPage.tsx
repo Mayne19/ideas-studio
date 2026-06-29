@@ -66,7 +66,7 @@ function getPublicationDateKey(article: Article): string | null {
 }
 
 function heatmapTone(count: number): string {
-  if (count <= 0) return 'bg-[#f0f0f2]'
+  if (count <= 0) return 'bg-surface-soft'
   if (count === 1) return 'bg-success/20'
   if (count === 2) return 'bg-success/35'
   if (count <= 4) return 'bg-success/55'
@@ -279,7 +279,7 @@ export default function CalendarPage() {
                 <button
                   onClick={() => setViewMode('list')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium transition-colors ${
-                    viewMode === 'list' ? 'bg-accent text-white' : 'text-secondary hover:bg-[#f0f0f2]'
+                    viewMode === 'list' ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'
                   }`}
                 >
                   <List size={13} />
@@ -288,7 +288,7 @@ export default function CalendarPage() {
                 <button
                   onClick={() => setViewMode('month')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium transition-colors ${
-                    viewMode === 'month' ? 'bg-accent text-white' : 'text-secondary hover:bg-[#f0f0f2]'
+                    viewMode === 'month' ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'
                   }`}
                 >
                   <Calendar size={13} />
@@ -340,7 +340,7 @@ export default function CalendarPage() {
                               key={a.id}
                               className="flex items-center gap-3 rounded-[16px] bg-surface px-4 py-3 transition-colors hover:bg-white group"
                             >
-                              <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-[10px] bg-[#f0f0f2]">
+                              <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-[10px] bg-surface-soft">
                                 <span className="text-[16px] font-bold text-primary leading-none">{displayDay}</span>
                                 <span className="text-[9px] text-tertiary uppercase">{displayMonth}</span>
                               </div>
@@ -355,7 +355,7 @@ export default function CalendarPage() {
                               <StatusBadge status={a.status} />
                               <button
                                 onClick={() => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
-                                className="opacity-0 group-hover:opacity-100 flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-all"
+                                className="opacity-0 group-hover:opacity-100 flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-surface-muted hover:text-primary transition-all"
                                 title="Ouvrir l'éditeur"
                               >
                                 <ExternalLink size={12} />
@@ -376,7 +376,7 @@ export default function CalendarPage() {
           <div className="mb-4 flex items-center justify-between">
             <button
               onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
-              className="flex h-8 w-8 items-center justify-center rounded-[8px] text-secondary hover:bg-[#f0f0f2] transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-[8px] text-secondary hover:bg-surface-soft transition-colors"
             >
               <ChevronLeft size={15} />
             </button>
@@ -385,7 +385,7 @@ export default function CalendarPage() {
             </p>
             <button
               onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
-              className="flex h-8 w-8 items-center justify-center rounded-[8px] text-secondary hover:bg-[#f0f0f2] transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-[8px] text-secondary hover:bg-surface-soft transition-colors"
             >
               <ChevronRight size={15} />
             </button>
@@ -432,7 +432,7 @@ export default function CalendarPage() {
                             ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
                             : a.status === 'review_needed' || a.status === 'ready_to_publish'
                             ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-                            : 'bg-[#f0f0f2] text-secondary hover:bg-[#e5e5e7]'
+                            : 'bg-surface-soft text-secondary hover:bg-surface-muted'
                         }`}
                         title={a.title}
                       >

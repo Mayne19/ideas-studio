@@ -76,7 +76,7 @@ export default function VersionsPanel({
         {versions.map((v) => (
           <div
             key={v.id}
-            className="flex items-center gap-2 rounded-[8px] border border-transparent px-2 py-1.5 hover:border-border hover:bg-[#f0f0f2]"
+            className="flex items-center gap-2 rounded-[8px] border border-transparent px-2 py-1.5 hover:border-border hover:bg-surface-soft"
           >
             <div className="flex-1 min-w-0">
               <p className="text-[11px] font-medium text-primary truncate">v{v.version_number} — {v.title}</p>
@@ -88,7 +88,7 @@ export default function VersionsPanel({
             <button
               onClick={() => setRestoreTarget(v)}
               disabled={restoring === v.id}
-              className="flex h-6 w-6 items-center justify-center rounded-[6px] text-tertiary transition-colors hover:bg-[#e5e5e7] hover:text-primary disabled:opacity-40"
+              className="flex h-6 w-6 items-center justify-center rounded-[6px] text-tertiary transition-colors hover:bg-surface-muted hover:text-primary disabled:opacity-40"
               title="Restaurer cette version"
             >
               <RotateCcw size={12} />

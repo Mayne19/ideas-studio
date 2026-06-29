@@ -40,7 +40,7 @@ export default function PremiumTable({
     return (
       <div className={cn('flex flex-col gap-2', className)}>
         {Array.from({ length: skeletonRows }).map((_, i) => (
-          <Skeleton key={i} className="h-14 w-full rounded-[12px]" />
+          <Skeleton key={i} className="h-14 w-full rounded-[8px]" />
         ))}
       </div>
     )
@@ -67,8 +67,8 @@ export default function PremiumTable({
   }
 
   return (
-    <div className={cn('flex flex-col', className)}>
-      <div className={cn('hidden gap-2.5 px-3 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-tertiary lg:grid')}
+    <div className={cn('flex flex-col overflow-hidden rounded-[8px] border border-border bg-surface shadow-none', className)}>
+      <div className={cn('hidden gap-2.5 border-b border-border px-4 py-3 text-[12px] font-medium text-secondary lg:grid')}
         style={{ gridTemplateColumns: columns.map((col) => col.className ?? '1fr').join(' ') }}
       >
         {columns.map((col) => (
@@ -77,7 +77,7 @@ export default function PremiumTable({
           </div>
         ))}
       </div>
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col divide-y divide-border-soft">
         {data.map((item, i) => renderRow(item, i))}
       </div>
     </div>

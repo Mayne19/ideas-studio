@@ -100,7 +100,7 @@ export default function ArticlePerformancePage() {
               key={p.value}
               onClick={() => setPeriod(p.value)}
               className={`px-3 py-1.5 text-[12px] font-medium transition-colors ${
-                period === p.value ? 'bg-accent text-white' : 'text-secondary hover:bg-[#f0f0f2]'
+                period === p.value ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'
               }`}
             >
               {p.label}

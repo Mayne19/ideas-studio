@@ -189,7 +189,7 @@ export default function PublishPanel({
             <div className="flex gap-1.5">
               <button
                 onClick={() => { setScheduleOpen(false); setScheduleDate('') }}
-                className="flex-1 rounded-[8px] border border-border py-1.5 text-[11px] text-secondary hover:bg-[#e5e5e7] transition-colors"
+                className="flex-1 rounded-[8px] border border-border py-1.5 text-[11px] text-secondary hover:bg-surface-muted transition-colors"
               >
                 Annuler
               </button>

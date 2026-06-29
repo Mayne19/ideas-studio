@@ -1,42 +1,50 @@
 @import "tailwindcss";
 
 @theme {
-  /* Colors — warm light theme */
-  --color-bg: #F8F5EF;
-  --color-app: #F8F5EF;
-  --color-surface: #FCFAF7;
-  --color-surface-soft: #F4EFE6;
-  --color-surface-muted: #EFE7DA;
-  --color-primary: #1F1A17;
-  --color-secondary: #6F665C;
-  --color-tertiary: #8C8379;
-  --color-border: #E7DCC8;
-  --color-border-soft: #EFE7DA;
-  --color-border-strong: #D8C7AD;
-  --color-accent: #A8643A;
-  --color-accent-dark: #8F4F2B;
-  --color-brand: #A8643A;
-  --color-brand-soft: #FDF6F0;
-  --color-success: #4A7C59;
-  --color-warning: #C4943A;
-  --color-danger: #B03A3A;
+  /* Colors — Vercel Geist neutral light theme */
+  --color-bg: #FAFAFA;
+  --color-app: #FAFAFA;
+  --color-surface: #FFFFFF;
+  --color-surface-soft: #F7F7F7;
+  --color-surface-muted: #EBEBEB;
+  --color-primary: #171717;
+  --color-secondary: #4D4D4D;
+  --color-tertiary: #7D7D7D;
+  --color-border: rgba(0, 0, 0, 0.05);
+  --color-border-soft: rgba(0, 0, 0, 0.05);
+  --color-border-strong: rgba(0, 0, 0, 0.10);
+  --color-accent: #0072F5;
+  --color-accent-dark: #0062D1;
+  --color-brand: #171717;
+  --color-brand-soft: #F2F2F2;
+  --color-success: #008A2E;
+  --color-warning: #A35200;
+  --color-danger: #E5484D;
 
   /* Radius */
-  --radius-sm: 10px;
-  --radius-md: 16px;
-  --radius-lg: 22px;
-  --radius-xl: 28px;
-  --radius-card: 22px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-card: 8px;
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.025);
-  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-sm: none;
+  --shadow-soft: none;
   --shadow-card: none;
   --shadow-float: none;
 
   /* Typography */
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
-    Inter, "Segoe UI", sans-serif;
+  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Display",
+    "SF Pro Text", Inter, "Segoe UI", sans-serif;
+}
+
+@font-face {
+  font-family: "Geist";
+  src: url("https://vercel.com/vc-ap-b3331f/_next/static/immutable/media/Geist_Variable-s.p.2v-cf9syxr5ni.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
 }
 
 * {
@@ -52,7 +60,7 @@ body,
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+  font-family: "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Display",
     "SF Pro Text", Inter, "Segoe UI", sans-serif;
   background-color: var(--color-bg);
   color: var(--color-primary);

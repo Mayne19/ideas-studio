@@ -68,7 +68,7 @@ function ProjectCard({
 }) {
   const isConnected = project.status === 'connected'
   return (
-    <Card className="flex flex-col gap-3 hover:shadow-float transition-shadow duration-200 group">
+    <Card className="flex flex-col gap-3 hover:shadow-none transition-shadow duration-200 group">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div
@@ -98,18 +98,18 @@ function ProjectCard({
       {/* Badges */}
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-          isConnected ? 'bg-success/10 text-[#1a7a3a]' : 'bg-[#f0f0f2] text-tertiary'
+          isConnected ? 'bg-success/10 text-[#1a7a3a]' : 'bg-surface-soft text-tertiary'
         }`}>
           <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-[#1a7a3a]' : 'bg-[#c8c8cc]'}`} />
           {isConnected ? 'Connecté' : 'Non connecté'}
         </span>
         {project.language && (
-          <span className="rounded-full bg-[#f0f0f2] px-2 py-0.5 text-[10px] text-tertiary uppercase font-medium">
+          <span className="rounded-full bg-surface-soft px-2 py-0.5 text-[10px] text-tertiary uppercase font-medium">
             {project.language}
           </span>
         )}
         {project.country_target && (
-          <span className="rounded-full bg-[#f0f0f2] px-2 py-0.5 text-[10px] text-tertiary font-medium">
+          <span className="rounded-full bg-surface-soft px-2 py-0.5 text-[10px] text-tertiary font-medium">
             {project.country_target}
           </span>
         )}

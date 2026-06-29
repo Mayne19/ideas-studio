@@ -164,7 +164,7 @@ export default function AccountPage() {
             </div>
           )}
           <button
-            className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full bg-surface border border-border text-tertiary hover:bg-[#f0f0f2] transition-colors"
+            className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full bg-surface border border-border text-tertiary hover:bg-surface-soft transition-colors"
             title="Changer la photo de profil"
             onClick={() => fileRef.current?.click()}
             disabled={avatarUploading}
@@ -244,7 +244,7 @@ export default function AccountPage() {
                   <button
                     type="button"
                     onClick={handleCopyUsername}
-                    className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors shrink-0"
+                    className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-surface-muted hover:text-primary transition-colors shrink-0"
                     title="Copier mon @username"
                   >
                     {copied ? <Check size={12} className="text-success" /> : <Copy size={12} />}

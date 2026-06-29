@@ -1,0 +1,1382 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ideas Studio - Dashboard Preview</title>
+  <link rel="stylesheet" href="https://vercel.com/vc-ap-b3331f/_next/static/immutable/chunks/05foduxk-776_.css">
+  <link rel="stylesheet" href="https://vercel.com/vc-ap-b3331f/_next/static/immutable/chunks/1_w9atwk0yfh7.css">
+  <link rel="stylesheet" href="https://vercel.com/vc-ap-b3331f/_next/static/immutable/chunks/2w3hab7hc5rcn.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    @font-face {
+      font-family: "Geist";
+      src: url("https://vercel.com/vc-ap-b3331f/_next/static/immutable/media/Geist_Variable-s.p.2v-cf9syxr5ni.woff2") format("woff2");
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root {
+      --font-geist-sans: "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-weight-normal: 400;
+      --font-weight-medium: 500;
+      --font-weight-semibold: 600;
+      --ds-background-100-value: 0, 0%, 100%;
+      --ds-background-200-value: 0, 0%, 98%;
+      --ds-gray-100-value: 0, 0%, 95%;
+      --ds-gray-200-value: 0, 0%, 92%;
+      --ds-gray-300-value: 0, 0%, 90%;
+      --ds-gray-400-value: 0, 0%, 92%;
+      --ds-gray-500-value: 0, 0%, 79%;
+      --ds-gray-600-value: 0, 0%, 66%;
+      --ds-gray-700-value: 0, 0%, 56%;
+      --ds-gray-800-value: 0, 0%, 49%;
+      --ds-gray-900-value: 0, 0%, 30%;
+      --ds-gray-1000-value: 0, 0%, 9%;
+      --ds-blue-100-value: 212, 100%, 97%;
+      --ds-blue-200-value: 210, 100%, 96%;
+      --ds-blue-300-value: 210, 100%, 94%;
+      --ds-blue-400-value: 209, 100%, 90%;
+      --ds-blue-500-value: 209, 100%, 80%;
+      --ds-blue-600-value: 208, 100%, 66%;
+      --ds-blue-700-value: 212, 100%, 48%;
+      --ds-blue-800-value: 212, 100%, 41%;
+      --ds-blue-900-value: 211, 100%, 42%;
+      --ds-green-100-value: 120, 60%, 96%;
+      --ds-green-200-value: 120, 60%, 95%;
+      --ds-green-300-value: 120, 60%, 91%;
+      --ds-green-400-value: 122, 60%, 86%;
+      --ds-green-500-value: 124, 60%, 75%;
+      --ds-green-600-value: 125, 60%, 64%;
+      --ds-green-700-value: 131, 41%, 46%;
+      --ds-green-800-value: 132, 43%, 39%;
+      --ds-green-900-value: 133, 50%, 32%;
+      --ds-red-100-value: 0, 100%, 97%;
+      --ds-red-200-value: 0, 100%, 96%;
+      --ds-red-300-value: 0, 100%, 95%;
+      --ds-red-400-value: 0, 90%, 92%;
+      --ds-red-500-value: 0, 82%, 85%;
+      --ds-red-600-value: 359, 90%, 71%;
+      --ds-red-700-value: 358, 75%, 59%;
+      --ds-red-800-value: 358, 70%, 52%;
+      --ds-red-900-value: 358, 66%, 48%;
+      --ds-amber-100-value: 39, 100%, 95%;
+      --ds-amber-200-value: 44, 100%, 92%;
+      --ds-amber-300-value: 43, 96%, 90%;
+      --ds-amber-400-value: 42, 100%, 78%;
+      --ds-amber-500-value: 38, 100%, 71%;
+      --ds-amber-600-value: 36, 90%, 62%;
+      --ds-amber-700-value: 39, 100%, 57%;
+      --ds-amber-800-value: 35, 100%, 52%;
+      --ds-amber-900-value: 30, 100%, 32%;
+      --ds-purple-100-value: 276, 100%, 97%;
+      --ds-purple-200-value: 277, 87%, 97%;
+      --ds-purple-300-value: 274, 78%, 95%;
+      --ds-purple-400-value: 276, 71%, 92%;
+      --ds-purple-500-value: 274, 70%, 82%;
+      --ds-purple-600-value: 273, 72%, 73%;
+      --ds-purple-700-value: 272, 51%, 54%;
+      --ds-purple-800-value: 272, 47%, 45%;
+      --ds-purple-900-value: 274, 71%, 43%;
+      --ds-background-100: hsla(var(--ds-background-100-value), 1);
+      --ds-background-200: hsla(var(--ds-background-200-value), 1);
+      --ds-gray-100: hsla(var(--ds-gray-100-value), 1);
+      --ds-gray-200: hsla(var(--ds-gray-200-value), 1);
+      --ds-gray-300: hsla(var(--ds-gray-300-value), 1);
+      --ds-gray-400: hsla(var(--ds-gray-400-value), 1);
+      --ds-gray-500: hsla(var(--ds-gray-500-value), 1);
+      --ds-gray-600: hsla(var(--ds-gray-600-value), 1);
+      --ds-gray-700: hsla(var(--ds-gray-700-value), 1);
+      --ds-gray-800: hsla(var(--ds-gray-800-value), 1);
+      --ds-gray-900: hsla(var(--ds-gray-900-value), 1);
+      --ds-gray-1000: hsla(var(--ds-gray-1000-value), 1);
+      --ds-gray-alpha-100: rgba(0, 0, 0, .05);
+      --ds-gray-alpha-200: rgba(0, 0, 0, .08);
+      --ds-gray-alpha-300: rgba(0, 0, 0, .10);
+      --ds-gray-alpha-400: rgba(0, 0, 0, .08);
+      --ds-gray-alpha-500: rgba(0, 0, 0, .21);
+      --ds-blue-100: hsla(var(--ds-blue-100-value), 1);
+      --ds-blue-200: hsla(var(--ds-blue-200-value), 1);
+      --ds-blue-300: hsla(var(--ds-blue-300-value), 1);
+      --ds-blue-400: hsla(var(--ds-blue-400-value), 1);
+      --ds-blue-500: hsla(var(--ds-blue-500-value), 1);
+      --ds-blue-600: hsla(var(--ds-blue-600-value), 1);
+      --ds-blue-700: hsla(var(--ds-blue-700-value), 1);
+      --ds-blue-800: hsla(var(--ds-blue-800-value), 1);
+      --ds-blue-900: hsla(var(--ds-blue-900-value), 1);
+      --ds-green-100: hsla(var(--ds-green-100-value), 1);
+      --ds-green-200: hsla(var(--ds-green-200-value), 1);
+      --ds-green-300: hsla(var(--ds-green-300-value), 1);
+      --ds-green-400: hsla(var(--ds-green-400-value), 1);
+      --ds-green-500: hsla(var(--ds-green-500-value), 1);
+      --ds-green-600: hsla(var(--ds-green-600-value), 1);
+      --ds-green-700: hsla(var(--ds-green-700-value), 1);
+      --ds-green-800: hsla(var(--ds-green-800-value), 1);
+      --ds-green-900: hsla(var(--ds-green-900-value), 1);
+      --ds-red-100: hsla(var(--ds-red-100-value), 1);
+      --ds-red-200: hsla(var(--ds-red-200-value), 1);
+      --ds-red-300: hsla(var(--ds-red-300-value), 1);
+      --ds-red-400: hsla(var(--ds-red-400-value), 1);
+      --ds-red-500: hsla(var(--ds-red-500-value), 1);
+      --ds-red-600: hsla(var(--ds-red-600-value), 1);
+      --ds-red-700: hsla(var(--ds-red-700-value), 1);
+      --ds-red-800: hsla(var(--ds-red-800-value), 1);
+      --ds-red-900: hsla(var(--ds-red-900-value), 1);
+      --ds-amber-100: hsla(var(--ds-amber-100-value), 1);
+      --ds-amber-200: hsla(var(--ds-amber-200-value), 1);
+      --ds-amber-300: hsla(var(--ds-amber-300-value), 1);
+      --ds-amber-400: hsla(var(--ds-amber-400-value), 1);
+      --ds-amber-500: hsla(var(--ds-amber-500-value), 1);
+      --ds-amber-600: hsla(var(--ds-amber-600-value), 1);
+      --ds-amber-700: hsla(var(--ds-amber-700-value), 1);
+      --ds-amber-800: hsla(var(--ds-amber-800-value), 1);
+      --ds-amber-900: hsla(var(--ds-amber-900-value), 1);
+      --ds-purple-100: hsla(var(--ds-purple-100-value), 1);
+      --ds-purple-200: hsla(var(--ds-purple-200-value), 1);
+      --ds-purple-300: hsla(var(--ds-purple-300-value), 1);
+      --ds-purple-400: hsla(var(--ds-purple-400-value), 1);
+      --ds-purple-500: hsla(var(--ds-purple-500-value), 1);
+      --ds-purple-600: hsla(var(--ds-purple-600-value), 1);
+      --ds-purple-700: hsla(var(--ds-purple-700-value), 1);
+      --ds-purple-800: hsla(var(--ds-purple-800-value), 1);
+      --ds-purple-900: hsla(var(--ds-purple-900-value), 1);
+      --ds-shadow-border: none;
+      --ds-shadow-border-small: none;
+      --ds-shadow-border-medium: none;
+      --ds-shadow-border-large: none;
+      --ds-shadow-menu: none;
+      --ds-shadow-modal: none;
+      --ds-shadow-tooltip: none;
+      --ds-shadow-fullscreen: none;
+      --bg: var(--ds-background-200);
+      --panel: var(--ds-background-100);
+      --line: var(--ds-gray-alpha-100);
+      --line-soft: var(--ds-gray-alpha-100);
+      --text-primary: var(--ds-gray-1000);
+      --text-secondary: var(--ds-gray-900);
+      --text-tertiary: var(--ds-gray-800);
+      --text: var(--text-primary);
+      --muted: var(--text-secondary);
+      --faint: var(--text-tertiary);
+      --blue: var(--ds-blue-700);
+      --green: var(--ds-green-700);
+      --red: var(--ds-red-700);
+      --purple: var(--ds-purple-700);
+      --amber: var(--ds-amber-700);
+      --chart-1: var(--ds-blue-700);
+      --chart-2: var(--ds-green-700);
+      --chart-3: var(--ds-red-700);
+      --chart-4: var(--ds-purple-700);
+      --chart-5: var(--ds-amber-700);
+      --chart-positive: #00c950;
+      --chart-blue: #0066ff;
+      --chart-negative: #ff3b1f;
+      --chart-purple: #a238ff;
+      --color-desktop: var(--chart-1);
+      --color-safari: var(--chart-2);
+      --shadow: none;
+      --radius: 8px;
+      --background: var(--ds-background-100);
+      --foreground: var(--text-primary);
+      --muted-bg: var(--ds-gray-100);
+      --muted-foreground: var(--text-secondary);
+      --border: var(--line);
+      --primary: var(--text-primary);
+      --primary-foreground: var(--ds-background-100);
+      --secondary: var(--ds-gray-100);
+      --secondary-foreground: var(--text-primary);
+      --preview-scale: .85;
+    }
+
+    .text-heading-32{font-family:var(--font-geist-sans);font-size:33px;line-height:42px;font-weight:750;letter-spacing:0}
+    .text-heading-24{font-family:var(--font-geist-sans);font-size:25px;line-height:33px;font-weight:750;letter-spacing:0}
+    .text-heading-20{font-family:var(--font-geist-sans);font-size:24px;line-height:30px;font-weight:600;letter-spacing:0}
+    .text-heading-16{font-family:var(--font-geist-sans);font-size:17px;line-height:25px;font-weight:700;letter-spacing:0}
+    .text-label-14{font-family:var(--font-geist-sans);font-size:15px;line-height:21px;font-weight:500;letter-spacing:0}
+    .text-label-13{font-family:var(--font-geist-sans);font-size:14px;line-height:20px;font-weight:500;letter-spacing:0}
+    .text-label-12{font-family:var(--font-geist-sans);font-size:13px;line-height:18px;font-weight:500;letter-spacing:0}
+    .text-copy-14{font-family:var(--font-geist-sans);font-size:20px;line-height:28px;font-weight:400;color:var(--text-secondary);letter-spacing:0}
+    .text-copy-13{font-family:var(--font-geist-sans);font-size:14px;line-height:20px;font-weight:400;color:var(--text-secondary);letter-spacing:0}
+    .text-button-14{font-family:var(--font-geist-sans);font-size:15px;line-height:21px;font-weight:var(--font-weight-medium)}
+    .text-button-12{font-family:var(--font-geist-sans);font-size:13px;line-height:18px;font-weight:var(--font-weight-medium)}
+    .material-base{background-color:var(--ds-background-100);border:1px solid var(--line);box-shadow:none;border-radius:6px}
+    .material-small{background-color:var(--ds-background-100);border:1px solid var(--line);box-shadow:none;border-radius:6px}
+    .material-medium{background-color:var(--ds-background-100);border:1px solid var(--line);box-shadow:none;border-radius:12px}
+    .material-large{background-color:var(--ds-background-100);border:1px solid var(--line);box-shadow:none;border-radius:12px}
+    .material-menu{background-color:var(--ds-background-100);border:1px solid var(--line);box-shadow:none;border-radius:12px}
+    .material-modal{background-color:var(--ds-background-100);border:1px solid var(--line);box-shadow:none;border-radius:12px}
+    .material-tooltip{background-color:var(--ds-background-100);border:1px solid var(--line);box-shadow:none;border-radius:6px}
+    .material-fullscreen{background-color:var(--ds-background-100);border:1px solid var(--line);box-shadow:none;border-radius:16px}
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.45;
+      font-family: var(--font-geist-sans);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 20px;
+      line-height: 28px;
+      font-weight: 400;
+      letter-spacing: 0;
+    }
+
+    button, input { font: inherit; }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: calc(256px / var(--preview-scale)) minmax(0, 1fr);
+      transform: scale(var(--preview-scale));
+      transform-origin: top left;
+      width: calc(100% / var(--preview-scale));
+      min-height: calc(100vh / var(--preview-scale));
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      border-right: 1px solid var(--line);
+      background: var(--ds-background-100);
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 30px;
+    }
+
+    .logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: var(--text-primary);
+      display: grid;
+      place-items: center;
+      color: var(--ds-background-100);
+    }
+
+    [data-lucide] {
+      width: 16px;
+      height: 16px;
+      stroke-width: 1.65;
+    }
+
+    .project-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 15px 16px;
+      margin-bottom: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--ds-background-100);
+    }
+
+    .project-card strong { display: block; }
+    .project-card span { display: block; color: var(--muted); margin-top: 3px; }
+
+    [data-slot="sidebar-menu"] {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    [data-slot="sidebar-menu-item"] {
+      position: relative;
+    }
+
+    [data-slot="sidebar-menu-button"] {
+      text-decoration: none;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 40px;
+      width: 100%;
+      padding: 0 10px;
+      border-radius: 6px;
+      font-size: 16px;
+      line-height: 22px;
+      font-weight: 400;
+      outline: none;
+      overflow: hidden;
+    }
+
+    [data-slot="sidebar-menu-button"][data-active="true"] {
+      background: var(--ds-gray-alpha-100);
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    [data-slot="sidebar-menu-button"] .icon {
+      width: 20px;
+      height: 20px;
+      display: grid;
+      place-items: center;
+      color: var(--text-secondary);
+      flex: 0 0 auto;
+    }
+
+    [data-slot="sidebar-menu-button"] .icon svg {
+      width: 19px;
+      height: 19px;
+      stroke-width: 1.55;
+    }
+
+    [data-slot="sidebar-menu-button"][data-active="true"] .icon {
+      color: var(--text-primary);
+    }
+
+    .sidebar-bottom {
+      margin-top: auto;
+      border-top: 1px solid var(--line);
+      padding-top: 24px;
+    }
+
+    .main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      height: 64px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px 0 34px;
+    }
+
+    [data-slot="breadcrumb-list"] {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      font-size: 14px;
+      line-height: 20px;
+      font-weight: 500;
+    }
+
+    [data-slot="breadcrumb-item"] {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    [data-slot="breadcrumb-page"] {
+      color: var(--foreground);
+      font-weight: 600;
+    }
+
+    [data-slot="breadcrumb-separator"] {
+      display: inline-flex;
+      color: var(--text-tertiary);
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .search {
+      width: 310px;
+      height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--ds-background-100);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 12px;
+      color: var(--muted);
+    }
+
+    .kbd {
+      margin-left: auto;
+      height: 22px;
+      min-width: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      background: var(--ds-gray-100);
+      color: var(--text-tertiary);
+    }
+
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 50% 36%, var(--text-primary) 0 17%, transparent 18%),
+        radial-gradient(circle at 50% 100%, var(--text-secondary) 0 39%, transparent 40%),
+        linear-gradient(135deg, var(--ds-amber-400), var(--ds-gray-700));
+      border: 1px solid var(--ds-gray-300);
+    }
+
+    .content {
+      padding: 4px 28px 30px;
+      max-width: none;
+      width: 100%;
+      margin: 0;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      box-shadow: none;
+    }
+
+    .hero {
+      min-height: 132px;
+      padding: 24px 26px 20px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+    }
+
+    .hero h1 {
+      margin: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hero p {
+      margin: 8px 0 0;
+      color: var(--text-secondary);
+      font-size: 20px;
+      line-height: 28px;
+      font-weight: 400;
+    }
+
+    .site-state {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin-top: 22px;
+    }
+
+    .divider {
+      width: 1px;
+      height: 22px;
+      background: var(--line);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 8px;
+      vertical-align: 1px;
+    }
+
+    .green { background: var(--green); }
+    .blue { background: var(--blue); }
+    .amber { background: var(--amber); }
+    .red { background: var(--red); }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding-top: 12px;
+    }
+
+    [data-slot="button"] {
+      height: 36px;
+      border-radius: 8px;
+      padding: 0 10px;
+      border: 1px solid transparent;
+      background: var(--primary);
+      color: var(--primary-foreground);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 15px;
+      line-height: 21px;
+      font-weight: 500;
+      white-space: nowrap;
+      outline: none;
+      cursor: default;
+      user-select: none;
+    }
+
+    [data-slot="button"][data-size="lg"] {
+      height: 40px;
+      padding: 0 14px;
+      gap: 8px;
+    }
+
+    [data-slot="button"][data-variant="outline"] {
+      background: var(--background);
+      color: var(--foreground);
+      border-color: var(--border);
+    }
+
+    [data-slot="button"][data-variant="default"] {
+      background: var(--text-primary);
+      color: var(--ds-background-100);
+      border-color: var(--text-primary);
+    }
+
+    .status-strip {
+      margin-top: 14px;
+      height: 50px;
+      display: grid;
+      grid-template-columns: 164px 1fr 1.35fr 1.35fr 1.35fr;
+      align-items: center;
+      overflow: hidden;
+      color: var(--text-secondary);
+    }
+
+    .strip-item {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      border-right: 1px solid var(--line);
+    }
+
+    .strip-item:last-child { border-right: 0; }
+
+    [data-slot="badge"] {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      height: 20px;
+      width: fit-content;
+      max-width: 100%;
+      overflow: hidden;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      padding: 2px 8px;
+      font-size: 13px;
+      line-height: 18px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    [data-slot="badge"] svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .production-badge-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      background: var(--ds-background-100);
+      color: var(--chart-blue);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+    }
+
+    .production-badge-icon svg {
+      width: 11px;
+      height: 11px;
+      stroke-width: 2.4;
+    }
+
+    [data-slot="badge"][data-variant="default"] {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: var(--primary-foreground);
+    }
+
+    [data-slot="badge"][data-variant="secondary"] {
+      background: var(--ds-blue-100);
+      border-color: var(--ds-blue-300);
+      color: var(--ds-blue-900);
+    }
+
+    .status-strip [data-slot="badge"][data-variant="secondary"] {
+      background: var(--chart-blue);
+      border-color: var(--chart-blue);
+      color: var(--ds-background-100);
+    }
+
+    [data-slot="badge"][data-variant="success"] {
+      background: var(--ds-green-100);
+      border-color: var(--ds-green-300);
+      color: var(--ds-green-900);
+    }
+
+    [data-slot="badge"][data-variant="outline"] {
+      background: var(--ds-gray-100);
+      border-color: var(--ds-gray-alpha-200);
+      color: var(--text-secondary);
+    }
+
+    .metrics {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .metric {
+      min-height: 136px;
+      padding: 16px 22px 14px;
+      overflow: hidden;
+    }
+
+    .metric-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .metric-main {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .metric-value {
+      line-height: 1;
+    }
+
+    .change {
+      font-weight: 500;
+    }
+
+    .change.green-text { color: var(--green); }
+    .change.red-text { color: var(--red); }
+    .change.purple-text { color: var(--purple); }
+
+    .gauge-line {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      margin-top: 10px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .chart-container {
+      width: 100%;
+      min-height: 42px;
+    }
+
+    .greeting-icon {
+      color: var(--ds-amber-700);
+    }
+
+    .chart-radial-host {
+      width: 58px;
+      height: 58px;
+      flex: 0 0 auto;
+    }
+
+    .chart-line,
+    .chart-bars {
+      width: 100%;
+      height: 48px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .bars {
+      height: 48px;
+      display: flex;
+      align-items: flex-end;
+      gap: 5px;
+      margin-top: 14px;
+    }
+
+    .bars span {
+      width: 4px;
+      border-radius: 3px 3px 0 0;
+      background: var(--chart-2);
+    }
+
+    .bars.purple span { background: var(--chart-4); }
+
+    .pipeline-cards {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .pipeline-card {
+      min-height: 118px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 22px;
+    }
+
+    .pipeline-icon {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      color: var(--text-primary);
+    }
+
+    .pipeline-card strong {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .pipeline-card b {
+      display: block;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .pipeline-card span {
+      color: var(--text-secondary);
+    }
+
+    .lower {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(430px, .95fr);
+      align-items: stretch;
+      gap: 16px;
+    }
+
+    .articles-card {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .section-title {
+      margin: 0;
+      padding: 18px 24px 13px;
+      border-bottom: 1px solid var(--line);
+      font-size: 22px;
+      line-height: 28px;
+      font-weight: 650;
+      letter-spacing: 0;
+    }
+
+    [data-slot="table-container"] {
+      position: relative;
+      width: 100%;
+      overflow-x: auto;
+      border-top: 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    [data-slot="table"] {
+      width: 100%;
+      border-collapse: collapse;
+      caption-side: bottom;
+      font-size: 15px;
+      line-height: 21px;
+    }
+
+    [data-slot="table-header"] tr {
+      border-bottom: 1px solid var(--line);
+    }
+
+    [data-slot="table-row"] {
+      border-bottom: 1px solid var(--line-soft);
+      transition: background-color .15s ease;
+    }
+
+    [data-slot="table-body"] [data-slot="table-row"]:last-child {
+      border-bottom: 0;
+    }
+
+    [data-slot="table-head"] {
+      height: 38px;
+      padding: 0 8px;
+      color: var(--text-secondary);
+      text-align: left;
+      vertical-align: middle;
+      font-weight: 500;
+      white-space: nowrap;
+      font-size: 13px;
+      line-height: 18px;
+    }
+
+    [data-slot="table-cell"] {
+      padding: 9px 8px;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    [data-slot="table-head"]:first-child,
+    [data-slot="table-cell"]:first-child {
+      padding-left: 20px;
+    }
+
+    [data-slot="table-head"]:last-child,
+    [data-slot="table-cell"]:last-child {
+      padding-right: 20px;
+    }
+
+    .article-title {
+      max-width: 420px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 19px;
+      font-weight: 650;
+    }
+
+    .article-meta {
+      margin-top: 2px;
+      color: var(--text-secondary);
+      font-size: 12.5px;
+      line-height: 18px;
+      font-weight: 500;
+      transform: scale(calc(1 / var(--preview-scale)));
+      transform-origin: left top;
+      width: calc(100% * var(--preview-scale));
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .meta-dot {
+      width: 3px;
+      height: 3px;
+      border-radius: 999px;
+      background: var(--text-tertiary);
+      flex: 0 0 auto;
+    }
+
+    .score-cell {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .geist-progress {
+      width: 58px;
+      height: 5px;
+      border-radius: 999px;
+      background: var(--ds-gray-300);
+      overflow: hidden;
+    }
+
+    .geist-progress i {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--chart-2);
+    }
+
+    .geist-progress.amber i { background: var(--chart-5); }
+
+    .table-link {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .side-stack {
+      display: flex;
+      flex-direction: column;
+      align-self: stretch;
+      gap: 16px;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .side-stack > article {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .side-stack > article:first-child {
+      flex: 0 0 auto;
+    }
+
+    .side-stack > article:last-child {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    .side-stack > article:last-child .table-link {
+      margin-top: auto;
+    }
+
+    .task-row, .activity-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      align-items: center;
+      gap: 13px;
+      padding: 12px 22px;
+      border-top: 1px solid var(--line-soft);
+    }
+
+    .section-title + .task-row,
+    .section-title + .activity-row {
+      border-top: 0;
+    }
+
+    .task-row strong {
+      display: block;
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 20px;
+      font-weight: 650;
+    }
+
+    .task-row span {
+      display: block;
+      color: var(--text-secondary);
+      margin-top: 1px;
+      font-size: 13px;
+      line-height: 18px;
+      font-weight: 500;
+    }
+
+    .count {
+      min-width: 34px;
+      height: 24px;
+      border-radius: 999px;
+      background: var(--ds-blue-100);
+      color: var(--chart-1);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      line-height: 18px;
+      font-weight: 600;
+    }
+
+    .activity-row {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      padding: 8px 22px;
+    }
+
+    .activity-row p {
+      margin: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text-primary);
+      font-size: 13px;
+      line-height: 18px;
+      font-weight: 450;
+    }
+
+    .activity-row time {
+      color: var(--text-tertiary);
+      white-space: nowrap;
+      font-size: 13px;
+      line-height: 18px;
+      font-weight: 500;
+    }
+
+    @media (max-width: 1180px) {
+      .app { grid-template-columns: 88px minmax(0, 1fr); }
+      .brand span, .project-card, [data-slot="sidebar-menu-button"] span, .sidebar-bottom span { display: none; }
+      [data-slot="sidebar-menu-button"] { justify-content: center; padding: 0; }
+      .lower { grid-template-columns: 1fr; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .pipeline-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 760px) {
+      .app { display: block; }
+      .sidebar { display: none; }
+      .topbar { padding: 0 16px; }
+      .search { display: none; }
+      .content { padding: 16px; }
+      .hero { flex-direction: column; }
+      .hero-actions { width: 100%; }
+      [data-slot="button"] { flex: 1; justify-content: center; padding: 0 12px; }
+      .status-strip { grid-template-columns: 1fr; height: auto; }
+      .strip-item { justify-content: flex-start; padding: 12px 16px; border-right: 0; border-top: 1px solid var(--line-soft); }
+      .strip-item:first-child { border-top: 0; }
+      .metrics, .pipeline-cards { grid-template-columns: 1fr; }
+      .lower { grid-template-columns: 1fr; }
+      [data-slot="table"] { min-width: 760px; }
+      .articles-card { overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" data-slot="sidebar" data-state="expanded" data-collapsible="" data-variant="sidebar" data-side="left">
+      <div class="brand" data-slot="sidebar-header">
+        <div class="logo"><i data-lucide="pen-line"></i></div>
+        <span class="text-heading-16">Ideas Studio</span>
+      </div>
+
+      <div class="project-card material-small">
+        <div>
+          <strong class="text-label-14">theslash</strong>
+          <span class="text-label-12">https://www.theslash.fr/</span>
+        </div>
+        <span><i data-lucide="chevron-down"></i></span>
+      </div>
+
+      <nav data-slot="sidebar-content" aria-label="Navigation projet">
+        <ul data-slot="sidebar-menu">
+          <li data-slot="sidebar-menu-item"><a data-slot="sidebar-menu-button" data-active="true" href="#"><span class="icon"><i data-lucide="house"></i></span><span>Dashboard</span></a></li>
+          <li data-slot="sidebar-menu-item"><a data-slot="sidebar-menu-button" href="#"><span class="icon"><i data-lucide="file-text"></i></span><span>Articles</span></a></li>
+          <li data-slot="sidebar-menu-item"><a data-slot="sidebar-menu-button" href="#"><span class="icon"><i data-lucide="folder"></i></span><span>Catégories</span></a></li>
+          <li data-slot="sidebar-menu-item"><a data-slot="sidebar-menu-button" href="#"><span class="icon"><i data-lucide="lightbulb"></i></span><span>Idées</span></a></li>
+          <li data-slot="sidebar-menu-item"><a data-slot="sidebar-menu-button" href="#"><span class="icon"><i data-lucide="list-filter"></i></span><span>Production</span></a></li>
+          <li data-slot="sidebar-menu-item"><a data-slot="sidebar-menu-button" href="#"><span class="icon"><i data-lucide="circle-check"></i></span><span>Validation</span></a></li>
+          <li data-slot="sidebar-menu-item"><a data-slot="sidebar-menu-button" href="#"><span class="icon"><i data-lucide="image"></i></span><span>Médias</span></a></li>
+          <li data-slot="sidebar-menu-item"><a data-slot="sidebar-menu-button" href="#"><span class="icon"><i data-lucide="calendar-days"></i></span><span>Calendrier</span></a></li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-bottom" data-slot="sidebar-footer">
+        <ul data-slot="sidebar-menu">
+          <li data-slot="sidebar-menu-item"><a data-slot="sidebar-menu-button" href="#"><span class="icon"><i data-lucide="settings"></i></span><span>Paramètres</span></a></li>
+          <li data-slot="sidebar-menu-item"><a data-slot="sidebar-menu-button" href="#"><span class="icon"><i data-lucide="log-out"></i></span><span>Déconnexion</span></a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <nav data-slot="breadcrumb" aria-label="breadcrumb">
+          <ol data-slot="breadcrumb-list">
+            <li data-slot="breadcrumb-item"><a data-slot="breadcrumb-link" href="#">Projets</a></li>
+            <li data-slot="breadcrumb-separator"><i data-lucide="chevron-right"></i></li>
+            <li data-slot="breadcrumb-item"><a data-slot="breadcrumb-link" href="#">theslash</a></li>
+            <li data-slot="breadcrumb-separator"><i data-lucide="chevron-right"></i></li>
+            <li data-slot="breadcrumb-item"><span data-slot="breadcrumb-page">Dashboard</span></li>
+          </ol>
+        </nav>
+
+        <div class="top-actions">
+          <div class="search material-small text-label-14">
+            <span><i data-lucide="search"></i></span>
+            <span>Rechercher...</span>
+            <span class="kbd material-tooltip text-label-12">⌘ K</span>
+          </div>
+          <span><i data-lucide="bell"></i></span>
+          <div class="avatar" aria-label="Avatar"></div>
+        </div>
+      </header>
+
+      <section class="content">
+        <section class="hero">
+          <div>
+            <h1 class="text-heading-24">Bonjour, Mayne <i class="greeting-icon" data-lucide="hand"></i></h1>
+            <p class="text-copy-14">Vue d'ensemble de votre pipeline éditorial et de vos performances.</p>
+            <div class="site-state text-label-13">
+              <span><i data-lucide="globe-2"></i></span>
+              <span class="text-label-12">https://www.theslash.fr/</span>
+              <span class="divider"></span>
+              <span><i class="status-dot green"></i>Connecté</span>
+            </div>
+          </div>
+          <div class="hero-actions">
+            <button data-slot="button" data-variant="outline" data-size="lg">Créer un article <span><i data-lucide="plus"></i></span></button>
+            <button data-slot="button" data-variant="default" data-size="lg">Lancer le pipeline <span><i data-lucide="play"></i></span></button>
+          </div>
+        </section>
+
+        <section class="status-strip material-medium">
+          <div class="strip-item text-label-14"><span data-slot="badge" data-variant="secondary"><span class="production-badge-icon"><i data-lucide="arrow-up"></i></span> Production</span></div>
+          <div class="strip-item text-label-14"><i data-lucide="circle-dot"></i> <span>Pipeline : <strong>Inactif</strong></span></div>
+          <div class="strip-item text-label-14"><i data-lucide="clock-3"></i> <span>Dernier run : <strong>2 juin 14:32</strong></span></div>
+          <div class="strip-item text-label-14"><i data-lucide="calendar-days"></i> <span>Prochain run : <strong>—</strong></span></div>
+          <div class="strip-item text-label-14"><i data-lucide="refresh-cw"></i> <span>Mode : <strong>Mensuel</strong></span></div>
+        </section>
+
+        <section class="metrics">
+          <article class="metric material-medium">
+            <div class="metric-label text-label-13">Score SEO moyen <span><i data-lucide="circle-help"></i></span></div>
+            <div class="metric-main">
+              <div class="gauge-line">
+                <div id="chart-seo-radial" class="chart-container chart-radial-host"></div>
+                <div id="chart-seo-line" class="chart-container chart-line"></div>
+              </div>
+              <span class="change text-label-14 green-text">+6 pts</span>
+            </div>
+          </article>
+
+          <article class="metric material-medium">
+            <div class="metric-label text-label-13">Vues du mois <span><i data-lucide="circle-help"></i></span></div>
+            <div class="metric-main">
+              <span class="metric-value text-heading-24">128,4K</span>
+              <span class="change text-label-14 green-text">+12%</span>
+            </div>
+            <div id="chart-views-line" class="chart-container chart-line"></div>
+          </article>
+
+          <article class="metric material-medium">
+            <div class="metric-label text-label-13">Temps moyen <span><i data-lucide="circle-help"></i></span></div>
+            <div class="metric-main">
+              <span class="metric-value text-heading-24">4:32</span>
+              <span class="change text-label-14 red-text">-12%</span>
+            </div>
+            <div id="chart-time-line" class="chart-container chart-line"></div>
+          </article>
+
+          <article class="metric material-medium">
+            <div class="metric-label text-label-13">Publiés <span><i data-lucide="circle-help"></i></span></div>
+            <div class="metric-main">
+              <span class="metric-value text-heading-24">42</span>
+              <span class="change text-label-14 green-text">+9%</span>
+            </div>
+            <div id="chart-published-bars" class="chart-container chart-bars"></div>
+          </article>
+
+          <article class="metric material-medium">
+            <div class="metric-label text-label-13">En cours <span><i data-lucide="circle-help"></i></span></div>
+            <div class="metric-main">
+              <span class="metric-value text-heading-24">16</span>
+              <span class="change text-label-14 purple-text">-5%</span>
+            </div>
+            <div id="chart-progress-bars" class="chart-container chart-bars"></div>
+          </article>
+        </section>
+
+        <section class="pipeline-cards">
+          <article class="pipeline-card material-medium">
+            <div class="pipeline-icon"><i data-lucide="workflow"></i></div>
+            <div><strong class="text-label-14">Pipeline</strong><b class="text-heading-24">0</b><span class="text-copy-13">Aucun pipeline actif</span></div>
+          </article>
+          <article class="pipeline-card material-medium">
+            <div class="pipeline-icon"><i data-lucide="clipboard-list"></i></div>
+            <div><strong class="text-label-14">Production en cours</strong><b class="text-heading-24">8</b><span class="text-copy-13">Articles en rédaction</span></div>
+          </article>
+          <article class="pipeline-card material-medium">
+            <div class="pipeline-icon"><i data-lucide="shield-check"></i></div>
+            <div><strong class="text-label-14">À valider</strong><b class="text-heading-24">24</b><span class="text-copy-13">En attente de décision</span></div>
+          </article>
+          <article class="pipeline-card material-medium">
+            <div class="pipeline-icon"><i data-lucide="lightbulb"></i></div>
+            <div><strong class="text-label-14">Idées prêtes</strong><b class="text-heading-24">37</b><span class="text-copy-13">Qualifiées, à valider</span></div>
+          </article>
+        </section>
+
+        <section class="lower">
+          <article class="material-medium articles-card">
+            <h2 class="section-title text-heading-20">Articles récents</h2>
+            <div data-slot="table-container">
+              <table data-slot="table">
+                <thead data-slot="table-header">
+                  <tr data-slot="table-row">
+                    <th data-slot="table-head">Article</th>
+                    <th data-slot="table-head">Score SEO</th>
+                    <th data-slot="table-head">Vues</th>
+                    <th data-slot="table-head">Statut</th>
+                    <th data-slot="table-head">Catégorie</th>
+                  </tr>
+                </thead>
+                <tbody data-slot="table-body">
+                  <tr data-slot="table-row">
+                    <td data-slot="table-cell"><div class="article-title text-label-13">Intelligence artificielle : tendances 2025 à suivre</div><div class="article-meta"><span>2 juin 2025</span><span class="meta-dot"></span><span>Clara Martin</span><span class="meta-dot"></span><span>2 468 mots</span></div></td>
+                    <td data-slot="table-cell"><div class="score-cell text-label-14">86 <span class="geist-progress"><i style="width:86%"></i></span></div></td>
+                    <td data-slot="table-cell"><strong class="text-label-14">12,4K</strong></td>
+                    <td data-slot="table-cell"><span data-slot="badge" data-variant="success"><i data-lucide="check-circle-2"></i> Publié</span></td>
+                    <td data-slot="table-cell"><span data-slot="badge" data-variant="secondary">IA</span></td>
+                  </tr>
+                  <tr data-slot="table-row">
+                    <td data-slot="table-cell"><div class="article-title text-label-13">SEO technique : le guide complet 2025</div><div class="article-meta"><span>1 juin 2025</span><span class="meta-dot"></span><span>Hugo Bernard</span><span class="meta-dot"></span><span>3 210 mots</span></div></td>
+                    <td data-slot="table-cell"><div class="score-cell text-label-14">82 <span class="geist-progress"><i style="width:82%"></i></span></div></td>
+                    <td data-slot="table-cell"><strong class="text-label-14">9,8K</strong></td>
+                    <td data-slot="table-cell"><span data-slot="badge" data-variant="success"><i data-lucide="check-circle-2"></i> Publié</span></td>
+                    <td data-slot="table-cell"><span data-slot="badge" data-variant="secondary">SEO</span></td>
+                  </tr>
+                  <tr data-slot="table-row">
+                    <td data-slot="table-cell"><div class="article-title text-label-13">Productivité : 10 outils qui changent tout</div><div class="article-meta"><span>31 mai 2025</span><span class="meta-dot"></span><span>Clara Martin</span><span class="meta-dot"></span><span>1 980 mots</span></div></td>
+                    <td data-slot="table-cell"><div class="score-cell text-label-14">74 <span class="geist-progress amber"><i style="width:74%"></i></span></div></td>
+                    <td data-slot="table-cell"><strong class="text-label-14">6,1K</strong></td>
+                    <td data-slot="table-cell"><span data-slot="badge" data-variant="success"><i data-lucide="check-circle-2"></i> Publié</span></td>
+                    <td data-slot="table-cell"><span data-slot="badge" data-variant="secondary">Productivité</span></td>
+                  </tr>
+                  <tr data-slot="table-row">
+                    <td data-slot="table-cell"><div class="article-title text-label-13">Marketing de contenu : stratégies gagnantes</div><div class="article-meta"><span>30 mai 2025</span><span class="meta-dot"></span><span>Hugo Bernard</span><span class="meta-dot"></span><span>2 120 mots</span></div></td>
+                    <td data-slot="table-cell"><div class="score-cell text-label-14">69 <span class="geist-progress amber"><i style="width:69%"></i></span></div></td>
+                    <td data-slot="table-cell"><strong class="text-label-14">4,3K</strong></td>
+                    <td data-slot="table-cell"><span data-slot="badge" data-variant="secondary"><i data-lucide="loader-circle"></i> En cours</span></td>
+                    <td data-slot="table-cell"><span data-slot="badge" data-variant="secondary">Marketing</span></td>
+                  </tr>
+                  <tr data-slot="table-row">
+                    <td data-slot="table-cell"><div class="article-title text-label-13">Réseaux sociaux : optimisation 2025</div><div class="article-meta"><span>29 mai 2025</span><span class="meta-dot"></span><span>Clara Martin</span><span class="meta-dot"></span><span>1 560 mots</span></div></td>
+                    <td data-slot="table-cell"><div class="score-cell text-label-14">62 <span class="geist-progress amber"><i style="width:62%"></i></span></div></td>
+                    <td data-slot="table-cell"><strong class="text-label-14">3,2K</strong></td>
+                    <td data-slot="table-cell"><span data-slot="badge" data-variant="outline"><i data-lucide="archive"></i> Archivé</span></td>
+                    <td data-slot="table-cell"><span data-slot="badge" data-variant="secondary">Réseaux</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <div class="side-stack">
+            <article class="material-medium">
+              <h2 class="section-title text-heading-20">À faire maintenant</h2>
+              <div class="task-row"><div><strong class="text-label-13">Valider 37 idées</strong><span class="text-label-12">Générées le 25 juin</span></div><span class="count text-label-13">37</span><span><i data-lucide="chevron-right"></i></span></div>
+              <div class="task-row"><div><strong class="text-label-13">Valider 24 articles</strong><span class="text-label-12">Prêts à publier</span></div><span class="count text-label-13">24</span><span><i data-lucide="chevron-right"></i></span></div>
+              <div class="task-row"><div><strong class="text-label-13">Programmer 4 publications</strong><span class="text-label-12">Dans le calendrier</span></div><span class="count text-label-13">4</span><span><i data-lucide="chevron-right"></i></span></div>
+            </article>
+
+            <article class="material-medium">
+              <h2 class="section-title text-heading-20">Activité récente</h2>
+              <div class="activity-row"><i class="status-dot green"></i><p class="text-label-12">Article publié : Intelligence artificielle : tendances 2025</p><time class="text-label-12">il y a 18 min</time></div>
+              <div class="activity-row"><i class="status-dot blue"></i><p class="text-label-12">Article validé : SEO technique : le guide complet</p><time class="text-label-12">il y a 45 min</time></div>
+              <div class="activity-row"><i class="status-dot amber"></i><p class="text-label-12">Idée créée : Automatisation no-code en 2025</p><time class="text-label-12">il y a 1 h</time></div>
+              <div class="activity-row"><i class="status-dot red"></i><p class="text-label-12">Pipeline : rerun manuellement</p><time class="text-label-12">il y a 2 h</time></div>
+              <div class="activity-row"><i class="status-dot green"></i><p class="text-label-12">Article publié : Productivité : 10 outils qui changent tout</p><time class="text-label-12">il y a 2 h</time></div>
+            </article>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+  <script type="module">
+    import React from "https://esm.sh/react@18.3.1"
+    import { createRoot } from "https://esm.sh/react-dom@18.3.1/client"
+    import {
+      Bar,
+      BarChart,
+      CartesianGrid,
+      Label,
+      Line,
+      LineChart,
+      PolarGrid,
+      PolarRadiusAxis,
+      RadialBar,
+      RadialBarChart,
+      ResponsiveContainer,
+      XAxis,
+    } from "https://esm.sh/recharts@2.15.3?deps=react@18.3.1,react-dom@18.3.1"
+
+    const h = React.createElement
+    const rootStyle = getComputedStyle(document.documentElement)
+    const color = (name) => rootStyle.getPropertyValue(name).trim()
+    const data = (values) => values.map((value, index) => ({ name: String(index + 1), value }))
+
+    function render(id, node) {
+      const element = document.getElementById(id)
+      if (element) createRoot(element).render(node)
+    }
+
+    function LineMini({ values, stroke }) {
+      return h(ResponsiveContainer, { width: "100%", height: "100%" },
+        h(LineChart, { accessibilityLayer: true, data: data(values), margin: { left: 12, right: 12, top: 6, bottom: 2 } },
+          h(CartesianGrid, { vertical: false, horizontal: false }),
+          h(XAxis, { dataKey: "name", hide: true }),
+          h(Line, {
+            dataKey: "value",
+            type: "natural",
+            stroke,
+            strokeWidth: 2,
+            dot: {
+              fill: stroke,
+              r: 2,
+              strokeWidth: 0,
+            },
+            activeDot: {
+              r: 4,
+            },
+            isAnimationActive: false,
+          }),
+        ),
+      )
+    }
+
+    function BarMini({ values, fill }) {
+      return h(ResponsiveContainer, { width: "100%", height: "100%" },
+        h(BarChart, { accessibilityLayer: true, data: data(values), margin: { left: 12, right: 12, top: 6, bottom: 0 } },
+          h(XAxis, { dataKey: "name", hide: true }),
+          h(Bar, { dataKey: "value", fill, radius: 8, barSize: 4, isAnimationActive: false }),
+        ),
+      )
+    }
+
+    function RadialScore() {
+      const score = 78
+      return h(ResponsiveContainer, { width: "100%", height: "100%" },
+        h(RadialBarChart, {
+          data: [{ name: "Score SEO", value: score, fill: color("--chart-2") }],
+          startAngle: 90,
+          endAngle: 90 + (360 * score / 100),
+          innerRadius: 22,
+          outerRadius: 28,
+        },
+          h(PolarGrid, { gridType: "circle", radialLines: false, stroke: "none", polarRadius: [28, 22] }),
+          h(RadialBar, { dataKey: "value", background: { fill: color("--ds-gray-300") }, cornerRadius: 10, isAnimationActive: false }),
+          h(PolarRadiusAxis, { tick: false, tickLine: false, axisLine: false },
+            h(Label, {
+              content: ({ viewBox }) => {
+                if (!viewBox || !("cx" in viewBox) || !("cy" in viewBox)) return null
+                return h("text", {
+                  x: viewBox.cx,
+                  y: viewBox.cy,
+                  textAnchor: "middle",
+                  dominantBaseline: "middle",
+                  fill: color("--text-primary"),
+                  style: { fontFamily: "var(--font-geist-sans)", fontSize: 18, fontWeight: 600 },
+                }, score)
+              },
+            }),
+          ),
+        ),
+      )
+    }
+
+    render("chart-seo-radial", h(RadialScore))
+    render("chart-seo-line", h(LineMini, { values: [54, 58, 57, 62, 64, 61, 66, 65, 70, 72, 75, 78], stroke: color("--chart-positive") }))
+    render("chart-views-line", h(LineMini, { values: [24, 27, 29, 21, 25, 17, 19, 12, 22, 20, 10, 14].reverse(), stroke: color("--chart-blue") }))
+    render("chart-time-line", h(LineMini, { values: [18, 14, 28, 22, 31, 24, 29, 26, 34, 28, 35, 30], stroke: color("--chart-negative") }))
+    render("chart-published-bars", h(BarMini, { values: [13, 15, 16, 17, 22, 15, 28, 19, 25, 34, 23, 29, 38, 31, 35, 27, 31, 28], fill: color("--chart-positive") }))
+    render("chart-progress-bars", h(BarMini, { values: [13, 14, 15, 14, 20, 27, 34, 39, 31, 19, 15, 12, 13, 13, 14, 13], fill: color("--chart-purple") }))
+
+    if (window.lucide) {
+      window.lucide.createIcons({
+        attrs: {
+          "stroke-width": 1.55,
+        },
+      })
+    }
+  </script>
+</body>
+</html>

@@ -66,7 +66,7 @@ function RouteErrorFallback() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-app px-4">
-      <div className="w-full max-w-md rounded-[18px] border border-border bg-surface p-6 text-center shadow-soft">
+      <div className="w-full max-w-md rounded-[18px] border border-border bg-surface p-6 text-center shadow-none">
         <p className="text-[15px] font-semibold text-primary">
           {isChunkError ? "L'application vient d'être mise à jour." : 'Impossible de charger cette page.'}
         </p>

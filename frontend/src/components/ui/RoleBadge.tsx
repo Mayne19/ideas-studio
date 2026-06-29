@@ -19,12 +19,12 @@ const ROLE_COLORS: Record<ProjectRole, RoleBadgeVariant> = {
 }
 
 const variantClasses: Record<RoleBadgeVariant, string> = {
-  purple: 'bg-[#f3eeff] text-[#6f3cc2]',
-  blue:   'bg-accent/10 text-accent',
-  green:  'bg-success/10 text-[#1a7a3a]',
-  orange: 'bg-warning/10 text-[#c07000]',
-  pink:   'bg-[#fff0f6] text-[#b83270]',
-  gray:   'bg-[#f0f0f2] text-secondary',
+  purple: 'border-purple-200 bg-purple-50 text-purple-700',
+  blue:   'border-blue-200 bg-blue-50 text-blue-700',
+  green:  'border-green-200 bg-green-50 text-green-700',
+  orange: 'border-amber-200 bg-amber-50 text-amber-700',
+  pink:   'border-pink-200 bg-pink-50 text-pink-700',
+  gray:   'border-border bg-surface-soft text-secondary',
 }
 
 type RoleBadgeProps = {
@@ -37,7 +37,7 @@ export default function RoleBadge({ role, className }: RoleBadgeProps) {
   const color = ROLE_COLORS[role as ProjectRole] ?? 'gray'
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${variantClasses[color]} ${className ?? ''}`}
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[12px] font-medium ${variantClasses[color]} ${className ?? ''}`}
     >
       {label}
     </span>

@@ -34,7 +34,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
           ref={ref}
           id={inputId}
           className={cn(
-            'h-10 w-full appearance-none rounded-[12px] border border-border bg-surface px-3.5 pr-9',
+            'h-10 w-full appearance-none rounded-[8px] border border-border bg-surface px-3.5 pr-9',
             'text-[14px] text-primary',
             'outline-none transition-all duration-150 cursor-pointer',
             'hover:border-border-strong',

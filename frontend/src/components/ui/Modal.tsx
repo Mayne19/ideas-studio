@@ -43,7 +43,7 @@ export default function Modal({ open, onClose, title, size = 'md', children }: M
       />
       <div
         className={cn(
-          'relative w-full rounded-[24px] bg-surface shadow-float',
+          'relative w-full rounded-[12px] border border-border bg-surface shadow-none',
           'animate-in zoom-in-95 fade-in duration-200',
           sizes[size],
         )}
@@ -53,7 +53,7 @@ export default function Modal({ open, onClose, title, size = 'md', children }: M
             <h2 className="text-[15px] font-semibold text-primary">{title}</h2>
             <button
               onClick={onClose}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-tertiary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
               aria-label="Fermer"
             >
               <X size={15} />

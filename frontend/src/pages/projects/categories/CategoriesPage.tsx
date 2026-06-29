@@ -89,7 +89,7 @@ function CategoryColumn({
         <div className="flex shrink-0 items-center gap-1">
           <button
             onClick={() => onEdit(category)}
-            className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors"
+            className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-surface-muted hover:text-primary transition-colors"
             title="Modifier"
           >
             <Pencil size={13} />
@@ -128,7 +128,7 @@ function CategoryColumn({
                 <button
                   type="button"
                   onClick={() => onOpenArticle(article)}
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] text-tertiary transition-colors hover:bg-[#e5e5e7] hover:text-primary"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] text-tertiary transition-colors hover:bg-surface-muted hover:text-primary"
                   title="Ouvrir l'article"
                 >
                   <ExternalLink size={12} />
@@ -163,8 +163,8 @@ function UncategorizedColumn({
   onCreateArticle: () => void
 }) {
   return (
-    <div className="flex min-h-[360px] min-w-[240px] flex-1 max-w-[360px] flex-col rounded-[18px] bg-gradient-to-b from-[#f0f0f2] to-[#f7f7f9] p-2">
-      <div className="rounded-[14px] bg-white/75 px-3 py-3">
+    <div className="flex min-h-[360px] min-w-[240px] flex-1 max-w-[360px] flex-col rounded-[8px] border border-border bg-surface-soft p-2">
+      <div className="rounded-[8px] border border-border bg-surface px-3 py-3">
         <p className="text-[13px] font-medium text-primary">Sans catégorie</p>
         <p className="mt-0.5 text-[12px] text-tertiary">
           {articles.length}
@@ -429,7 +429,7 @@ export default function CategoriesPage() {
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="shrink-0 flex items-center gap-1.5 rounded-[8px] border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2] hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-wait"
+            className="shrink-0 flex items-center gap-1.5 rounded-[8px] border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-secondary hover:bg-surface-soft hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-wait"
           >
             <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} />
             {syncing ? 'Synchronisation…' : 'Synchroniser depuis votre site'}

@@ -123,7 +123,7 @@ export default function EditorialSetupAssistant({ projectId, open, onClose, onAp
                 Suggéré par l'intelligence artificielle
               </div>
             ) : (
-              <div className="flex items-center gap-2 rounded-[10px] bg-[#f0f0f2] px-3.5 py-2.5 text-[12px] text-secondary font-medium">
+              <div className="flex items-center gap-2 rounded-[10px] bg-surface-soft px-3.5 py-2.5 text-[12px] text-secondary font-medium">
                 <Info size={13} />
                 Suggestions basées sur l'analyse du site
               </div>

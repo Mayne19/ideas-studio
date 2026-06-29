@@ -80,7 +80,7 @@ function finiteScore(value: unknown): number | null {
 }
 
 function scoreTone(score: number | null) {
-  if (score === null) return 'bg-[#f0f0f2] text-tertiary'
+  if (score === null) return 'bg-surface-soft text-tertiary'
   if (score >= 85) return 'bg-success/10 text-[#16723a]'
   if (score >= 65) return 'bg-warning/12 text-[#a35b00]'
   return 'bg-danger/10 text-danger'

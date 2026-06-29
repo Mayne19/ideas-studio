@@ -81,7 +81,7 @@ function ArticleRow({
         </button>
         <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-tertiary">
           <span
-            className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${category?.color ? '' : 'bg-[#f0f0f2] text-tertiary'}`}
+            className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${category?.color ? '' : 'bg-surface-soft text-tertiary'}`}
             style={category?.color ? { backgroundColor: `${category.color}20`, color: category.color } : undefined}
           >
             {category?.name ?? 'Sans catégorie'}
@@ -103,7 +103,7 @@ function ArticleRow({
               {cost.toFixed(4)} €
             </span>
           ) : (
-            <span className="inline-flex items-center rounded-full bg-[#f0f0f2] px-1.5 py-0.5 text-[10px] font-medium text-tertiary">
+            <span className="inline-flex items-center rounded-full bg-surface-soft px-1.5 py-0.5 text-[10px] font-medium text-tertiary">
               — €
             </span>
           )
@@ -124,7 +124,7 @@ function ArticleRow({
         </button>
         <select
           onChange={(e) => { if (e.target.value) { onAction(e.target.value, article); e.target.value = '' } }}
-          className="h-8 w-[82px] cursor-pointer rounded-[8px] border border-border bg-surface px-1.5 text-[11px] text-secondary transition-colors hover:bg-[#e5e5e7]"
+          className="h-8 w-[82px] cursor-pointer rounded-[8px] border border-border bg-surface px-1.5 text-[11px] text-secondary transition-colors hover:bg-surface-muted"
           defaultValue=""
           aria-label={`Actions pour ${article.title}`}
         >

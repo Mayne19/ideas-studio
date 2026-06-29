@@ -26,7 +26,7 @@ function SeoBar({ score }: { score: number | null }) {
   const color = val >= 70 ? '#34c759' : val >= 40 ? '#ff9500' : '#ff3b30'
   return (
     <div className="flex items-center gap-2 min-w-[80px]">
-      <div className="h-1.5 flex-1 rounded-full bg-[#e5e5e7]">
+      <div className="h-1.5 flex-1 rounded-full bg-surface-muted">
         <div className="h-full rounded-full" style={{ width: `${val}%`, backgroundColor: color }} />
       </div>
       <span className="text-[12px] font-medium text-primary w-6 text-right">{val}</span>
@@ -85,7 +85,7 @@ export default function PerformanceArticlesPage() {
                 className={`px-3 py-1.5 text-[12px] font-medium transition-colors ${
                   period === p.value
                     ? 'bg-accent text-white'
-                    : 'text-secondary hover:bg-[#f0f0f2] hover:text-primary'
+                    : 'text-secondary hover:bg-surface-soft hover:text-primary'
                 }`}
               >
                 {p.label}
@@ -145,7 +145,7 @@ export default function PerformanceArticlesPage() {
                   </div>
                   <button
                     onClick={() => navigate(`/projects/${projectId}/performance/${article.article_id}`)}
-                    className="shrink-0 opacity-0 group-hover:opacity-100 flex h-6 w-6 items-center justify-center rounded-[6px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-all"
+                    className="shrink-0 opacity-0 group-hover:opacity-100 flex h-6 w-6 items-center justify-center rounded-[6px] text-tertiary hover:bg-surface-muted hover:text-primary transition-all"
                     title="Voir les détails"
                   >
                     <ExternalLink size={11} />

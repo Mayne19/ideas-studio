@@ -141,7 +141,7 @@ function ActionBadge({ action }: { action: string }) {
   }
   return (
     <span
-      className={`rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ${styles[action] ?? 'bg-[#f0f0f2] text-secondary'}`}
+      className={`rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ${styles[action] ?? 'bg-surface-soft text-secondary'}`}
       title={action}
     >
       {ACTION_SHORT[action] ?? action}
@@ -556,7 +556,7 @@ export default function PerformanceDashboardPage() {
                       </span>
                       <span className="text-[12px] font-semibold text-secondary">{formatMetric(row.views)}</span>
                     </div>
-                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#f0f0f2]">
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-soft">
                       <div className="h-full rounded-full" style={{ width: `${percentOf(row.views, totalArticleViews)}%`, backgroundColor: categoryColor(row.category) }} />
                     </div>
                     <p className="mt-1 text-[11px] text-tertiary">{row.count} article{row.count > 1 ? 's' : ''}</p>

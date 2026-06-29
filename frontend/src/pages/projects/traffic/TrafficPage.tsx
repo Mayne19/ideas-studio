@@ -194,7 +194,7 @@ function VisualRow({
   return (
     <div className="flex items-center gap-2.5 rounded-[10px] px-2 py-1 hover:bg-[#f9f9fb]">
       {rank !== undefined && <span className="w-4 shrink-0 text-[11px] font-medium text-tertiary">{rank}</span>}
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-[#f0f0f2] text-secondary">{leading}</span>
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-surface-soft text-secondary">{leading}</span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-3">
           {href ? (
@@ -207,7 +207,7 @@ function VisualRow({
           <span className="shrink-0 text-[12px] font-semibold text-secondary">{formatMetric(value)}</span>
         </div>
         <div className="mt-1 flex items-center gap-2">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#f0f0f2]">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-soft">
             <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
           </div>
           <span className="w-8 text-right text-[11px] text-tertiary">{pct}%</span>
@@ -499,7 +499,7 @@ export default function TrafficPage() {
                 </div>
                 {sources.length ? sources.slice(0, 8).map((source) => (
                   <div key={source.key} className="grid grid-cols-[1.4fr_1fr_0.8fr_0.8fr] gap-3 border-b border-border px-2 py-3 text-[12px] last:border-0">
-                    <span className="flex min-w-0 items-center gap-2 font-medium text-primary"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[8px] bg-[#f0f0f2]"><SourceMark referrer={source.raw} /></span><span className="truncate">{source.label}</span></span>
+                    <span className="flex min-w-0 items-center gap-2 font-medium text-primary"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[8px] bg-surface-soft"><SourceMark referrer={source.raw} /></span><span className="truncate">{source.label}</span></span>
                     <span className="text-secondary">{source.channel}</span>
                     <span>{formatMetric(source.visits)}</span>
                     <span>{source.share}%</span>

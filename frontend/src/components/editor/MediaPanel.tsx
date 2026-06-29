@@ -81,7 +81,7 @@ export default function MediaPanel({
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
-        className="flex items-center justify-center gap-1.5 rounded-[8px] border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-[#f0f0f2] hover:text-primary"
+        className="flex items-center justify-center gap-1.5 rounded-[8px] border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary"
         disabled={uploading}
       >
         <Image size={12} />

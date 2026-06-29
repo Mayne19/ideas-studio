@@ -9,19 +9,19 @@ type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
 }
 
 const variants: Record<BadgeVariant, string> = {
-  default: 'bg-[#f0f0f2] text-secondary',
-  gray:    'bg-[#f0f0f2] text-secondary',
-  blue:    'bg-accent/10 text-accent',
-  green:   'bg-success/10 text-[#1a7a3a]',
-  orange:  'bg-warning/10 text-[#c07000]',
-  red:     'bg-danger/10 text-[#c0291f]',
+  default: 'border-border bg-surface-soft text-secondary',
+  gray:    'border-border bg-surface-soft text-secondary',
+  blue:    'border-blue-200 bg-blue-50 text-blue-700',
+  green:   'border-green-200 bg-green-50 text-green-700',
+  orange:  'border-amber-200 bg-amber-50 text-amber-700',
+  red:     'border-red-200 bg-red-50 text-red-700',
 }
 
 export default function Badge({ variant = 'default', children, className, ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium',
+        'inline-flex h-5 items-center gap-1 rounded-full border px-2 py-0.5 text-[12px] font-medium leading-none',
         variants[variant],
         className,
       )}

@@ -1020,7 +1020,7 @@ export default function DocumentationPage() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <Link to="/login" className="hidden sm:inline-flex rounded-[8px] px-3 py-1.5 text-[13px] font-medium text-secondary hover:bg-[#f0f0f2] hover:text-primary transition-colors">
+            <Link to="/login" className="hidden sm:inline-flex rounded-[8px] px-3 py-1.5 text-[13px] font-medium text-secondary hover:bg-surface-soft hover:text-primary transition-colors">
               Connexion
             </Link>
             <Link to="/projects" className="inline-flex items-center gap-1.5 rounded-[8px] bg-accent px-3 py-1.5 text-[13px] font-medium text-white hover:opacity-90 transition-opacity">
@@ -1028,7 +1028,7 @@ export default function DocumentationPage() {
               <ArrowRight size={13} />
             </Link>
             <button
-              className="flex md:hidden h-8 w-8 items-center justify-center rounded-[8px] text-secondary hover:bg-[#f0f0f2]"
+              className="flex md:hidden h-8 w-8 items-center justify-center rounded-[8px] text-secondary hover:bg-surface-soft"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
@@ -1070,7 +1070,7 @@ export default function DocumentationPage() {
                   className={`w-full text-left rounded-[8px] px-3 py-2 text-[13px] transition-colors ${
                     activeChapterId === ch.id
                       ? 'bg-accent/10 font-medium text-accent'
-                      : 'text-secondary hover:bg-[#f0f0f2] hover:text-primary'
+                      : 'text-secondary hover:bg-surface-soft hover:text-primary'
                   }`}
                 >
                   {ch.label}
@@ -1101,13 +1101,13 @@ export default function DocumentationPage() {
                 <Download size={14} />
                 Télécharger Markdown complet
               </button>
-              <a href={swaggerUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-[8px] border border-border px-3.5 text-[13px] font-medium text-primary hover:bg-[#f0f0f2]">
+              <a href={swaggerUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-[8px] border border-border px-3.5 text-[13px] font-medium text-primary hover:bg-surface-soft">
                 Ouvrir Swagger API
               </a>
-              <a href={redocUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-[8px] border border-border px-3.5 text-[13px] font-medium text-primary hover:bg-[#f0f0f2]">
+              <a href={redocUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-[8px] border border-border px-3.5 text-[13px] font-medium text-primary hover:bg-surface-soft">
                 ReDoc
               </a>
-              <a href={openApiUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-[8px] border border-border px-3.5 text-[13px] font-medium text-primary hover:bg-[#f0f0f2]">
+              <a href={openApiUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-[8px] border border-border px-3.5 text-[13px] font-medium text-primary hover:bg-surface-soft">
                 OpenAPI JSON
               </a>
             </div>

@@ -259,7 +259,7 @@ export default function ProjectProvidersPage() {
                 key={p.key}
                 onClick={() => openCreate(p.key)}
                 disabled={!!error}
-                className="flex items-center gap-1.5 rounded-[10px] border border-border px-3 py-2 text-[12px] font-medium text-secondary transition-colors hover:bg-[#f0f0f2] hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-[10px] border border-border px-3 py-2 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Plus size={13} />
                 {p.label}
@@ -272,7 +272,7 @@ export default function ProjectProvidersPage() {
       {configs.map((config) => {
         const def = getProviderDef(config.provider)
         return (
-          <div key={config.id} className="rounded-[22px] bg-surface p-4">
+          <div key={config.id} className="rounded-[8px] border border-border bg-surface p-4">
             <div className="flex items-start justify-between mb-3">
               <div>
                 <div className="flex items-center gap-2">
@@ -295,14 +295,14 @@ export default function ProjectProvidersPage() {
                 <button
                   onClick={() => handleTest(config.id)}
                   disabled={testing === config.id}
-                  className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
+                  className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
                   title="Tester la connexion"
                 >
                   {testing === config.id ? <Loader2 size={13} className="animate-spin" /> : <TestTube size={13} />}
                 </button>
                 <button
                   onClick={() => openEdit(config)}
-                  className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
+                  className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
                   title="Modifier"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -350,7 +350,7 @@ export default function ProjectProvidersPage() {
                 key={p.key}
                 onClick={() => openCreate(p.key)}
                 disabled={!!error}
-                className="flex items-center gap-1.5 rounded-[10px] border border-border px-3 py-2 text-[12px] font-medium text-secondary transition-colors hover:bg-[#f0f0f2] hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-[10px] border border-border px-3 py-2 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Plus size={13} />
                 {p.label}
@@ -474,7 +474,7 @@ export default function ProjectProvidersPage() {
               </button>
               <button
                 onClick={() => { setShowForm(false); setEditingId(null); setTestResult(null) }}
-                className="rounded-[10px] px-4 py-2 text-[12px] font-medium text-secondary hover:bg-[#f0f0f2] transition-colors"
+                className="rounded-[10px] px-4 py-2 text-[12px] font-medium text-secondary hover:bg-surface-soft transition-colors"
               >
                 Annuler
               </button>

@@ -192,7 +192,7 @@ export default function ProjectIntegrationPage() {
             }`}
           >
             <div className="flex min-w-0 items-center gap-3">
-              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] ${isConnected ? 'bg-success/10 text-success' : 'bg-[#f0f0f2] text-tertiary'}`}>
+              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] ${isConnected ? 'bg-success/10 text-success' : 'bg-surface-soft text-tertiary'}`}>
                 {isConnected ? <Wifi size={18} /> : <WifiOff size={18} />}
               </span>
               <div className="min-w-0">
@@ -220,7 +220,7 @@ export default function ProjectIntegrationPage() {
               <button
                 onClick={() => loadInfo({ quiet: true })}
                 disabled={isRefreshing}
-                className="inline-flex items-center gap-1.5 rounded-[8px] bg-[#f0f0f2] px-3 py-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-[#e5e5e7] hover:text-primary disabled:cursor-wait disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 rounded-[8px] bg-surface-soft px-3 py-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-muted hover:text-primary disabled:cursor-wait disabled:opacity-60"
               >
                 <RefreshCw size={12} className={isRefreshing ? 'animate-spin' : ''} />
                 Rafraîchir le statut
@@ -312,7 +312,7 @@ export default function ProjectIntegrationPage() {
           >
             <div className="flex flex-col gap-3">
               <div className="relative">
-                <div className="flex items-center justify-between rounded-t-[12px] bg-[#f0f0f2] px-3.5 py-2">
+                <div className="flex items-center justify-between rounded-t-[12px] bg-surface-soft px-3.5 py-2">
                   <div className="flex items-center gap-2 text-[12px] text-secondary">
                     <Code2 size={13} />
                     HTML

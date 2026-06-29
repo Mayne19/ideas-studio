@@ -117,7 +117,7 @@ export default function Topbar() {
 
   return (
     <>
-    <header className="flex h-[64px] shrink-0 items-center justify-between border-b border-border bg-surface px-6">
+    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-surface px-6 shadow-none">
       {/* Breadcrumb */}
       <div className="flex items-center gap-1.5 text-[13px]">
         <Link to="/projects" className="text-secondary hover:text-primary transition-colors">
@@ -150,11 +150,11 @@ export default function Topbar() {
                 onChange={(e) => handleSearchInput(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-                className="rounded-[10px] border border-border bg-[#f0f0f2] pl-7 pr-3 py-1.5 text-[13px] placeholder:text-tertiary focus:outline-none focus:ring-1 focus:ring-accent/30 focus:border-accent/50 w-44 transition-all focus:w-56"
+                className="rounded-[8px] border border-border bg-surface pl-7 pr-3 py-1.5 text-[13px] placeholder:text-tertiary focus:outline-none focus:ring-1 focus:ring-accent/30 focus:border-accent/50 w-44 transition-all focus:w-56"
               />
             </div>
             {searchFocused && searchQuery && (
-              <div className="absolute right-0 top-10 z-50 w-80 rounded-[16px] border border-border bg-surface p-2 shadow-float">
+              <div className="absolute right-0 top-10 z-50 w-80 rounded-[8px] border border-border bg-surface p-2 shadow-none">
                 {searching ? (
                   <div className="flex items-center justify-center py-4">
                     <Loader2 size={16} className="animate-spin text-tertiary" />
@@ -167,10 +167,10 @@ export default function Topbar() {
                       <Link
                         key={`${result.type}-${result.id}`}
                         to={result.url}
-                        className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 hover:bg-[#f0f0f2] transition-colors"
+                        className="flex items-center gap-2.5 rounded-[6px] px-2.5 py-2 hover:bg-surface-soft transition-colors"
                         onClick={() => setSearchFocused(false)}
                       >
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] bg-accent/10 text-accent">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] bg-surface-soft text-secondary">
                           {resultIcon(result.type)}
                         </span>
                         <div className="min-w-0 flex-1">
@@ -193,7 +193,7 @@ export default function Topbar() {
           <div className="relative" ref={notifRef}>
             <button
               onClick={() => setNotifOpen((v) => !v)}
-              className="relative flex h-8 w-8 items-center justify-center rounded-full text-tertiary hover:bg-[#f0f0f2] hover:text-primary transition-colors"
+              className="relative flex h-8 w-8 items-center justify-center rounded-full text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
               title="Notifications"
               aria-label="Notifications"
             >
@@ -206,12 +206,12 @@ export default function Topbar() {
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 top-10 z-50 w-80 rounded-[16px] border border-border bg-surface p-2 shadow-float">
+              <div className="absolute right-0 top-10 z-50 w-80 rounded-[8px] border border-border bg-surface p-2 shadow-none">
                 <div className="flex items-center justify-between mb-1 px-1">
                   <p className="text-[13px] font-semibold text-primary">Notifications</p>
                   <button
                     onClick={() => { setNotifOpen(false); navigate(`/projects/${projectId}/notifications`) }}
-                    className="text-[11px] text-accent hover:underline"
+                    className="text-[11px] text-secondary hover:text-primary"
                   >
                     Voir tout →
                   </button>
@@ -224,7 +224,7 @@ export default function Topbar() {
                       {notifications.length > 0 && (
                         <button
                           onClick={() => { setNotifOpen(false); navigate(`/projects/${projectId}/notifications`) }}
-                          className="text-[11px] text-accent hover:underline"
+                          className="text-[11px] text-secondary hover:text-primary"
                         >
                           Voir l'historique →
                         </button>
@@ -235,13 +235,13 @@ export default function Topbar() {
                       <button
                         key={n.id}
                         onClick={() => { setNotifOpen(false); if (n.link) navigate(n.link) }}
-                        className={`flex w-full items-start gap-2 rounded-[10px] px-2.5 py-2 text-left transition-colors ${n.link ? 'hover:bg-[#f0f0f2]' : ''}`}
+                        className={`flex w-full items-start gap-2 rounded-[6px] px-2.5 py-2 text-left transition-colors ${n.link ? 'hover:bg-surface-soft' : ''}`}
                       >
-                        <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[8px] ${
+                        <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] ${
                           n.level === 'error' ? 'bg-danger/10 text-danger' :
                           n.level === 'warning' ? 'bg-warning/10 text-[#c07000]' :
                           n.level === 'success' ? 'bg-success/10 text-[#1a7a3a]' :
-                          'bg-accent/10 text-accent'
+                          'bg-surface-soft text-secondary'
                         }`}>
                           <HugeIcon icon={BellIcon} size={11} />
                         </span>
@@ -262,14 +262,14 @@ export default function Topbar() {
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setMenuOpen((v) => !v)}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/10 text-accent text-[12px] font-semibold hover:bg-accent/20 transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white text-[12px] font-semibold hover:opacity-90 transition-opacity"
             aria-label="Menu utilisateur"
           >
             {initials}
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-10 z-50 min-w-[200px] rounded-[16px] border border-border bg-surface p-1.5 shadow-float">
+            <div className="absolute right-0 top-10 z-50 min-w-[200px] rounded-[8px] border border-border bg-surface p-1.5 shadow-none">
               <div className="px-3 py-2 border-b border-border mb-1">
                 <p className="text-[13px] font-medium text-primary truncate">{user?.name}</p>
                 <p className="text-[12px] text-tertiary truncate">{user?.email}</p>
@@ -278,8 +278,8 @@ export default function Topbar() {
                 to="/account"
                 onClick={() => setMenuOpen(false)}
                 className={cn(
-                  'flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2',
-                  'text-[13px] text-secondary hover:bg-[#f0f0f2] hover:text-primary transition-colors',
+                  'flex w-full items-center gap-2.5 rounded-[6px] px-3 py-2',
+                  'text-[13px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors',
                 )}
               >
                 <User size={14} />
@@ -288,8 +288,8 @@ export default function Topbar() {
               <button
                 onClick={() => setLogoutConfirmOpen(true)}
                 className={cn(
-                  'flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2',
-                  'text-[13px] text-secondary hover:bg-[#f0f0f2] hover:text-primary transition-colors',
+                  'flex w-full items-center gap-2.5 rounded-[6px] px-3 py-2',
+                  'text-[13px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors',
                 )}
               >
                 <LogOut size={14} />

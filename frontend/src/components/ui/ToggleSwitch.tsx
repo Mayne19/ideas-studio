@@ -28,7 +28,7 @@ export default function ToggleSwitch({ checked, onChange, disabled = false, labe
         <span
           aria-hidden="true"
           className={cn(
-            'pointer-events-none inline-block h-[18px] w-[18px] rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ease-in-out',
+            'pointer-events-none inline-block h-[18px] w-[18px] rounded-full bg-white shadow-none ring-0 transition-transform duration-200 ease-in-out',
             checked ? 'translate-x-4' : 'translate-x-0',
           )}
         />

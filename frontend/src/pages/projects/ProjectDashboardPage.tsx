@@ -382,7 +382,7 @@ export default function ProjectDashboardPage() {
             </span>
             <span
               className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                isConnected ? 'bg-success/10 text-[#1a7a3a]' : 'bg-[#f0f0f2] text-tertiary'
+                isConnected ? 'bg-success/10 text-[#1a7a3a]' : 'bg-surface-soft text-tertiary'
               }`}
             >
               <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-[#1a7a3a]' : 'bg-[#c8c8cc]'}`} />
@@ -558,7 +558,7 @@ export default function ProjectDashboardPage() {
                         </p>
                         <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1.5">
                           <span
-                            className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${cat?.color ? '' : 'bg-[#f0f0f2] text-tertiary'}`}
+                            className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${cat?.color ? '' : 'bg-surface-soft text-tertiary'}`}
                             style={cat?.color ? { backgroundColor: `${cat.color}20`, color: cat.color } : undefined}
                           >
                             {cat?.name ?? 'Sans catégorie'}

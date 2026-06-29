@@ -48,7 +48,7 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
             className={cn(
               'h-8 rounded-[9px] px-2.5 text-[12px] font-medium transition-colors whitespace-nowrap',
               value.mode === mode.value && value.isCurrent
-                ? 'bg-accent text-white shadow-sm'
+                ? 'bg-accent text-white shadow-none'
                 : 'text-secondary hover:bg-surface hover:text-primary',
             )}
           >

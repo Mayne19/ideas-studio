@@ -30,7 +30,7 @@ export default function SettingsLayout() {
                     'rounded-[12px] px-3 py-2.5 transition-colors',
                     isActive
                       ? 'bg-accent/10 text-accent'
-                      : 'text-secondary hover:bg-[#f0f0f2] hover:text-primary',
+                      : 'text-secondary hover:bg-surface-soft hover:text-primary',
                   )
                 }
               >

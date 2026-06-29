@@ -25,7 +25,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textare
         ref={ref}
         id={inputId}
         className={cn(
-          'w-full rounded-[12px] border border-border bg-surface px-3.5 py-2.5',
+          'w-full rounded-[8px] border border-border bg-surface px-3.5 py-2.5',
           'text-[14px] text-primary placeholder:text-tertiary',
           'outline-none transition-all duration-150 resize-none',
           'hover:border-border-strong',

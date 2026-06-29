@@ -40,14 +40,14 @@ type ColumnDef = {
 }
 
 const COLUMNS: ColumnDef[] = [
-  { status: 'outline_ready',       label: 'Brief à préparer', color: '#A8643A' },
-  { status: 'writing_requested',   label: 'Brief prêt',       color: '#A8643A' },
-  { status: 'draft_ready',         label: 'Brouillon IA',     color: '#7C6F5F' },
-  { status: 'writing_in_progress', label: 'En rédaction',     color: '#7C6F5F' },
-  { status: 'review_needed',       label: 'En relecture',     color: '#C4943A' },
-  { status: 'correction_needed',   label: 'SEO à corriger',   color: '#B03A3A' },
-  { status: 'ready_to_publish',    label: 'Prêt validation',  color: '#4A7C59' },
-  { status: 'failed',              label: 'Échecs',           color: '#B03A3A' },
+  { status: 'outline_ready',       label: 'Brief à préparer', color: '#0072F5' },
+  { status: 'writing_requested',   label: 'Brief prêt',       color: '#0072F5' },
+  { status: 'draft_ready',         label: 'Brouillon IA',     color: '#4D4D4D' },
+  { status: 'writing_in_progress', label: 'En rédaction',     color: '#4D4D4D' },
+  { status: 'review_needed',       label: 'En relecture',     color: '#A35200' },
+  { status: 'correction_needed',   label: 'SEO à corriger',   color: '#E5484D' },
+  { status: 'ready_to_publish',    label: 'Prêt validation',  color: '#008A2E' },
+  { status: 'failed',              label: 'Échecs',           color: '#E5484D' },
 ]
 
 const QUICK_ACTIONS: Partial<Record<ArticleStatus, { key: string; label: string }[]>> = {
@@ -118,7 +118,7 @@ function CardContent({
         </p>
         <button
           onClick={onEdit}
-          className="shrink-0 flex h-5 w-5 items-center justify-center rounded-[6px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors mt-0.5"
+          className="shrink-0 flex h-5 w-5 items-center justify-center rounded-[6px] text-tertiary hover:bg-surface-muted hover:text-primary transition-colors mt-0.5"
         >
           <ExternalLink size={10} />
         </button>
@@ -167,7 +167,7 @@ function CardContent({
             <button
               key={action.key}
               onClick={(e) => { e.stopPropagation(); onAction(action.key, article) }}
-              className="flex-1 rounded-[8px] bg-[#f0f0f2] px-2 py-1 text-[10px] font-medium text-secondary hover:bg-accent hover:text-white transition-colors"
+              className="flex-1 rounded-[8px] bg-surface-soft px-2 py-1 text-[10px] font-medium text-secondary hover:bg-accent hover:text-white transition-colors"
             >
               {action.label}
             </button>
@@ -246,7 +246,7 @@ function KanbanColumn({
             ✕
           </button>
         )}
-        <span className="text-[11px] text-tertiary bg-[#f0f0f2] rounded-full px-1.5 py-0.5">
+        <span className="text-[11px] text-tertiary bg-surface-soft rounded-full px-1.5 py-0.5">
           {articles.length}
         </span>
       </div>

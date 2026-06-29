@@ -137,7 +137,7 @@ function MemberRow({
         <div className="flex items-center gap-1">
           <button
             onClick={() => onEditRole(member)}
-            className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors"
+            className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-surface-muted hover:text-primary transition-colors"
             title="Modifier le rôle"
           >
             <Edit2 size={13} />
@@ -400,7 +400,7 @@ export default function ProjectMembersPage() {
                             `${window.location.origin}/invitations/${invitation.token}`,
                           )
                         }}
-                        className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors"
+                        className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-surface-muted hover:text-primary transition-colors"
                         title="Copier le lien d'invitation"
                       >
                         <Link size={13} />
@@ -464,7 +464,7 @@ export default function ProjectMembersPage() {
         )}
         {activityStatus === 'error' && (
           <div className="flex items-start gap-3 rounded-[16px] bg-[#f9f9fb] px-4 py-4">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-[#f0f0f2] text-tertiary">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-surface-soft text-tertiary">
               <Activity size={16} />
             </span>
             <div>
@@ -477,7 +477,7 @@ export default function ProjectMembersPage() {
         )}
         {activityStatus === 'success' && activityLogs.length === 0 && (
           <div className="flex items-start gap-3 rounded-[16px] bg-[#f9f9fb] px-4 py-4">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-[#f0f0f2] text-tertiary">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-surface-soft text-tertiary">
               <Activity size={16} />
             </span>
             <div>

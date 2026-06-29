@@ -40,7 +40,7 @@ function SidebarLink({ to, icon, label, disabled = false, collapsed = false }: N
     return (
       <span
         title={label}
-        className="flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-[13px] font-medium text-tertiary cursor-not-allowed opacity-50"
+        className="flex h-9 items-center gap-2.5 rounded-[6px] px-3 text-[13px] font-medium text-tertiary cursor-not-allowed opacity-50"
       >
         <span className="shrink-0">{icon}</span>
         {!collapsed && label}
@@ -54,11 +54,11 @@ function SidebarLink({ to, icon, label, disabled = false, collapsed = false }: N
       title={collapsed ? label : undefined}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-[13px] font-medium transition-colors duration-150',
+          'flex h-9 items-center gap-2.5 rounded-[6px] px-3 text-[13px] font-medium transition-colors duration-150',
           collapsed ? 'justify-center px-2' : '',
           isActive
-            ? 'bg-accent/10 text-accent'
-            : 'text-secondary hover:bg-[#f0f0f2] hover:text-primary',
+            ? 'bg-surface-muted text-primary'
+            : 'text-secondary hover:bg-surface-soft hover:text-primary',
         )
       }
     >
@@ -72,7 +72,7 @@ function SidebarSection({ title, children, collapsed }: { title?: string; childr
   return (
     <div className="flex flex-col gap-0.5">
       {title && !collapsed && (
-        <p className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-tertiary">
+        <p className="px-3 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wide text-tertiary">
           {title}
         </p>
       )}
@@ -126,10 +126,10 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
   return (
     <>
       <aside
-        className={`flex h-full ${sidebarWidth} shrink-0 flex-col border-r border-border bg-surface transition-all duration-200 overflow-hidden`}
+        className={`flex h-full ${sidebarWidth} shrink-0 flex-col border-r border-border bg-surface transition-all duration-200 overflow-hidden shadow-none`}
       >
       {/* Brand + collapse toggle */}
-      <div className="flex h-[64px] items-center border-b border-border px-3 justify-between shrink-0">
+      <div className="flex h-16 items-center border-b border-border px-3 justify-between shrink-0">
         {!collapsed && (
           <Link to="/projects" className="flex min-w-0 items-center gap-2 text-[15px] font-semibold text-primary hover:opacity-80 transition-opacity">
             <img src="/icon.svg" alt="" className="h-7 w-7 shrink-0 rounded-[8px]" />
@@ -139,7 +139,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
         <button
           onClick={onToggle}
           className={cn(
-            'flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] text-tertiary hover:bg-[#f0f0f2] hover:text-primary transition-colors',
+            'flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors',
             collapsed ? 'mx-auto' : 'ml-auto',
           )}
           title={collapsed ? 'Ouvrir la sidebar' : 'Fermer la sidebar'}
@@ -153,9 +153,9 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
         <div className="border-b border-border px-4 py-3 relative" ref={dropRef}>
           <button
             onClick={() => setProjectsOpen((v) => !v)}
-            className="flex w-full items-center gap-2 rounded-[10px] px-2 py-1.5 hover:bg-[#f0f0f2] transition-colors text-left"
+            className="flex w-full items-center gap-2 rounded-[8px] border border-border bg-surface px-3 py-2 hover:bg-surface-soft transition-colors text-left"
           >
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-accent/10 text-accent text-[10px] font-bold">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-primary text-white text-[10px] font-bold">
               {project.name.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
@@ -166,7 +166,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
           </button>
 
           {projectsOpen && (
-            <div className="absolute left-3 right-3 top-full mt-1 z-50 rounded-[14px] border border-border bg-surface shadow-float overflow-hidden">
+            <div className="absolute left-3 right-3 top-full mt-1 z-50 rounded-[8px] border border-border bg-surface shadow-none overflow-hidden">
               {projects.length === 0 ? (
                 <p className="px-4 py-3 text-[12px] text-tertiary">Aucun autre projet</p>
               ) : (
@@ -177,16 +177,16 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                       setProjectsOpen(false)
                       navigate(`/projects/${p.id}/dashboard`)
                     }}
-                    className="flex w-full items-center gap-2.5 px-3 py-2.5 hover:bg-[#f0f0f2] transition-colors text-left"
+                    className="flex w-full items-center gap-2.5 px-3 py-2.5 hover:bg-surface-soft transition-colors text-left"
                   >
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-accent/10 text-accent text-[10px] font-bold">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-primary text-white text-[10px] font-bold">
                       {p.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="truncate text-[12px] font-medium text-primary">{p.name}</p>
                       <p className="truncate text-[11px] text-tertiary">{p.domain ?? 'Pas défini'}</p>
                     </div>
-                    {p.id === projectId && <Check size={12} className="text-accent shrink-0" />}
+                    {p.id === projectId && <Check size={12} className="text-primary shrink-0" />}
                   </button>
                 ))
               )}
@@ -194,7 +194,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                 <Link
                   to="/projects"
                   onClick={() => setProjectsOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2.5 text-[12px] text-accent hover:bg-[#f0f0f2] transition-colors"
+                  className="flex items-center gap-2 px-3 py-2.5 text-[12px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors"
                 >
                   <FolderOpen size={13} />
                   Voir tous les projets
@@ -237,7 +237,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                   <div
                     className={cn(
                       'flex items-center rounded-[10px] transition-colors duration-150',
-                      inSettings ? 'bg-accent/10 text-accent' : 'text-secondary hover:bg-[#f0f0f2] hover:text-primary',
+                      inSettings ? 'bg-surface-muted text-primary' : 'text-secondary hover:bg-surface-soft hover:text-primary',
                     )}
                   >
                     <NavLink
@@ -255,7 +255,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                         event.stopPropagation()
                         setSettingsOpen((open) => !open)
                       }}
-                      className="mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] text-current hover:bg-white/50"
+                      className="mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] text-current hover:bg-surface-soft"
                       aria-label={settingsOpen ? 'Replier les paramètres' : 'Déplier les paramètres'}
                     >
                       <ChevronDown
@@ -274,7 +274,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                           className={({ isActive }) =>
                             cn(
                               'rounded-[8px] px-2.5 py-1.5 text-[12px] font-medium transition-colors',
-                              isActive ? 'text-accent' : 'text-secondary hover:text-primary',
+                              isActive ? 'text-primary' : 'text-secondary hover:text-primary',
                             )
                           }
                         >
@@ -295,7 +295,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                 onClick={() => setLogoutConfirmOpen(true)}
                 title={collapsed ? 'Se déconnecter' : undefined}
                 className={cn(
-                  'flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-[13px] font-medium text-secondary transition-colors hover:bg-[#f0f0f2] hover:text-primary',
+                  'flex h-9 items-center gap-2.5 rounded-[6px] px-3 text-[13px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary',
                   collapsed && 'justify-center px-2',
                 )}
               >

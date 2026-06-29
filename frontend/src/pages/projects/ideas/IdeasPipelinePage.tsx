@@ -452,7 +452,7 @@ export default function IdeasPipelinePage() {
 
         {loadStatus === 'success' && allIdeas.length === 0 && (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-[#f0f0f2] text-tertiary">
+            <div className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-surface-soft text-tertiary">
               <Lightbulb size={22} />
             </div>
             <p className="text-[15px] font-medium text-primary">Aucune idée pour l'instant</p>
@@ -595,7 +595,7 @@ export default function IdeasPipelinePage() {
                           )}
                           <button
                             onClick={() => setPreviewIdea(article)}
-                            className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-[#e5e5e7] hover:text-primary transition-colors"
+                            className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-surface-muted hover:text-primary transition-colors"
                             title="Voir le brief"
                           >
                             <Eye size={12} />
@@ -772,7 +772,7 @@ export default function IdeasPipelinePage() {
                 <summary className="cursor-pointer text-[11px] text-secondary hover:text-primary transition-colors">
                   Sorties des agents
                 </summary>
-                <pre className="mt-1 max-h-40 overflow-auto rounded-[6px] bg-[#f0f0f2] p-2 text-[10px] leading-relaxed text-primary">
+                <pre className="mt-1 max-h-40 overflow-auto rounded-[6px] bg-surface-soft p-2 text-[10px] leading-relaxed text-primary">
                   {JSON.stringify(previewIdea.agent_outputs_json, null, 2)}
                 </pre>
               </details>
@@ -784,7 +784,7 @@ export default function IdeasPipelinePage() {
                 <summary className="cursor-pointer text-[11px] text-secondary hover:text-primary transition-colors">
                   Brief planning
                 </summary>
-                <pre className="mt-1 max-h-40 overflow-auto rounded-[6px] bg-[#f0f0f2] p-2 text-[10px] leading-relaxed text-primary">
+                <pre className="mt-1 max-h-40 overflow-auto rounded-[6px] bg-surface-soft p-2 text-[10px] leading-relaxed text-primary">
                   {JSON.stringify(previewIdea.planning_brief_json, null, 2)}
                 </pre>
               </details>

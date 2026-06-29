@@ -75,7 +75,7 @@ function ToolBtn({
       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] transition-colors ${
         active
           ? 'bg-accent text-white'
-          : 'text-secondary hover:bg-[#e5e5e7] hover:text-primary'
+          : 'text-secondary hover:bg-surface-muted hover:text-primary'
       } disabled:cursor-not-allowed disabled:opacity-40`}
     >
       {children}
@@ -871,7 +871,7 @@ export default function EditorToolbar({
                     key={tab}
                     type="button"
                     onClick={() => setImageTab(tab)}
-                    className={`flex-1 py-1.5 text-[11px] font-medium transition-colors ${imageTab === tab ? 'bg-accent text-white' : 'text-secondary hover:bg-[#f0f0f2]'}`}
+                    className={`flex-1 py-1.5 text-[11px] font-medium transition-colors ${imageTab === tab ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'}`}
                   >
                     {tab === 'library' && <Library size={11} className="inline mr-1 -mt-0.5" />}
                     {label}
@@ -1023,7 +1023,7 @@ export default function EditorToolbar({
                 className={`rounded-[6px] px-2 py-1 text-[11px] font-medium transition-colors ${
                   parseImageWidth(imageWidth) === preset
                     ? 'bg-accent text-white'
-                    : 'text-secondary hover:bg-[#e5e5e7]'
+                    : 'text-secondary hover:bg-surface-muted'
                 }`}
               >
                 {preset}%
@@ -1033,7 +1033,7 @@ export default function EditorToolbar({
             <button
               type="button"
               onClick={replaceSelectedImage}
-              className="rounded-[6px] p-1.5 text-secondary hover:bg-[#e5e5e7] transition-colors"
+              className="rounded-[6px] p-1.5 text-secondary hover:bg-surface-muted transition-colors"
               title="Remplacer l'image"
             >
               <Image size={13} />

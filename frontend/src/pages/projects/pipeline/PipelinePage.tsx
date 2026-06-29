@@ -97,7 +97,7 @@ function TabButton({
       {count > 0 && (
         <span
           className={`ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold ${
-            active ? 'bg-accent/10 text-accent' : 'bg-[#f0f0f2] text-tertiary'
+            active ? 'bg-accent/10 text-accent' : 'bg-surface-soft text-tertiary'
           }`}
         >
           {count}
@@ -126,7 +126,7 @@ function StepBadge({ status }: { status: string }) {
     )
   }
   return (
-    <span className="inline-flex items-center rounded-full bg-[#f0f0f2] px-2.5 py-1 text-[11px] font-medium text-secondary">
+    <span className="inline-flex items-center rounded-full bg-surface-soft px-2.5 py-1 text-[11px] font-medium text-secondary">
       En attente
     </span>
   )
@@ -396,7 +396,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
                         title={article.status === 'idea_priority' ? 'Retirer priorité' : 'Prioriser'}
                         onClick={() => handlePrioritize(article)}
                         disabled={actionLoading === article.id + '-prioritize'}
-                        className={`flex h-7 w-7 items-center justify-center rounded-[8px] transition-colors hover:bg-[#f0f0f2] ${article.status === 'idea_priority' ? 'text-orange-500' : 'text-tertiary'}`}
+                        className={`flex h-7 w-7 items-center justify-center rounded-[8px] transition-colors hover:bg-surface-soft ${article.status === 'idea_priority' ? 'text-orange-500' : 'text-tertiary'}`}
                       >
                         <Star size={14} />
                       </button>
@@ -424,7 +424,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
                       type="button"
                       title="Ouvrir dans l'éditeur"
                       onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
-                      className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary transition-colors hover:bg-[#f0f0f2] hover:text-primary"
+                      className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary transition-colors hover:bg-surface-soft hover:text-primary"
                     >
                       <ExternalLink size={14} />
                     </button>
@@ -547,7 +547,7 @@ function WritingTab({ projectId }: { projectId: string }) {
               type="button"
               title="Ouvrir"
               onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
-              className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary opacity-0 transition-opacity hover:bg-[#f0f0f2] hover:text-primary group-hover:opacity-100"
+              className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary opacity-0 transition-opacity hover:bg-surface-soft hover:text-primary group-hover:opacity-100"
             >
               <ExternalLink size={14} />
             </button>

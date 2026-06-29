@@ -15,19 +15,19 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    'bg-accent text-white hover:bg-accent-dark active:opacity-90 shadow-sm',
+    'border border-primary bg-primary text-white hover:bg-secondary active:bg-primary',
   secondary:
-    'bg-[#f0f0f2] text-primary hover:bg-[#e5e5e7] active:bg-[#dcdce0]',
+    'border border-border bg-surface text-primary hover:bg-surface-soft active:bg-surface-muted',
   ghost:
-    'bg-transparent text-primary hover:bg-[#f0f0f2] active:bg-[#e5e5e7]',
+    'border border-transparent bg-transparent text-primary hover:bg-surface-soft active:bg-surface-muted',
   danger:
-    'bg-danger text-white hover:opacity-90 active:opacity-80',
+    'border border-danger bg-danger text-white hover:opacity-90 active:opacity-80',
 }
 
 const sizes: Record<ButtonSize, string> = {
-  sm: 'h-8 px-3 text-[13px] gap-1.5 rounded-[8px]',
-  md: 'h-9 px-4 text-[14px] gap-2 rounded-[10px]',
-  lg: 'h-10 px-5 text-[15px] gap-2 rounded-[10px]',
+  sm: 'h-8 px-3 text-[13px] gap-1.5 rounded-[6px]',
+  md: 'h-9 px-4 text-[14px] gap-2 rounded-[6px]',
+  lg: 'h-10 px-5 text-[15px] gap-2 rounded-[6px]',
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
@@ -42,6 +42,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
         'inline-flex items-center justify-center font-medium transition-all duration-150',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40',
         'disabled:opacity-50 disabled:cursor-not-allowed',
+        'shadow-none',
         variants[variant],
         sizes[size],
         className,
