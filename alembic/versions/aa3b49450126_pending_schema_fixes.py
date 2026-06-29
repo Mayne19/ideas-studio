@@ -8,7 +8,6 @@ Create Date: 2026-06-29 07:18:44.046416
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy import text
 
 
 revision: str = 'aa3b49450126'
@@ -17,79 +16,39 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-def _try_create_unique_constraint(constraint_name, table, columns):
-    """Add a unique constraint, silently skip if it already exists or data violates it."""
-    try:
-        op.create_unique_constraint(constraint_name, table, columns)
-    except Exception:
-        pass
-
-
 def upgrade() -> None:
-    _try_create_unique_constraint('uq_project_agent_assignment', 'agent_assignments', ['project_id', 'agent_id'])
-    _try_create_unique_constraint('uq_project_provider', 'ai_provider_configs', ['project_id', 'provider'])
-
-    # FK auto-référentes : NOT VALID — instantané, ne scanne pas les lignes existantes
-    try:
-        op.execute("""
-            ALTER TABLE articles
-            ADD CONSTRAINT fk_articles_original_article_id
-            FOREIGN KEY (original_article_id) REFERENCES articles(id)
-            NOT VALID
-        """)
-    except Exception:
-        pass
-
-    try:
-        op.execute("""
-            ALTER TABLE articles
-            ADD CONSTRAINT fk_articles_revision_of_article_id
-            FOREIGN KEY (revision_of_article_id) REFERENCES articles(id)
-            NOT VALID
-        """)
-    except Exception:
-        pass
-
-    op.add_column('notifications', sa.Column('link', sa.String(length=1000), nullable=True))
-
-    # Contrainte UNIQUE sur users.username : vérifier doublons et NULL avant d'ajouter
     conn = op.get_bind()
-    duplicate_count = conn.execute(
-        text(
-            "SELECT COUNT(*) FROM ("
-            "  SELECT username FROM users"
-            "  WHERE username IS NOT NULL"
-            "  GROUP BY username HAVING COUNT(*) > 1"
-            ") AS dups"
-        )
-    ).scalar()
-    null_count = conn.execute(
-        text("SELECT COUNT(*) FROM users WHERE username IS NULL")
-    ).scalar()
 
-    if duplicate_count == 0 and null_count == 0:
-        _try_create_unique_constraint(None, 'users', ['username'])
+    def safe(sql: str):
+        conn.execute(sa.text("SAVEPOINT sp"))
+        try:
+            conn.execute(sa.text(sql))
+            conn.execute(sa.text("RELEASE SAVEPOINT sp"))
+        except Exception:
+            conn.execute(sa.text("ROLLBACK TO SAVEPOINT sp"))
+
+    safe("ALTER TABLE agent_assignments ADD CONSTRAINT uq_project_agent_assignment UNIQUE (project_id, agent_id)")
+    safe("ALTER TABLE ai_provider_configs ADD CONSTRAINT uq_project_provider UNIQUE (project_id, provider)")
+    safe("ALTER TABLE articles ADD CONSTRAINT fk_articles_original_article_id FOREIGN KEY (original_article_id) REFERENCES articles(id) NOT VALID")
+    safe("ALTER TABLE articles ADD CONSTRAINT fk_articles_revision_of_article_id FOREIGN KEY (revision_of_article_id) REFERENCES articles(id) NOT VALID")
+    safe("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link VARCHAR(500)")
+    safe("ALTER TABLE users ADD CONSTRAINT uq_users_username UNIQUE (username)")
 
 
 def downgrade() -> None:
-    try:
-        op.drop_constraint(None, 'users', type_='unique')
-    except Exception:
-        pass
-    op.drop_column('notifications', 'link')
-    try:
-        op.execute("ALTER TABLE articles DROP CONSTRAINT IF EXISTS fk_articles_original_article_id")
-    except Exception:
-        pass
-    try:
-        op.execute("ALTER TABLE articles DROP CONSTRAINT IF EXISTS fk_articles_revision_of_article_id")
-    except Exception:
-        pass
-    try:
-        op.drop_constraint('uq_project_provider', 'ai_provider_configs', type_='unique')
-    except Exception:
-        pass
-    try:
-        op.drop_constraint('uq_project_agent_assignment', 'agent_assignments', type_='unique')
-    except Exception:
-        pass
+    conn = op.get_bind()
+
+    def safe(sql: str):
+        conn.execute(sa.text("SAVEPOINT sp"))
+        try:
+            conn.execute(sa.text(sql))
+            conn.execute(sa.text("RELEASE SAVEPOINT sp"))
+        except Exception:
+            conn.execute(sa.text("ROLLBACK TO SAVEPOINT sp"))
+
+    safe("ALTER TABLE users DROP CONSTRAINT IF EXISTS uq_users_username")
+    safe("ALTER TABLE notifications DROP COLUMN IF EXISTS link")
+    safe("ALTER TABLE articles DROP CONSTRAINT IF EXISTS fk_articles_revision_of_article_id")
+    safe("ALTER TABLE articles DROP CONSTRAINT IF EXISTS fk_articles_original_article_id")
+    safe("ALTER TABLE ai_provider_configs DROP CONSTRAINT IF EXISTS uq_project_provider")
+    safe("ALTER TABLE agent_assignments DROP CONSTRAINT IF EXISTS uq_project_agent_assignment")
