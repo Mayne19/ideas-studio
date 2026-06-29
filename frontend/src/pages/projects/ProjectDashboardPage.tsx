@@ -13,10 +13,10 @@ import { listArticles } from '@/api/articles'
 import { listCategories } from '@/api/categories'
 import { getPerformanceSummary } from '@/api/performance'
 import { listRecommendations } from '@/api/recommendations'
-import { getPipelineSettings } from '@/api/pipeline'
+import { getPipelineLogs, getPipelineSettings } from '@/api/pipeline'
 import { listAIProviders } from '@/api/aiProviders'
 import type { Article, Category, OptimizationRecommendation } from '@/types'
-import type { PipelineSettings } from '@/api/pipeline'
+import type { PipelineLog, PipelineSettings } from '@/api/pipeline'
 import type { AIProviderPublic } from '@/api/aiProviders'
 import { Card } from '@/components/ui/Card'
 import StatusBadge from '@/components/ui/StatusBadge'
@@ -312,6 +312,7 @@ export default function ProjectDashboardPage() {
   const { user } = useAuth()
   const [data, setData] = useState<DashboardData | null>(null)
   const [pipeline, setPipeline] = useState<PipelineSettings | null>(null)
+  const [pipelineLogs, setPipelineLogs] = useState<PipelineLog[]>([])
   const [providers, setProviders] = useState<AIProviderPublic[]>([])
 
   useEffect(() => {
@@ -322,9 +323,11 @@ export default function ProjectDashboardPage() {
       getPerformanceSummary(projectId, '30d'),
       listCategories(projectId),
       getPipelineSettings(projectId).catch(() => null),
+      getPipelineLogs(projectId, 1).catch(() => []),
       listAIProviders(projectId).catch(() => []),
-    ]).then(([articles, recs, perf, cats, pipelineResult, providersResult]) => {
+    ]).then(([articles, recs, perf, cats, pipelineResult, logsResult, providersResult]) => {
       if (pipelineResult.status === 'fulfilled') setPipeline(pipelineResult.value)
+      if (logsResult.status === 'fulfilled') setPipelineLogs(logsResult.value)
       if (providersResult.status === 'fulfilled') setProviders(providersResult.value)
       const allArticles =
         articles.status === 'fulfilled'
@@ -432,6 +435,7 @@ export default function ProjectDashboardPage() {
 
   const enabledProviders = providers.filter((provider) => provider.enabled)
   const pipelineActive = Boolean(pipeline?.enabled)
+  const lastRunLabel = pipelineLogs[0] ? formatDate(pipelineLogs[0].started_at) : '—'
 
   const todoRows = data
     ? [
@@ -487,30 +491,35 @@ export default function ProjectDashboardPage() {
         </div>
       </section>
 
-      <section className="flex h-[44px] items-center gap-0 overflow-hidden rounded-[8px] border border-border bg-surface text-[13px] text-secondary">
-        <div className="flex h-full shrink-0 items-center justify-center border-r border-border px-4">
+      <section className="flex h-[44px] items-center overflow-hidden rounded-[8px] border border-border bg-surface text-[13px] text-secondary">
+        {/* Badge Production + indicateur Connecté */}
+        <div className="flex h-full shrink-0 items-center gap-3 border-r border-border px-4">
           <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[13px] font-medium text-white">
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-accent">
               <ArrowRight size={10} />
             </span>
             Production
           </span>
-        </div>
-        <div className="flex h-full flex-1 items-center gap-5 px-5">
-          <span className="flex items-center gap-2 font-medium text-primary">
-            <Globe size={13} className="shrink-0 text-secondary" />
-            {project?.domain ?? '—'}
-          </span>
-          <span className="h-4 w-px bg-border" />
           <span className="flex items-center gap-1.5 font-medium text-primary">
             <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${isConnected ? 'bg-[#00c950]' : 'bg-tertiary'}`} />
             {isConnected ? 'Connecté' : 'Non connecté'}
           </span>
-          <span className="h-4 w-px bg-border" />
+        </div>
+        {/* Domain */}
+        <div className="flex h-full shrink-0 items-center gap-2 border-r border-border px-5 font-medium text-primary">
+          <Globe size={13} className="shrink-0 text-secondary" />
+          {project?.domain ?? '—'}
+        </div>
+        {/* Pipeline + runs */}
+        <div className="flex h-full flex-1 items-center gap-5 px-5">
           <span className="flex items-center gap-2">
             <Clock size={13} className="shrink-0" />
             Pipeline : <strong className="text-primary">{pipelineActive ? 'Actif' : 'Inactif'}</strong>
           </span>
+          <span className="h-4 w-px bg-border" />
+          <span>Dernier run : <strong className="text-primary">{lastRunLabel}</strong></span>
+          <span className="h-4 w-px bg-border" />
+          <span>Prochain run : <strong className="text-primary">—</strong></span>
         </div>
       </section>
 
