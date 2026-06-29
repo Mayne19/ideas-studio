@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Line, LineChart, ResponsiveContainer } from 'recharts'
+import { Bar, BarChart, Line, LineChart, ResponsiveContainer } from 'recharts'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Lightbulb, BarChart2, Globe,
   ArrowRight, AlertCircle, Clock,
-  Edit3, Eye, Send, Star, ClipboardList, Calendar, HelpCircle, Play,
-  Plus, RefreshCw, ShieldCheck,
+  Edit3, Eye, Send, Star, ClipboardList, HelpCircle, Play,
+  Plus, ShieldCheck,
 } from '@/components/ui/hugeIcons'
 import { useProject } from '@/context/ProjectContext'
 import { useAuth } from '@/context/AuthContext'
@@ -13,10 +13,10 @@ import { listArticles } from '@/api/articles'
 import { listCategories } from '@/api/categories'
 import { getPerformanceSummary } from '@/api/performance'
 import { listRecommendations } from '@/api/recommendations'
-import { getPipelineLogs, getPipelineSettings } from '@/api/pipeline'
+import { getPipelineSettings } from '@/api/pipeline'
 import { listAIProviders } from '@/api/aiProviders'
 import type { Article, Category, OptimizationRecommendation } from '@/types'
-import type { PipelineLog, PipelineSettings } from '@/api/pipeline'
+import type { PipelineSettings } from '@/api/pipeline'
 import type { AIProviderPublic } from '@/api/aiProviders'
 import { Card } from '@/components/ui/Card'
 import StatusBadge from '@/components/ui/StatusBadge'
@@ -67,8 +67,10 @@ type DashboardData = {
   seoMonthly: MonthPoint[]
   viewsMonthly: MonthPoint[]
   timeMonthly: MonthPoint[]
+  publishedMonthly: MonthPoint[]
   seoChangePts: number
   timeChangeMins: number
+  publishedChangePct: number
 }
 
 const IN_PROGRESS_STATUSES = new Set<Article['status']>([
@@ -162,8 +164,8 @@ function SparkMetricCard({
         <span className="text-[12px] font-semibold tabular-nums" style={{ color: changeColor }}>{change}</span>
       </div>
       <div className="mt-2 -mx-1">
-        <ResponsiveContainer width="100%" height={36}>
-          <LineChart data={data} margin={{ top: 2, right: 4, bottom: 2, left: 4 }}>
+        <ResponsiveContainer width="100%" height={44}>
+          <LineChart data={data} margin={{ top: 8, right: 6, bottom: 4, left: 6 }}>
             <Line
               type="natural"
               dataKey="v"
@@ -180,52 +182,43 @@ function SparkMetricCard({
   )
 }
 
-
-function MiniBarChart({ values, color }: { values: number[]; color: string }) {
-  const max = Math.max(...values, 1)
-  return (
-    <div className="flex h-10 items-end gap-2">
-      {values.map((value, index) => (
-        <span
-          key={index}
-          className="w-1 rounded-t-full"
-          style={{ height: `${Math.max(8, (value / max) * 40)}px`, backgroundColor: color }}
-        />
-      ))}
-    </div>
-  )
-}
-
-
-function MetricBox({
+function BarMetricCard({
   title,
   value,
   change,
+  changeColor,
   color,
-  children,
+  data,
 }: {
   title: string
   value: string | number
-  change?: string
+  change: string
+  changeColor: string
   color: string
-  children: React.ReactNode
+  data: MonthPoint[]
 }) {
   return (
     <article className="rounded-[8px] border border-border bg-surface px-5 py-4 shadow-none">
-      <div className="mb-2.5 flex items-center gap-1.5 text-[12px] font-medium text-secondary">
+      <div className="mb-2 flex items-center gap-1.5 text-[12px] font-medium text-secondary">
         {title}
         <HelpCircle size={12} className="text-tertiary" />
       </div>
-      <div className="flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <div className="text-[20px] font-semibold leading-none text-primary">{value}</div>
-          {children}
-        </div>
-        {change && <span className="text-[14px] font-medium" style={{ color }}>{change}</span>}
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[20px] font-semibold leading-none text-primary">{value}</div>
+        <span className="text-[12px] font-semibold tabular-nums" style={{ color: changeColor }}>{change}</span>
+      </div>
+      <div className="mt-2 -mx-1">
+        <ResponsiveContainer width="100%" height={44}>
+          <BarChart data={data} margin={{ top: 8, right: 6, bottom: 4, left: 6 }} barSize={5}>
+            <Bar dataKey="v" fill={color} radius={[2, 2, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </article>
   )
 }
+
+
 
 function PipelineInfoCard({
   icon,
@@ -319,7 +312,6 @@ export default function ProjectDashboardPage() {
   const { user } = useAuth()
   const [data, setData] = useState<DashboardData | null>(null)
   const [pipeline, setPipeline] = useState<PipelineSettings | null>(null)
-  const [pipelineLogs, setPipelineLogs] = useState<PipelineLog[]>([])
   const [providers, setProviders] = useState<AIProviderPublic[]>([])
 
   useEffect(() => {
@@ -330,11 +322,9 @@ export default function ProjectDashboardPage() {
       getPerformanceSummary(projectId, '30d'),
       listCategories(projectId),
       getPipelineSettings(projectId).catch(() => null),
-      getPipelineLogs(projectId, 1).catch(() => []),
       listAIProviders(projectId).catch(() => []),
-    ]).then(([articles, recs, perf, cats, pipelineResult, logsResult, providersResult]) => {
+    ]).then(([articles, recs, perf, cats, pipelineResult, providersResult]) => {
       if (pipelineResult.status === 'fulfilled') setPipeline(pipelineResult.value)
-      if (logsResult.status === 'fulfilled') setPipelineLogs(logsResult.value)
       if (providersResult.status === 'fulfilled') setProviders(providersResult.value)
       const allArticles =
         articles.status === 'fulfilled'
@@ -386,8 +376,15 @@ export default function ProjectDashboardPage() {
         contentArticles,
         (arts) => arts.length,
       )
+      const publishedMonthly = buildMonthlyMetric(
+        allArticles.filter((a) => a.status === 'published'),
+        (arts) => arts.length,
+      )
       const seoChangePts = seoMonthly[11].v - seoMonthly[10].v
       const timeChangeMins = timeMonthly[11].v - timeMonthly[10].v
+      const publishedChangePct = publishedMonthly[10].v > 0
+        ? Math.round(((publishedMonthly[11].v - publishedMonthly[10].v) / publishedMonthly[10].v) * 100)
+        : publishedMonthly[11].v > 0 ? 100 : 0
 
       setData({
         recentArticles,
@@ -414,8 +411,10 @@ export default function ProjectDashboardPage() {
         seoMonthly,
         viewsMonthly,
         timeMonthly,
+        publishedMonthly,
         seoChangePts,
         timeChangeMins,
+        publishedChangePct,
       })
     })
   }, [projectId])
@@ -430,10 +429,10 @@ export default function ProjectDashboardPage() {
 
   const seoScore = scoreOnHundred(data?.avgSeoScore) ?? 0
   const totalViews = formatCompact(data?.totalViews)
-  const lastPipelineRun = pipelineLogs[0]
+
   const enabledProviders = providers.filter((provider) => provider.enabled)
   const pipelineActive = Boolean(pipeline?.enabled)
-  const lastRunLabel = lastPipelineRun ? formatDate(lastPipelineRun.started_at) : '—'
+
   const todoRows = data
     ? [
         {
@@ -499,7 +498,7 @@ export default function ProjectDashboardPage() {
         </div>
       </section>
 
-      <section className="grid h-[44px] grid-cols-[160px_1fr_1.25fr_1.25fr_1.25fr] overflow-hidden rounded-[8px] border border-border bg-surface text-[13px] text-secondary">
+      <section className="grid h-[44px] grid-cols-[160px_1fr] overflow-hidden rounded-[8px] border border-border bg-surface text-[13px] text-secondary">
         <div className="flex items-center justify-center border-r border-border">
           <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[13px] font-medium text-white">
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-accent">
@@ -508,21 +507,9 @@ export default function ProjectDashboardPage() {
             Production
           </span>
         </div>
-        <div className="flex items-center justify-center gap-2 border-r border-border">
+        <div className="flex items-center justify-center gap-2">
           <Clock size={14} />
           Pipeline : <strong className="text-primary">{pipelineActive ? 'Actif' : 'Inactif'}</strong>
-        </div>
-        <div className="flex items-center justify-center gap-2 border-r border-border">
-          <Clock size={14} />
-          Dernier run : <strong className="text-primary">{lastRunLabel}</strong>
-        </div>
-        <div className="flex items-center justify-center gap-2 border-r border-border">
-          <Calendar size={14} />
-          Prochain run : <strong className="text-primary">—</strong>
-        </div>
-        <div className="flex items-center justify-center gap-2">
-          <RefreshCw size={14} />
-          Mode : <strong className="text-primary">{pipeline?.enabled ? 'Automatique' : 'Mensuel'}</strong>
         </div>
       </section>
 
@@ -551,15 +538,17 @@ export default function ProjectDashboardPage() {
           color="#ff3b1f"
           data={data?.timeMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
         />
-        <MetricBox title="Publiés" value={data?.publishedCount ?? '—'} change="+9%" color="#00c950">
-          <MiniBarChart values={[13, 15, 16, 17, 22, 15, 28, 19, 25, 34, 23, 29, 38, 31, 35, 27, 31, 28]} color="#00c950" />
-        </MetricBox>
-        <MetricBox title="En cours" value={data?.inProgressCount ?? '—'} change="-5%" color="#a238ff">
-          <MiniBarChart values={[13, 14, 15, 14, 20, 27, 34, 39, 31, 19, 15, 12, 13, 13, 14, 13]} color="#a238ff" />
-        </MetricBox>
+        <BarMetricCard
+          title="Publiés"
+          value={data?.publishedCount ?? '—'}
+          change={data ? (data.publishedChangePct >= 0 ? `+${data.publishedChangePct}%` : `${data.publishedChangePct}%`) : '—'}
+          changeColor={!data || data.publishedChangePct >= 0 ? '#00c950' : '#ff3b1f'}
+          color="#00c950"
+          data={data?.publishedMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
+        />
       </section>
 
-      <section className="grid grid-cols-4 gap-4">
+      <section className="grid grid-cols-5 gap-4">
         <PipelineInfoCard
           icon={<BarChart2 size={24} />}
           title="Pipeline"
@@ -583,6 +572,12 @@ export default function ProjectDashboardPage() {
           title="Idées prêtes"
           value={data?.ideasReadyForProductionCount ?? data?.ideasCount ?? 0}
           description={enabledProviders.length > 0 ? 'Qualifiées, à valider' : '0 provider IA actif.'}
+        />
+        <PipelineInfoCard
+          icon={<Edit3 size={24} />}
+          title="En cours"
+          value={data?.inProgressCount ?? 0}
+          description="Articles en rédaction ou révision"
         />
       </section>
 
