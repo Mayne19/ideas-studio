@@ -3,7 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Legend,
+  Area, AreaChart,
 } from 'recharts'
+import { Gauge } from '@vercel/geistcn/components'
 import {
   Eye,
   Globe,
@@ -118,6 +120,74 @@ function chartTick(period: PeriodMode, value: unknown) {
   return label.includes('-') ? label.slice(5) : label
 }
 
+function AreaMetricCard({
+  icon,
+  value,
+  label,
+  change,
+  changeColor,
+  color,
+  data,
+}: {
+  icon: React.ReactNode
+  value: string | number
+  label: string
+  change?: string | null
+  changeColor?: string
+  color: string
+  data: { v: number }[]
+}) {
+  return (
+    <div className="flex h-[148px] flex-col rounded-[8px] border-2 border-border bg-transparent p-4 shadow-none">
+      <div className="flex items-center justify-between">
+        <span className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-surface-soft text-primary">{icon}</span>
+        {change && (
+          <span className="text-[12px] font-semibold tabular-nums" style={{ color: changeColor }}>{change}</span>
+        )}
+      </div>
+      <p className="mt-2 text-[24px] font-semibold tracking-tight leading-none text-primary">{value}</p>
+      <p className="mt-1 text-[12px] text-tertiary">{label}</p>
+      <div className="mt-auto h-[44px] -mx-1">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
+            <Area
+              type="linear"
+              dataKey="v"
+              stroke={color}
+              strokeWidth={1.5}
+              fill={color}
+              fillOpacity={0.12}
+              dot={false}
+              isAnimationActive={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+}
+
+function SeoGaugeCard({
+  icon,
+  score,
+  label,
+}: {
+  icon: React.ReactNode
+  score: number | null
+  label: string
+}) {
+  const color = score === null ? '#9ca3af' : score >= 75 ? '#45a75a' : score >= 50 ? '#ffa51f' : '#ff3b1f'
+  return (
+    <div className="flex h-[148px] flex-col rounded-[8px] border-2 border-border bg-transparent p-4 shadow-none">
+      <span className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-surface-soft text-primary">{icon}</span>
+      <div className="mt-2 flex flex-1 items-center">
+        <Gauge showValue size="small" value={score ?? 0} color={color} />
+      </div>
+      <p className="text-[12px] text-tertiary">{label}</p>
+    </div>
+  )
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AnalyticsPage() {
@@ -169,6 +239,17 @@ export default function AnalyticsPage() {
 
   const channelTrend = summary?.channel_trend_by_day ?? []
   const hasChannelTrend = channelTrend.length > 0 && summary && summary.total_views > 0
+
+  const viewsTrend = useMemo(
+    () => (summary?.trend_by_day ?? []).map((d) => ({ v: d.views })),
+    [summary],
+  )
+  const viewsChange = useMemo(() => {
+    const points = summary?.trend_by_day ?? []
+    if (points.length < 2) return null
+    const diff = points[points.length - 1].views - points[points.length - 2].views
+    return diff >= 0 ? `+${formatMetric(diff)}` : `-${formatMetric(Math.abs(diff))}`
+  }, [summary])
 
   const avgSeoScore = useMemo(() => {
     const withScore = articleMetrics.filter((a) => a.seo_score !== null)
@@ -244,15 +325,18 @@ export default function AnalyticsPage() {
       <div className="flex flex-col gap-6">
         {/* Section 1 — 4 KPIs */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <MetricCard icon={<Eye size={18} />} value={formatMetric(summary.total_views)} label="Vues totales" tone="accent" />
-          <MetricCard icon={<Users size={18} />} value={formatMetric(summary.unique_pages)} label="Pages uniques" tone="success" />
-          <MetricCard icon={<BarChart3 size={18} />} value={String(articleMetrics.length)} label="Articles suivis" tone="warning" />
-          <MetricCard
-            icon={<TrendingUp size={18} />}
-            value={avgSeoScore !== null ? `${avgSeoScore}` : '—'}
-            label="Score SEO moyen"
-            tone="violet"
+          <AreaMetricCard
+            icon={<Eye size={18} />}
+            value={formatMetric(summary.total_views)}
+            label="Vues totales"
+            change={viewsChange}
+            changeColor={viewsChange?.startsWith('-') ? '#ff3b1f' : '#0066ff'}
+            color="#0066ff"
+            data={viewsTrend}
           />
+          <MetricCard icon={<Users size={18} />} value={formatMetric(summary.unique_pages)} label="Pages uniques" tone="success" className="h-[148px]" />
+          <MetricCard icon={<BarChart3 size={18} />} value={String(articleMetrics.length)} label="Articles suivis" tone="warning" className="h-[148px]" />
+          <SeoGaugeCard icon={<TrendingUp size={18} />} score={avgSeoScore} label="Score SEO moyen" />
         </div>
 
         {/* Section 2 — Évolution des vues */}
@@ -315,12 +399,21 @@ export default function AnalyticsPage() {
                           </span>
                         ) : <span className="text-tertiary">—</span>}
                       </td>
-                      <td className="py-2.5 px-3 text-right">
+                      <td className="py-2.5 px-3">
                         {a.seo_score !== null ? (
-                          <span className={`text-[12px] font-medium tabular-nums ${a.seo_score >= 80 ? 'text-success' : a.seo_score >= 60 ? 'text-warning' : 'text-danger'}`}>
-                            {a.seo_score}
+                          <span className="flex items-center justify-end gap-2">
+                            <span className="w-6 shrink-0 text-right text-[12px] font-semibold tabular-nums text-primary">{a.seo_score}</span>
+                            <span className="h-[6px] w-[60px] shrink-0 overflow-hidden rounded-full bg-surface-muted">
+                              <span
+                                className="block h-full rounded-full transition-all"
+                                style={{
+                                  width: `${Math.min(a.seo_score, 100)}%`,
+                                  backgroundColor: a.seo_score >= 75 ? '#00c950' : a.seo_score >= 50 ? '#ffa51f' : '#ff3b1f',
+                                }}
+                              />
+                            </span>
                           </span>
-                        ) : <span className="text-tertiary">—</span>}
+                        ) : <span className="block text-right text-tertiary">—</span>}
                       </td>
                     </tr>
                   ))}
