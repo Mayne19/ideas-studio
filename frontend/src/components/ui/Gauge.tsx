@@ -12,24 +12,25 @@ type GaugeProps = {
 }
 
 const sizes: Record<GaugeSize, { box: string; stroke: number; text: string }> = {
-  tiny: { box: 'h-5 w-5', stroke: 10, text: 'text-[0]' },
-  small: { box: 'h-12 w-12', stroke: 9, text: 'text-[13px]' },
-  medium: { box: 'h-16 w-16', stroke: 9, text: 'text-[18px]' },
-  large: { box: 'h-24 w-24', stroke: 8, text: 'text-[30px]' },
+  tiny: { box: 'h-5 w-5', stroke: 9, text: 'text-[0]' },
+  small: { box: 'h-12 w-12', stroke: 8, text: 'text-[14px]' },
+  medium: { box: 'h-16 w-16', stroke: 8, text: 'text-[20px]' },
+  large: { box: 'h-24 w-24', stroke: 8, text: 'text-[32px]' },
 }
 
 export function Gauge({
   value,
   size = 'small',
   showValue = false,
-  color = '#00c950',
-  trackColor = '#e5e5e5',
+  color = '#45a75a',
+  trackColor = '#e8e8e8',
   className,
 }: GaugeProps) {
   const normalized = Math.max(0, Math.min(100, Math.round(value)))
   const radius = 42
   const circumference = 2 * Math.PI * radius
-  const dashOffset = circumference * (1 - normalized / 100)
+  const progressLength = circumference * (normalized / 100)
+  const trackLength = circumference - progressLength
   const config = sizes[size]
 
   return (
@@ -41,29 +42,34 @@ export function Gauge({
       aria-valuenow={normalized}
     >
       <svg className="h-full w-full -rotate-90 overflow-visible" viewBox="0 0 100 100" aria-hidden="true">
-        <circle
-          cx="50"
-          cy="50"
-          r={radius}
-          fill="none"
-          stroke={trackColor}
-          strokeLinecap="round"
-          strokeWidth={config.stroke}
-        />
-        <circle
-          cx="50"
-          cy="50"
-          r={radius}
-          fill="none"
-          stroke={color}
-          strokeDasharray={circumference}
-          strokeDashoffset={dashOffset}
-          strokeLinecap="round"
-          strokeWidth={config.stroke}
-        />
+        {normalized < 100 && trackLength > 0 && (
+          <circle
+            cx="50"
+            cy="50"
+            r={radius}
+            fill="none"
+            stroke={trackColor}
+            strokeDasharray={`${trackLength} ${circumference}`}
+            strokeDashoffset={-progressLength}
+            strokeLinecap="round"
+            strokeWidth={config.stroke}
+          />
+        )}
+        {normalized > 0 && (
+          <circle
+            cx="50"
+            cy="50"
+            r={radius}
+            fill="none"
+            stroke={color}
+            strokeDasharray={`${progressLength} ${circumference}`}
+            strokeLinecap="round"
+            strokeWidth={config.stroke}
+          />
+        )}
       </svg>
       {showValue && (
-        <span className={cn('absolute font-semibold leading-none text-primary tabular-nums', config.text)}>
+        <span className={cn('absolute font-semibold leading-none text-[#111111] tabular-nums', config.text)}>
           {normalized}
         </span>
       )}

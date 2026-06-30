@@ -156,7 +156,7 @@ function SeoRadialCard({
   data: MonthPoint[]
   color?: string
 }) {
-  const fillColor = color ?? (score >= 75 ? '#00c950' : score >= 50 ? '#ffa51f' : '#ff3b1f')
+  const fillColor = color ?? (score >= 75 ? '#45a75a' : score >= 50 ? '#ffa51f' : '#ff3b1f')
   const changeColor = fillColor
   const changeLabel = changePts >= 0 ? `+${changePts} pts` : `${changePts} pts`
 
@@ -167,7 +167,7 @@ function SeoRadialCard({
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
       <div className="mt-3 flex h-8 items-center justify-between gap-3">
-        <Gauge showValue size="small" value={score} color={fillColor} trackColor="#d4d4d4" />
+        <Gauge showValue size="small" value={score} color={fillColor} />
         <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{changeLabel}</span>
       </div>
       <div className="mt-2 h-[60px] -mx-1">
