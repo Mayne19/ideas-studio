@@ -156,6 +156,7 @@ function SeoRadialCard({
   color?: string
 }) {
   const fillColor = color ?? (score >= 75 ? '#00c950' : score >= 50 ? '#ffa51f' : '#ff3b1f')
+  const remainingColor = fillColor + '33'
   const changeColor = fillColor
   const changeLabel = changePts >= 0 ? `+${changePts} pts` : `${changePts} pts`
   const endAngle = 90 - (score / 100) * 280
@@ -177,7 +178,7 @@ function SeoRadialCard({
             margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
           >
             <PolarGrid gridType="circle" radialLines={false} stroke="none" polarRadius={[22, 16]} />
-            <RadialBar dataKey="v" background={{ fill: 'var(--color-surface-muted, #f1f5f9)' }} cornerRadius={6} />
+            <RadialBar dataKey="v" background={{ fill: remainingColor }} cornerRadius={6} />
             <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
               <Label
                 content={({ viewBox }) => {
