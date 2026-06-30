@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Area, AreaChart, Bar, BarChart, Label, Line, LineChart, PolarGrid, PolarRadiusAxis, RadialBar, RadialBarChart, ResponsiveContainer } from 'recharts'
+import { Area, AreaChart, Bar, BarChart, Line, LineChart, ResponsiveContainer } from 'recharts'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Lightbulb, Globe,
@@ -21,6 +21,7 @@ import type { AIProviderPublic } from '@/api/aiProviders'
 import { Card } from '@/components/ui/Card'
 import StatusBadge from '@/components/ui/StatusBadge'
 import LoadingState from '@/components/ui/LoadingState'
+import { Gauge } from '@/components/ui/Gauge'
 import { formatDate } from '@/utils/format'
 import { getGeoScore } from '@/lib/scoreBadge'
 
@@ -156,10 +157,8 @@ function SeoRadialCard({
   color?: string
 }) {
   const fillColor = color ?? (score >= 75 ? '#00c950' : score >= 50 ? '#ffa51f' : '#ff3b1f')
-  const remainingColor = '#d4d4d4'
   const changeColor = fillColor
   const changeLabel = changePts >= 0 ? `+${changePts} pts` : `${changePts} pts`
-  const endAngle = 90 - (score / 100) * 280
 
   return (
     <article className="flex h-[148px] flex-col rounded-[10px] border-2 border-border bg-transparent px-5 py-4 shadow-none">
@@ -168,34 +167,7 @@ function SeoRadialCard({
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
       <div className="mt-3 flex h-8 items-center justify-between gap-3">
-        <ResponsiveContainer width={48} height={48}>
-          <RadialBarChart
-            data={[{ v: score, fill: fillColor }]}
-            startAngle={90}
-            endAngle={endAngle}
-            outerRadius={22}
-            innerRadius={16}
-            margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
-          >
-            <PolarGrid gridType="circle" radialLines={false} stroke="none" polarRadius={[22, 16]} />
-            <RadialBar dataKey="v" background={{ fill: remainingColor }} cornerRadius={6} />
-            <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
-              <Label
-                content={({ viewBox }) => {
-                  if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
-                    return (
-                      <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                        <tspan x={viewBox.cx} y={viewBox.cy} style={{ fontSize: '12px', fontWeight: '700', fill: 'var(--color-primary, #111)' }}>
-                          {score}
-                        </tspan>
-                      </text>
-                    )
-                  }
-                }}
-              />
-            </PolarRadiusAxis>
-          </RadialBarChart>
-        </ResponsiveContainer>
+        <Gauge showValue size="small" value={score} color={fillColor} trackColor="#d4d4d4" />
         <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{changeLabel}</span>
       </div>
       <div className="mt-2 h-[60px] -mx-1">
