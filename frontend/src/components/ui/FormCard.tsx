@@ -11,7 +11,7 @@ type FormCardProps = {
 
 export default function FormCard({ title, description, children, footer, className }: FormCardProps) {
   return (
-    <div className={cn('rounded-[8px] bg-surface shadow-none', className)}>
+    <div className={cn('rounded-[8px] border-2 border-border bg-transparent shadow-none', className)}>
       <div className="border-b border-border/40 px-6 py-5">
         <h3 className="text-[14px] font-semibold text-primary">{title}</h3>
         {description && (
