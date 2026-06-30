@@ -49,7 +49,7 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
               'h-8 rounded-[9px] px-2.5 text-[12px] font-medium transition-colors whitespace-nowrap',
               value.mode === mode.value && value.isCurrent
                 ? 'bg-accent text-white shadow-none'
-                : 'text-secondary hover:bg-surface hover:text-primary',
+                : 'text-secondary hover:bg-bg hover:text-primary',
             )}
           >
             {mode.label}
@@ -62,7 +62,7 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
         <button
           type="button"
           onClick={() => onChange(shiftPeriod(value, -1))}
-          className="flex h-8 w-8 items-center justify-center rounded-[9px] text-secondary transition-colors hover:bg-surface hover:text-primary"
+          className="flex h-8 w-8 items-center justify-center rounded-[9px] text-secondary transition-colors hover:bg-bg hover:text-primary"
           aria-label="Période précédente"
         >
           <ArrowLeft size={14} />
@@ -74,7 +74,7 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
           type="button"
           onClick={() => onChange(nextRange)}
           disabled={disableNext}
-          className="flex h-8 w-8 items-center justify-center rounded-[9px] text-secondary transition-colors hover:bg-surface hover:text-primary disabled:cursor-not-allowed disabled:opacity-35"
+          className="flex h-8 w-8 items-center justify-center rounded-[9px] text-secondary transition-colors hover:bg-bg hover:text-primary disabled:cursor-not-allowed disabled:opacity-35"
           aria-label="Période suivante"
         >
           <ArrowRight size={14} />
@@ -88,14 +88,14 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
           onClick={() => { setCustomOpen(!customOpen); setCustomStart(value.startDate); setCustomEnd(value.endDate) }}
           className={cn(
             'flex h-8 items-center gap-1.5 rounded-[9px] px-3 text-[12px] font-medium transition-colors whitespace-nowrap',
-            customOpen || !value.isCurrent ? 'bg-accent/10 text-accent' : 'text-secondary hover:bg-surface hover:text-primary',
+            customOpen || !value.isCurrent ? 'bg-accent/10 text-accent' : 'text-secondary hover:bg-bg hover:text-primary',
           )}
         >
           <CalendarDays size={14} />
           Personnalisée
         </button>
         {customOpen && (
-          <div className="absolute right-0 top-full z-50 mt-1.5 flex min-w-[260px] flex-col gap-2 rounded-[14px] border border-border bg-surface p-3.5 shadow-lg">
+          <div className="absolute right-0 top-full z-50 mt-1.5 flex min-w-[260px] flex-col gap-2 rounded-[14px] border-2 border-border bg-transparent p-3.5 shadow-lg">
             <p className="text-[11px] font-medium uppercase tracking-wide text-secondary">Période personnalisée</p>
             <label className="text-[12px] font-medium text-primary">Date de début</label>
             <input
@@ -148,7 +148,7 @@ export function ExportButtons({
         Exporter
       </Button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 min-w-[175px] overflow-hidden rounded-[12px] border border-border bg-surface p-1 shadow-lg">
+        <div className="absolute right-0 top-full z-50 mt-1 min-w-[175px] overflow-hidden rounded-[12px] border-2 border-border bg-transparent p-1 shadow-lg">
           <button type="button" onClick={() => { onJson(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[9px] px-3 py-2 text-[13px] text-primary transition-colors hover:bg-surface-soft">
             Exporter en JSON
           </button>

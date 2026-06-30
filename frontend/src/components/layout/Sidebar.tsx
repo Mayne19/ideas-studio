@@ -126,7 +126,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
   return (
     <>
       <aside
-        className={`flex h-full ${sidebarWidth} shrink-0 flex-col border-r border-border bg-surface transition-all duration-200 overflow-hidden`}
+        className={`flex h-full ${sidebarWidth} shrink-0 flex-col border-r-2 border-border bg-transparent transition-all duration-200 overflow-hidden`}
       >
         {/* Brand + collapse toggle */}
         <div className="flex h-14 items-center border-b border-border px-3 justify-between shrink-0">
@@ -254,7 +254,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
               </button>
 
               {projectsOpen && (
-                <div className="absolute bottom-full left-0 right-0 mb-1 z-50 rounded-[8px] border border-border bg-surface shadow-md overflow-hidden">
+                <div className="absolute bottom-full left-0 right-0 mb-1 z-50 rounded-[8px] border-2 border-border bg-transparent shadow-md overflow-hidden">
                   {projects.length === 0 ? (
                     <p className="px-3 py-2.5 text-[12px] text-tertiary">Aucun autre projet</p>
                   ) : (
