@@ -3,7 +3,7 @@ import { Area, AreaChart, Bar, BarChart, Line, LineChart, ResponsiveContainer } 
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Lightbulb, Globe,
-  ArrowRight, ArrowUp, AlertCircle, Clock,
+  ArrowRight, AlertCircle, Clock,
   Edit3, Eye, Send, Star, ClipboardList, HelpCircle,
   ShieldCheck,
 } from '@/components/ui/hugeIcons'
@@ -593,9 +593,23 @@ export default function ProjectDashboardPage() {
         <div className="flex h-full min-w-0 items-center justify-center border-r border-border px-6">
           <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[14px] font-semibold text-white">
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-accent">
-              <ArrowUp size={11} />
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 16 16"
+                className="h-3 w-3"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2.4"
+              >
+                <path d="M8 12V4" />
+                <path d="M4.75 7.25 8 4l3.25 3.25" />
+              </svg>
             </span>
-            {isConnected ? 'Connecté' : 'Non connecté'}
+            <span className={isConnected ? 'text-[#00a63e]' : 'text-white'}>
+              {isConnected ? 'Connecté' : 'Non connecté'}
+            </span>
           </span>
         </div>
         {/* Pipeline + runs */}
