@@ -644,12 +644,12 @@ export default function AnalyticsPage() {
           {sourceChannels.length === 0 ? (
             <InlineEmpty>Aucune donnée de provenance pour cette période.</InlineEmpty>
           ) : (
-            <div className="h-[220px]">
+            <div className="h-[140px]">
               <ChartContainer config={trafficOriginConfig} className="h-full w-full">
-                <BarChart
+                  <BarChart
                   data={sourceChannels}
                   layout="vertical"
-                  margin={{ right: 16, left: 0 }}
+                  margin={{ top: 0, right: 16, bottom: 0, left: 0 }}
                 >
                   <CartesianGrid horizontal={false} />
                   <YAxis dataKey="channel" type="category" tickLine={false} axisLine={false} hide />
