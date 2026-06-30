@@ -106,7 +106,7 @@ function SplitMetric({ value, suffix }: { value: React.ReactNode; suffix: string
   return (
     <span className="inline-flex items-baseline gap-0.5">
       <span>{value}</span>
-      <span className="text-[13px] font-medium text-tertiary">{suffix}</span>
+      <span className="text-[14px] font-medium text-tertiary">{suffix}</span>
     </span>
   )
 }
@@ -141,7 +141,7 @@ function ActionBadge({ action }: { action: string }) {
   }
   return (
     <span
-      className={`rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ${styles[action] ?? 'bg-surface-soft text-secondary'}`}
+      className={`rounded-full px-2 py-0.5 text-[12px] font-medium whitespace-nowrap ${styles[action] ?? 'bg-surface-soft text-secondary'}`}
       title={action}
     >
       {ACTION_SHORT[action] ?? action}
@@ -249,13 +249,13 @@ function TrendList({ title, items, type }: { title: string; items: ArticleMetric
               {type === 'up' ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-medium text-primary">{item.article.title}</p>
+              <p className="truncate text-[14px] font-medium text-primary">{item.article.title}</p>
               <p className="text-[12px] text-tertiary">{formatMetric(item.views)} vues</p>
             </div>
             <VariationBadge value={item.variation} />
           </div>
         )) : (
-          <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">Aucune variation fiable sur cette période.</p>
+          <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[14px] text-secondary">Aucune variation fiable sur cette période.</p>
         )}
       </div>
     </Card>
@@ -269,7 +269,7 @@ function KeywordOpportunities() {
   return (
     <Card className="h-full">
       <SectionTitle>Mots-clés suivis</SectionTitle>
-      <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">
+      <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[14px] text-secondary">
         Connectez Google Search Console depuis les <a href={integrationHref} className="text-accent hover:underline">paramètres du projet</a> pour voir les mots-clés.
       </p>
     </Card>
@@ -438,7 +438,7 @@ export default function PerformanceDashboardPage() {
       <div className="project-page-header">
         <div>
           <h1 className="text-[20px] font-semibold tracking-tight text-primary">Performance</h1>
-          <p className="mt-0.5 text-[13px] text-secondary">Identifiez les contenus qui montent, baissent ou méritent une optimisation.</p>
+          <p className="mt-0.5 text-[14px] text-secondary">Identifiez les contenus qui montent, baissent ou méritent une optimisation.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="secondary" icon={<RefreshCw size={13} />} onClick={() => setTick((t) => t + 1)}>
@@ -453,7 +453,7 @@ export default function PerformanceDashboardPage() {
 
         <div className="flex flex-col gap-6">
           {showPeriodEmpty && (
-            <div className="rounded-[14px] border border-border bg-surface px-4 py-3 text-[13px] text-secondary">
+            <div className="rounded-[14px] border border-border bg-surface px-4 py-3 text-[14px] text-secondary">
               {trackingMessage}
             </div>
           )}
@@ -526,13 +526,13 @@ export default function PerformanceDashboardPage() {
                   <div key={item.article.id} className="flex items-start gap-3 rounded-[12px] px-2 py-2 hover:bg-surface-soft">
                     <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-warning/10 text-[#b46a00]"><Lightbulb size={15} /></span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-medium text-primary">{item.article.title}</p>
+                      <p className="truncate text-[14px] font-medium text-primary">{item.article.title}</p>
                       <div className="mt-1"><ActionBadge action={item.recommendation} /></div>
                     </div>
                     <ScoreBadge label="SEO" value={item.article.seo_score} />
                   </div>
                 )) : (
-                  <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">Aucun article prioritaire à optimiser.</p>
+                  <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[14px] text-secondary">Aucun article prioritaire à optimiser.</p>
                 )}
               </div>
             </Card>
@@ -550,7 +550,7 @@ export default function PerformanceDashboardPage() {
                 {categoryRows.length ? categoryRows.slice(0, 6).map((row) => (
                   <div key={row.category.id} className="rounded-[10px] px-2 py-1.5 hover:bg-surface-soft">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="flex min-w-0 items-center gap-2 truncate text-[13px] font-medium text-primary">
+                      <span className="flex min-w-0 items-center gap-2 truncate text-[14px] font-medium text-primary">
                         <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent" style={{ backgroundColor: categoryColor(row.category) }} />
                         <span className="truncate">{row.category.name}</span>
                       </span>
@@ -559,10 +559,10 @@ export default function PerformanceDashboardPage() {
                     <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-soft">
                       <div className="h-full rounded-full" style={{ width: `${percentOf(row.views, totalArticleViews)}%`, backgroundColor: categoryColor(row.category) }} />
                     </div>
-                    <p className="mt-1 text-[11px] text-tertiary">{row.count} article{row.count > 1 ? 's' : ''}</p>
+                    <p className="mt-1 text-[12px] text-tertiary">{row.count} article{row.count > 1 ? 's' : ''}</p>
                   </div>
                 )) : (
-                  <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">Aucune catégorie avec trafic pour le moment.</p>
+                  <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[14px] text-secondary">Aucune catégorie avec trafic pour le moment.</p>
                 )}
               </div>
             </Card>
@@ -575,7 +575,7 @@ export default function PerformanceDashboardPage() {
             <SectionTitle>Tableau performance articles</SectionTitle>
             <div className="overflow-x-auto">
               <div className="min-w-[1040px]">
-                <div className="grid grid-cols-[2fr_0.8fr_0.8fr_0.5fr_0.5fr_0.6fr_0.6fr_0.45fr_0.45fr_0.45fr_0.45fr_0.45fr_0.45fr_0.45fr_0.7fr_0.7fr] gap-2 border-b border-border px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-tertiary">
+                <div className="grid grid-cols-[2fr_0.8fr_0.8fr_0.5fr_0.5fr_0.6fr_0.6fr_0.45fr_0.45fr_0.45fr_0.45fr_0.45fr_0.45fr_0.45fr_0.7fr_0.7fr] gap-2 border-b border-border px-2 pb-2 text-[12px] font-semibold uppercase tracking-wide text-tertiary">
                   <span className="truncate">Article</span><span className="whitespace-nowrap">Catégorie</span><span className="whitespace-nowrap">Statut</span><span className="whitespace-nowrap">Vues</span><span className="whitespace-nowrap">Variation</span><span className="whitespace-nowrap">Temps</span><span className="whitespace-nowrap">Engagement</span><span className="whitespace-nowrap">Global</span><span className="whitespace-nowrap">SEO</span><span className="whitespace-nowrap">Qualité</span><span className="whitespace-nowrap">Lisibilité</span><span className="whitespace-nowrap">Originalité</span><span className="whitespace-nowrap">GEO</span><span className="whitespace-nowrap">EEAT</span><span className="whitespace-nowrap">MAJ</span><span className="whitespace-nowrap">Action</span>
                 </div>
                 {articleMetrics.slice(0, 12).map((item) => (

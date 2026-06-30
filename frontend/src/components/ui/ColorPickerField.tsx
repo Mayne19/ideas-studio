@@ -18,14 +18,14 @@ export default function ColorPickerField({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
-        <label className="text-[13px] font-medium text-primary">{label}</label>
+        <label className="text-[14px] font-medium text-primary">{label}</label>
         <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface-soft px-2 py-1">
           <span
             className="h-4 w-4 rounded-full border border-black/10"
             style={{ backgroundColor: selected }}
             aria-hidden="true"
           />
-          <span className="font-mono text-[11px] uppercase text-secondary">{selected}</span>
+          <span className="font-mono text-[12px] uppercase text-secondary">{selected}</span>
           <input
             type="color"
             value={selected}
@@ -37,7 +37,7 @@ export default function ColorPickerField({
       </div>
 
       <div>
-        <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.04em] text-tertiary">{paletteLabel}</p>
+        <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.04em] text-tertiary">{paletteLabel}</p>
         <div className="grid grid-cols-6 gap-2">
           {RADIX_COLOR_SWATCHES.map((color) => (
             <button
@@ -68,7 +68,7 @@ export default function ColorPickerField({
           value={rawValue}
           onChange={(event) => onChange(event.target.value)}
           placeholder="#2563eb"
-          className={`h-10 rounded-[12px] border bg-white px-3 font-mono text-[13px] uppercase outline-none transition-colors ${
+          className={`h-10 rounded-[12px] border bg-white px-3 font-mono text-[14px] uppercase outline-none transition-colors ${
             isManualValid || rawValue.trim() === ''
               ? 'border-border text-primary focus:border-accent/60 focus:ring-1 focus:ring-accent/25'
               : 'border-danger/40 text-danger focus:border-danger/50 focus:ring-1 focus:ring-danger/20'
@@ -76,7 +76,7 @@ export default function ColorPickerField({
           spellCheck={false}
         />
         {!isManualValid && rawValue.trim() !== '' && (
-          <p className="text-[11px] text-danger">
+          <p className="text-[12px] text-danger">
             Utilisez un code couleur hexadécimal valide, par exemple #2563eb.
           </p>
         )}

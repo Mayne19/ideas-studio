@@ -119,7 +119,7 @@ export default function Topbar() {
     <>
     <header className="flex h-16 shrink-0 items-center justify-between border-b-2 border-border bg-transparent px-6 shadow-none">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-[13px]">
+      <div className="flex items-center gap-1.5 text-[14px]">
         <Link to="/projects" className="text-secondary hover:text-primary transition-colors">
           Projets
         </Link>
@@ -150,7 +150,7 @@ export default function Topbar() {
                 onChange={(e) => handleSearchInput(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-                className="rounded-[8px] border-2 border-border bg-transparent pl-7 pr-3 py-1.5 text-[13px] placeholder:text-tertiary focus:outline-none focus:ring-1 focus:ring-accent/30 focus:border-accent/50 w-44 transition-all focus:w-56"
+                className="rounded-[8px] border-2 border-border bg-transparent pl-7 pr-3 py-1.5 text-[14px] placeholder:text-tertiary focus:outline-none focus:ring-1 focus:ring-accent/30 focus:border-accent/50 w-44 transition-all focus:w-56"
               />
             </div>
             {searchFocused && searchQuery && (
@@ -174,9 +174,9 @@ export default function Topbar() {
                           {resultIcon(result.type)}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="text-[13px] font-medium text-primary truncate">{result.title}</p>
+                          <p className="text-[14px] font-medium text-primary truncate">{result.title}</p>
                           {result.subtitle && (
-                            <p className="text-[11px] text-tertiary truncate">{result.subtitle}</p>
+                            <p className="text-[12px] text-tertiary truncate">{result.subtitle}</p>
                           )}
                         </div>
                       </Link>
@@ -208,10 +208,10 @@ export default function Topbar() {
             {notifOpen && (
               <div className="absolute right-0 top-10 z-50 w-80 rounded-[8px] border-2 border-border bg-transparent p-2 shadow-none">
                 <div className="flex items-center justify-between mb-1 px-1">
-                  <p className="text-[13px] font-semibold text-primary">Notifications</p>
+                  <p className="text-[14px] font-semibold text-primary">Notifications</p>
                   <button
                     onClick={() => { setNotifOpen(false); navigate(`/projects/${projectId}/notifications`) }}
-                    className="text-[11px] text-secondary hover:text-primary"
+                    className="text-[12px] text-secondary hover:text-primary"
                   >
                     Voir tout →
                   </button>
@@ -224,7 +224,7 @@ export default function Topbar() {
                       {notifications.length > 0 && (
                         <button
                           onClick={() => { setNotifOpen(false); navigate(`/projects/${projectId}/notifications`) }}
-                          className="text-[11px] text-secondary hover:text-primary"
+                          className="text-[12px] text-secondary hover:text-primary"
                         >
                           Voir l'historique →
                         </button>
@@ -247,7 +247,7 @@ export default function Topbar() {
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="text-[12px] font-medium text-primary truncate">{n.title}</p>
-                          <p className="text-[11px] text-tertiary truncate">{n.message}</p>
+                          <p className="text-[12px] text-tertiary truncate">{n.message}</p>
                         </div>
                       </button>
                     ))
@@ -271,7 +271,7 @@ export default function Topbar() {
           {menuOpen && (
             <div className="absolute right-0 top-10 z-50 min-w-[200px] rounded-[8px] border-2 border-border bg-transparent p-1.5 shadow-none">
               <div className="px-3 py-2 border-b border-border mb-1">
-                <p className="text-[13px] font-medium text-primary truncate">{user?.name}</p>
+                <p className="text-[14px] font-medium text-primary truncate">{user?.name}</p>
                 <p className="text-[12px] text-tertiary truncate">{user?.email}</p>
               </div>
               <Link
@@ -279,7 +279,7 @@ export default function Topbar() {
                 onClick={() => setMenuOpen(false)}
                 className={cn(
                   'flex w-full items-center gap-2.5 rounded-[6px] px-3 py-2',
-                  'text-[13px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors',
+                  'text-[14px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors',
                 )}
               >
                 <User size={14} />
@@ -289,7 +289,7 @@ export default function Topbar() {
                 onClick={() => setLogoutConfirmOpen(true)}
                 className={cn(
                   'flex w-full items-center gap-2.5 rounded-[6px] px-3 py-2',
-                  'text-[13px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors',
+                  'text-[14px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors',
                 )}
               >
                 <LogOut size={14} />

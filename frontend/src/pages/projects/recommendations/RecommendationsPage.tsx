@@ -49,7 +49,7 @@ function priorityDot(priority: number) {
   const color = priority >= 3 ? 'bg-danger' : priority === 2 ? 'bg-warning' : 'bg-[#c8c8cc]'
   const label = priority >= 3 ? 'Haute' : priority === 2 ? 'Normale' : 'Basse'
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] text-tertiary">
+    <span className="inline-flex items-center gap-1 text-[12px] text-tertiary">
       <span className={`h-1.5 w-1.5 rounded-full ${color}`} />
       {label}
     </span>
@@ -112,18 +112,18 @@ function RecommendationCard({
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="flex flex-col gap-1 flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] font-medium text-secondary bg-surface-soft rounded-full px-2 py-0.5">
+            <span className="text-[12px] font-medium text-secondary bg-surface-soft rounded-full px-2 py-0.5">
               {TYPE_LABELS[rec.type] ?? rec.type}
             </span>
             {priorityDot(rec.priority)}
             {articleTitle && (
-              <span className="flex items-center gap-1 text-[11px] text-tertiary truncate max-w-[160px]">
+              <span className="flex items-center gap-1 text-[12px] text-tertiary truncate max-w-[160px]">
                 <FileText size={10} />
                 {articleTitle}
               </span>
             )}
           </div>
-          <p className="text-[13px] font-medium text-primary leading-snug mt-1">{rec.reason}</p>
+          <p className="text-[14px] font-medium text-primary leading-snug mt-1">{rec.reason}</p>
         </div>
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] ${STATUS_CLASSES[status] ?? 'bg-surface-soft text-tertiary'}`}>
           {STATUS_LABELS[status] ?? rec.status}
@@ -133,14 +133,14 @@ function RecommendationCard({
       <p className="text-[12px] text-secondary leading-snug mb-3">{rec.suggestion}</p>
 
       {error && (
-        <p className="mb-2 rounded-[8px] bg-danger/5 px-2.5 py-1.5 text-[11px] text-danger">{error}</p>
+        <p className="mb-2 rounded-[8px] bg-danger/5 px-2.5 py-1.5 text-[12px] text-danger">{error}</p>
       )}
 
       <div className="flex items-center gap-2 flex-wrap">
         {rec.article_id && (
           <button
             onClick={() => onNavigate(rec.article_id!)}
-            className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[11px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors"
+            className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[12px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors"
           >
             <Pencil size={11} />
             Voir l'article
@@ -150,7 +150,7 @@ function RecommendationCard({
           <button
             onClick={() => doAction('apply')}
             disabled={busy}
-            className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[11px] text-secondary hover:bg-accent/8 hover:text-accent transition-colors disabled:opacity-40"
+            className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[12px] text-secondary hover:bg-accent/8 hover:text-accent transition-colors disabled:opacity-40"
           >
             {loadingAction === 'apply' ? <Loader2 size={11} className="animate-spin" /> : <Zap size={11} />}
             Appliquer
@@ -161,7 +161,7 @@ function RecommendationCard({
             <button
               onClick={() => doAction('accept')}
               disabled={busy}
-              className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[11px] text-secondary hover:bg-success/8 hover:text-[#1a7a3a] transition-colors disabled:opacity-40"
+              className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[12px] text-secondary hover:bg-success/8 hover:text-[#1a7a3a] transition-colors disabled:opacity-40"
             >
               {loadingAction === 'accept' ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
               Accepter
@@ -169,7 +169,7 @@ function RecommendationCard({
             <button
               onClick={() => doAction('reject')}
               disabled={busy}
-              className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[11px] text-tertiary hover:bg-danger/5 hover:text-danger transition-colors disabled:opacity-40"
+              className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[12px] text-tertiary hover:bg-danger/5 hover:text-danger transition-colors disabled:opacity-40"
             >
               {loadingAction === 'reject' ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
               Rejeter
@@ -257,7 +257,7 @@ export default function RecommendationsPage() {
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-[20px] font-semibold text-primary tracking-tight">Recommandations</h1>
-          <p className="mt-0.5 text-[13px] text-secondary">Optimisez vos contenus publiés.</p>
+          <p className="mt-0.5 text-[14px] text-secondary">Optimisez vos contenus publiés.</p>
         </div>
         <Button
           size="sm"
@@ -272,12 +272,12 @@ export default function RecommendationsPage() {
 
       {/* Feedback banners */}
       {reviewError && (
-        <div className="mb-4 rounded-[10px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[13px] text-danger">
+        <div className="mb-4 rounded-[10px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[14px] text-danger">
           {reviewError}
         </div>
       )}
       {reviewSuccess && (
-        <div className="mb-4 rounded-[10px] border border-success/20 bg-success/5 px-4 py-2.5 text-[13px] text-[#1a7a3a]">
+        <div className="mb-4 rounded-[10px] border border-success/20 bg-success/5 px-4 py-2.5 text-[14px] text-[#1a7a3a]">
           {reviewSuccess}
         </div>
       )}
@@ -318,14 +318,14 @@ export default function RecommendationsPage() {
           </div>
           <div>
             <p className="text-[15px] font-medium text-primary">Aucune recommandation pour l'instant</p>
-            <p className="mt-1 max-w-sm text-[13px] text-secondary">
+            <p className="mt-1 max-w-sm text-[14px] text-secondary">
               Cliquez sur "Analyser les articles" pour que l'IA détecte les améliorations à apporter à vos contenus publiés.
             </p>
           </div>
         </div>
       )}
       {loadStatus === 'success' && recs.length > 0 && filtered.length === 0 && (
-        <div className="py-12 text-center text-[13px] text-tertiary">
+        <div className="py-12 text-center text-[14px] text-tertiary">
           Aucune recommandation avec ce filtre.
         </div>
       )}
@@ -343,7 +343,7 @@ export default function RecommendationsPage() {
           <div className="flex flex-col gap-6">
             {groups.map((group) => (
               <div key={group.key}>
-                <p className="mb-2.5 text-[11px] font-semibold text-secondary uppercase tracking-wide">
+                <p className="mb-2.5 text-[12px] font-semibold text-secondary uppercase tracking-wide">
                   {group.label} <span className="ml-1 normal-case font-normal text-tertiary">({group.recs.length})</span>
                 </p>
                 <div className="flex flex-col gap-3">

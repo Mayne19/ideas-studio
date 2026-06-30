@@ -131,7 +131,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
         {/* Brand + collapse toggle */}
         <div className="flex h-14 items-center border-b border-border px-3 justify-between shrink-0">
           {!collapsed && (
-            <Link to="/projects" className="flex min-w-0 items-center gap-2 text-[14px] font-semibold text-primary hover:opacity-80 transition-opacity">
+            <Link to="/projects" className="flex min-w-0 items-center gap-2 text-[15px] font-semibold text-primary hover:opacity-80 transition-opacity">
               <img src="/icon.svg" alt="" className="h-6 w-6 shrink-0 rounded-[6px]" />
               <span className="truncate">Ideas Studio</span>
             </Link>
@@ -207,7 +207,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                           end={item.end}
                           className={({ isActive }) =>
                             cn(
-                              'rounded-[6px] px-2 py-1.5 text-[11px] font-medium transition-colors',
+                              'rounded-[6px] px-2 py-1.5 text-[12px] font-medium transition-colors',
                               isActive ? 'text-primary' : 'text-secondary hover:text-primary',
                             )
                           }
@@ -279,7 +279,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                     <Link
                       to="/projects"
                       onClick={() => setProjectsOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 text-[11px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors"
+                      className="flex items-center gap-2 px-3 py-2 text-[12px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors"
                     >
                       <FolderOpen size={12} />
                       Tous les projets

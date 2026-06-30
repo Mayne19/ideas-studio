@@ -123,9 +123,9 @@ function MemberRow({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className="text-[13px] font-medium text-primary truncate">
+          <p className="text-[14px] font-medium text-primary truncate">
             {displayName}
-            {isSelf && <span className="ml-1 text-tertiary text-[11px]">(vous)</span>}
+            {isSelf && <span className="ml-1 text-tertiary text-[12px]">(vous)</span>}
           </p>
         </div>
         <p className="text-[12px] text-tertiary truncate">
@@ -343,7 +343,7 @@ export default function ProjectMembersPage() {
       </FormCard>
 
       {revokeSuccess && (
-        <div className="rounded-[10px] bg-success/10 px-3.5 py-2.5 text-[13px] text-[#1a7a3a]">
+        <div className="rounded-[10px] bg-success/10 px-3.5 py-2.5 text-[14px] text-[#1a7a3a]">
           {revokeSuccess}
         </div>
       )}
@@ -364,7 +364,7 @@ export default function ProjectMembersPage() {
                   className="flex items-center gap-3 rounded-[14px] bg-surface-soft px-4 py-3"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-primary truncate">
+                    <p className="text-[14px] font-medium text-primary truncate">
                       {invitation.email}
                     </p>
                     <p className="text-[12px] text-tertiary">
@@ -378,7 +378,7 @@ export default function ProjectMembersPage() {
                   </div>
                   <RoleBadge role={invitation.role} />
                   <span
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[12px] font-medium ${
                       accepted
                         ? 'bg-success/10 text-[#1a7a3a]'
                         : expired
@@ -440,7 +440,7 @@ export default function ProjectMembersPage() {
                 </div>
                 <ul className="mt-1.5 flex flex-col gap-0.5">
                   {item.permissions.map((permission) => (
-                    <li key={permission} className="text-[11px] leading-snug text-secondary">
+                    <li key={permission} className="text-[12px] leading-snug text-secondary">
                       {permission}
                     </li>
                   ))}
@@ -468,7 +468,7 @@ export default function ProjectMembersPage() {
               <Activity size={16} />
             </span>
             <div>
-              <p className="text-[13px] font-medium text-primary">Aucune activité récente</p>
+              <p className="text-[14px] font-medium text-primary">Aucune activité récente</p>
               <p className="mt-0.5 text-[12px] leading-relaxed text-secondary">
                 Les actions de l'équipe apparaîtront ici au fur et à mesure.
               </p>
@@ -481,7 +481,7 @@ export default function ProjectMembersPage() {
               <Activity size={16} />
             </span>
             <div>
-              <p className="text-[13px] font-medium text-primary">Aucune activité récente</p>
+              <p className="text-[14px] font-medium text-primary">Aucune activité récente</p>
               <p className="mt-0.5 text-[12px] leading-relaxed text-secondary">
                 Les actions de l'équipe apparaîtront ici au fur et à mesure.
               </p>
@@ -517,7 +517,7 @@ export default function ProjectMembersPage() {
       >
         <form onSubmit={handleAdd} className="flex flex-col gap-4">
           {addError && (
-            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">
               {addError}
             </div>
           )}
@@ -611,11 +611,11 @@ export default function ProjectMembersPage() {
       >
         <form onSubmit={handleEditRole} className="flex flex-col gap-4">
           {editError && (
-            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">
               {editError}
             </div>
           )}
-          <p className="text-[13px] text-secondary">
+          <p className="text-[14px] text-secondary">
             Modifier le rôle de{' '}
             <strong className="text-primary">
               {editMember?.user_name ?? editMember?.user_email}

@@ -43,12 +43,12 @@ export default function ResetPasswordPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="mb-1">
           <h2 className="text-[18px] font-semibold text-primary">Nouveau mot de passe</h2>
-          <p className="mt-0.5 text-[13px] text-secondary">
+          <p className="mt-0.5 text-[14px] text-secondary">
             Choisissez un mot de passe d’au moins 8 caractères.
           </p>
         </div>
-        {error && <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">{error}</div>}
-        {done && <div className="rounded-[10px] bg-success/8 px-3.5 py-2.5 text-[13px] text-success">Mot de passe mis à jour. Redirection...</div>}
+        {error && <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">{error}</div>}
+        {done && <div className="rounded-[10px] bg-success/8 px-3.5 py-2.5 text-[14px] text-success">Mot de passe mis à jour. Redirection...</div>}
         <Input
           label="Nouveau mot de passe"
           type="password"
@@ -70,7 +70,7 @@ export default function ResetPasswordPage() {
         <Button type="submit" loading={loading} className="w-full justify-center rounded-full">
           Modifier le mot de passe
         </Button>
-        <p className="text-center text-[13px] text-secondary">
+        <p className="text-center text-[14px] text-secondary">
           <Link to="/login" className="font-medium text-accent hover:underline">Retour à la connexion</Link>
         </p>
       </form>

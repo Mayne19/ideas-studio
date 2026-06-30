@@ -152,7 +152,7 @@ function ScoreSynthesisCard({
         <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-[18px] font-bold ${globalTone}`}>
           {globalScore === null ? '—' : Math.round(globalScore)}
         </div>
-        <div className="text-[11px] leading-snug text-secondary">
+        <div className="text-[12px] leading-snug text-secondary">
           Score global calculé à partir de l'ensemble des critères de qualité, SEO, lisibilité et fiabilité.
         </div>
       </div>
@@ -170,7 +170,7 @@ function ScoreSynthesisCard({
               }`}
             >
               <span className="block text-[10px] font-medium uppercase tracking-wide text-tertiary">{tile.label}</span>
-              <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${scoreTone(score)}`}>
+              <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[12px] font-semibold ${scoreTone(score)}`}>
                 {score === null ? '—' : Math.round(score)}
               </span>
             </button>
@@ -246,7 +246,7 @@ function V2SignalsBreakdown({ report }: { report: V2Report }) {
   return (
     <div className="flex flex-col gap-2">
       {report.explanation && (
-        <p className="text-[11px] leading-snug text-secondary italic">{report.explanation}</p>
+        <p className="text-[12px] leading-snug text-secondary italic">{report.explanation}</p>
       )}
 
       {report.flags && report.flags.length > 0 && (
@@ -254,7 +254,7 @@ function V2SignalsBreakdown({ report }: { report: V2Report }) {
           {report.flags.map((flag) => (
             <div key={flag} className="flex items-start gap-1.5 rounded-[8px] bg-warning/5 px-2.5 py-1.5">
               <AlertTriangle size={10} className="mt-0.5 shrink-0 text-warning" />
-              <span className="text-[11px] text-secondary">{FLAG_LABELS[flag] ?? flag}</span>
+              <span className="text-[12px] text-secondary">{FLAG_LABELS[flag] ?? flag}</span>
             </div>
           ))}
         </div>
@@ -354,10 +354,10 @@ function ScoreDetailPanel({
   return (
     <div className="rounded-[14px] border border-border bg-surface p-4">
       <div className="flex items-center gap-3 mb-4">
-        <span className={`inline-flex rounded-full px-3 py-1 text-[13px] font-semibold ${scoreTone(score)}`}>
+        <span className={`inline-flex rounded-full px-3 py-1 text-[14px] font-semibold ${scoreTone(score)}`}>
           {selected} : {score === null ? '—' : Math.round(score)}
         </span>
-        <span className="text-[11px] text-tertiary leading-snug">
+        <span className="text-[12px] text-tertiary leading-snug">
           {selected === 'Synthèse' ? 'Vue d\'ensemble de l\'article' : 'Détail du score sélectionné'}
         </span>
       </div>
@@ -365,7 +365,7 @@ function ScoreDetailPanel({
       <div className="flex flex-col gap-3">
         <div className="rounded-[10px] bg-surface-soft px-3 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-secondary mb-1">Comment ce score est calculé</p>
-          <p className="text-[11px] leading-snug text-secondary">{CALCULATION_TEXT[selected]}</p>
+          <p className="text-[12px] leading-snug text-secondary">{CALCULATION_TEXT[selected]}</p>
         </div>
 
         {whatWorks.length > 0 && (
@@ -373,7 +373,7 @@ function ScoreDetailPanel({
             <p className="text-[10px] font-semibold uppercase tracking-wide text-success mb-1.5">Ce qui fonctionne</p>
             <div className="flex flex-col gap-1">
               {whatWorks.map((item, i) => (
-                <div key={i} className="flex items-start gap-1.5 text-[11px]">
+                <div key={i} className="flex items-start gap-1.5 text-[12px]">
                   <CheckCircle size={11} className="mt-0.5 shrink-0 text-success" />
                   <span className="text-secondary">{item}</span>
                 </div>
@@ -397,7 +397,7 @@ function ScoreDetailPanel({
                     : <AlertTriangle size={11} className="mt-0.5 shrink-0 text-warning" />
                   }
                   <div>
-                    <p className="text-[11px] leading-snug text-primary">{issue.message}</p>
+                    <p className="text-[12px] leading-snug text-primary">{issue.message}</p>
                     {issue.suggestion && <p className="mt-0.5 text-[10px] leading-snug text-tertiary">{issue.suggestion}</p>}
                   </div>
                 </div>
@@ -411,7 +411,7 @@ function ScoreDetailPanel({
             <p className="text-[10px] font-semibold uppercase tracking-wide text-accent mb-1.5">Actions recommandées</p>
             <div className="flex flex-col gap-1.5">
               {info.map((issue, i) => (
-                <div key={i} className="flex items-start gap-1.5 text-[11px]">
+                <div key={i} className="flex items-start gap-1.5 text-[12px]">
                   <Info size={11} className="mt-0.5 shrink-0 text-accent" />
                   <div>
                     <p className="leading-snug text-secondary">{issue.message}</p>
@@ -420,7 +420,7 @@ function ScoreDetailPanel({
                 </div>
               ))}
               {analysis?.suggestions?.map((s, i) => (
-                <div key={`s-${i}`} className="flex items-start gap-1.5 text-[11px]">
+                <div key={`s-${i}`} className="flex items-start gap-1.5 text-[12px]">
                   <RefreshCw size={11} className="mt-0.5 shrink-0 text-accent" />
                   <span className="text-secondary">{s}</span>
                 </div>
@@ -430,7 +430,7 @@ function ScoreDetailPanel({
         )}
 
         {!hasProblems && !hasActions && whatWorks.length === 0 && (
-          <div className="flex items-center gap-2 rounded-[10px] bg-surface-soft px-3 py-2.5 text-[11px] text-tertiary">
+          <div className="flex items-center gap-2 rounded-[10px] bg-surface-soft px-3 py-2.5 text-[12px] text-tertiary">
             <HelpCircle size={12} className="shrink-0" />
             <span>Lancez une analyse pour obtenir les détails de ce score.</span>
           </div>
@@ -480,7 +480,7 @@ function ExpertReviewSection({
       {isOpen && (
         <div className="border-t border-border px-3.5 py-3 flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
-            <p className="text-[11px] leading-snug text-tertiary">
+            <p className="text-[12px] leading-snug text-tertiary">
               Analyse SEO avancée avec audit éditorial, EEAT, lisibilité et recommandations personnalisées.
             </p>
             <Button size="sm" variant="secondary" icon={<RefreshCw size={12} />} loading={expertLoading} className="shrink-0" onClick={onRun}>
@@ -489,14 +489,14 @@ function ExpertReviewSection({
           </div>
 
           {expertError && (
-            <div className="flex items-start gap-2 rounded-[8px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[11px] text-danger">
+            <div className="flex items-start gap-2 rounded-[8px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[12px] text-danger">
               <AlertCircle size={12} className="mt-0.5 shrink-0" />
               <span className="leading-snug">{expertError}</span>
             </div>
           )}
 
           {expertSuccess && !expertError && (
-            <div className="flex items-start gap-2 rounded-[8px] border border-success/20 bg-success/8 px-2.5 py-2 text-[11px] text-success">
+            <div className="flex items-start gap-2 rounded-[8px] border border-success/20 bg-success/8 px-2.5 py-2 text-[12px] text-success">
               <CheckCircle size={12} className="mt-0.5 shrink-0" />
               <span className="leading-snug">{expertSuccess}</span>
             </div>
@@ -504,7 +504,7 @@ function ExpertReviewSection({
 
           {expertReview ? (
             <div className="flex flex-col gap-3">
-              <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <div className="grid grid-cols-2 gap-2 text-[12px]">
                 {([
                   ['Global', expertReview.score_global],
                   ['SEO Expert', expertReview.seo_score],
@@ -513,7 +513,7 @@ function ExpertReviewSection({
                 ] as const).map(([label, val]) => (
                   <div key={label} className="rounded-[10px] border border-border bg-surface-soft p-2.5">
                     <p className="text-[10px] text-tertiary">{label}</p>
-                    <p className={`mt-0.5 text-[14px] font-bold ${scoreTone(val)}`}>{Math.round(val)}</p>
+                    <p className={`mt-0.5 text-[15px] font-bold ${scoreTone(val)}`}>{Math.round(val)}</p>
                   </div>
                 ))}
               </div>
@@ -525,7 +525,7 @@ function ExpertReviewSection({
                     const Icon = issue.severity === 'critical' ? AlertCircle : issue.severity === 'warning' ? AlertTriangle : Info
                     const iconColor = issue.severity === 'critical' ? 'text-danger' : issue.severity === 'warning' ? 'text-warning' : 'text-accent'
                     return (
-                      <div key={i} className="flex items-start gap-1.5 text-[11px]">
+                      <div key={i} className="flex items-start gap-1.5 text-[12px]">
                         <Icon size={11} className={`mt-0.5 shrink-0 ${iconColor}`} />
                         <div>
                           <p className="leading-snug text-primary">{issue.message}</p>
@@ -541,25 +541,25 @@ function ExpertReviewSection({
                 <div className="flex flex-col gap-1">
                   <p className="text-[10px] font-medium uppercase tracking-wide text-secondary">Recommandations</p>
                   {expertReview.recommendations.map((rec, i) => (
-                    <p key={i} className="text-[11px] leading-snug text-secondary">- {rec}</p>
+                    <p key={i} className="text-[12px] leading-snug text-secondary">- {rec}</p>
                   ))}
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <div className="grid grid-cols-2 gap-2 text-[12px]">
                 <div className="rounded-[10px] border border-border bg-surface-soft p-2.5">
                   <p className="text-[10px] text-tertiary">Contrôles validés</p>
-                  <p className="mt-0.5 text-[14px] font-bold text-success">{expertReview.passed_checks.length}</p>
+                  <p className="mt-0.5 text-[15px] font-bold text-success">{expertReview.passed_checks.length}</p>
                 </div>
                 <div className="rounded-[10px] border border-border bg-surface-soft p-2.5">
                   <p className="text-[10px] text-tertiary">Contrôles en échec</p>
-                  <p className="mt-0.5 text-[14px] font-bold text-danger">{expertReview.failed_checks.length}</p>
+                  <p className="mt-0.5 text-[15px] font-bold text-danger">{expertReview.failed_checks.length}</p>
                 </div>
               </div>
             </div>
           ) : (
             !expertLoading && (
-              <p className="text-[11px] text-tertiary">
+              <p className="text-[12px] text-tertiary">
                 Aucun rapport SEO Expert enregistré pour cet article.
               </p>
             )
@@ -699,7 +699,7 @@ export default function AnalysePanel({
 
       {/* Error banner */}
       {error && (
-        <div className="flex items-start gap-2 rounded-[8px] border border-danger/20 bg-danger/5 px-3 py-2.5 text-[11px] text-danger">
+        <div className="flex items-start gap-2 rounded-[8px] border border-danger/20 bg-danger/5 px-3 py-2.5 text-[12px] text-danger">
           <AlertCircle size={12} className="mt-0.5 shrink-0" />
           <span className="leading-snug">{error}</span>
         </div>
@@ -741,7 +741,7 @@ export default function AnalysePanel({
         </Button>
       </div>
 
-      <p className="text-center text-[11px] text-tertiary pt-1">
+      <p className="text-center text-[12px] text-tertiary pt-1">
         {loading
           ? 'Analyse en cours…'
           : 'Les scores se mettent à jour automatiquement à chaque sauvegarde.'}

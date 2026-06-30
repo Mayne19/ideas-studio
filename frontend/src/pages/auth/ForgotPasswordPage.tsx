@@ -34,13 +34,13 @@ export default function ForgotPasswordPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="mb-1">
           <h2 className="text-[18px] font-semibold text-primary">Mot de passe oublié</h2>
-          <p className="mt-0.5 text-[13px] text-secondary">
+          <p className="mt-0.5 text-[14px] text-secondary">
             Entrez votre email. Si un compte existe, un lien de réinitialisation sera préparé.
           </p>
         </div>
-        {error && <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">{error}</div>}
+        {error && <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">{error}</div>}
         {message && (
-          <div className="rounded-[12px] bg-success/8 px-3.5 py-3 text-[13px] text-secondary">
+          <div className="rounded-[12px] bg-success/8 px-3.5 py-3 text-[14px] text-secondary">
             <p>{message}</p>
             {devLink && (
               <a href={devLink} className="mt-2 block break-all font-medium text-accent hover:underline">
@@ -62,7 +62,7 @@ export default function ForgotPasswordPage() {
         <Button type="submit" loading={loading} className="w-full justify-center rounded-full">
           Envoyer le lien
         </Button>
-        <p className="text-center text-[13px] text-secondary">
+        <p className="text-center text-[14px] text-secondary">
           <Link to="/login" className="font-medium text-accent hover:underline">Retour à la connexion</Link>
         </p>
       </form>

@@ -58,8 +58,8 @@ function InfoRow({
   return (
     <div className="flex items-start justify-between gap-3 rounded-[12px] bg-surface-soft px-4 py-3">
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium uppercase tracking-wider text-tertiary">{label}</p>
-        <p className={`mt-0.5 truncate text-[13px] text-primary ${mono ? 'font-mono' : ''}`}>{value}</p>
+        <p className="text-[12px] font-medium uppercase tracking-wider text-tertiary">{label}</p>
+        <p className={`mt-0.5 truncate text-[14px] text-primary ${mono ? 'font-mono' : ''}`}>{value}</p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {action}
@@ -196,7 +196,7 @@ export default function ProjectIntegrationPage() {
                 {isConnected ? <Wifi size={18} /> : <WifiOff size={18} />}
               </span>
               <div className="min-w-0">
-                <p className={`text-[14px] font-semibold ${isConnected ? 'text-[#1a7a3a]' : 'text-primary'}`}>
+                <p className={`text-[15px] font-semibold ${isConnected ? 'text-[#1a7a3a]' : 'text-primary'}`}>
                   {isConnected ? 'Site connecté' : 'En attente de connexion'}
                 </p>
                 <p className="text-[12px] text-secondary">
@@ -274,7 +274,7 @@ export default function ProjectIntegrationPage() {
       {isConnected && (
         <button
           onClick={() => setShowInstructions((visible) => !visible)}
-          className="inline-flex w-fit items-center gap-2 rounded-[12px] bg-accent px-4 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-accent/90"
+          className="inline-flex w-fit items-center gap-2 rounded-[12px] bg-accent px-4 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-accent/90"
         >
           <Code2 size={14} />
           {showInstructions ? 'Masquer les instructions d’installation' : 'Voir les instructions d’installation'}
@@ -296,10 +296,10 @@ export default function ProjectIntegrationPage() {
                 { n: 4, text: 'Revenez ici — le statut passera à "Connecté" dès la première visite enregistrée.' },
               ].map(({ n, text }) => (
                 <li key={n} className="flex items-start gap-3">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/10 text-[11px] font-semibold text-accent mt-0.5">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/10 text-[12px] font-semibold text-accent mt-0.5">
                     {n}
                   </span>
-                  <span className="text-[13px] text-secondary leading-snug">{text}</span>
+                  <span className="text-[14px] text-secondary leading-snug">{text}</span>
                 </li>
               ))}
             </ol>
@@ -341,7 +341,7 @@ export default function ProjectIntegrationPage() {
                 className="flex items-start justify-between gap-3 rounded-[12px] bg-surface-soft px-4 py-3"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-tertiary">
+                  <div className="flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wider text-tertiary">
                     <Globe size={11} />
                     {key}
                   </div>
@@ -376,7 +376,7 @@ export default function ProjectIntegrationPage() {
                   })
                 }}
                 placeholder="https://www.votresite.com"
-                className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
               />
             </label>
             <label className="flex flex-col gap-1.5">
@@ -391,10 +391,10 @@ export default function ProjectIntegrationPage() {
                   }))
                 }}
                 placeholder="https://www.votresite.com/api/ideas-studio/revalidate"
-                className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
               />
               {!revalidateForm.revalidate_url && (
-                <span className="text-[11px] text-tertiary">
+                <span className="text-[12px] text-tertiary">
                   Renseignez l'URL du site public pour générer l'endpoint. Un email ne peut pas servir d'endpoint serveur.
                 </span>
               )}
@@ -409,7 +409,7 @@ export default function ProjectIntegrationPage() {
               onChange={(event) => setRevalidateForm((form) => ({ ...form, revalidate_secret: event.target.value }))}
               placeholder={info?.revalidate_secret_configured ? 'Laisser vide pour conserver le secret actuel' : 'Secret partagé avec le site public'}
               type="password"
-              className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+              className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
             />
           </label>
           <div className="grid gap-2 lg:grid-cols-3">

@@ -69,7 +69,7 @@ export default function NotificationsPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-[20px] font-semibold text-primary tracking-tight">Notifications</h1>
-          <p className="mt-0.5 text-[13px] text-secondary">
+          <p className="mt-0.5 text-[14px] text-secondary">
             Restez informé des événements importants de votre projet.
           </p>
         </div>
@@ -87,7 +87,7 @@ export default function NotificationsPage() {
       </div>
 
       {status === 'error' && (
-        <div className="mb-4 flex items-start justify-between gap-3 rounded-[14px] bg-danger/5 px-4 py-3 text-[13px] text-secondary">
+        <div className="mb-4 flex items-start justify-between gap-3 rounded-[14px] bg-danger/5 px-4 py-3 text-[14px] text-secondary">
           <div>
             <p className="font-medium text-primary">Notifications momentanément indisponibles</p>
             <p className="mt-0.5 text-[12px] text-secondary">La page reste accessible. Réessayez dans quelques instants.</p>
@@ -103,7 +103,7 @@ export default function NotificationsPage() {
           </div>
           <div>
             <p className="text-[15px] font-medium text-primary">Aucune notification</p>
-            <p className="mt-1 max-w-xs text-[13px] text-secondary">
+            <p className="mt-1 max-w-xs text-[14px] text-secondary">
               Vous serez notifié lors des événements importants de votre projet.
             </p>
           </div>
@@ -128,13 +128,13 @@ export default function NotificationsPage() {
                   <Bell size={14} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-[13px] ${isUnread ? 'font-semibold' : 'font-medium'} text-primary`}>
+                  <p className={`text-[14px] ${isUnread ? 'font-semibold' : 'font-medium'} text-primary`}>
                     {n.title}
                   </p>
                   <p className="mt-0.5 text-[12px] text-tertiary leading-snug">{n.message}</p>
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
-                  <span className="text-[11px] text-tertiary whitespace-nowrap">{timeAgo(n.created_at)}</span>
+                  <span className="text-[12px] text-tertiary whitespace-nowrap">{timeAgo(n.created_at)}</span>
                   {isUnread && (
                     <button
                       type="button"

@@ -126,7 +126,7 @@ function Field({
 }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[11px] font-medium text-secondary">{label}</label>
+      <label className="text-[12px] font-medium text-secondary">{label}</label>
       {children}
       {hint && <p className="text-[10px] text-tertiary">{hint}</p>}
     </div>
@@ -1141,8 +1141,8 @@ export default function ArticleEditorPage() {
             Sauvegarde en cours — quitter maintenant pourrait entraîner une perte de données.
           </span>
           <div className="flex items-center gap-2">
-            <button onClick={() => blocker.reset?.()} className="rounded-[6px] px-2.5 py-1 text-[11px] font-medium text-warning hover:bg-warning/10">Rester</button>
-            <button onClick={() => blocker.proceed?.()} className="rounded-[6px] px-2.5 py-1 text-[11px] font-medium text-danger hover:bg-danger/8">Quitter</button>
+            <button onClick={() => blocker.reset?.()} className="rounded-[6px] px-2.5 py-1 text-[12px] font-medium text-warning hover:bg-warning/10">Rester</button>
+            <button onClick={() => blocker.proceed?.()} className="rounded-[6px] px-2.5 py-1 text-[12px] font-medium text-danger hover:bg-danger/8">Quitter</button>
           </div>
         </div>
       )}
@@ -1161,7 +1161,7 @@ export default function ArticleEditorPage() {
               <p className="text-[15px] font-medium text-primary">
                 {generationTimedOut ? 'La génération prend plus de temps que prévu' : 'Génération en cours…'}
               </p>
-              <p className="mt-1 text-[13px] text-secondary">
+              <p className="mt-1 text-[14px] text-secondary">
                 {generationTimedOut
                   ? 'Cliquez sur Rafraîchir pour vérifier si le brouillon est disponible.'
                   : "L'IA rédige votre brouillon. La page se mettra à jour automatiquement."
@@ -1170,7 +1170,7 @@ export default function ArticleEditorPage() {
             </div>
             <button
               onClick={handleRefreshGeneration}
-              className={`flex items-center gap-1.5 rounded-[10px] px-4 py-2 text-[13px] font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded-[10px] px-4 py-2 text-[14px] font-medium transition-colors ${
                 generationTimedOut ? 'bg-accent text-white hover:bg-accent/90' : 'bg-surface-soft text-secondary hover:bg-surface-muted'
               }`}
             >
@@ -1216,7 +1216,7 @@ export default function ArticleEditorPage() {
                     <button
                       key={mode}
                       onClick={() => setViewMode(mode)}
-                      className={`flex h-7 items-center gap-1.5 rounded-[7px] px-2.5 text-[11px] font-medium transition-all ${
+                      className={`flex h-7 items-center gap-1.5 rounded-[7px] px-2.5 text-[12px] font-medium transition-all ${
                         viewMode === mode
                           ? 'bg-surface text-primary shadow-none'
                           : 'text-secondary hover:text-primary'
@@ -1245,7 +1245,7 @@ export default function ArticleEditorPage() {
                     <button
                       key={mode}
                       onClick={() => setViewMode(mode)}
-                      className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                      className={`flex items-center gap-1 px-2.5 py-1 text-[12px] font-medium transition-colors ${
                         viewMode === mode
                           ? 'bg-accent text-white'
                           : 'text-secondary hover:text-primary hover:bg-surface-soft'
@@ -1257,14 +1257,14 @@ export default function ArticleEditorPage() {
                   ))}
                 </div>
 
-                <span className="flex items-center gap-1 text-[11px] text-tertiary px-1">
+                <span className="flex items-center gap-1 text-[12px] text-tertiary px-1">
                   <Type size={10} />
                   {wordCount.toLocaleString('fr-FR')}
                 </span>
 
                 <button
                   onClick={() => navigate(`/projects/${projectId}/articles/${articleId}/preview`)}
-                  className="flex items-center gap-1 text-[11px] text-secondary hover:text-primary transition-colors rounded-[6px] px-2 py-1 hover:bg-surface-soft"
+                  className="flex items-center gap-1 text-[12px] text-secondary hover:text-primary transition-colors rounded-[6px] px-2 py-1 hover:bg-surface-soft"
                 >
                   <Eye size={12} />
                   Prévisualiser
@@ -1342,7 +1342,7 @@ export default function ArticleEditorPage() {
                             value={item.question}
                             onChange={(e) => handleFaqChange(i, 'question', e.target.value)}
                             placeholder="Question…"
-                            className="flex-1 bg-transparent text-[13px] font-semibold text-primary outline-none placeholder:text-tertiary"
+                            className="flex-1 bg-transparent text-[14px] font-semibold text-primary outline-none placeholder:text-tertiary"
                           />
                           <button onClick={() => handleFaqDelete(i)} className="shrink-0 text-tertiary hover:text-danger transition-colors mt-0.5">
                             <Trash2 size={13} />
@@ -1353,7 +1353,7 @@ export default function ArticleEditorPage() {
                           value={item.answer}
                           onChange={(e) => handleFaqChange(i, 'answer', e.target.value)}
                           placeholder="Réponse…"
-                          className="w-full bg-white rounded-[8px] border border-border px-2.5 py-1.5 text-[13px] text-primary placeholder:text-tertiary resize-none outline-none focus:ring-1 focus:ring-accent/50 focus:border-accent/60 transition-colors"
+                          className="w-full bg-white rounded-[8px] border border-border px-2.5 py-1.5 text-[14px] text-primary placeholder:text-tertiary resize-none outline-none focus:ring-1 focus:ring-accent/50 focus:border-accent/60 transition-colors"
                         />
                       </div>
                     ))}
@@ -1381,11 +1381,11 @@ export default function ArticleEditorPage() {
 
             {/* Footer: word count + reading time */}
             <div className="flex items-center justify-end gap-3 px-10 py-2 border-t border-border/60 bg-surface shrink-0">
-              <span className="flex items-center gap-1 text-[11px] text-tertiary">
+              <span className="flex items-center gap-1 text-[12px] text-tertiary">
                 <BookOpen size={10} />
                 {readingTime} min de lecture
               </span>
-              <span className="text-[11px] text-tertiary">{wordCount.toLocaleString('fr-FR')} mots</span>
+              <span className="text-[12px] text-tertiary">{wordCount.toLocaleString('fr-FR')} mots</span>
             </div>
           </div>
 
@@ -1398,7 +1398,7 @@ export default function ArticleEditorPage() {
                 <button
                   key={tab.key}
                   onClick={() => setRightTab(tab.key)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-medium border-b-2 transition-colors ${
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[12px] font-medium border-b-2 transition-colors ${
                     activeRightTab === tab.key
                       ? 'border-accent text-accent'
                       : 'border-transparent text-tertiary hover:text-secondary'
@@ -1419,7 +1419,7 @@ export default function ArticleEditorPage() {
 
                   {/* Zone 1 — Statut */}
                   <div className="p-3 flex items-center justify-between">
-                    <span className="text-[11px] font-medium text-secondary">Statut</span>
+                    <span className="text-[12px] font-medium text-secondary">Statut</span>
                     <StatusBadge status={article.status} />
                   </div>
 
@@ -1458,13 +1458,13 @@ export default function ArticleEditorPage() {
                       <div className="flex rounded-[8px] border border-border overflow-hidden">
                         <button
                           onClick={() => setPublishMode('now')}
-                          className={`flex-1 py-1.5 text-[11px] font-medium transition-colors ${publishMode === 'now' ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'}`}
+                          className={`flex-1 py-1.5 text-[12px] font-medium transition-colors ${publishMode === 'now' ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'}`}
                         >
                           Maintenant
                         </button>
                         <button
                           onClick={() => setPublishMode('schedule')}
-                          className={`flex-1 py-1.5 text-[11px] font-medium transition-colors ${publishMode === 'schedule' ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'}`}
+                          className={`flex-1 py-1.5 text-[12px] font-medium transition-colors ${publishMode === 'schedule' ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'}`}
                         >
                           Programmer
                         </button>
@@ -1490,7 +1490,7 @@ export default function ArticleEditorPage() {
                           <button
                             onClick={handleSchedule}
                             disabled={!scheduleDate || !scheduleTime || busy}
-                            className="w-full rounded-[8px] bg-accent py-1.5 text-[11px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
+                            className="w-full rounded-[8px] bg-accent py-1.5 text-[12px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
                           >
                             {actionLoading === 'schedule' ? '…' : 'Programmer la publication'}
                           </button>
@@ -1532,7 +1532,7 @@ export default function ArticleEditorPage() {
 
                   {/* Zone 2 — À compléter */}
                   <div className="p-3 flex flex-col gap-2">
-                    <span className="text-[11px] font-medium text-secondary">Image de couverture</span>
+                    <span className="text-[12px] font-medium text-secondary">Image de couverture</span>
                     <MediaPanel coverImageUrl={coverImageUrl} onChange={handleCoverChange} projectId={projectId!} />
                   </div>
 
@@ -1595,7 +1595,7 @@ export default function ArticleEditorPage() {
 
                   {/* Zone 3 — Paramètres SEO (collapsible) */}
                   <details className="group">
-                    <summary className="flex cursor-pointer list-none select-none items-center justify-between p-3 text-[11px] font-medium text-secondary hover:text-primary">
+                    <summary className="flex cursor-pointer list-none select-none items-center justify-between p-3 text-[12px] font-medium text-secondary hover:text-primary">
                       <span>Paramètres SEO</span>
                       <ChevronDown size={12} className="transition-transform group-open:rotate-180" />
                     </summary>
@@ -1684,7 +1684,7 @@ export default function ArticleEditorPage() {
                                 handleMetaChange('slug', s)
                                 slugManuallyEditedRef.current = false
                               }}
-                              className="shrink-0 rounded-[8px] border border-border bg-surface px-2 text-[11px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors"
+                              className="shrink-0 rounded-[8px] border border-border bg-surface px-2 text-[12px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors"
                               title="Régénérer depuis le titre"
                             >
                               ↻
@@ -1708,7 +1708,7 @@ export default function ArticleEditorPage() {
 
                   {/* Commentaires éditoriaux */}
                   <div className="p-3">
-                    <p className="text-[11px] font-medium text-secondary mb-2 flex items-center gap-1.5">
+                    <p className="text-[12px] font-medium text-secondary mb-2 flex items-center gap-1.5">
                       <MessageCircle size={12} className="text-tertiary" />
                       Commentaires éditoriaux
                     </p>
@@ -1733,7 +1733,7 @@ export default function ArticleEditorPage() {
 
                   {/* Error */}
                   {actionError && (
-                    <div className="mx-3 mb-2 flex items-start gap-1.5 rounded-[8px] bg-danger/5 border border-danger/20 px-2.5 py-2 text-[11px] text-danger">
+                    <div className="mx-3 mb-2 flex items-start gap-1.5 rounded-[8px] bg-danger/5 border border-danger/20 px-2.5 py-2 text-[12px] text-danger">
                       <AlertCircle size={11} className="mt-0.5 shrink-0" />
                       <span>{actionError}</span>
                     </div>
@@ -1857,14 +1857,14 @@ export default function ArticleEditorPage() {
           <div className="flex gap-1.5">
             <button
               onClick={() => { setCommentAnchor(null); setCommentInput('') }}
-              className="flex-1 rounded-[8px] border border-border py-1.5 text-[11px] text-secondary hover:bg-surface-muted transition-colors"
+              className="flex-1 rounded-[8px] border border-border py-1.5 text-[12px] text-secondary hover:bg-surface-muted transition-colors"
             >
               Annuler
             </button>
             <button
               onClick={handleSendInlineComment}
               disabled={!commentInput.trim() || sendingComment}
-              className="flex-1 flex items-center justify-center gap-1 rounded-[8px] bg-accent py-1.5 text-[11px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
+              className="flex-1 flex items-center justify-center gap-1 rounded-[8px] bg-accent py-1.5 text-[12px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
             >
               {sendingComment ? <Loader2 size={11} className="animate-spin" /> : <Send size={11} />}
               Commenter
@@ -1887,14 +1887,14 @@ export default function ArticleEditorPage() {
           <div className="mt-3 flex gap-1.5">
             <button
               onClick={() => void handleResolveInlineComment(selectedComment.id, true)}
-              className="flex flex-1 items-center justify-center gap-1 rounded-[8px] bg-success/10 py-1.5 text-[11px] font-medium text-success transition-colors hover:bg-success/15"
+              className="flex flex-1 items-center justify-center gap-1 rounded-[8px] bg-success/10 py-1.5 text-[12px] font-medium text-success transition-colors hover:bg-success/15"
             >
               <Check size={11} />
               Valider
             </button>
             <button
               onClick={() => void handleDeleteInlineComment(selectedComment.id)}
-              className="flex flex-1 items-center justify-center gap-1 rounded-[8px] border border-border py-1.5 text-[11px] font-medium text-danger transition-colors hover:bg-danger/5"
+              className="flex flex-1 items-center justify-center gap-1 rounded-[8px] border border-border py-1.5 text-[12px] font-medium text-danger transition-colors hover:bg-danger/5"
             >
               <Trash2 size={11} />
               Supprimer

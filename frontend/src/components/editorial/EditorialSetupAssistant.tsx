@@ -78,7 +78,7 @@ export default function EditorialSetupAssistant({ projectId, open, onClose, onAp
     <Modal open={open} onClose={handleClose} title="Assistant de configuration éditoriale" size="lg">
       <div className="flex flex-col gap-4">
         {error && (
-          <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger flex items-start gap-2">
+          <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger flex items-start gap-2">
             <AlertCircle size={14} className="mt-0.5 shrink-0" />
             <span>{error}</span>
           </div>
@@ -90,10 +90,10 @@ export default function EditorialSetupAssistant({ projectId, open, onClose, onAp
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent">
                 <Wand2 size={22} />
               </span>
-              <p className="text-[14px] font-medium text-primary">
+              <p className="text-[15px] font-medium text-primary">
                 Analyse automatique de votre projet
               </p>
-              <p className="text-[13px] text-secondary leading-relaxed max-w-sm">
+              <p className="text-[14px] text-secondary leading-relaxed max-w-sm">
                 L'assistant va analyser votre site connecté, les catégories existantes et
                 les données de votre projet pour vous proposer une configuration éditoriale
                 complète. Rien ne sera sauvegardé sans votre validation.
@@ -108,7 +108,7 @@ export default function EditorialSetupAssistant({ projectId, open, onClose, onAp
         {step === 'loading' && (
           <div className="flex flex-col items-center gap-3 py-8">
             <Loader2 size={28} className="animate-spin text-accent" />
-            <p className="text-[14px] font-medium text-primary">Analyse en cours…</p>
+            <p className="text-[15px] font-medium text-primary">Analyse en cours…</p>
             <p className="text-[12px] text-secondary">
               Consultation du site, des catégories et génération des suggestions.
             </p>
@@ -134,7 +134,7 @@ export default function EditorialSetupAssistant({ projectId, open, onClose, onAp
               <summary className="cursor-pointer text-[12px] font-medium text-secondary hover:text-primary">
                 Sources utilisées
               </summary>
-              <ul className="mt-2 flex flex-col gap-1.5 pl-1 text-[11px] text-tertiary">
+              <ul className="mt-2 flex flex-col gap-1.5 pl-1 text-[12px] text-tertiary">
                 <li className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-success" />
                   Domaine du projet
@@ -153,7 +153,7 @@ export default function EditorialSetupAssistant({ projectId, open, onClose, onAp
                 </li>
               </ul>
               {source === 'default' && (
-                <p className="mt-2 text-[11px] text-warning">
+                <p className="mt-2 text-[12px] text-warning">
                   Proposition basée sur des données limitées.
                 </p>
               )}

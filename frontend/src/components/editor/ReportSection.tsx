@@ -38,7 +38,7 @@ export function ReportSection({ title, data }: { title: string; data: unknown })
 
   return (
     <details className="group rounded-[10px] border border-border bg-surface">
-      <summary className="flex cursor-pointer items-center justify-between px-3 py-2 text-[11px] font-medium text-secondary hover:text-primary">
+      <summary className="flex cursor-pointer items-center justify-between px-3 py-2 text-[12px] font-medium text-secondary hover:text-primary">
         <span>{title}</span>
         <span className="text-[10px] text-tertiary">{entries.length} champs</span>
       </summary>
@@ -60,7 +60,7 @@ export function ReportSection({ title, data }: { title: string; data: unknown })
 export function ReportGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary">{title}</p>
+      <p className="text-[12px] font-semibold uppercase tracking-wide text-secondary">{title}</p>
       {children}
     </div>
   )

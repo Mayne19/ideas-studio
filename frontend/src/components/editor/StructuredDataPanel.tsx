@@ -6,7 +6,7 @@ export default function StructuredDataPanel({ article }: { article: EditorArticl
 
   if (!sd) {
     return (
-      <div className="rounded-[10px] border border-border bg-surface p-3 text-[11px] text-tertiary">
+      <div className="rounded-[10px] border border-border bg-surface p-3 text-[12px] text-tertiary">
         Aucune donnée structurée générée.
       </div>
     )
@@ -23,7 +23,7 @@ export default function StructuredDataPanel({ article }: { article: EditorArticl
         <Code size={14} /> Données structurées
       </div>
 
-      <div className="flex items-center justify-between text-[11px]">
+      <div className="flex items-center justify-between text-[12px]">
         <span className="text-tertiary">Statut</span>
         <span className={status === 'generated' ? 'text-success' : 'text-tertiary'}>
           {status === 'generated' ? 'Généré' : 'Vide'}
@@ -31,7 +31,7 @@ export default function StructuredDataPanel({ article }: { article: EditorArticl
       </div>
 
       {schemaCount != null && (
-        <div className="flex items-center justify-between text-[11px]">
+        <div className="flex items-center justify-between text-[12px]">
           <span className="text-tertiary">Schémas</span>
           <span className="text-primary">{schemaCount}</span>
         </div>
@@ -50,7 +50,7 @@ export default function StructuredDataPanel({ article }: { article: EditorArticl
 
       {schemas && schemas.length > 0 && (
         <details className="group">
-          <summary className="cursor-pointer text-[11px] text-secondary hover:text-primary transition-colors">
+          <summary className="cursor-pointer text-[12px] text-secondary hover:text-primary transition-colors">
             Voir le JSON ({schemas.length} schéma{schemas.length > 1 ? 's' : ''})
           </summary>
           <pre className="mt-2 max-h-48 overflow-auto rounded-[6px] bg-[#1d1d1f] p-2 text-[10px] leading-relaxed text-[#f0f0f2]">

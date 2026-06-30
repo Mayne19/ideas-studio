@@ -56,7 +56,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             {item.variant === 'success' && <CheckCircle size={16} className="mt-0.5 shrink-0" />}
             {item.variant === 'error' && <AlertCircle size={16} className="mt-0.5 shrink-0" />}
             {item.variant === 'info' && <AlertCircle size={16} className="mt-0.5 shrink-0 text-accent" />}
-            <p className="flex-1 text-[13px] leading-snug">{item.message}</p>
+            <p className="flex-1 text-[14px] leading-snug">{item.message}</p>
             <button onClick={() => remove(item.id)} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity">
               <X size={14} />
             </button>

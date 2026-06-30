@@ -35,7 +35,7 @@ export default function ToggleSwitch({ checked, onChange, disabled = false, labe
       </button>
       {(label || description) && (
         <div className="flex flex-col">
-          {label && <span className="text-[13px] font-medium text-primary">{label}</span>}
+          {label && <span className="text-[14px] font-medium text-primary">{label}</span>}
           {description && <span className="text-[12px] text-tertiary">{description}</span>}
         </div>
       )}

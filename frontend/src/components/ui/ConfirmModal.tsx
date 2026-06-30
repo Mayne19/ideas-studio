@@ -26,7 +26,7 @@ export default function ConfirmModal({
     <Modal open={open} onClose={onClose} title={title} size="sm">
       <div className="flex flex-col gap-5">
         {description && (
-          <p className="text-[14px] text-secondary leading-relaxed">{description}</p>
+          <p className="text-[15px] text-secondary leading-relaxed">{description}</p>
         )}
         <div className="flex gap-2 justify-end">
           <Button variant="secondary" size="sm" onClick={onClose} disabled={loading}>

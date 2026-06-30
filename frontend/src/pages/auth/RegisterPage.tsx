@@ -63,13 +63,13 @@ export default function RegisterPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="mb-1">
           <h2 className="text-[18px] font-semibold text-primary">Créer un compte</h2>
-          <p className="mt-0.5 text-[13px] text-secondary">
+          <p className="mt-0.5 text-[14px] text-secondary">
             Rejoignez Ideas Studio et commencez à produire du contenu SEO.
           </p>
         </div>
 
         {error && (
-          <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+          <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">
             {error}
           </div>
         )}
@@ -128,7 +128,7 @@ export default function RegisterPage() {
           Créer mon compte
         </Button>
 
-        <p className="text-center text-[13px] text-secondary">
+        <p className="text-center text-[14px] text-secondary">
           Déjà un compte ?{' '}
           <Link to="/login" className="font-medium text-accent hover:underline">
             Se connecter

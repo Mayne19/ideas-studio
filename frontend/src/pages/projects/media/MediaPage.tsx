@@ -74,7 +74,7 @@ function MediaCard({ asset, onDelete }: { asset: MediaAsset; onDelete: () => voi
         ) : (
           <div className="flex flex-col items-center gap-2 text-tertiary">
             <Image size={28} />
-            <span className="text-[11px]">{imageFailed ? 'Aperçu indisponible' : asset.mime_type?.split('/')[1]?.toUpperCase() ?? 'FICHIER'}</span>
+            <span className="text-[12px]">{imageFailed ? 'Aperçu indisponible' : asset.mime_type?.split('/')[1]?.toUpperCase() ?? 'FICHIER'}</span>
           </div>
         )}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
@@ -109,10 +109,10 @@ function MediaCard({ asset, onDelete }: { asset: MediaAsset; onDelete: () => voi
         <p className="text-[12px] font-medium text-primary truncate" title={asset.filename ?? asset.url}>
           {asset.filename ?? src.split('/').pop() ?? 'Image'}
         </p>
-        <p className="mt-0.5 truncate text-[11px] text-tertiary">
+        <p className="mt-0.5 truncate text-[12px] text-tertiary">
           {[formatBytes(asset.size), asset.mime_type ?? 'type inconnu', asset.article_id ? 'lié article' : 'non lié'].filter(Boolean).join(' · ')}
         </p>
-        <p className="mt-0.5 text-[11px] text-tertiary">
+        <p className="mt-0.5 text-[12px] text-tertiary">
           {new Date(asset.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
         </p>
       </div>
@@ -172,7 +172,7 @@ export default function MediaPage() {
       <div className="project-page-header">
         <div>
           <h1 className="text-[20px] font-semibold text-primary tracking-tight">Médiathèque</h1>
-          <p className="mt-0.5 text-[13px] text-secondary">Images et fichiers associés à ce projet.</p>
+          <p className="mt-0.5 text-[14px] text-secondary">Images et fichiers associés à ce projet.</p>
         </div>
         <Button
           icon={uploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
@@ -195,13 +195,13 @@ export default function MediaPage() {
           </div>
           <div>
             <p className="text-[15px] font-medium text-primary">Aucun média</p>
-            <p className="mt-1 max-w-xs text-[13px] text-secondary">
+            <p className="mt-1 max-w-xs text-[14px] text-secondary">
               Ajoutez des images pour les utiliser dans vos articles.
             </p>
           </div>
           <button
             onClick={() => fileRef.current?.click()}
-            className="flex items-center gap-1.5 rounded-[10px] bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent/90 transition-colors"
+            className="flex items-center gap-1.5 rounded-[10px] bg-accent px-4 py-2 text-[14px] font-medium text-white hover:bg-accent/90 transition-colors"
           >
             <Upload size={13} />
             Importer des images

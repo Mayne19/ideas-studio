@@ -177,7 +177,7 @@ export default function ValidationPage() {
         <div className="project-page-header">
           <div>
             <h1 className="text-[20px] font-semibold tracking-tight text-primary">Validation</h1>
-            <p className="mt-0.5 text-[13px] text-secondary">
+            <p className="mt-0.5 text-[14px] text-secondary">
               Articles sortis de production, en attente de décision humaine.
             </p>
           </div>
@@ -187,7 +187,7 @@ export default function ValidationPage() {
         </div>
 
         {error && (
-          <div className="mb-4 rounded-[12px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[13px] text-danger">
+          <div className="mb-4 rounded-[12px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[14px] text-danger">
             {error}
           </div>
         )}
@@ -226,7 +226,7 @@ export default function ValidationPage() {
           />
         ) : (
           <>
-            <div className={`hidden gap-3 px-4 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-tertiary lg:grid ${GRID}`}>
+            <div className={`hidden gap-3 px-4 pb-1.5 text-[12px] font-medium uppercase tracking-wide text-tertiary lg:grid ${GRID}`}>
               <label>
                 <input
                   type="checkbox"
@@ -260,11 +260,11 @@ export default function ValidationPage() {
                       <button
                         type="button"
                         onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
-                        className="block w-full truncate text-left text-[13px] font-semibold text-primary hover:text-accent"
+                        className="block w-full truncate text-left text-[14px] font-semibold text-primary hover:text-accent"
                       >
                         {article.title}
                       </button>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-tertiary">
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] text-tertiary">
                         <span className="font-medium text-accent">{categoryName(article)}</span>
                         <span>·</span>
                         <StatusBadge status={article.status} />
@@ -285,7 +285,7 @@ export default function ValidationPage() {
                     <ScoreBadge value={getOriginalityScore(article)} label="Orig." className="w-full justify-center" />
                     <ScoreBadge value={getGeoScore(article)} label="GEO" className="w-full justify-center" />
                     <ScoreBadge value={finiteScore(article.eeat_score)} label="EEAT" className="w-full justify-center" />
-                    <span className={`inline-flex items-center justify-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium ${criticalCount > 0 ? 'bg-danger/10 text-danger' : 'bg-success/10 text-[#1f6d3d]'}`}>
+                    <span className={`inline-flex items-center justify-center gap-1 rounded-full px-2 py-1 text-[12px] font-medium ${criticalCount > 0 ? 'bg-danger/10 text-danger' : 'bg-success/10 text-[#1f6d3d]'}`}>
                       {criticalCount > 0 ? <AlertTriangle size={11} /> : <CheckCircle size={11} />}
                       {criticalCount}
                     </span>
@@ -318,7 +318,7 @@ export default function ValidationPage() {
         <div className="flex flex-col gap-4">
           {!bulkResult ? (
             <>
-              <p className="text-[13px] leading-relaxed text-secondary">
+              <p className="text-[14px] leading-relaxed text-secondary">
                 {confirmMode === 'publish'
                   ? `Publication immédiate explicite de ${selectedCount} article(s). Les alertes de validation restent visibles mais ne bloquent pas votre décision.`
                   : confirmMode === 'correction'
@@ -336,7 +336,7 @@ export default function ValidationPage() {
             </>
           ) : (
             <>
-              <div className="rounded-[12px] bg-surface-soft p-3 text-[13px] text-secondary">
+              <div className="rounded-[12px] bg-surface-soft p-3 text-[14px] text-secondary">
                 {bulkResult.scheduled_count} traité(s), {bulkResult.blocked_count} échec(s).
               </div>
               {bulkResult.blocked_articles.length > 0 && (
@@ -344,7 +344,7 @@ export default function ValidationPage() {
                   {bulkResult.blocked_articles.map((item) => (
                     <div key={item.article_id} className="border-b border-border px-3 py-2 last:border-b-0">
                       <p className="text-[12px] font-medium text-primary">{item.title}</p>
-                      <ul className="mt-1 list-disc pl-4 text-[11px] text-danger">
+                      <ul className="mt-1 list-disc pl-4 text-[12px] text-danger">
                         {item.reasons.map((reason, index) => <li key={index}>{reason}</li>)}
                       </ul>
                     </div>

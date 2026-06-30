@@ -62,13 +62,13 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="mb-1">
           <h2 className="text-[18px] font-semibold text-primary">Connexion</h2>
-          <p className="mt-0.5 text-[13px] text-secondary">
+          <p className="mt-0.5 text-[14px] text-secondary">
             Entrez vos identifiants pour accéder à votre espace.
           </p>
         </div>
 
         {error && (
-          <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+          <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">
             {error}
           </div>
         )}
@@ -106,7 +106,7 @@ export default function LoginPage() {
           <p className="text-center text-[12px] text-tertiary">{loadingMessage}</p>
         )}
 
-        <p className="text-center text-[13px] text-secondary">
+        <p className="text-center text-[14px] text-secondary">
           Pas encore de compte ?{' '}
           <Link to="/register" className="font-medium text-accent hover:underline">
             Créer un compte

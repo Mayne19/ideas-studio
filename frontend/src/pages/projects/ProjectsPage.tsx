@@ -45,7 +45,7 @@ type ProjectStats = {
 function StatPill({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
   if (value === 0) return null
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] text-tertiary">
+    <span className="inline-flex items-center gap-1 text-[12px] text-tertiary">
       {icon}
       <span className="font-medium text-secondary">{value}</span>
       <span>{label}</span>
@@ -78,17 +78,17 @@ function ProjectCard({
           {project.name.charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0 cursor-pointer" onClick={onClick}>
-          <h3 className="text-[14px] font-semibold text-primary truncate group-hover:text-accent transition-colors">
+          <h3 className="text-[15px] font-semibold text-primary truncate group-hover:text-accent transition-colors">
             {project.name}
           </h3>
-          <p className="mt-0.5 text-[11px] text-tertiary truncate flex items-center gap-1">
+          <p className="mt-0.5 text-[12px] text-tertiary truncate flex items-center gap-1">
             <Globe size={10} className="shrink-0" />
             {project.domain ?? 'Pas défini'}
           </p>
         </div>
         <button
           onClick={onClick}
-          className="shrink-0 flex items-center gap-1 rounded-[8px] bg-accent px-2.5 py-1 text-[11px] font-medium text-white hover:bg-accent/90 transition-colors"
+          className="shrink-0 flex items-center gap-1 rounded-[8px] bg-accent px-2.5 py-1 text-[12px] font-medium text-white hover:bg-accent/90 transition-colors"
         >
           <ExternalLink size={10} />
           Ouvrir
@@ -126,7 +126,7 @@ function ProjectCard({
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-1 border-t border-border">
-        <p className="text-[11px] text-tertiary">
+        <p className="text-[12px] text-tertiary">
           {project.last_seen_at
             ? `Dernière visite ${formatDate(project.last_seen_at)}`
             : isConnected ? 'En attente de trafic' : 'Snippet non installé'}
@@ -135,7 +135,7 @@ function ProjectCard({
           {!isConnected && (
             <button
               onClick={(e) => { e.stopPropagation(); onConnect() }}
-              className="flex items-center gap-1 text-[11px] text-accent hover:underline"
+              className="flex items-center gap-1 text-[12px] text-accent hover:underline"
             >
               <WifiOff size={10} />
               Connecter
@@ -143,7 +143,7 @@ function ProjectCard({
           )}
           <button
             onClick={(e) => { e.stopPropagation(); onDelete() }}
-            className="flex items-center gap-1 text-[11px] text-tertiary hover:text-danger transition-colors"
+            className="flex items-center gap-1 text-[12px] text-tertiary hover:text-danger transition-colors"
             title="Supprimer le projet"
           >
             <Trash2 size={10} />
@@ -263,7 +263,7 @@ export default function ProjectsPage() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-[22px] font-semibold text-primary tracking-tight">Mes projets</h1>
-          <p className="mt-0.5 text-[13px] text-secondary">
+          <p className="mt-0.5 text-[14px] text-secondary">
             Gérez vos blogs et sites depuis un seul espace.
           </p>
         </div>
@@ -310,7 +310,7 @@ export default function ProjectsPage() {
       >
         <form onSubmit={handleCreate} className="flex flex-col gap-4">
           {formError && (
-            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">{formError}</div>
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">{formError}</div>
           )}
           <Input
             label="Nom du projet"
@@ -375,12 +375,12 @@ export default function ProjectsPage() {
         size="sm"
       >
         <div className="flex flex-col gap-4">
-          <p className="text-[13px] text-secondary">
+          <p className="text-[14px] text-secondary">
             Voulez-vous vraiment supprimer <strong className="text-primary">{deleteTarget?.name}</strong> ?
             Cette action est irréversible — tous les articles, idées et données associés seront perdus.
           </p>
           {deleteError && (
-            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">{deleteError}</div>
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">{deleteError}</div>
           )}
           <div className="flex gap-2 pt-1">
             <Button type="button" variant="secondary" className="flex-1 justify-center" onClick={() => setDeleteTarget(null)}>

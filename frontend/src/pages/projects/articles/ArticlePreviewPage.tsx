@@ -142,7 +142,7 @@ export default function ArticlePreviewPage() {
       <div className="mb-6 flex items-center justify-between">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-[13px] text-secondary transition-colors hover:text-primary"
+          className="flex items-center gap-1.5 text-[14px] text-secondary transition-colors hover:text-primary"
         >
           <ArrowLeft size={14} />
           Retour
@@ -171,7 +171,7 @@ export default function ArticlePreviewPage() {
                 {readingTime ? `${readingTime} min de lecture` : 'Temps de lecture —'}
               </span>
             </div>
-            <p className="mb-4 max-w-[680px] text-[14px] leading-relaxed text-secondary">
+            <p className="mb-4 max-w-[680px] text-[15px] leading-relaxed text-secondary">
               {article.meta_description?.trim() || 'Meta description —'}
             </p>
             <h1 id="article-title" className="mb-5 max-w-[760px] text-[32px] font-bold leading-tight text-primary [overflow-wrap:anywhere]">
@@ -188,12 +188,12 @@ export default function ArticlePreviewPage() {
 
           {article.content ? (
             <div
-              className="max-w-[760px] text-[16px] leading-[1.78] text-primary [&_a]:text-accent [&_a]:underline [&_a]:underline-offset-2 [&_blockquote]:my-6 [&_blockquote]:rounded-r-[10px] [&_blockquote]:border-l-4 [&_blockquote]:border-accent [&_blockquote]:bg-accent/5 [&_blockquote]:px-4 [&_blockquote]:py-3 [&_blockquote]:text-secondary [&_blockquote]:italic [&_code]:rounded-[5px] [&_code]:bg-surface-soft [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[13px] [&_code]:text-primary [&_em]:italic [&_h1]:mb-4 [&_h1]:mt-7 [&_h1]:text-[26px] [&_h1]:font-bold [&_h1]:leading-tight [&_h2]:mb-3 [&_h2]:mt-8 [&_h2]:text-[22px] [&_h2]:font-semibold [&_h2]:leading-snug [&_h3]:mb-2.5 [&_h3]:mt-6 [&_h3]:text-[18px] [&_h3]:font-semibold [&_h3]:leading-snug [&_h4]:mb-2 [&_h4]:mt-5 [&_h4]:text-[16px] [&_h4]:font-semibold [&_hr]:my-8 [&_hr]:border-border [&_img]:my-7 [&_img]:max-w-full [&_img]:rounded-[14px] [&_img]:object-cover [&_li]:my-0.5 [&_li]:leading-[1.55] [&_li_p]:my-0 [&_ol]:my-5 [&_ol]:list-decimal [&_ol]:pl-9 [&_p]:my-4 [&_pre]:my-6 [&_pre]:overflow-x-auto [&_pre]:rounded-[12px] [&_pre]:bg-[#111318] [&_pre]:p-4 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-[13px] [&_pre_code]:text-white [&_strong]:font-semibold [&_table]:my-7 [&_table]:w-full [&_table]:border-collapse [&_table]:overflow-hidden [&_table]:rounded-[12px] [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1 [&_td]:leading-tight [&_td_p]:my-0 [&_th]:border [&_th]:border-border [&_th]:bg-surface-soft [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:font-semibold [&_th]:leading-tight [&_th_p]:my-0 [&_u]:underline [&_ul]:my-5 [&_ul]:list-disc [&_ul]:pl-9 [&_ul[data-type='taskList']]:list-none [&_ul[data-type='taskList']]:pl-0 [&_ul[data-type='taskList']_li]:flex [&_ul[data-type='taskList']_li]:gap-2"
+              className="max-w-[760px] text-[16px] leading-[1.78] text-primary [&_a]:text-accent [&_a]:underline [&_a]:underline-offset-2 [&_blockquote]:my-6 [&_blockquote]:rounded-r-[10px] [&_blockquote]:border-l-4 [&_blockquote]:border-accent [&_blockquote]:bg-accent/5 [&_blockquote]:px-4 [&_blockquote]:py-3 [&_blockquote]:text-secondary [&_blockquote]:italic [&_code]:rounded-[5px] [&_code]:bg-surface-soft [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[14px] [&_code]:text-primary [&_em]:italic [&_h1]:mb-4 [&_h1]:mt-7 [&_h1]:text-[26px] [&_h1]:font-bold [&_h1]:leading-tight [&_h2]:mb-3 [&_h2]:mt-8 [&_h2]:text-[22px] [&_h2]:font-semibold [&_h2]:leading-snug [&_h3]:mb-2.5 [&_h3]:mt-6 [&_h3]:text-[18px] [&_h3]:font-semibold [&_h3]:leading-snug [&_h4]:mb-2 [&_h4]:mt-5 [&_h4]:text-[16px] [&_h4]:font-semibold [&_hr]:my-8 [&_hr]:border-border [&_img]:my-7 [&_img]:max-w-full [&_img]:rounded-[14px] [&_img]:object-cover [&_li]:my-0.5 [&_li]:leading-[1.55] [&_li_p]:my-0 [&_ol]:my-5 [&_ol]:list-decimal [&_ol]:pl-9 [&_p]:my-4 [&_pre]:my-6 [&_pre]:overflow-x-auto [&_pre]:rounded-[12px] [&_pre]:bg-[#111318] [&_pre]:p-4 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-[14px] [&_pre_code]:text-white [&_strong]:font-semibold [&_table]:my-7 [&_table]:w-full [&_table]:border-collapse [&_table]:overflow-hidden [&_table]:rounded-[12px] [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1 [&_td]:leading-tight [&_td_p]:my-0 [&_th]:border [&_th]:border-border [&_th]:bg-surface-soft [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:font-semibold [&_th]:leading-tight [&_th_p]:my-0 [&_u]:underline [&_ul]:my-5 [&_ul]:list-disc [&_ul]:pl-9 [&_ul[data-type='taskList']]:list-none [&_ul[data-type='taskList']]:pl-0 [&_ul[data-type='taskList']_li]:flex [&_ul[data-type='taskList']_li]:gap-2"
               dangerouslySetInnerHTML={{ __html: renderedContent }}
             />
           ) : (
             <div className="flex flex-col items-center gap-2 py-16 text-center">
-              <p className="text-[14px] text-tertiary">Aucun contenu redige pour l'instant.</p>
+              <p className="text-[15px] text-tertiary">Aucun contenu redige pour l'instant.</p>
               <Button
                 variant="secondary"
                 size="sm"
@@ -211,7 +211,7 @@ export default function ArticlePreviewPage() {
                 {faqItems.map((item, index) => (
                   <div key={index} className="rounded-[12px] border border-border bg-surface p-4">
                     <h3 className="text-[15px] font-semibold text-primary">{item.question}</h3>
-                    <p className="mt-2 text-[14px] leading-relaxed text-secondary">{item.answer}</p>
+                    <p className="mt-2 text-[15px] leading-relaxed text-secondary">{item.answer}</p>
                   </div>
                 ))}
               </div>
@@ -221,7 +221,7 @@ export default function ArticlePreviewPage() {
 
         <aside className="lg:sticky lg:top-4 lg:self-start">
           <div className="rounded-[14px] border border-border bg-surface p-4">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-tertiary">Plan</p>
+            <p className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-tertiary">Plan</p>
             <nav className="flex flex-col gap-1.5">
               {outline.length > 0 ? (
                 outline.map((item) => (

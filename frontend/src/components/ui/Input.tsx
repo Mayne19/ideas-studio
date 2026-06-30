@@ -19,7 +19,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       {label && (
         <label
           htmlFor={inputId}
-          className="text-[13px] font-medium text-primary"
+          className="text-[14px] font-medium text-primary"
         >
           {label}
         </label>
@@ -29,7 +29,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         id={inputId}
         className={cn(
           'h-10 w-full rounded-[8px] border-2 border-border bg-transparent px-3.5',
-          'text-[14px] text-primary placeholder:text-tertiary',
+          'text-[15px] text-primary placeholder:text-tertiary',
           'outline-none transition-all duration-150',
           'hover:border-border-strong',
           'focus:border-accent focus:ring-2 focus:ring-accent/10',

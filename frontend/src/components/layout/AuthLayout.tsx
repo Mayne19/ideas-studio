@@ -11,7 +11,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         <h1 className="text-[22px] font-semibold text-primary tracking-tight">
           Ideas Studio
         </h1>
-        <p className="mt-1 text-[13px] text-secondary">
+        <p className="mt-1 text-[14px] text-secondary">
           CMS headless SEO assisté par IA
         </p>
       </div>

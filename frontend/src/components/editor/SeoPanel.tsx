@@ -70,7 +70,7 @@ function ScoreRing({ label, score }: { label: string; score: number | null }) {
           {val > 0 ? Math.round(val) : '-'}
         </text>
       </svg>
-      <span className="text-[11px] font-semibold text-secondary">{label}</span>
+      <span className="text-[12px] font-semibold text-secondary">{label}</span>
     </div>
   )
 }
@@ -132,13 +132,13 @@ function ScoreSummary({
             className={`rounded-[10px] px-2.5 py-2 text-left transition-colors ${selected === row.label ? 'bg-surface-soft ring-1 ring-accent/25' : 'hover:bg-surface-soft'}`}
           >
             <span className="block text-[10px] font-medium uppercase tracking-wide text-tertiary">{row.label}</span>
-            <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${scoreTone(row.value)}`}>
+            <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[12px] font-semibold ${scoreTone(row.value)}`}>
               {row.value === null ? '—' : Math.round(row.value)}
             </span>
           </button>
         ))}
       </div>
-      <div className="mt-3 rounded-[10px] bg-surface-soft px-3 py-2 text-[11px] leading-snug text-secondary">
+      <div className="mt-3 rounded-[10px] bg-surface-soft px-3 py-2 text-[12px] leading-snug text-secondary">
         <span className="font-semibold text-primary">{current.label}</span> : {current.detail}
       </div>
     </div>
@@ -152,7 +152,7 @@ function IssueItem({ issue }: { issue: SeoIssue }) {
     <Info size={12} className="mt-0.5 shrink-0 text-accent" />
 
   return (
-    <div className="flex gap-2 text-[11px]">
+    <div className="flex gap-2 text-[12px]">
       {icon}
       <div>
         <p className="leading-snug text-primary">{issue.message}</p>
@@ -169,7 +169,7 @@ function ExpertIssueItem({ issue }: { issue: SeoExpertIssue }) {
     <Info size={12} className="mt-0.5 shrink-0 text-accent" />
 
   return (
-    <div className="flex gap-2 text-[11px]">
+    <div className="flex gap-2 text-[12px]">
       {icon}
       <div>
         <p className="leading-snug text-primary">{issue.message}</p>
@@ -214,13 +214,13 @@ function ReadinessBlock({ check, hasTitleH1 }: { check: ReadyCheck; hasTitleH1: 
       {hasBlocking && (
         <ul className="mt-2 flex flex-col gap-1">
           {check.global_score !== null && check.global_score !== undefined && (
-            <li className="text-[11px] leading-snug">- Score global V1 : {Math.round(check.global_score)}/100{check.global_score_valid === false ? ' (incomplet/non validable)' : ''}</li>
+            <li className="text-[12px] leading-snug">- Score global V1 : {Math.round(check.global_score)}/100{check.global_score_valid === false ? ' (incomplet/non validable)' : ''}</li>
           )}
           {blockingIssues.map((issue, i) => (
-            <li key={i} className="text-[11px] leading-snug">- {issue.message}</li>
+            <li key={i} className="text-[12px] leading-snug">- {issue.message}</li>
           ))}
           {criticalWarnings.map((warning, i) => (
-            <li key={`warning-${i}`} className="text-[11px] leading-snug">- {warning.message}</li>
+            <li key={`warning-${i}`} className="text-[12px] leading-snug">- {warning.message}</li>
           ))}
         </ul>
       )}
@@ -356,14 +356,14 @@ export default function SeoPanel({
         </div>
 
         {expertError && (
-          <div className="mt-3 flex items-start gap-2 rounded-[8px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[11px] text-danger">
+          <div className="mt-3 flex items-start gap-2 rounded-[8px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[12px] text-danger">
             <AlertCircle size={12} className="mt-0.5 shrink-0" />
             <span className="leading-snug">{expertError}</span>
           </div>
         )}
 
         {expertSuccess && !expertError && (
-          <div className="mt-3 flex items-start gap-2 rounded-[8px] border border-success/20 bg-success/8 px-2.5 py-2 text-[11px] text-success">
+          <div className="mt-3 flex items-start gap-2 rounded-[8px] border border-success/20 bg-success/8 px-2.5 py-2 text-[12px] text-success">
             <CheckCircle size={12} className="mt-0.5 shrink-0" />
             <span className="leading-snug">{expertSuccess}</span>
           </div>
@@ -380,7 +380,7 @@ export default function SeoPanel({
 
             {expertReview.issues.length > 0 && (
               <div className="flex flex-col gap-2">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-secondary">Issues SEO Expert</p>
+                <p className="text-[12px] font-medium uppercase tracking-wide text-secondary">Issues SEO Expert</p>
                 {expertReview.issues.map((issue, index) => (
                   <ExpertIssueItem key={`${issue.check}-${index}`} issue={issue} />
                 ))}
@@ -389,14 +389,14 @@ export default function SeoPanel({
 
             {expertReview.recommendations.length > 0 && (
               <div className="flex flex-col gap-1.5">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-secondary">Recommandations</p>
+                <p className="text-[12px] font-medium uppercase tracking-wide text-secondary">Recommandations</p>
                 {expertReview.recommendations.map((recommendation, index) => (
-                  <p key={index} className="text-[11px] leading-snug text-secondary">- {recommendation}</p>
+                  <p key={index} className="text-[12px] leading-snug text-secondary">- {recommendation}</p>
                 ))}
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3 text-[11px]">
+            <div className="grid grid-cols-2 gap-3 text-[12px]">
               <div className="rounded-[10px] border border-border bg-surface-soft p-2.5">
                 <p className="font-medium text-secondary">Checks valides</p>
                 <p className="mt-1 text-primary">{expertReview.passed_checks.length}</p>
@@ -408,14 +408,14 @@ export default function SeoPanel({
             </div>
           </div>
         ) : (
-          <p className="mt-3 text-[11px] leading-snug text-tertiary">
+          <p className="mt-3 text-[12px] leading-snug text-tertiary">
             Aucun rapport SEO Expert enregistre pour cet article pour l'instant.
           </p>
         )}
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 rounded-[8px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[11px] text-danger">
+        <div className="flex items-start gap-2 rounded-[8px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[12px] text-danger">
           <AlertCircle size={12} className="mt-0.5 shrink-0" />
           <span className="leading-snug">{error}</span>
         </div>
@@ -434,7 +434,7 @@ export default function SeoPanel({
 
       {analysis && groupKeys.length > 0 && (
         <div className="flex flex-col gap-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary">Problemes bloquants et points a corriger</p>
+          <p className="text-[12px] font-semibold uppercase tracking-wide text-secondary">Problemes bloquants et points a corriger</p>
           {groupKeys.map((cat) => (
             <div key={cat}>
               <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-tertiary">
@@ -452,15 +452,15 @@ export default function SeoPanel({
 
       {analysis && analysis.suggestions.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-secondary">Suggestions</p>
+          <p className="text-[12px] font-medium uppercase tracking-wide text-secondary">Suggestions</p>
           {analysis.suggestions.map((s, i) => (
-            <p key={i} className="text-[11px] leading-snug text-secondary">- {s}</p>
+            <p key={i} className="text-[12px] leading-snug text-secondary">- {s}</p>
           ))}
         </div>
       )}
 
       <details className="group">
-        <summary className="flex cursor-pointer items-center gap-1.5 text-[11px] font-medium text-secondary hover:text-primary">
+        <summary className="flex cursor-pointer items-center gap-1.5 text-[12px] font-medium text-secondary hover:text-primary">
           <HelpCircle size={12} />
           Comment les scores sont calcules
         </summary>
@@ -511,7 +511,7 @@ export default function SeoPanel({
       </details>
 
       {!brief && !loading && !error && (
-        <p className="text-center text-[11px] text-tertiary">
+        <p className="text-center text-[12px] text-tertiary">
           Lancez une analyse pour obtenir les scores SEO, lisibilite, qualite et EEAT.
         </p>
       )}
@@ -519,7 +519,7 @@ export default function SeoPanel({
       {/* ── Rapports externalisés ─────────────────────────── */}
       {(article.generation_report_json || article.research_brief_json || article.language_quality_report_json) && (
         <div className="flex flex-col gap-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary">
+          <p className="text-[12px] font-semibold uppercase tracking-wide text-secondary">
             Rapports
           </p>
           <BriefPanel article={article} />

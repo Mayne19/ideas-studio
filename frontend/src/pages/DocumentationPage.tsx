@@ -1011,7 +1011,7 @@ export default function DocumentationPage() {
             Ideas Studio
           </Link>
 
-          <nav className="hidden items-center gap-6 text-[14px] text-secondary md:flex">
+          <nav className="hidden items-center gap-6 text-[15px] text-secondary md:flex">
             {NAV_ITEMS.map((item) => (
               <a key={item.label} href={item.href} className="hover:text-primary transition-colors">
                 {item.label}
@@ -1020,10 +1020,10 @@ export default function DocumentationPage() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <Link to="/login" className="hidden sm:inline-flex rounded-[8px] px-3 py-1.5 text-[13px] font-medium text-secondary hover:bg-surface-soft hover:text-primary transition-colors">
+            <Link to="/login" className="hidden sm:inline-flex rounded-[8px] px-3 py-1.5 text-[14px] font-medium text-secondary hover:bg-surface-soft hover:text-primary transition-colors">
               Connexion
             </Link>
-            <Link to="/projects" className="inline-flex items-center gap-1.5 rounded-[8px] bg-accent px-3 py-1.5 text-[13px] font-medium text-white hover:opacity-90 transition-opacity">
+            <Link to="/projects" className="inline-flex items-center gap-1.5 rounded-[8px] bg-accent px-3 py-1.5 text-[14px] font-medium text-white hover:opacity-90 transition-opacity">
               Ouvrir le studio
               <ArrowRight size={13} />
             </Link>
@@ -1039,11 +1039,11 @@ export default function DocumentationPage() {
           <div className="border-t border-border bg-surface px-5 py-3 md:hidden">
             <nav className="flex flex-col gap-2">
               {NAV_ITEMS.map((item) => (
-                <a key={item.label} href={item.href} className="text-[14px] text-secondary hover:text-primary py-1">
+                <a key={item.label} href={item.href} className="text-[15px] text-secondary hover:text-primary py-1">
                   {item.label}
                 </a>
               ))}
-              <Link to="/login" className="text-[14px] text-accent font-medium py-1">Connexion</Link>
+              <Link to="/login" className="text-[15px] text-accent font-medium py-1">Connexion</Link>
             </nav>
           </div>
         )}
@@ -1059,7 +1059,7 @@ export default function DocumentationPage() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Rechercher dans la doc…"
-                className="w-full bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+                className="w-full bg-transparent text-[14px] text-primary outline-none placeholder:text-tertiary"
               />
             </div>
             <nav className="flex flex-col gap-0.5">
@@ -1067,7 +1067,7 @@ export default function DocumentationPage() {
                 <button
                   key={ch.id}
                   onClick={() => { setActiveChapterId(ch.id); setQuery('') }}
-                  className={`w-full text-left rounded-[8px] px-3 py-2 text-[13px] transition-colors ${
+                  className={`w-full text-left rounded-[8px] px-3 py-2 text-[14px] transition-colors ${
                     activeChapterId === ch.id
                       ? 'bg-accent/10 font-medium text-accent'
                       : 'text-secondary hover:bg-surface-soft hover:text-primary'
@@ -1089,25 +1089,25 @@ export default function DocumentationPage() {
               Comprendre, configurer et utiliser le studio éditorial SEO/GEO assisté par IA.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
-              <Link to="/projects" className="inline-flex h-9 items-center gap-1.5 rounded-[8px] bg-accent px-3.5 text-[13px] font-semibold text-white hover:opacity-90">
+              <Link to="/projects" className="inline-flex h-9 items-center gap-1.5 rounded-[8px] bg-accent px-3.5 text-[14px] font-semibold text-white hover:opacity-90">
                 Ouvrir le studio
                 <ArrowRight size={14} />
               </Link>
               <button
                 type="button"
                 onClick={handleDownloadMarkdown}
-                className="inline-flex h-9 items-center gap-1.5 rounded-[8px] bg-[#1d1d1f] px-3.5 text-[13px] font-semibold text-white hover:bg-[#2d2d30]"
+                className="inline-flex h-9 items-center gap-1.5 rounded-[8px] bg-[#1d1d1f] px-3.5 text-[14px] font-semibold text-white hover:bg-[#2d2d30]"
               >
                 <Download size={14} />
                 Télécharger Markdown complet
               </button>
-              <a href={swaggerUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-[8px] border border-border px-3.5 text-[13px] font-medium text-primary hover:bg-surface-soft">
+              <a href={swaggerUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-[8px] border border-border px-3.5 text-[14px] font-medium text-primary hover:bg-surface-soft">
                 Ouvrir Swagger API
               </a>
-              <a href={redocUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-[8px] border border-border px-3.5 text-[13px] font-medium text-primary hover:bg-surface-soft">
+              <a href={redocUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-[8px] border border-border px-3.5 text-[14px] font-medium text-primary hover:bg-surface-soft">
                 ReDoc
               </a>
-              <a href={openApiUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-[8px] border border-border px-3.5 text-[13px] font-medium text-primary hover:bg-surface-soft">
+              <a href={openApiUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-[8px] border border-border px-3.5 text-[14px] font-medium text-primary hover:bg-surface-soft">
                 OpenAPI JSON
               </a>
             </div>
@@ -1123,13 +1123,13 @@ export default function DocumentationPage() {
         {/* Right sidebar - outline of active chapter only */}
         <aside className="hidden xl:block border-l border-border min-h-[calc(100vh-56px)]">
           <div className="sticky top-14 py-6 pl-4">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-tertiary">Sur cette page</p>
+            <p className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-tertiary">Sur cette page</p>
             <nav className="flex flex-col gap-0.5 border-l border-border pl-4">
               {outline.map((item) => (
                 <a
                   key={item.id}
                   href={`#${item.id}`}
-                  className={`py-1 text-[13px] transition-colors ${
+                  className={`py-1 text-[14px] transition-colors ${
                     item.depth === 3 ? 'pl-3 text-tertiary' : 'text-secondary'
                   } hover:text-primary`}
                 >
@@ -1143,7 +1143,7 @@ export default function DocumentationPage() {
 
       {/* Footer */}
       <footer className="border-t border-border bg-surface">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-6 text-[13px] text-tertiary">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-6 text-[14px] text-tertiary">
           <span>&copy; {new Date().getFullYear()} Ideas Studio</span>
           <div className="flex items-center gap-6">
             <Link to="/documentation" className="hover:text-primary transition-colors">Documentation</Link>

@@ -66,13 +66,13 @@ export default function PerformanceArticlesPage() {
         <div>
           <button
             onClick={() => navigate(`/projects/${projectId}/performance`)}
-            className="flex items-center gap-1.5 text-[13px] text-secondary hover:text-primary transition-colors mb-2"
+            className="flex items-center gap-1.5 text-[14px] text-secondary hover:text-primary transition-colors mb-2"
           >
             <ArrowLeft size={13} />
             Performance
           </button>
           <h1 className="text-[20px] font-semibold text-primary tracking-tight">Articles</h1>
-          <p className="mt-0.5 text-[13px] text-secondary">
+          <p className="mt-0.5 text-[14px] text-secondary">
             Performance par article — {totalViews.toLocaleString('fr-FR')} vues au total
           </p>
         </div>
@@ -125,10 +125,10 @@ export default function PerformanceArticlesPage() {
         <div className="rounded-[16px] bg-surface overflow-hidden">
           {/* Table header */}
           <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2.5 border-b border-border/40 bg-surface-soft">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Article</span>
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-tertiary w-16 text-right">Vues</span>
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-tertiary w-24 text-right hidden sm:block">Score SEO</span>
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-tertiary w-20 text-right hidden md:block">Publié</span>
+            <span className="text-[12px] font-semibold uppercase tracking-wide text-tertiary">Article</span>
+            <span className="text-[12px] font-semibold uppercase tracking-wide text-tertiary w-16 text-right">Vues</span>
+            <span className="text-[12px] font-semibold uppercase tracking-wide text-tertiary w-24 text-right hidden sm:block">Score SEO</span>
+            <span className="text-[12px] font-semibold uppercase tracking-wide text-tertiary w-20 text-right hidden md:block">Publié</span>
           </div>
 
           {/* Rows */}
@@ -140,8 +140,8 @@ export default function PerformanceArticlesPage() {
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-medium text-primary truncate">{article.title}</p>
-                    <p className="text-[11px] text-tertiary truncate">{article.slug}</p>
+                    <p className="text-[14px] font-medium text-primary truncate">{article.title}</p>
+                    <p className="text-[12px] text-tertiary truncate">{article.slug}</p>
                   </div>
                   <button
                     onClick={() => navigate(`/projects/${projectId}/performance/${article.article_id}`)}
@@ -151,7 +151,7 @@ export default function PerformanceArticlesPage() {
                     <ExternalLink size={11} />
                   </button>
                 </div>
-                <span className="text-[13px] font-semibold text-primary w-16 text-right">
+                <span className="text-[14px] font-semibold text-primary w-16 text-right">
                   {article.views.toLocaleString('fr-FR')}
                 </span>
                 <div className="w-24 flex justify-end hidden sm:flex">

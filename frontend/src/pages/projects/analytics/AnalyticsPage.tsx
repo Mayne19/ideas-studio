@@ -47,7 +47,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 function InlineEmpty({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">{children}</p>
+  return <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[14px] text-secondary">{children}</p>
 }
 
 function ChartEmpty({ message }: { message: string }) {
@@ -76,20 +76,20 @@ function VisualRow({
   const pct = percentOf(value, total)
   return (
     <div className="flex items-center gap-2.5 rounded-[10px] px-2 py-1 hover:bg-surface-soft">
-      {rank !== undefined && <span className="w-4 shrink-0 text-[11px] font-medium text-tertiary">{rank}</span>}
+      {rank !== undefined && <span className="w-4 shrink-0 text-[12px] font-medium text-tertiary">{rank}</span>}
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-surface-soft text-secondary">{leading}</span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-3">
-          <span className="truncate text-[13px] font-medium text-primary" title={label}>{label}</span>
+          <span className="truncate text-[14px] font-medium text-primary" title={label}>{label}</span>
           <span className="shrink-0 text-[12px] font-semibold text-secondary">{formatMetric(value)}</span>
         </div>
         <div className="mt-1 flex items-center gap-2">
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-soft">
             <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
           </div>
-          <span className="w-8 text-right text-[11px] text-tertiary">{pct}%</span>
+          <span className="w-8 text-right text-[12px] text-tertiary">{pct}%</span>
         </div>
-        {meta && <div className="mt-0.5 text-[11px] text-tertiary">{meta}</div>}
+        {meta && <div className="mt-0.5 text-[12px] text-tertiary">{meta}</div>}
       </div>
     </div>
   )
@@ -227,7 +227,7 @@ export default function AnalyticsPage() {
       <div className="project-page-header">
         <div>
           <h1 className="text-[20px] font-semibold tracking-tight text-primary">Analytics</h1>
-          <p className="mt-0.5 text-[13px] text-secondary">Performance éditoriale et trafic du projet.</p>
+          <p className="mt-0.5 text-[14px] text-secondary">Performance éditoriale et trafic du projet.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="secondary" icon={<RefreshCw size={13} />} onClick={() => setTick((t) => t + 1)}>
@@ -285,7 +285,7 @@ export default function AnalyticsPage() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[520px]">
                 <thead>
-                  <tr className="border-b border-border text-[11px] font-medium uppercase tracking-wide text-tertiary">
+                  <tr className="border-b border-border text-[12px] font-medium uppercase tracking-wide text-tertiary">
                     <th className="px-3 pb-2 text-left font-medium">Titre</th>
                     <th className="px-3 pb-2 text-right font-medium tabular-nums">Vues</th>
                     <th className="px-3 pb-2 text-right font-medium">Variation</th>
@@ -296,7 +296,7 @@ export default function AnalyticsPage() {
                   {topArticles.map((a) => (
                     <tr
                       key={a.article_id}
-                      className="group border-b border-border/30 text-[13px] transition-colors hover:bg-surface-soft last:border-0"
+                      className="group border-b border-border/30 text-[14px] transition-colors hover:bg-surface-soft last:border-0"
                     >
                       <td className="py-2.5 px-3">
                         <button
@@ -387,7 +387,7 @@ export default function AnalyticsPage() {
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <AlertTriangle size={14} className="shrink-0 text-warning" />
-                    <span className="truncate text-[13px] font-medium text-primary">{a.title}</span>
+                    <span className="truncate text-[14px] font-medium text-primary">{a.title}</span>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <span className={`text-[12px] font-medium tabular-nums ${a.seo_score !== null && a.seo_score < 60 ? 'text-danger' : 'text-warning'}`}>

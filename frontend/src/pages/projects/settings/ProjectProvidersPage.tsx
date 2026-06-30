@@ -70,7 +70,7 @@ function AccessDenied() {
         <span className="text-2xl text-error">🔒</span>
       </div>
       <h2 className="text-[18px] font-semibold text-primary">Accès réservé aux administrateurs</h2>
-      <p className="mt-2 max-w-sm text-[14px] text-secondary">
+      <p className="mt-2 max-w-sm text-[15px] text-secondary">
         La configuration des providers, agents et pipeline est réservée aux owners et admins du projet.
       </p>
     </div>
@@ -235,7 +235,7 @@ export default function ProjectProvidersPage() {
 
       {error && (
         <div className="rounded-[12px] border border-danger/20 bg-danger/5 px-4 py-3">
-          <div className="flex items-start gap-2 text-[13px] text-danger">
+          <div className="flex items-start gap-2 text-[14px] text-danger">
             <XCircle size={15} className="mt-0.5 shrink-0" />
             <div>
               <p className="font-medium">Configuration IA indisponible</p>
@@ -252,7 +252,7 @@ export default function ProjectProvidersPage() {
 
       {configs.length === 0 && !showForm && (
         <Card className="text-center">
-          <p className="text-[13px] text-secondary mb-4">Aucun provider configuré. Ajoutez-en un depuis la liste ci-dessous.</p>
+          <p className="text-[14px] text-secondary mb-4">Aucun provider configuré. Ajoutez-en un depuis la liste ci-dessous.</p>
           <div className="flex flex-wrap justify-center gap-2">
             {SUPPORTED_PROVIDERS.map((p) => (
               <button
@@ -276,7 +276,7 @@ export default function ProjectProvidersPage() {
             <div className="flex items-start justify-between mb-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <p className="text-[13px] font-medium text-primary">{config.label}</p>
+                  <p className="text-[14px] font-medium text-primary">{config.label}</p>
                   {config.is_default && (
                     <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">Par défaut</span>
                   )}
@@ -321,17 +321,17 @@ export default function ProjectProvidersPage() {
             </div>
 
             {config.last_test_error && (
-              <p className="text-[11px] text-danger mb-2">{config.last_test_error}</p>
+              <p className="text-[12px] text-danger mb-2">{config.last_test_error}</p>
             )}
 
             {testResult && testResult.id === config.id && (
-              <div className={`rounded-[8px] p-2 text-[11px] mb-2 ${testResult.status === 'connected' ? 'bg-[#e8f5e9] text-[#1a7a3a]' : 'bg-[#fce4ec] text-danger'}`}>
+              <div className={`rounded-[8px] p-2 text-[12px] mb-2 ${testResult.status === 'connected' ? 'bg-[#e8f5e9] text-[#1a7a3a]' : 'bg-[#fce4ec] text-danger'}`}>
                 {testResult.status === 'connected' ? <CheckCircle size={11} className="inline mr-1" /> : <XCircle size={11} className="inline mr-1" />}
                 {testResult.message}
               </div>
             )}
 
-            <div className="flex flex-wrap gap-4 text-[11px] text-tertiary">
+            <div className="flex flex-wrap gap-4 text-[12px] text-tertiary">
               <span>Clé API : {config.api_key_configured ? 'Configurée' : 'Non configurée'}</span>
               {config.last_tested_at && <span>Dernier test : {new Date(config.last_tested_at).toLocaleString('fr-FR')}</span>}
               <span>Statut : {config.enabled ? 'Actif' : 'Inactif'}</span>
@@ -362,13 +362,13 @@ export default function ProjectProvidersPage() {
 
       {showForm && (
         <Card>
-          <p className="text-[13px] font-medium text-primary mb-4">
+          <p className="text-[14px] font-medium text-primary mb-4">
             {editingId ? `Modifier : ${form.label}` : `Ajouter : ${getProviderDef(form.provider)?.label || form.provider}`}
           </p>
           <div className="flex flex-col gap-3">
             {!editingId && (
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-medium text-secondary">Type de provider</label>
+                <label className="text-[12px] font-medium text-secondary">Type de provider</label>
                 <select
                   value={form.provider}
                   onChange={(e) => {
@@ -382,7 +382,7 @@ export default function ProjectProvidersPage() {
                     })
                     setAdvancedOpen(e.target.value === 'custom' || e.target.value === 'ollama')
                   }}
-                  className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                  className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
                 >
                   {SUPPORTED_PROVIDERS.map((p) => (
                     <option key={p.key} value={p.key}>{p.label}</option>
@@ -391,17 +391,17 @@ export default function ProjectProvidersPage() {
               </div>
             )}
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-medium text-secondary">Label</label>
+              <label className="text-[12px] font-medium text-secondary">Label</label>
               <input
                 type="text"
                 value={form.label}
                 onChange={(e) => setForm({ ...form, label: e.target.value })}
                 placeholder="Mon provider Gemini"
-                className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-medium text-secondary">
+              <label className="text-[12px] font-medium text-secondary">
                 Clé API {editingId ? '(laisser vide pour conserver)' : ''}
               </label>
               <div className="relative">
@@ -410,7 +410,7 @@ export default function ProjectProvidersPage() {
                   value={form.api_key}
                   onChange={(e) => setForm({ ...form, api_key: e.target.value })}
                   placeholder={editingId ? 'Nouvelle clé (optionnelle)' : 'Votre clé API'}
-                  className="w-full rounded-[10px] border border-border bg-surface px-3 py-2 pr-8 text-[13px] text-primary outline-none focus:border-accent"
+                  className="w-full rounded-[10px] border border-border bg-surface px-3 py-2 pr-8 text-[14px] text-primary outline-none focus:border-accent"
                 />
                 <button
                   type="button"
@@ -423,24 +423,24 @@ export default function ProjectProvidersPage() {
             </div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-medium text-secondary">Modèle</label>
+                <label className="text-[12px] font-medium text-secondary">Modèle</label>
                 <input
                   type="text"
                   value={form.model}
                   onChange={(e) => setForm({ ...form, model: e.target.value })}
                   placeholder="gemini-2.5-flash"
-                  className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                  className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
                 />
               </div>
               {(advancedOpen || form.provider === 'custom' || form.provider === 'ollama') && (
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-medium text-secondary">URL de base</label>
+                  <label className="text-[12px] font-medium text-secondary">URL de base</label>
                   <input
                     type="text"
                     value={form.base_url}
                     onChange={(e) => setForm({ ...form, base_url: e.target.value })}
                     placeholder="https://api.openai.com/v1"
-                    className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none focus:border-accent"
+                    className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
                   />
                 </div>
               )}
@@ -449,7 +449,7 @@ export default function ProjectProvidersPage() {
               <button
                 type="button"
                 onClick={() => setAdvancedOpen((open) => !open)}
-                className="w-fit rounded-[8px] px-2 py-1 text-[11px] font-medium text-accent hover:bg-accent/8"
+                className="w-fit rounded-[8px] px-2 py-1 text-[12px] font-medium text-accent hover:bg-accent/8"
               >
                 {advancedOpen ? 'Masquer les options avancées' : 'Afficher Base URL avancée'}
               </button>

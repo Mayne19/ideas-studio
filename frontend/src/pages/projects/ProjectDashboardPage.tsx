@@ -360,7 +360,7 @@ function PipelineSummaryItem({
   return (
     <div className="flex h-[56px] min-w-0 items-center gap-2.5 px-5">
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] bg-surface-soft text-secondary">{icon}</span>
-      <span className="min-w-0 truncate text-[13px] font-medium text-secondary">{title}</span>
+      <span className="min-w-0 truncate text-[14px] font-medium text-secondary">{title}</span>
       <strong className="shrink-0 text-[18px] font-semibold leading-none tabular-nums text-primary">{value}</strong>
       <span className="min-w-0 truncate text-[12px] text-tertiary">{description}</span>
     </div>
@@ -604,13 +604,13 @@ export default function ProjectDashboardPage() {
           <h1 className="text-[22px] font-semibold leading-tight text-primary">
             {firstName ? `Bonjour, ${firstName} 👋` : 'Bonjour 👋'}
           </h1>
-          <p className="mt-1.5 text-[13px] text-secondary">
+          <p className="mt-1.5 text-[14px] text-secondary">
             Vue d'ensemble de votre pipeline éditorial et de vos performances.
           </p>
         </div>
       </section>
 
-      <section className="grid h-[48px] grid-cols-[1.35fr_1fr_1.15fr_1fr_1fr] items-center overflow-hidden rounded-[10px] border-2 border-border bg-transparent text-[13px] text-secondary">
+      <section className="grid h-[48px] grid-cols-[1.35fr_1fr_1.15fr_1fr_1fr] items-center overflow-hidden rounded-[10px] border-2 border-border bg-transparent text-[14px] text-secondary">
         {/* Domain */}
         <div className="flex h-full min-w-0 items-center gap-2 border-r border-border px-6 font-medium text-primary">
           <Globe size={15} className="shrink-0 text-secondary" />
@@ -618,7 +618,7 @@ export default function ProjectDashboardPage() {
         </div>
         {/* Statut connecté */}
         <div className="flex h-full min-w-0 items-center border-r border-border px-6">
-          <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[13px] font-semibold text-white">
+          <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[14px] font-semibold text-white">
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-accent">
               <ArrowUp size={11} />
             </span>
@@ -708,7 +708,7 @@ export default function ProjectDashboardPage() {
       <section className="grid items-stretch gap-4 lg:grid-cols-[1.62fr_1fr]">
         <Card padding="none" className="flex h-full flex-col overflow-hidden rounded-[10px]">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
-            <h2 className="text-[14px] font-semibold text-primary">Articles récents</h2>
+            <h2 className="text-[15px] font-semibold text-primary">Articles récents</h2>
             <button
               type="button"
               onClick={() => navigate(`/projects/${projectId}/articles`)}
@@ -737,8 +737,8 @@ export default function ProjectDashboardPage() {
                   className="grid grid-cols-[minmax(0,1fr)_120px_56px_110px_96px] items-center gap-6 px-5 py-3 text-left transition-colors hover:bg-surface-soft"
                 >
                   <span className="min-w-0">
-                    <span className="block truncate text-[13px] font-medium text-primary">{article.title}</span>
-                    <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-tertiary">
+                    <span className="block truncate text-[14px] font-medium text-primary">{article.title}</span>
+                    <span className="mt-0.5 flex items-center gap-1.5 text-[12px] text-tertiary">
                       <span>{formatDate(getArticleDate(article))}</span>
                       <span>·</span>
                       <span>{article.author_name ?? 'Auteur'}</span>
@@ -746,7 +746,7 @@ export default function ProjectDashboardPage() {
                     </span>
                   </span>
                   <span className="flex items-center gap-2">
-                    <span className="w-6 shrink-0 text-right text-[13px] font-semibold tabular-nums text-primary">
+                    <span className="w-6 shrink-0 text-right text-[14px] font-semibold tabular-nums text-primary">
                       {score ?? '—'}
                     </span>
                     <span className="h-[6px] w-[60px] shrink-0 overflow-hidden rounded-full bg-surface-muted">
@@ -763,7 +763,7 @@ export default function ProjectDashboardPage() {
                   <span className="flex shrink-0">
                     {category ? (
                       <span
-                        className="inline-flex h-[22px] items-center rounded-full px-2.5 text-[11px] font-semibold whitespace-nowrap"
+                        className="inline-flex h-[22px] items-center rounded-full px-2.5 text-[12px] font-semibold whitespace-nowrap"
                         style={{ backgroundColor: `${category.color ?? '#0066ff'}22`, color: category.color ?? '#0066ff' }}
                       >
                         {category.name}
@@ -776,14 +776,14 @@ export default function ProjectDashboardPage() {
               )
             })}
             {data && data.recentArticles.length === 0 && (
-              <div className="px-4 py-10 text-[13px] text-secondary">Aucun article récent.</div>
+              <div className="px-4 py-10 text-[14px] text-secondary">Aucun article récent.</div>
             )}
           </div>
         </Card>
 
         <div className="flex flex-col gap-4">
           <Card padding="none" className="overflow-hidden rounded-[10px]">
-            <h2 className="border-b border-border px-6 py-4 text-[14px] font-semibold text-primary">À faire maintenant</h2>
+            <h2 className="border-b border-border px-6 py-4 text-[15px] font-semibold text-primary">À faire maintenant</h2>
             <div className="flex flex-col divide-y divide-border-soft">
               {todoRows.map((row) => (
                 <button
@@ -792,7 +792,7 @@ export default function ProjectDashboardPage() {
                   onClick={() => navigate(row.href)}
                   className="grid h-10 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 text-left transition-colors hover:bg-surface-soft"
                 >
-                  <span className="text-[13px] font-medium text-primary">{row.label}</span>
+                  <span className="text-[14px] font-medium text-primary">{row.label}</span>
                   <span className="shrink-0 pl-6 text-[12px] text-secondary">{row.detail}</span>
                 </button>
               ))}
@@ -800,13 +800,13 @@ export default function ProjectDashboardPage() {
           </Card>
 
           <Card padding="none" className="overflow-hidden rounded-[10px]">
-            <h2 className="border-b border-border px-6 py-4 text-[14px] font-semibold text-primary">Activité récente</h2>
+            <h2 className="border-b border-border px-6 py-4 text-[15px] font-semibold text-primary">Activité récente</h2>
             <div className="flex flex-col divide-y divide-border-soft">
               {visibleActivityEvents.length === 0
                 ? Array.from({ length: 5 }).map((_, i) => (
                     <div key={`empty-${i}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 py-2.5">
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-transparent" />
-                      <span className="text-[13px] text-tertiary">—</span>
+                      <span className="text-[14px] text-tertiary">—</span>
                       <span />
                     </div>
                   ))
@@ -820,7 +820,7 @@ export default function ProjectDashboardPage() {
                         className="grid h-10 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 text-left transition-colors hover:bg-surface-soft"
                       >
                         <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${['bg-[#00c950]', 'bg-[#0066ff]', 'bg-[#ffa51f]', 'bg-[#ff3b1f]'][index % 4]}`} />
-                        <span className="truncate text-[13px] font-medium text-primary">
+                        <span className="truncate text-[14px] font-medium text-primary">
                           {event.label} : {event.articleTitle}
                         </span>
                         <span className="shrink-0 pl-6 text-[12px] font-medium text-secondary">{event.time}</span>
@@ -848,7 +848,7 @@ export default function ProjectDashboardPage() {
         >
           <AlertCircle size={16} className="mt-0.5 shrink-0" />
           <span>
-            <span className="block text-[13px] font-semibold">Complétez la configuration de votre projet</span>
+            <span className="block text-[14px] font-semibold">Complétez la configuration de votre projet</span>
             <span className="block text-[12px]">Définissez l'audience cible et le ton éditorial.</span>
           </span>
         </button>

@@ -269,7 +269,7 @@ export default function CalendarPage() {
           <div>
             <div className="mb-5">
               <h1 className="text-[20px] font-semibold text-primary tracking-tight">Calendrier éditorial</h1>
-              <p className="mt-0.5 text-[13px] text-secondary">
+              <p className="mt-0.5 text-[14px] text-secondary">
                 Articles programmés et publiés dans le temps.
               </p>
             </div>
@@ -345,8 +345,8 @@ export default function CalendarPage() {
                                 <span className="text-[9px] text-tertiary uppercase">{displayMonth}</span>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="truncate text-[13px] font-medium text-primary">{a.title}</p>
-                                <div className="flex items-center gap-2 mt-0.5 text-[11px] text-tertiary">
+                                <p className="truncate text-[14px] font-medium text-primary">{a.title}</p>
+                                <div className="flex items-center gap-2 mt-0.5 text-[12px] text-tertiary">
                                   {a.keyword && <span>{a.keyword}</span>}
                                   {a.keyword && <span>·</span>}
                                   <span>{dateLabel} {displayDate}</span>
@@ -380,7 +380,7 @@ export default function CalendarPage() {
             >
               <ChevronLeft size={15} />
             </button>
-            <p className="text-[14px] font-semibold text-primary">
+            <p className="text-[15px] font-semibold text-primary">
               {MONTH_NAMES[month]} {year}
             </p>
             <button
@@ -394,7 +394,7 @@ export default function CalendarPage() {
           {/* Day headers */}
           <div className="grid grid-cols-7 mb-1">
             {DAY_NAMES.map((d) => (
-              <div key={d} className="py-2 text-center text-[11px] font-semibold text-tertiary uppercase tracking-wide">
+              <div key={d} className="py-2 text-center text-[12px] font-semibold text-tertiary uppercase tracking-wide">
                 {d}
               </div>
             ))}
@@ -449,7 +449,7 @@ export default function CalendarPage() {
           </div>
 
           {/* Legend */}
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-tertiary">
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-[12px] text-tertiary">
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-blue-400" />
               Idée

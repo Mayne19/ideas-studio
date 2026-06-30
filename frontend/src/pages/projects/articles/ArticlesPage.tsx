@@ -73,13 +73,13 @@ function ArticleRow({
       <TableCell className="min-w-0 max-w-[280px]">
         <button
           type="button"
-          className="block w-full truncate text-left text-[13px] font-medium leading-snug text-primary transition-colors hover:text-accent"
+          className="block w-full truncate text-left text-[14px] font-medium leading-snug text-primary transition-colors hover:text-accent"
           onClick={() => onEdit(article)}
           title={article.title}
         >
           {article.title}
         </button>
-        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-tertiary">
+        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] text-tertiary">
           <span
             className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap ${category?.color ? '' : 'bg-surface-soft text-tertiary'}`}
             style={category?.color ? { backgroundColor: `${category.color}20`, color: category.color } : undefined}
@@ -123,7 +123,7 @@ function ArticleRow({
           </Button>
           <select
             onChange={(e) => { if (e.target.value) { onAction(e.target.value, article); e.target.value = '' } }}
-            className="h-8 w-[82px] cursor-pointer rounded-[8px] border border-border bg-surface px-1.5 text-[11px] text-secondary transition-colors hover:bg-surface-muted"
+            className="h-8 w-[82px] cursor-pointer rounded-[8px] border border-border bg-surface px-1.5 text-[12px] text-secondary transition-colors hover:bg-surface-muted"
             defaultValue=""
             aria-label={`Actions pour ${article.title}`}
           >
@@ -418,7 +418,7 @@ export default function ArticlesPage() {
         <div className="project-page-header">
           <div>
             <h1 className="text-[20px] font-semibold text-primary tracking-tight">Articles</h1>
-            <p className="mt-0.5 text-[13px] text-secondary">
+            <p className="mt-0.5 text-[14px] text-secondary">
               Gérez l'ensemble de votre contenu éditorial.
             </p>
           </div>
@@ -439,7 +439,7 @@ export default function ArticlesPage() {
 
         {/* Action error banner */}
         {actionError && (
-          <div className="mb-4 flex items-center justify-between rounded-[10px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[13px] text-danger">
+          <div className="mb-4 flex items-center justify-between rounded-[10px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[14px] text-danger">
             <span>{actionError}</span>
             <button onClick={() => setActionError('')} className="ml-3 shrink-0 text-danger/60 hover:text-danger transition-colors">✕</button>
           </div>
@@ -481,7 +481,7 @@ export default function ArticlesPage() {
               className="w-[185px]"
             />
           ) : (
-            <div className="flex h-10 w-[185px] cursor-not-allowed select-none items-center rounded-[12px] border border-border bg-surface/50 px-3.5 text-[13px] text-tertiary">
+            <div className="flex h-10 w-[185px] cursor-not-allowed select-none items-center rounded-[12px] border border-border bg-surface/50 px-3.5 text-[14px] text-tertiary">
               Auteurs indisponibles
             </div>
           )}
@@ -554,7 +554,7 @@ export default function ArticlesPage() {
           <div className="flex items-start gap-3 rounded-[12px] border border-warning/20 bg-warning/5 px-3.5 py-3">
             <EyeOff size={15} className="mt-0.5 shrink-0 text-[#9B6B19]" />
             <div>
-              <p className="text-[13px] font-medium text-primary">{unpublishTarget?.title}</p>
+              <p className="text-[14px] font-medium text-primary">{unpublishTarget?.title}</p>
               <p className="mt-0.5 text-[12px] text-secondary leading-snug">
                 L'article sera retiré du site public et renvoyé en Production.
               </p>
@@ -582,7 +582,7 @@ export default function ArticlesPage() {
           <div className="flex items-start gap-3 rounded-[12px] border border-danger/20 bg-danger/5 px-3.5 py-3">
             <Archive size={15} className="mt-0.5 shrink-0 text-danger" />
             <div>
-              <p className="text-[13px] font-medium text-primary">{archiveTarget?.title}</p>
+              <p className="text-[14px] font-medium text-primary">{archiveTarget?.title}</p>
               <p className="mt-0.5 text-[12px] text-secondary leading-snug">
                 L'article sera retiré du site public et déplacé dans les Archives.
               </p>
@@ -610,7 +610,7 @@ export default function ArticlesPage() {
           <div className="flex items-start gap-3 rounded-[12px] border border-danger/20 bg-danger/5 px-3.5 py-3">
             <Trash2 size={15} className="mt-0.5 shrink-0 text-danger" />
             <div>
-              <p className="text-[13px] font-medium text-primary">{deleteTarget?.title}</p>
+              <p className="text-[14px] font-medium text-primary">{deleteTarget?.title}</p>
               <p className="mt-0.5 text-[12px] text-secondary leading-snug">
                 Cette action est critique. L'article sera supprimé selon la logique de suppression existante.
               </p>
@@ -636,7 +636,7 @@ export default function ArticlesPage() {
       >
         <form onSubmit={handleCreate} className="flex flex-col gap-4">
           {createError && (
-            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">
               {createError}
             </div>
           )}
@@ -685,7 +685,7 @@ export default function ArticlesPage() {
             <div className="flex items-start gap-3 rounded-[12px] border border-success/20 bg-success/5 px-3.5 py-3">
               <CheckCircle size={15} className="mt-0.5 shrink-0 text-[#1a7a3a]" />
               <div>
-                <p className="text-[13px] font-medium text-primary">{generateResult.title}</p>
+                <p className="text-[14px] font-medium text-primary">{generateResult.title}</p>
                 <p className="mt-0.5 text-[12px] text-secondary">Article généré avec succès</p>
               </div>
             </div>
@@ -701,7 +701,7 @@ export default function ArticlesPage() {
         ) : (
           <form onSubmit={handleGenerate} className="flex flex-col gap-4">
             {generateError && (
-              <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+              <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">
                 {generateError}
               </div>
             )}

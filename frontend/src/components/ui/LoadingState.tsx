@@ -11,7 +11,7 @@ export default function LoadingState({ label = 'Chargement…', className }: Loa
   return (
     <div className={cn('flex flex-col items-center justify-center gap-3 py-16', className)}>
       <Loader2 size={24} className="animate-spin text-tertiary" />
-      <p className="text-[13px] text-tertiary">{label}</p>
+      <p className="text-[14px] text-tertiary">{label}</p>
       <div className="flex w-44 flex-col gap-2 opacity-70">
         <MayneSkeleton width="100%" height={8} radius={999} />
         <MayneSkeleton width="68%" height={8} radius={999} />

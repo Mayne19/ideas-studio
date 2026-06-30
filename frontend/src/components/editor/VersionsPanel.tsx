@@ -61,25 +61,25 @@ export default function VersionsPanel({
   }
 
   if (loading) {
-    return <p className="text-[11px] text-tertiary text-center py-4">Chargement...</p>
+    return <p className="text-[12px] text-tertiary text-center py-4">Chargement...</p>
   }
 
   if (versions.length === 0) {
-    return <p className="text-[11px] text-tertiary text-center py-4">Aucune version sauvegardée.</p>
+    return <p className="text-[12px] text-tertiary text-center py-4">Aucune version sauvegardée.</p>
   }
 
   return (
     <>
       <div className="flex flex-col gap-1.5">
-        {message && <p className="rounded-[8px] bg-success/8 px-2 py-1.5 text-[11px] text-success">{message}</p>}
-        {error && <p className="rounded-[8px] bg-danger/8 px-2 py-1.5 text-[11px] text-danger">{error}</p>}
+        {message && <p className="rounded-[8px] bg-success/8 px-2 py-1.5 text-[12px] text-success">{message}</p>}
+        {error && <p className="rounded-[8px] bg-danger/8 px-2 py-1.5 text-[12px] text-danger">{error}</p>}
         {versions.map((v) => (
           <div
             key={v.id}
             className="flex items-center gap-2 rounded-[8px] border border-transparent px-2 py-1.5 hover:border-border hover:bg-surface-soft"
           >
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-medium text-primary truncate">v{v.version_number} — {v.title}</p>
+              <p className="text-[12px] font-medium text-primary truncate">v{v.version_number} — {v.title}</p>
               <p className="text-[10px] text-tertiary">
                 {VERSION_TYPE_LABELS[v.version_type] ?? v.version_type} · {formatDateTime(v.created_at)}
                 {v.created_by ? ` · Auteur ${authorLabel(v.created_by)}` : ''}

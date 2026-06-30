@@ -48,12 +48,12 @@ export default function MetricCard({
       </span>
       <p className="text-[24px] font-semibold text-primary tracking-tight leading-none">
         {value}
-        {suffix && <span className="text-[14px] font-normal text-tertiary ml-0.5">{suffix}</span>}
+        {suffix && <span className="text-[15px] font-normal text-tertiary ml-0.5">{suffix}</span>}
       </p>
       <div className="flex items-center justify-between">
         <p className="text-[12px] text-tertiary">{label}</p>
         {trend !== undefined && (
-          <span className={cn('rounded-full border px-1.5 py-0.5 text-[11px] font-medium', trendClass)}>
+          <span className={cn('rounded-full border px-1.5 py-0.5 text-[12px] font-medium', trendClass)}>
             {trend ?? '—'}
           </span>
         )}

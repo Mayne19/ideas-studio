@@ -57,7 +57,7 @@ export default function MediaPanel({
           ) : (
             <Upload size={20} className="text-tertiary" />
           )}
-          <p className="text-[11px] text-tertiary">
+          <p className="text-[12px] text-tertiary">
             {uploading ? 'Upload en cours...' : 'Uploader une image'}
           </p>
         </button>
@@ -66,7 +66,7 @@ export default function MediaPanel({
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
       <div>
-        <label className="mb-1 block text-[11px] font-medium text-secondary">URL de secours</label>
+        <label className="mb-1 block text-[12px] font-medium text-secondary">URL de secours</label>
         <input
           type="text"
           value={coverImageUrl}
@@ -76,7 +76,7 @@ export default function MediaPanel({
         />
       </div>
 
-      {uploadError && <p className="text-[11px] text-danger">{uploadError}</p>}
+      {uploadError && <p className="text-[12px] text-danger">{uploadError}</p>}
 
       <button
         type="button"

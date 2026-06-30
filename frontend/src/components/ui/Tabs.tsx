@@ -28,7 +28,7 @@ export default function Tabs({ items, value, onChange, className }: TabsProps) {
           aria-selected={value === item.value}
           onClick={() => onChange(item.value)}
           className={cn(
-            'rounded-[8px] px-3.5 py-1.5 text-[13px] font-medium transition-all duration-150',
+            'rounded-[8px] px-3.5 py-1.5 text-[14px] font-medium transition-all duration-150',
             value === item.value
               ? 'bg-transparent text-primary border-b-2 border-primary shadow-none'
               : 'text-secondary hover:text-primary',

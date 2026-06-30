@@ -186,7 +186,7 @@ export default function ProjectStrategyPage() {
   return (
     <form onSubmit={handleSave} className="flex flex-col gap-6">
       {error && (
-        <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">{error}</div>
+        <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">{error}</div>
       )}
 
       {/* Assistant button */}

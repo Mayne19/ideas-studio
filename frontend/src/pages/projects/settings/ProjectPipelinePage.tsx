@@ -32,7 +32,7 @@ function AccessDenied() {
         <span className="text-2xl text-error">🔒</span>
       </div>
       <h2 className="text-[18px] font-semibold text-primary">Accès réservé aux administrateurs</h2>
-      <p className="mt-2 max-w-sm text-[14px] text-secondary">
+      <p className="mt-2 max-w-sm text-[15px] text-secondary">
         La configuration des providers, agents et pipeline est réservée aux owners et admins du projet.
       </p>
     </div>
@@ -149,7 +149,7 @@ export default function ProjectPipelinePage() {
     return (
       <div className="flex flex-col gap-4">
         <ErrorState message={loadError || 'Impossible de charger le pipeline.'} onRetry={handleRetry} />
-        <div className="rounded-[14px] border border-border bg-surface p-4 text-[13px] text-secondary">
+        <div className="rounded-[14px] border border-border bg-surface p-4 text-[14px] text-secondary">
           Les owners/admins doivent pouvoir accéder à cette page. Si ce message apparaît en production, le backend déployé n’inclut pas encore les endpoints Pipeline.
         </div>
       </div>
@@ -159,12 +159,12 @@ export default function ProjectPipelinePage() {
   return (
     <div className="flex flex-col gap-6">
       <Card padding="sm">
-        <p className="text-[13px] font-medium text-primary">Flux éditorial automatique</p>
+        <p className="text-[14px] font-medium text-primary">Flux éditorial automatique</p>
         <p className="mt-1 text-[12px] leading-relaxed text-secondary">
           Les catégories et leurs fréquences alimentent la génération d'idées, puis la validation humaine déclenche la production,
           la rédaction, la relecture et la planification. Ideas Studio ne publie pas automatiquement sans validation humaine.
         </p>
-        <div className="mt-3 grid gap-2 text-[11px] text-secondary sm:grid-cols-5">
+        <div className="mt-3 grid gap-2 text-[12px] text-secondary sm:grid-cols-5">
           {['Catégories', 'Idées', 'Validation', 'Production', 'Publication'].map((step) => (
             <span key={step} className="rounded-[10px] bg-surface-soft px-3 py-2 text-center font-medium">{step}</span>
           ))}
@@ -173,7 +173,7 @@ export default function ProjectPipelinePage() {
 
       {/* Enable toggle */}
       <Card padding="sm">
-        <p className="text-[13px] font-medium text-primary">Volume éditorial</p>
+        <p className="text-[14px] font-medium text-primary">Volume éditorial</p>
         <p className="mt-0.5 text-[12px] text-tertiary">
           {settings?.total_monthly_from_categories ?? 0} article(s)/mois calculé(s) depuis les catégories actives.
         </p>
@@ -194,7 +194,7 @@ export default function ProjectPipelinePage() {
       <Card padding="sm">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[13px] font-medium text-primary">Pipeline automatique</p>
+            <p className="text-[14px] font-medium text-primary">Pipeline automatique</p>
             <p className="mt-0.5 text-[12px] text-tertiary">
               Planifiez les automatisations éditoriales du projet.
             </p>
@@ -225,7 +225,7 @@ export default function ProjectPipelinePage() {
         <>
           {/* Schedule */}
           <Card padding="sm">
-            <p className="mb-3 text-[13px] font-medium text-primary">Planification</p>
+            <p className="mb-3 text-[14px] font-medium text-primary">Planification</p>
 
             <div className="mb-3">
               <p className="mb-1.5 text-[12px] text-secondary">Jours actifs</p>
@@ -238,7 +238,7 @@ export default function ProjectPipelinePage() {
                       key={dayEn}
                       type="button"
                       onClick={() => toggleDay(dayEn)}
-                      className={`rounded-[8px] px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                      className={`rounded-[8px] px-2.5 py-1 text-[12px] font-medium transition-colors ${
                         active
                           ? 'bg-accent text-white'
                           : 'border border-border bg-surface-soft text-secondary hover:bg-surface-muted'
@@ -250,7 +250,7 @@ export default function ProjectPipelinePage() {
                 })}
               </div>
               {activeDays.length === 0 && (
-                <p className="mt-1 text-[11px] text-tertiary">Aucun jour sélectionné = tous les jours actifs</p>
+                <p className="mt-1 text-[12px] text-tertiary">Aucun jour sélectionné = tous les jours actifs</p>
               )}
             </div>
 
@@ -278,7 +278,7 @@ export default function ProjectPipelinePage() {
                   <option key={n} value={n}>{n}</option>
                 ))}
               </select>
-              <p className="mt-1 text-[11px] text-tertiary">
+              <p className="mt-1 text-[12px] text-tertiary">
                 Le volume éditorial vient des catégories. Cette valeur limite l'exécution hebdomadaire du pipeline.
               </p>
             </div>
@@ -327,7 +327,7 @@ export default function ProjectPipelinePage() {
           <Card padding="sm">
             <div className="flex items-center gap-1.5 mb-3">
               <History size={14} className="text-tertiary" />
-              <p className="text-[13px] font-medium text-primary">Historique d'exécution</p>
+              <p className="text-[14px] font-medium text-primary">Historique d'exécution</p>
             </div>
             {logs.length === 0 ? (
               <p className="text-[12px] text-tertiary">Aucune exécution pour le moment.</p>
@@ -336,17 +336,17 @@ export default function ProjectPipelinePage() {
                 {logs.map((log) => (
                   <div key={log.id} className="flex items-center justify-between rounded-[8px] bg-surface-soft px-3 py-2">
                     <div>
-                      <p className="text-[11px] text-primary">
+                      <p className="text-[12px] text-primary">
                         {new Date(log.started_at).toLocaleDateString('fr-FR', {
                           day: 'numeric', month: 'short', year: 'numeric',
                           hour: '2-digit', minute: '2-digit',
                         })}
                       </p>
-                      <p className="text-[11px] text-tertiary">
+                      <p className="text-[12px] text-tertiary">
                         {log.ideas_generated} idée(s) · {log.articles_created} article(s)
                       </p>
                     </div>
-                    <span className={`text-[11px] font-medium ${
+                    <span className={`text-[12px] font-medium ${
                       log.status === 'completed' ? 'text-[#1a7a3a]' : 'text-danger'
                     }`}>
                       {log.status === 'completed' ? 'OK' : 'Échec'}

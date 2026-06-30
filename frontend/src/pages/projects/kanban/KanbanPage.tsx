@@ -246,7 +246,7 @@ function KanbanColumn({
             ✕
           </button>
         )}
-        <span className="text-[11px] text-tertiary bg-surface-soft rounded-full px-1.5 py-0.5">
+        <span className="text-[12px] text-tertiary bg-surface-soft rounded-full px-1.5 py-0.5">
           {articles.length}
         </span>
       </div>
@@ -257,7 +257,7 @@ function KanbanColumn({
         >
           {articles.length === 0 ? (
             <div className="flex items-center justify-center rounded-[12px] border border-dashed border-border h-20">
-              <p className="text-[11px] text-tertiary">Vide</p>
+              <p className="text-[12px] text-tertiary">Vide</p>
             </div>
           ) : (
             articles.map((article) => (
@@ -272,7 +272,7 @@ function KanbanColumn({
           )}
           <button
             onClick={() => onAddArticle(column.status)}
-            className="flex items-center justify-center gap-1 rounded-[12px] border border-dashed border-border py-2 text-[11px] text-tertiary hover:border-accent/40 hover:text-accent transition-colors"
+            className="flex items-center justify-center gap-1 rounded-[12px] border border-dashed border-border py-2 text-[12px] text-tertiary hover:border-accent/40 hover:text-accent transition-colors"
           >
             <Plus size={12} /> Ajouter un article
           </button>
@@ -527,7 +527,7 @@ export default function KanbanPage() {
         <div className="flex items-center justify-between mb-4 shrink-0">
           <div>
             <h1 className="text-[20px] font-semibold text-primary tracking-tight">Production éditoriale</h1>
-            <p className="mt-0.5 text-[13px] text-secondary">
+            <p className="mt-0.5 text-[14px] text-secondary">
               Contenus en fabrication. Les articles validés, programmés ou publiés sont dans Articles.
             </p>
           </div>
@@ -543,7 +543,7 @@ export default function KanbanPage() {
         </div>
 
         {actionError && (
-          <div className="mb-3 shrink-0 rounded-[10px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[13px] text-danger flex items-center justify-between">
+          <div className="mb-3 shrink-0 rounded-[10px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[14px] text-danger flex items-center justify-between">
             <span>{actionError}</span>
             <button onClick={() => setActionError('')} className="ml-3 text-danger/60 hover:text-danger">✕</button>
           </div>
@@ -601,10 +601,10 @@ export default function KanbanPage() {
               value={newColumnName}
               onChange={(event) => setNewColumnName(event.target.value)}
               placeholder="Ex. À valider client"
-              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[14px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
               autoFocus
             />
-            <p className="text-[11px] leading-snug text-tertiary">
+            <p className="text-[12px] leading-snug text-tertiary">
               La colonne est partagée avec toute l'équipe du projet. Les cartes déplacées dans cette colonne sont enregistrées avec ce statut.
             </p>
           </div>
@@ -639,7 +639,7 @@ export default function KanbanPage() {
               value={createTitle}
               onChange={(e) => setCreateTitle(e.target.value)}
               placeholder="Titre de l'article"
-              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[14px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
               autoFocus
             />
           </div>
@@ -649,7 +649,7 @@ export default function KanbanPage() {
               value={createKeyword}
               onChange={(e) => setCreateKeyword(e.target.value)}
               placeholder="Mot-clé principal (optionnel)"
-              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[14px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -657,7 +657,7 @@ export default function KanbanPage() {
             <select
               value={createCategoryId}
               onChange={(e) => setCreateCategoryId(e.target.value)}
-              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[14px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
             >
               <option value="">Sans catégorie</option>
               {categories.map((cat) => (
@@ -684,14 +684,14 @@ export default function KanbanPage() {
         size="sm"
       >
         <div className="flex flex-col gap-4">
-          <p className="text-[13px] text-secondary truncate">{scheduleTarget?.title}</p>
+          <p className="text-[14px] text-secondary truncate">{scheduleTarget?.title}</p>
           <div className="flex flex-col gap-1.5">
             <label className="text-[12px] font-medium text-secondary">Date et heure de publication</label>
             <input
               type="datetime-local"
               value={scheduleDate}
               onChange={(e) => setScheduleDate(e.target.value)}
-              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[14px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
             />
           </div>
           <div className="flex gap-2 pt-1">

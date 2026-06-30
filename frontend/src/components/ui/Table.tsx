@@ -16,7 +16,7 @@ export function TableRoot({ className, ...props }: HTMLAttributes<HTMLDivElement
 export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>) {
   return (
     <table
-      className={cn('w-full border-collapse text-[13px]', className)}
+      className={cn('w-full border-collapse text-[14px]', className)}
       {...props}
     />
   )
@@ -57,7 +57,7 @@ export function TableHead({ className, ...props }: ThHTMLAttributes<HTMLTableCel
   return (
     <th
       className={cn(
-        'px-3 py-2.5 text-left text-[11px] font-medium uppercase tracking-wide text-tertiary',
+        'px-3 py-2.5 text-left text-[12px] font-medium uppercase tracking-wide text-tertiary',
         'first:pl-4 last:pr-4',
         className,
       )}
@@ -70,7 +70,7 @@ export function TableCell({ className, ...props }: TdHTMLAttributes<HTMLTableCel
   return (
     <td
       className={cn(
-        'px-3 py-3 align-middle text-[13px] text-primary',
+        'px-3 py-3 align-middle text-[14px] text-primary',
         'first:pl-4 last:pr-4',
         className,
       )}

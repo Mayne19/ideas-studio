@@ -17,7 +17,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textare
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <label htmlFor={inputId} className="text-[13px] font-medium text-primary">
+        <label htmlFor={inputId} className="text-[14px] font-medium text-primary">
           {label}
         </label>
       )}
@@ -26,7 +26,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textare
         id={inputId}
         className={cn(
           'w-full rounded-[8px] border-2 border-border bg-transparent px-3.5 py-2.5',
-          'text-[14px] text-primary placeholder:text-tertiary',
+          'text-[15px] text-primary placeholder:text-tertiary',
           'outline-none transition-all duration-150 resize-none',
           'hover:border-border-strong',
           'focus:border-accent focus:ring-2 focus:ring-accent/10',

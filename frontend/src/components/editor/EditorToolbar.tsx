@@ -653,8 +653,8 @@ export default function EditorToolbar({
           <span className="absolute left-[-7px] top-6 h-3.5 w-3.5 rotate-45 border-b border-l border-border-strong bg-surface" />
           {activePopover === 'link' && (
             <div className="relative flex flex-col gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary">Lien</p>
-              <label className="flex flex-col gap-1 text-[11px] text-secondary">
+              <p className="text-[12px] font-semibold uppercase tracking-wide text-secondary">Lien</p>
+              <label className="flex flex-col gap-1 text-[12px] text-secondary">
                 Texte
                 <input
                   value={linkText}
@@ -663,7 +663,7 @@ export default function EditorToolbar({
                   className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
                 />
               </label>
-              <label className="flex flex-col gap-1 text-[11px] text-secondary">
+              <label className="flex flex-col gap-1 text-[12px] text-secondary">
                 URL
                 <input
                   value={linkUrl}
@@ -690,10 +690,10 @@ export default function EditorToolbar({
 
           {activePopover === 'table' && (
             <div className="relative flex flex-col gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary">Tableau</p>
+              <p className="text-[12px] font-semibold uppercase tracking-wide text-secondary">Tableau</p>
               {!currentEditor.isActive('table') ? (
                 <>
-                  <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                  <label className="flex flex-col gap-1 text-[12px] text-secondary">
                     Lignes
                     <input
                       type="number"
@@ -704,7 +704,7 @@ export default function EditorToolbar({
                       className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
                     />
                   </label>
-                  <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                  <label className="flex flex-col gap-1 text-[12px] text-secondary">
                     Colonnes
                     <input
                       type="number"
@@ -742,14 +742,14 @@ export default function EditorToolbar({
           {activePopover === 'callout' && (
             <div className="relative flex flex-col gap-2">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary">Callout</p>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-secondary">Callout</p>
                 <button
                   type="button"
                   onClick={() => {
                     setCreateCalloutOpen((open) => !open)
                     setCalloutError('')
                   }}
-                  className="inline-flex items-center gap-1 rounded-[8px] border border-border px-2 py-1 text-[11px] font-medium text-secondary hover:bg-surface-soft"
+                  className="inline-flex items-center gap-1 rounded-[8px] border border-border px-2 py-1 text-[12px] font-medium text-secondary hover:bg-surface-soft"
                 >
                   <Plus size={12} />
                   Créer
@@ -759,7 +759,7 @@ export default function EditorToolbar({
               {createCalloutOpen && (
                 <div className="rounded-[12px] border border-border bg-surface-soft p-3">
                   <div className="flex flex-col gap-3">
-                    <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                    <label className="flex flex-col gap-1 text-[12px] text-secondary">
                       Nom
                       <input
                         value={calloutForm.label}
@@ -768,7 +768,7 @@ export default function EditorToolbar({
                         className="h-8 rounded-[8px] border border-border bg-white px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
                       />
                     </label>
-                    <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                    <label className="flex flex-col gap-1 text-[12px] text-secondary">
                       Titre par defaut
                       <input
                         value={calloutForm.defaultTitle}
@@ -782,7 +782,7 @@ export default function EditorToolbar({
                       value={calloutForm.primaryColor}
                       onChange={(value) => setCalloutForm((prev) => ({ ...prev, primaryColor: value }))}
                     />
-                    {calloutError && <p className="text-[11px] text-danger">{calloutError}</p>}
+                    {calloutError && <p className="text-[12px] text-danger">{calloutError}</p>}
                     <div className="flex items-center justify-end gap-2">
                       <button type="button" onClick={() => { setCreateCalloutOpen(false); resetCalloutCreateForm() }} className="text-[12px] text-tertiary hover:text-secondary">Annuler</button>
                       <button type="button" onClick={handleCreateCallout} disabled={calloutSaving} className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-medium text-white disabled:opacity-40">
@@ -799,7 +799,7 @@ export default function EditorToolbar({
                 </p>
               ) : (
                 <>
-                  <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                  <label className="flex flex-col gap-1 text-[12px] text-secondary">
                     Titre
                     <input
                       value={calloutTitle}
@@ -853,14 +853,14 @@ export default function EditorToolbar({
 
           {activePopover === 'image' && (
             <div className="relative flex flex-col gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-secondary">Image</p>
+              <p className="text-[12px] font-semibold uppercase tracking-wide text-secondary">Image</p>
               {currentEditor.isActive('image') && (
-                <div className="rounded-[10px] border border-accent/15 bg-accent/5 px-2.5 py-2 text-[11px] text-secondary">
+                <div className="rounded-[10px] border border-accent/15 bg-accent/5 px-2.5 py-2 text-[12px] text-secondary">
                   Image sélectionnée. Vous pouvez la remplacer, modifier son alt ou ajuster sa largeur.
                 </div>
               )}
               {imageError && (
-                <div className="rounded-[10px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[11px] text-danger">
+                <div className="rounded-[10px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[12px] text-danger">
                   {imageError}
                 </div>
               )}
@@ -871,7 +871,7 @@ export default function EditorToolbar({
                     key={tab}
                     type="button"
                     onClick={() => setImageTab(tab)}
-                    className={`flex-1 py-1.5 text-[11px] font-medium transition-colors ${imageTab === tab ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'}`}
+                    className={`flex-1 py-1.5 text-[12px] font-medium transition-colors ${imageTab === tab ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'}`}
                   >
                     {tab === 'library' && <Library size={11} className="inline mr-1 -mt-0.5" />}
                     {label}
@@ -889,7 +889,7 @@ export default function EditorToolbar({
                   >
                     {uploading ? 'Upload en cours...' : currentEditor.isActive('image') ? "Remplacer avec un fichier" : 'Choisir un fichier'}
                   </button>
-                  <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                  <label className="flex flex-col gap-1 text-[12px] text-secondary">
                     Texte alternatif
                     <input
                       value={imageAlt}
@@ -903,7 +903,7 @@ export default function EditorToolbar({
 
               {imageTab === 'url' && (
                 <>
-                  <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                  <label className="flex flex-col gap-1 text-[12px] text-secondary">
                     URL de l'image
                     <input
                       value={imageUrl}
@@ -912,7 +912,7 @@ export default function EditorToolbar({
                       className="h-8 rounded-[8px] border border-border px-2 text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30"
                     />
                   </label>
-                  <label className="flex flex-col gap-1 text-[11px] text-secondary">
+                  <label className="flex flex-col gap-1 text-[12px] text-secondary">
                     Texte alternatif
                     <input
                       value={imageAlt}
@@ -955,7 +955,7 @@ export default function EditorToolbar({
                 </div>
               )}
 
-              <div className="flex flex-col gap-1 text-[11px] text-secondary">
+              <div className="flex flex-col gap-1 text-[12px] text-secondary">
                 <span>Largeur</span>
                 <div className="grid grid-cols-4 gap-1">
                   {IMAGE_WIDTH_PRESETS.map((preset) => (
@@ -963,7 +963,7 @@ export default function EditorToolbar({
                       key={preset}
                       type="button"
                       onClick={() => setImageWidth(String(preset))}
-                      className={`rounded-[8px] px-2 py-1 text-[11px] font-medium ${
+                      className={`rounded-[8px] px-2 py-1 text-[12px] font-medium ${
                         Number(imageWidth) === preset ? 'bg-accent text-white' : 'border border-border text-secondary hover:bg-surface-soft'
                       }`}
                     >
@@ -1020,7 +1020,7 @@ export default function EditorToolbar({
                 type="button"
                 onClick={() => applyImageWidth(preset)}
                 title={`${preset}%`}
-                className={`rounded-[6px] px-2 py-1 text-[11px] font-medium transition-colors ${
+                className={`rounded-[6px] px-2 py-1 text-[12px] font-medium transition-colors ${
                   parseImageWidth(imageWidth) === preset
                     ? 'bg-accent text-white'
                     : 'text-secondary hover:bg-surface-muted'
@@ -1058,7 +1058,7 @@ export default function EditorToolbar({
               value={imageAlt}
               onChange={(e) => setImageAlt(e.target.value)}
               placeholder="Texte alternatif"
-              className="flex-1 h-6 rounded-[5px] border border-border px-1.5 text-[11px] text-primary outline-none focus:border-accent/60"
+              className="flex-1 h-6 rounded-[5px] border border-border px-1.5 text-[12px] text-primary outline-none focus:border-accent/60"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') { e.preventDefault(); applyImageAltCb() }
               }}

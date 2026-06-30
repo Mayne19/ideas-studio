@@ -5,7 +5,7 @@ export default function CostPanel({ article }: { article: EditorArticle }) {
   const report = article.generation_report_json as Record<string, unknown> | null
   if (!report) {
     return (
-      <div className="rounded-[10px] border border-border bg-surface p-3 text-[11px] text-tertiary">
+      <div className="rounded-[10px] border border-border bg-surface p-3 text-[12px] text-tertiary">
         Aucun coût enregistré pour cet article.
       </div>
     )
@@ -28,14 +28,14 @@ export default function CostPanel({ article }: { article: EditorArticle }) {
       </div>
 
       {isOverLimit && (
-        <div className="flex items-start gap-2 rounded-[8px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[11px] text-danger">
+        <div className="flex items-start gap-2 rounded-[8px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[12px] text-danger">
           <AlertCircle size={12} className="mt-0.5 shrink-0" />
           <span className="leading-snug">Limite de coût dépassée.</span>
         </div>
       )}
 
       {hasUnknown && (
-        <div className="flex items-start gap-2 rounded-[8px] border border-warning/20 bg-warning/5 px-2.5 py-2 text-[11px] text-warning">
+        <div className="flex items-start gap-2 rounded-[8px] border border-warning/20 bg-warning/5 px-2.5 py-2 text-[12px] text-warning">
           <HelpCircle size={12} className="mt-0.5 shrink-0" />
           <span className="leading-snug">Certains prix de modèles ne sont pas configurés.</span>
         </div>
@@ -44,20 +44,20 @@ export default function CostPanel({ article }: { article: EditorArticle }) {
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-[8px] border border-border bg-surface-soft px-2.5 py-2">
           <div className="text-[10px] text-tertiary">Estimé</div>
-          <div className="text-[13px] font-medium text-primary">
+          <div className="text-[14px] font-medium text-primary">
             {est != null ? `${est.toFixed(4)} €` : '—'}
           </div>
         </div>
         <div className="rounded-[8px] border border-border bg-surface-soft px-2.5 py-2">
           <div className="text-[10px] text-tertiary">Réel</div>
-          <div className="text-[13px] font-medium text-primary">
+          <div className="text-[14px] font-medium text-primary">
             {act != null ? `${act.toFixed(4)} €` : '—'}
           </div>
         </div>
       </div>
 
       {limit != null && (
-        <div className="flex items-center justify-between text-[11px]">
+        <div className="flex items-center justify-between text-[12px]">
           <span className="text-tertiary">Limite</span>
           <span className="text-primary">{limit.toFixed(2)} €</span>
         </div>
@@ -76,7 +76,7 @@ export default function CostPanel({ article }: { article: EditorArticle }) {
 
       {breakdown && breakdown.length > 0 && (
         <details className="group">
-          <summary className="cursor-pointer text-[11px] text-secondary hover:text-primary transition-colors">
+          <summary className="cursor-pointer text-[12px] text-secondary hover:text-primary transition-colors">
             Détail par agent ({breakdown.length})
           </summary>
           <div className="mt-2 flex flex-col gap-1">

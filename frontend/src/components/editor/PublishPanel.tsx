@@ -94,7 +94,7 @@ export default function PublishPanel({
       )}
 
       {error && (
-        <div className="flex items-start gap-2 rounded-[8px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[11px] text-danger">
+        <div className="flex items-start gap-2 rounded-[8px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[12px] text-danger">
           <AlertCircle size={12} className="mt-0.5 shrink-0" />
           <span className="leading-snug">{error}</span>
         </div>
@@ -179,7 +179,7 @@ export default function PublishPanel({
 
         {scheduleOpen && (
           <div className="rounded-[10px] border border-border bg-surface-soft p-3 flex flex-col gap-2">
-            <label className="text-[11px] text-secondary">Date et heure de publication</label>
+            <label className="text-[12px] text-secondary">Date et heure de publication</label>
             <input
               type="datetime-local"
               value={scheduleDate}
@@ -189,14 +189,14 @@ export default function PublishPanel({
             <div className="flex gap-1.5">
               <button
                 onClick={() => { setScheduleOpen(false); setScheduleDate('') }}
-                className="flex-1 rounded-[8px] border border-border py-1.5 text-[11px] text-secondary hover:bg-surface-muted transition-colors"
+                className="flex-1 rounded-[8px] border border-border py-1.5 text-[12px] text-secondary hover:bg-surface-muted transition-colors"
               >
                 Annuler
               </button>
               <button
                 onClick={handleSchedule}
                 disabled={!scheduleDate || busy}
-                className="flex-1 rounded-[8px] bg-accent py-1.5 text-[11px] font-medium text-white hover:bg-accent/90 transition-colors disabled:opacity-40"
+                className="flex-1 rounded-[8px] bg-accent py-1.5 text-[12px] font-medium text-white hover:bg-accent/90 transition-colors disabled:opacity-40"
               >
                 {loadingAction === 'schedule' ? '…' : 'Confirmer'}
               </button>

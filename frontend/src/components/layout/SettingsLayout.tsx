@@ -14,7 +14,7 @@ export default function SettingsLayout() {
         <aside className="sticky top-0 z-10 bg-app pb-4 pt-1">
           <div className="mb-5 px-1">
             <h1 className="text-[20px] font-semibold text-primary tracking-tight">Paramètres</h1>
-            <p className="mt-0.5 max-w-[210px] whitespace-normal text-[13px] leading-snug text-secondary">
+            <p className="mt-0.5 max-w-[210px] whitespace-normal text-[14px] leading-snug text-secondary">
               Configurez votre projet, votre équipe et votre intégration.
             </p>
           </div>
@@ -34,8 +34,8 @@ export default function SettingsLayout() {
                   )
                 }
               >
-                <span className="block text-[13px] font-semibold">{tab.label}</span>
-                <span className="mt-0.5 block max-w-full whitespace-normal break-words text-[11px] leading-snug text-tertiary">
+                <span className="block text-[14px] font-semibold">{tab.label}</span>
+                <span className="mt-0.5 block max-w-full whitespace-normal break-words text-[12px] leading-snug text-tertiary">
                   {tab.description}
                 </span>
               </NavLink>

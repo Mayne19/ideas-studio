@@ -28,7 +28,7 @@ function MetaField({
   const base = "w-full rounded-[8px] border border-border bg-surface px-2.5 py-1.5 text-[12px] text-primary placeholder:text-tertiary focus:outline-none focus:ring-1 focus:ring-accent/50 focus:border-accent/60 transition-colors"
   return (
     <div>
-      <label className="block text-[11px] font-medium text-secondary mb-1">{label}</label>
+      <label className="block text-[12px] font-medium text-secondary mb-1">{label}</label>
       {multiline ? (
         <textarea
           rows={3}
@@ -67,7 +67,7 @@ export default function MetaPanel({
       <MetaField label="Mot-clé" name="keyword" value={fields.keyword} onChange={onChange} />
       {categories.length > 0 && (
         <div>
-          <label className="block text-[11px] font-medium text-secondary mb-1">Catégorie</label>
+          <label className="block text-[12px] font-medium text-secondary mb-1">Catégorie</label>
           <select
             value={fields.category_id}
             onChange={(e) => onChange('category_id', e.target.value)}

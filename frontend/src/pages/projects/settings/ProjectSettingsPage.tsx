@@ -158,10 +158,10 @@ export default function ProjectSettingsPage() {
         footer={
           <div className="flex items-center gap-3">
             {saveStatus === 'saved' && (
-              <span className="text-[13px] text-[#1a7a3a]">Sauvegardé ✓</span>
+              <span className="text-[14px] text-[#1a7a3a]">Sauvegardé ✓</span>
             )}
             {saveStatus === 'error' && (
-              <span className="text-[13px] text-danger">{errorMsg}</span>
+              <span className="text-[14px] text-danger">{errorMsg}</span>
             )}
             <Button type="submit" loading={saveStatus === 'saving'} size="sm">
               Sauvegarder

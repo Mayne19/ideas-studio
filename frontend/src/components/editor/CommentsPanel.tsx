@@ -58,7 +58,7 @@ function CommentItem({
       } ${onSelect ? 'cursor-pointer hover:border-accent/50' : ''}`}
     >
       <div className="mb-1.5 flex items-center justify-between">
-        <span className="text-[11px] font-semibold text-primary">{comment.author_name}</span>
+        <span className="text-[12px] font-semibold text-primary">{comment.author_name}</span>
         <div className="flex items-center gap-1">
           <span className="text-[10px] text-tertiary">{timeAgo(comment.created_at)}</span>
           <button
@@ -161,18 +161,18 @@ export default function CommentsPanel({
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="rounded-[8px] bg-surface-soft px-2.5 py-2 text-[11px] leading-snug text-secondary">
+      <p className="rounded-[8px] bg-surface-soft px-2.5 py-2 text-[12px] leading-snug text-secondary">
         Pour ajouter un commentaire, passez en mode Commentaire et selectionnez un passage dans l'article.
       </p>
 
       {loading && (
-        <p className="py-4 text-center text-[11px] text-tertiary">Chargement...</p>
+        <p className="py-4 text-center text-[12px] text-tertiary">Chargement...</p>
       )}
 
       {!loading && comments.length === 0 && (
         <div className="flex flex-col items-center gap-2 py-6 text-center">
           <MessageCircle size={18} className="text-tertiary opacity-40" />
-          <p className="text-[11px] text-tertiary">Aucun commentaire pour l'instant.</p>
+          <p className="text-[12px] text-tertiary">Aucun commentaire pour l'instant.</p>
         </div>
       )}
 

@@ -144,7 +144,7 @@ export default function AccountPage() {
     <div className="flex flex-col gap-5">
       <div className="mb-2">
         <h1 className="text-[20px] font-semibold text-primary tracking-tight">Mon profil</h1>
-        <p className="mt-0.5 text-[13px] text-secondary">
+        <p className="mt-0.5 text-[14px] text-secondary">
           Gérez vos informations personnelles.
         </p>
       </div>
@@ -180,7 +180,7 @@ export default function AccountPage() {
           />
         </div>
         <div>
-          <p className="text-[13px] font-medium text-primary">{effectiveDisplayName}</p>
+          <p className="text-[14px] font-medium text-primary">{effectiveDisplayName}</p>
           <p className="text-[12px] text-tertiary">{user?.email ?? '—'}</p>
         </div>
       </div>
@@ -202,7 +202,7 @@ export default function AccountPage() {
                     }
                   }}
                   placeholder="Votre prénom"
-                  className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+                  className="flex-1 bg-transparent text-[14px] text-primary outline-none placeholder:text-tertiary"
                 />
               </div>
             </div>
@@ -215,7 +215,7 @@ export default function AccountPage() {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder="Votre nom"
-                  className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+                  className="flex-1 bg-transparent text-[14px] text-primary outline-none placeholder:text-tertiary"
                 />
               </div>
             </div>
@@ -226,7 +226,7 @@ export default function AccountPage() {
               <label className="text-[12px] font-medium text-secondary">Email</label>
               <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface-soft px-3 py-2">
                 <Mail size={14} className="text-tertiary shrink-0" />
-                <span className="text-[13px] text-tertiary">{user?.email ?? '—'}</span>
+                <span className="text-[14px] text-tertiary">{user?.email ?? '—'}</span>
               </div>
             </div>
             <div className="flex flex-col gap-1">
@@ -238,7 +238,7 @@ export default function AccountPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="votre-pseudo"
-                  className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+                  className="flex-1 bg-transparent text-[14px] text-primary outline-none placeholder:text-tertiary"
                 />
                 {user?.username && (
                   <button
@@ -264,10 +264,10 @@ export default function AccountPage() {
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder={firstName || username || 'Votre prénom'}
-                  className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+                  className="flex-1 bg-transparent text-[14px] text-primary outline-none placeholder:text-tertiary"
                 />
               </div>
-              <p className="text-[11px] text-tertiary">
+              <p className="text-[12px] text-tertiary">
                 Par défaut, votre prénom est utilisé{username ? ', sinon votre nom d\'utilisateur' : ''}.
               </p>
             </div>
@@ -276,7 +276,7 @@ export default function AccountPage() {
             <div className="flex flex-col gap-1">
               <label className="text-[12px] font-medium text-secondary">Aperçu du profil</label>
               <div className="flex items-center gap-3 rounded-[10px] border border-border bg-surface-soft px-3 py-2.5">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent text-[11px] font-bold">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent text-[12px] font-bold">
                   {initials}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -284,7 +284,7 @@ export default function AccountPage() {
                     {effectiveDisplayName}
                   </p>
                   {user?.username && (
-                    <p className="truncate text-[11px] text-tertiary">@{user.username}</p>
+                    <p className="truncate text-[12px] text-tertiary">@{user.username}</p>
                   )}
                 </div>
               </div>
@@ -292,7 +292,7 @@ export default function AccountPage() {
           </div>
 
           {error && (
-            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">
               {error}
             </div>
           )}
@@ -302,7 +302,7 @@ export default function AccountPage() {
               Sauvegarder
             </Button>
             {saved && (
-              <span className="flex items-center gap-1 text-[13px] text-success">
+              <span className="flex items-center gap-1 text-[14px] text-success">
                 <Check size={14} />
                 Sauvegardé
               </span>
@@ -335,7 +335,7 @@ export default function AccountPage() {
                   value={passwordForm.current_password}
                   onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })}
                   placeholder="Mot de passe actuel"
-                  className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+                  className="flex-1 bg-transparent text-[14px] text-primary outline-none placeholder:text-tertiary"
                 />
               </div>
             </div>
@@ -348,7 +348,7 @@ export default function AccountPage() {
                   value={passwordForm.new_password}
                   onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })}
                   placeholder="Nouveau mot de passe (6 caractères minimum)"
-                  className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+                  className="flex-1 bg-transparent text-[14px] text-primary outline-none placeholder:text-tertiary"
                 />
               </div>
             </div>
@@ -361,12 +361,12 @@ export default function AccountPage() {
                   value={passwordForm.confirm_password}
                   onChange={(e) => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })}
                   placeholder="Confirmez le nouveau mot de passe"
-                  className="flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-tertiary"
+                  className="flex-1 bg-transparent text-[14px] text-primary outline-none placeholder:text-tertiary"
                 />
               </div>
             </div>
             {passwordError && (
-              <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+              <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">
                 {passwordError}
               </div>
             )}
@@ -382,7 +382,7 @@ export default function AccountPage() {
                 Annuler
               </button>
               {passwordSaved && (
-                <span className="flex items-center gap-1 text-[13px] text-success">
+                <span className="flex items-center gap-1 text-[14px] text-success">
                   <Check size={14} />
                   Mot de passe modifié
                 </span>

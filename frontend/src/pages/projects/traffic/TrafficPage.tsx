@@ -170,7 +170,7 @@ function ChartEmpty({ message }: { message: string }) {
 }
 
 function InlineEmpty({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">{children}</p>
+  return <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[14px] text-secondary">{children}</p>
 }
 
 function VisualRow({
@@ -193,16 +193,16 @@ function VisualRow({
   const pct = percentOf(value, total)
   return (
     <div className="flex items-center gap-2.5 rounded-[10px] px-2 py-1 hover:bg-surface-soft">
-      {rank !== undefined && <span className="w-4 shrink-0 text-[11px] font-medium text-tertiary">{rank}</span>}
+      {rank !== undefined && <span className="w-4 shrink-0 text-[12px] font-medium text-tertiary">{rank}</span>}
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-surface-soft text-secondary">{leading}</span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-3">
           {href ? (
-            <a href={href} className="truncate text-[13px] font-medium text-primary hover:text-accent" title={label}>
+            <a href={href} className="truncate text-[14px] font-medium text-primary hover:text-accent" title={label}>
               {label}
             </a>
           ) : (
-            <span className="truncate text-[13px] font-medium text-primary" title={label}>{label}</span>
+            <span className="truncate text-[14px] font-medium text-primary" title={label}>{label}</span>
           )}
           <span className="shrink-0 text-[12px] font-semibold text-secondary">{formatMetric(value)}</span>
         </div>
@@ -210,9 +210,9 @@ function VisualRow({
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-soft">
             <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
           </div>
-          <span className="w-8 text-right text-[11px] text-tertiary">{pct}%</span>
+          <span className="w-8 text-right text-[12px] text-tertiary">{pct}%</span>
         </div>
-        {meta && <div className="mt-0.5 text-[11px] text-tertiary">{meta}</div>}
+        {meta && <div className="mt-0.5 text-[12px] text-tertiary">{meta}</div>}
       </div>
     </div>
   )
@@ -332,7 +332,7 @@ export default function TrafficPage() {
       <div className="project-page-header">
         <div>
           <h1 className="text-[20px] font-semibold tracking-tight text-primary">Trafic</h1>
-          <p className="mt-0.5 text-[13px] text-secondary">Comprenez d’où viennent les visiteurs et quelles sources apportent le meilleur trafic.</p>
+          <p className="mt-0.5 text-[14px] text-secondary">Comprenez d’où viennent les visiteurs et quelles sources apportent le meilleur trafic.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="secondary" icon={<RefreshCw size={13} />} onClick={() => setTick((t) => t + 1)}>
@@ -347,7 +347,7 @@ export default function TrafficPage() {
 
         <div className="flex flex-col gap-6">
           {showPeriodEmpty && (
-            <div className="rounded-[14px] border border-border bg-surface px-4 py-3 text-[13px] text-secondary">
+            <div className="rounded-[14px] border border-border bg-surface px-4 py-3 text-[14px] text-secondary">
               {trackingMessage}
             </div>
           )}
@@ -379,7 +379,7 @@ export default function TrafficPage() {
                 </ResponsiveContainer>
                 {!hasChannelTrend && <ChartEmpty message="Aucune évolution par canal disponible pour cette période." />}
               </div>
-              <div className="mt-2 grid gap-1 text-[11px] text-tertiary sm:grid-cols-2">
+              <div className="mt-2 grid gap-1 text-[12px] text-tertiary sm:grid-cols-2">
                 <span><strong className="text-secondary">Google</strong> : recherche organique</span>
                 <span><strong className="text-secondary">Direct</strong> : accès sans référent</span>
                 <span><strong className="text-secondary">Social</strong> : réseaux sociaux</span>
@@ -449,7 +449,7 @@ export default function TrafficPage() {
             </Card>
             <Card>
               <SectionTitle>Trafic organique / mots-clés</SectionTitle>
-              <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">
+              <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[14px] text-secondary">
                 Connectez Google Search Console depuis les <a href={`/projects/${projectId}/settings/integration`} className="text-accent hover:underline">paramètres du projet</a> pour voir les mots-clés organiques.
               </p>
             </Card>
@@ -485,7 +485,7 @@ export default function TrafficPage() {
                 />
               ))}
               {!sources.some((source) => source.channel === 'Referral' || source.channel === 'Social') && (
-                <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">Aucun référent externe disponible sur cette période.</p>
+                <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[14px] text-secondary">Aucun référent externe disponible sur cette période.</p>
               )}
             </Card>
           </div>
@@ -494,7 +494,7 @@ export default function TrafficPage() {
             <SectionTitle>Qualité des sources</SectionTitle>
             <div className="overflow-x-auto">
               <div className="min-w-[860px]">
-                <div className="grid grid-cols-[1.4fr_1fr_0.8fr_0.8fr] gap-3 border-b border-border px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-tertiary">
+                <div className="grid grid-cols-[1.4fr_1fr_0.8fr_0.8fr] gap-3 border-b border-border px-2 pb-2 text-[12px] font-semibold uppercase tracking-wide text-tertiary">
                   <span>Source</span><span>Canal</span><span>Pages vues</span><span>Part</span>
                 </div>
                 {sources.length ? sources.slice(0, 8).map((source) => (
@@ -529,7 +529,7 @@ function SplitMetric({ value, suffix }: { value: React.ReactNode; suffix: string
   return (
     <span className="inline-flex items-baseline gap-0.5">
       <span>{value}</span>
-      <span className="text-[13px] font-medium text-tertiary">{suffix}</span>
+      <span className="text-[14px] font-medium text-tertiary">{suffix}</span>
     </span>
   )
 }

@@ -23,7 +23,7 @@ export default function ErrorState({
       <div className="flex flex-col gap-1">
         <p className="text-[15px] font-medium text-primary">{title}</p>
         {message && (
-          <p className="max-w-xs text-[13px] text-secondary leading-relaxed">{message}</p>
+          <p className="max-w-xs text-[14px] text-secondary leading-relaxed">{message}</p>
         )}
       </div>
       {onRetry && (

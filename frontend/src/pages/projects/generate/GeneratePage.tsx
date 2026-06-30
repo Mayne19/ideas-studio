@@ -16,7 +16,7 @@ type LoadState = 'loading' | 'success' | 'error'
 
 function StatusPill({ ok, label }: { ok: boolean; label: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${ok ? 'bg-success/10 text-success' : 'bg-warning/12 text-[#a35b00]'}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium ${ok ? 'bg-success/10 text-success' : 'bg-warning/12 text-[#a35b00]'}`}>
       {ok ? <CheckCircle size={11} /> : <AlertTriangle size={11} />}
       {label}
     </span>
@@ -131,7 +131,7 @@ export default function GeneratePage() {
       <div className="project-page-header">
         <div>
           <h1 className="text-[20px] font-semibold tracking-tight text-primary">Génération IA</h1>
-          <p className="mt-0.5 text-[13px] text-secondary">Surveillez les workflows IA, les agents, les coûts et les erreurs d’exécution.</p>
+          <p className="mt-0.5 text-[14px] text-secondary">Surveillez les workflows IA, les agents, les coûts et les erreurs d’exécution.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" variant="secondary" icon={<Settings size={13} />} onClick={() => navigate(`/projects/${projectId}/settings/providers`)}>
@@ -147,10 +147,10 @@ export default function GeneratePage() {
       </div>
 
       {runState === 'error' && (
-        <div className="mb-4 rounded-[12px] border border-danger/20 bg-danger/5 px-4 py-3 text-[13px] text-danger">Le lancement manuel a échoué. Consultez l’historique ou les providers.</div>
+        <div className="mb-4 rounded-[12px] border border-danger/20 bg-danger/5 px-4 py-3 text-[14px] text-danger">Le lancement manuel a échoué. Consultez l’historique ou les providers.</div>
       )}
       {runState === 'done' && (
-        <div className="mb-4 rounded-[12px] border border-success/20 bg-success/5 px-4 py-3 text-[13px] text-success">Pipeline lancé. L’historique a été rafraîchi.</div>
+        <div className="mb-4 rounded-[12px] border border-success/20 bg-success/5 px-4 py-3 text-[14px] text-success">Pipeline lancé. L’historique a été rafraîchi.</div>
       )}
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
@@ -201,11 +201,11 @@ export default function GeneratePage() {
         <div className="rounded-[14px] border border-border bg-surface p-4">
           <SectionTitle>Dernières générations</SectionTitle>
           {recentGenerations.length === 0 ? (
-            <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">Aucune génération IA tracée pour le moment.</p>
+            <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[14px] text-secondary">Aucune génération IA tracée pour le moment.</p>
           ) : (
             <div className="overflow-x-auto">
               <div className="min-w-[860px]">
-                <div className="grid grid-cols-[1.5fr_0.7fr_0.7fr_0.9fr_0.6fr_0.7fr_0.7fr] gap-3 border-b border-border px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-tertiary">
+                <div className="grid grid-cols-[1.5fr_0.7fr_0.7fr_0.9fr_0.6fr_0.7fr_0.7fr] gap-3 border-b border-border px-2 pb-2 text-[12px] font-semibold uppercase tracking-wide text-tertiary">
                   <span>Contenu</span><span>Type</span><span>Statut</span><span>Dernier agent</span><span>Coût</span><span>Modèle</span><span>MAJ</span>
                 </div>
                 {recentGenerations.map((article) => (
@@ -227,7 +227,7 @@ export default function GeneratePage() {
         <div className="rounded-[14px] border border-border bg-surface p-4">
           <SectionTitle>Logs agents</SectionTitle>
           {logs.length === 0 ? (
-            <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">Aucun log pipeline disponible.</p>
+            <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[14px] text-secondary">Aucun log pipeline disponible.</p>
           ) : (
             <div className="flex flex-col gap-2">
               {logs.map((log) => (
@@ -237,10 +237,10 @@ export default function GeneratePage() {
                       <History size={13} />
                       {log.status === 'completed' ? 'Terminé' : 'Échec'}
                     </span>
-                    <span className="text-[11px] text-tertiary">{new Date(log.started_at).toLocaleString('fr-FR')}</span>
+                    <span className="text-[12px] text-tertiary">{new Date(log.started_at).toLocaleString('fr-FR')}</span>
                   </div>
-                  <p className="mt-1 text-[11px] text-tertiary">{log.ideas_generated} idée(s) · {log.articles_created} article(s)</p>
-                  {log.errors && <p className="mt-1 text-[11px] text-danger">{log.errors}</p>}
+                  <p className="mt-1 text-[12px] text-tertiary">{log.ideas_generated} idée(s) · {log.articles_created} article(s)</p>
+                  {log.errors && <p className="mt-1 text-[12px] text-danger">{log.errors}</p>}
                 </div>
               ))}
             </div>
@@ -251,7 +251,7 @@ export default function GeneratePage() {
               <Button size="sm" variant="secondary" icon={<TestTube2 size={13} />} onClick={handleRunPipeline}>Tester pipeline</Button>
               <Button size="sm" variant="secondary" icon={<RotateCw size={13} />} onClick={() => setTick((value) => value + 1)}>Rafraîchir</Button>
             </div>
-            <p className="mt-2 text-[11px] text-tertiary">Relance agent bloqué et reprise d’étape : non disponible en V1.</p>
+            <p className="mt-2 text-[12px] text-tertiary">Relance agent bloqué et reprise d’étape : non disponible en V1.</p>
           </div>
         </div>
       </div>
@@ -259,17 +259,17 @@ export default function GeneratePage() {
       <div className="mt-6 rounded-[14px] border border-border bg-surface p-4">
         <SectionTitle>Registre agents</SectionTitle>
         {agents.length === 0 ? (
-          <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">Registry agents indisponible ou non exposé par l’API.</p>
+          <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[14px] text-secondary">Registry agents indisponible ou non exposé par l’API.</p>
         ) : (
           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
             {agents.slice(0, 12).map((agent) => (
               <div key={agent.agent_id} className="rounded-[12px] bg-surface-soft px-3 py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-semibold text-primary">{agent.name}</p>
-                    <p className="mt-0.5 truncate text-[11px] text-tertiary">{agent.agent_id}</p>
+                    <p className="truncate text-[14px] font-semibold text-primary">{agent.name}</p>
+                    <p className="mt-0.5 truncate text-[12px] text-tertiary">{agent.agent_id}</p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-[11px] text-secondary">{agent.phase || agent.category}</span>
+                  <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-[12px] text-secondary">{agent.phase || agent.category}</span>
                 </div>
                 <p className="mt-2 line-clamp-2 text-[12px] leading-snug text-secondary">{agent.description}</p>
               </div>

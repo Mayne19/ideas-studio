@@ -62,7 +62,7 @@ function CategoryColumn({
               style={{ backgroundColor: color }}
               aria-hidden="true"
             />
-            <p className="truncate text-[13px] font-medium text-primary">{category.name}</p>
+            <p className="truncate text-[14px] font-medium text-primary">{category.name}</p>
             <span className="rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-medium text-tertiary">
               {articles.length}
             </span>
@@ -165,7 +165,7 @@ function UncategorizedColumn({
   return (
     <div className="flex min-h-[360px] min-w-[240px] flex-1 max-w-[360px] flex-col rounded-[8px] border border-border bg-surface-soft p-2">
       <div className="rounded-[8px] border border-border bg-surface px-3 py-3">
-        <p className="text-[13px] font-medium text-primary">Sans catégorie</p>
+        <p className="text-[14px] font-medium text-primary">Sans catégorie</p>
         <p className="mt-0.5 text-[12px] text-tertiary">
           {articles.length}
         </p>
@@ -405,7 +405,7 @@ export default function CategoriesPage() {
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-[20px] font-semibold text-primary tracking-tight">Catégories</h1>
-            <p className="mt-0.5 text-[13px] text-secondary">
+            <p className="mt-0.5 text-[14px] text-secondary">
               Organisez vos articles par thématique.
             </p>
           </div>
@@ -418,7 +418,7 @@ export default function CategoriesPage() {
         <div className="mb-5 flex items-start gap-3 rounded-[14px] border border-border bg-surface-soft px-4 py-3">
           <Info size={15} className="mt-0.5 shrink-0 text-tertiary" />
           <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-medium text-primary">Synchronisation depuis votre site</p>
+            <p className="text-[14px] font-medium text-primary">Synchronisation depuis votre site</p>
              <p className="mt-0.5 text-[12px] text-secondary">
                Importe les catégories depuis l'API publique de votre site connecté (name, slug, couleur). Les doublons sont évités.
              </p>
@@ -490,7 +490,7 @@ export default function CategoriesPage() {
       >
         <form onSubmit={handleCreateArticleSubmit} className="flex flex-col gap-4">
           {createError && (
-            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">
               {createError}
             </div>
           )}
@@ -533,7 +533,7 @@ export default function CategoriesPage() {
       >
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {formError && (
-            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">
               {formError}
             </div>
           )}
@@ -593,7 +593,7 @@ export default function CategoriesPage() {
           />
           <div className="flex items-center justify-between rounded-[12px] bg-surface-soft px-3.5 py-3">
             <div>
-              <p className="text-[13px] font-medium text-primary">Inclure dans le pipeline</p>
+              <p className="text-[14px] font-medium text-primary">Inclure dans le pipeline</p>
               <p className="mt-0.5 text-[12px] text-secondary">Génération automatique d'idées activée.</p>
             </div>
             <ToggleSwitch

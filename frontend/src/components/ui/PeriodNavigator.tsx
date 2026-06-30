@@ -96,20 +96,20 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
         </button>
         {customOpen && (
           <div className="absolute right-0 top-full z-50 mt-1.5 flex min-w-[260px] flex-col gap-2 rounded-[14px] border-2 border-border bg-transparent p-3.5 shadow-lg">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-secondary">Période personnalisée</p>
+            <p className="text-[12px] font-medium uppercase tracking-wide text-secondary">Période personnalisée</p>
             <label className="text-[12px] font-medium text-primary">Date de début</label>
             <input
               type="date"
               value={customStart}
               onChange={(e) => setCustomStart(e.target.value)}
-              className="h-9 rounded-[10px] border border-border bg-surface-soft px-3 text-[13px] text-primary outline-none focus:border-accent"
+              className="h-9 rounded-[10px] border border-border bg-surface-soft px-3 text-[14px] text-primary outline-none focus:border-accent"
             />
             <label className="text-[12px] font-medium text-primary">Date de fin</label>
             <input
               type="date"
               value={customEnd}
               onChange={(e) => setCustomEnd(e.target.value)}
-              className="h-9 rounded-[10px] border border-border bg-surface-soft px-3 text-[13px] text-primary outline-none focus:border-accent"
+              className="h-9 rounded-[10px] border border-border bg-surface-soft px-3 text-[14px] text-primary outline-none focus:border-accent"
             />
             <div className="mt-0.5 flex gap-2">
               <Button size="sm" variant="secondary" className="flex-1 justify-center" onClick={() => setCustomOpen(false)}>Annuler</Button>
@@ -149,10 +149,10 @@ export function ExportButtons({
       </Button>
       {open && (
         <div className="absolute right-0 top-full z-50 mt-1 min-w-[175px] overflow-hidden rounded-[12px] border-2 border-border bg-transparent p-1 shadow-lg">
-          <button type="button" onClick={() => { onJson(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[9px] px-3 py-2 text-[13px] text-primary transition-colors hover:bg-surface-soft">
+          <button type="button" onClick={() => { onJson(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[9px] px-3 py-2 text-[14px] text-primary transition-colors hover:bg-surface-soft">
             Exporter en JSON
           </button>
-          <button type="button" onClick={() => { onPdf(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[9px] px-3 py-2 text-[13px] text-primary transition-colors hover:bg-surface-soft">
+          <button type="button" onClick={() => { onPdf(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[9px] px-3 py-2 text-[14px] text-primary transition-colors hover:bg-surface-soft">
             Exporter en PDF
           </button>
         </div>

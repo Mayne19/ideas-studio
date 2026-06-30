@@ -28,8 +28,8 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 function SimpleRow({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
-      <span className="text-[13px] text-primary truncate max-w-[220px]" title={label}>{label || '—'}</span>
-      <span className="text-[13px] font-medium text-secondary shrink-0 ml-2">{value.toLocaleString('fr-FR')}</span>
+      <span className="text-[14px] text-primary truncate max-w-[220px]" title={label}>{label || '—'}</span>
+      <span className="text-[14px] font-medium text-secondary shrink-0 ml-2">{value.toLocaleString('fr-FR')}</span>
     </div>
   )
 }
@@ -62,7 +62,7 @@ export default function ArticlePerformancePage() {
       <div className="mb-6 flex items-center justify-between">
         <button
           onClick={() => navigate(`/projects/${projectId}/performance`)}
-          className="flex items-center gap-1.5 text-[13px] text-secondary hover:text-primary transition-colors"
+          className="flex items-center gap-1.5 text-[14px] text-secondary hover:text-primary transition-colors"
         >
           <ArrowLeft size={14} />
           Performance

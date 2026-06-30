@@ -6,7 +6,7 @@ export default function GeoPanel({ article }: { article: EditorArticle }) {
 
   if (!geo) {
     return (
-      <div className="rounded-[10px] border border-border bg-surface p-3 text-[11px] text-tertiary">
+      <div className="rounded-[10px] border border-border bg-surface p-3 text-[12px] text-tertiary">
         Aucune analyse GEO disponible.
       </div>
     )
@@ -29,19 +29,19 @@ export default function GeoPanel({ article }: { article: EditorArticle }) {
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-[8px] border border-border bg-surface-soft px-2.5 py-2">
           <div className="text-[10px] text-tertiary">Score GEO</div>
-          <div className={`text-[13px] font-medium ${statusColor}`}>
+          <div className={`text-[14px] font-medium ${statusColor}`}>
             {score != null ? `${score}/100` : '—'}
           </div>
         </div>
         <div className="rounded-[8px] border border-border bg-surface-soft px-2.5 py-2">
           <div className="text-[10px] text-tertiary">Statut</div>
-          <div className={`text-[13px] font-medium ${statusColor}`}>{statusLabel}</div>
+          <div className={`text-[14px] font-medium ${statusColor}`}>{statusLabel}</div>
         </div>
       </div>
 
       {checks && checks.length > 0 && (
         <div className="flex flex-col gap-1">
-          <div className="text-[11px] text-secondary font-medium">Vérifications</div>
+          <div className="text-[12px] text-secondary font-medium">Vérifications</div>
           {checks.map((c, i) => {
             const passed = c.passed as boolean
             const label = c.label as string

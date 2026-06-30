@@ -87,7 +87,7 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`relative px-4 py-2.5 text-[13px] font-medium transition-colors ${
+      className={`relative px-4 py-2.5 text-[14px] font-medium transition-colors ${
         active
           ? 'border-b-2 border-accent text-accent'
           : 'text-secondary hover:text-primary'
@@ -96,7 +96,7 @@ function TabButton({
       {children}
       {count > 0 && (
         <span
-          className={`ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold ${
+          className={`ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[12px] font-semibold ${
             active ? 'bg-accent/10 text-accent' : 'bg-surface-soft text-tertiary'
           }`}
         >
@@ -112,7 +112,7 @@ function TabButton({
 function StepBadge({ status }: { status: string }) {
   if (status === 'writing_in_progress') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-2.5 py-1 text-[11px] font-medium text-purple-700">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-2.5 py-1 text-[12px] font-medium text-purple-700">
         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-500" />
         En cours…
       </span>
@@ -120,13 +120,13 @@ function StepBadge({ status }: { status: string }) {
   }
   if (status === 'outline_ready') {
     return (
-      <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-medium text-blue-700">
+      <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-1 text-[12px] font-medium text-blue-700">
         Plan prêt
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center rounded-full bg-surface-soft px-2.5 py-1 text-[11px] font-medium text-secondary">
+    <span className="inline-flex items-center rounded-full bg-surface-soft px-2.5 py-1 text-[12px] font-medium text-secondary">
       En attente
     </span>
   )
@@ -309,7 +309,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher…"
-              className="h-8 rounded-[10px] border border-border bg-surface pl-8 pr-3 text-[13px] text-primary placeholder:text-tertiary focus:outline-none focus:ring-2 focus:ring-accent/30"
+              className="h-8 rounded-[10px] border border-border bg-surface pl-8 pr-3 text-[14px] text-primary placeholder:text-tertiary focus:outline-none focus:ring-2 focus:ring-accent/30"
             />
           </div>
           <Select options={categoryOptions} value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-44" />
@@ -327,7 +327,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
       </div>
 
       {error && (
-        <div className="mb-3 rounded-[10px] border border-danger/20 bg-danger/5 px-3 py-2 text-[13px] text-danger">{error}</div>
+        <div className="mb-3 rounded-[10px] border border-danger/20 bg-danger/5 px-3 py-2 text-[14px] text-danger">{error}</div>
       )}
 
       {/* Batch bar */}
@@ -357,7 +357,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
       ) : (
         <>
           {/* Header row */}
-          <div className="mb-1 hidden grid-cols-[20px_56px_minmax(0,1fr)_140px_140px_100px_80px_130px] gap-3 px-3 text-[11px] font-medium uppercase tracking-wide text-tertiary lg:grid">
+          <div className="mb-1 hidden grid-cols-[20px_56px_minmax(0,1fr)_140px_140px_100px_80px_130px] gap-3 px-3 text-[12px] font-medium uppercase tracking-wide text-tertiary lg:grid">
             <label><input type="checkbox" checked={selected.length > 0 && selected.length === visible.length} onChange={(e) => toggleAll(e.target.checked)} /></label>
             <div>Score</div>
             <div>Titre / Angle</div>
@@ -380,9 +380,9 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
                   <input type="checkbox" checked={selectedIds.has(article.id)} onChange={(e) => toggle(article.id, e.target.checked)} />
                   <ScoreBadge label="Score" value={score} valid={article.global_score_valid} />
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-medium text-primary">{article.title || '(sans titre)'}</p>
+                    <p className="truncate text-[14px] font-medium text-primary">{article.title || '(sans titre)'}</p>
                     {article.meta_description && (
-                      <p className="mt-0.5 truncate text-[11px] text-tertiary">{article.meta_description}</p>
+                      <p className="mt-0.5 truncate text-[12px] text-tertiary">{article.meta_description}</p>
                     )}
                   </div>
                   <span className="truncate text-[12px] text-secondary">{catName}</span>
@@ -439,7 +439,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
       {/* Reject modal */}
       <Modal open={rejectTarget !== null} onClose={() => { setRejectTarget(null); setRejectNote('') }} title="Rejeter l'idée" size="sm">
         <div className="flex flex-col gap-3">
-          <p className="text-[13px] text-secondary">Idée : <strong>{rejectTarget?.title}</strong></p>
+          <p className="text-[14px] text-secondary">Idée : <strong>{rejectTarget?.title}</strong></p>
           <Input
             label="Note (optionnelle)"
             value={rejectNote}
@@ -458,7 +458,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
         <div className="flex flex-col gap-3">
           <Input label="Titre suggéré (optionnel)" value={generateTitle} onChange={(e) => setGenerateTitle(e.target.value)} placeholder="ex. Comment choisir un hébergeur…" />
           <Input label="Contexte (optionnel)" value={generateContext} onChange={(e) => setGenerateContext(e.target.value)} placeholder="ex. Article pour débutants, angle SEO…" />
-          {generateResult && <p className="rounded-[10px] bg-surface-soft px-3 py-2 text-[13px] text-secondary">{generateResult}</p>}
+          {generateResult && <p className="rounded-[10px] bg-surface-soft px-3 py-2 text-[14px] text-secondary">{generateResult}</p>}
           <div className="flex gap-2">
             <Button size="sm" variant="secondary" className="flex-1 justify-center" onClick={() => setGenerateOpen(false)}>Fermer</Button>
             <Button size="sm" className="flex-1 justify-center" loading={generating} onClick={handleGenerate}>Générer</Button>
@@ -474,12 +474,12 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
             <select
               value={bulkCount}
               onChange={(e) => setBulkCount(Number(e.target.value))}
-              className="w-full rounded-[10px] border border-border bg-surface px-3 py-2 text-[13px] text-primary focus:outline-none focus:ring-2 focus:ring-accent/30"
+              className="w-full rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary focus:outline-none focus:ring-2 focus:ring-accent/30"
             >
               {[3, 5, 10, 20].map((n) => <option key={n} value={n}>{n} idées</option>)}
             </select>
           </div>
-          {generateResult && <p className="rounded-[10px] bg-surface-soft px-3 py-2 text-[13px] text-secondary">{generateResult}</p>}
+          {generateResult && <p className="rounded-[10px] bg-surface-soft px-3 py-2 text-[14px] text-secondary">{generateResult}</p>}
           <div className="flex gap-2">
             <Button size="sm" variant="secondary" className="flex-1 justify-center" onClick={() => setBulkGenerateOpen(false)}>Fermer</Button>
             <Button size="sm" className="flex-1 justify-center" loading={generating} onClick={handleBulkGenerate}>Générer {bulkCount} idées</Button>
@@ -526,7 +526,7 @@ function WritingTab({ projectId }: { projectId: string }) {
 
   return (
     <>
-      <div className="mb-1 hidden grid-cols-[minmax(0,1fr)_180px_140px_120px_40px] gap-3 px-3 text-[11px] font-medium uppercase tracking-wide text-tertiary lg:grid">
+      <div className="mb-1 hidden grid-cols-[minmax(0,1fr)_180px_140px_120px_40px] gap-3 px-3 text-[12px] font-medium uppercase tracking-wide text-tertiary lg:grid">
         <div>Titre</div>
         <div>Catégorie</div>
         <div>Étape</div>
@@ -539,7 +539,7 @@ function WritingTab({ projectId }: { projectId: string }) {
             key={article.id}
             className="group grid grid-cols-[minmax(0,1fr)_180px_140px_120px_40px] items-center gap-3 border-b border-border/30 px-3 py-3 transition-colors hover:bg-surface-soft"
           >
-            <p className="truncate text-[13px] font-medium text-primary">{article.title || '(sans titre)'}</p>
+            <p className="truncate text-[14px] font-medium text-primary">{article.title || '(sans titre)'}</p>
             <span className="truncate text-[12px] text-secondary">{article.category_id || '—'}</span>
             <StepBadge status={article.status} />
             <span className="text-[12px] text-tertiary">{formatDate(article.updated_at)}</span>
@@ -657,7 +657,7 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
           <select
             value={scoreThreshold}
             onChange={(e) => setScoreThreshold(Number(e.target.value))}
-            className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-[13px] text-primary focus:outline-none focus:ring-2 focus:ring-accent/30"
+            className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-[14px] text-primary focus:outline-none focus:ring-2 focus:ring-accent/30"
           >
             {SCORE_THRESHOLD_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
@@ -674,16 +674,16 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value as ValidateFilter)}
-          className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-[13px] text-primary focus:outline-none focus:ring-2 focus:ring-accent/30"
+          className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-[14px] text-primary focus:outline-none focus:ring-2 focus:ring-accent/30"
         >
           {VALIDATE_FILTER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </div>
 
-      {error && <div className="mb-3 rounded-[10px] border border-danger/20 bg-danger/5 px-3 py-2 text-[13px] text-danger">{error}</div>}
+      {error && <div className="mb-3 rounded-[10px] border border-danger/20 bg-danger/5 px-3 py-2 text-[14px] text-danger">{error}</div>}
 
       {bulkResult && !confirmMode && (
-        <div className="mb-3 rounded-[10px] bg-surface-soft px-3 py-2 text-[13px] text-secondary">
+        <div className="mb-3 rounded-[10px] bg-surface-soft px-3 py-2 text-[14px] text-secondary">
           {bulkResult.validated_count ?? bulkResult.scheduled_count} traité(s), {bulkResult.blocked_count} bloqué(s).
         </div>
       )}
@@ -696,7 +696,7 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
         />
       ) : (
         <>
-          <div className="mb-1 hidden grid-cols-[minmax(0,1fr)_90px_120px_160px] gap-3 px-3 text-[11px] font-medium uppercase tracking-wide text-tertiary lg:grid">
+          <div className="mb-1 hidden grid-cols-[minmax(0,1fr)_90px_120px_160px] gap-3 px-3 text-[12px] font-medium uppercase tracking-wide text-tertiary lg:grid">
             <div>Titre / Catégorie</div>
             <div className="text-center">Score global</div>
             <div>Date prévue</div>
@@ -712,8 +712,8 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
                   className="group grid grid-cols-[minmax(0,1fr)_90px_120px_160px] items-center gap-3 border-b border-border/30 px-3 py-3 transition-colors hover:bg-surface-soft"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-medium text-primary">{article.title || '(sans titre)'}</p>
-                    <div className="mt-0.5 flex items-center gap-2 text-[11px] text-tertiary">
+                    <p className="truncate text-[14px] font-medium text-primary">{article.title || '(sans titre)'}</p>
+                    <div className="mt-0.5 flex items-center gap-2 text-[12px] text-tertiary">
                       <span>{catName(article)}</span>
                       {article.critical_warnings.length > 0 && (
                         <span className="flex items-center gap-1 text-danger">
@@ -723,7 +723,7 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
                     </div>
                   </div>
                   <div className="flex justify-center">
-                    <span className={`text-[13px] font-semibold tabular-nums ${scoreColor}`}>
+                    <span className={`text-[14px] font-semibold tabular-nums ${scoreColor}`}>
                       {article.global_score_valid === false ? '~' : ''}{score ?? '—'}
                     </span>
                   </div>
@@ -776,7 +776,7 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
         <div className="flex flex-col gap-4">
           {!bulkResult ? (
             <>
-              <p className="text-[13px] text-secondary">
+              <p className="text-[14px] text-secondary">
                 {confirmMode === 'publish'
                   ? 'Publier cet article immédiatement ?'
                   : 'Valider et programmer cet article selon sa date prévue ?'}
@@ -788,7 +788,7 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
             </>
           ) : (
             <>
-              <div className="rounded-[10px] bg-surface-soft px-3 py-2 text-[13px] text-secondary">
+              <div className="rounded-[10px] bg-surface-soft px-3 py-2 text-[14px] text-secondary">
                 {bulkResult.validated_count ?? bulkResult.scheduled_count} traité(s), {bulkResult.blocked_count} bloqué(s).
               </div>
               <Button size="sm" className="justify-center" onClick={() => { setConfirmMode(null); setBulkResult(null) }}>Fermer</Button>
@@ -823,7 +823,7 @@ export default function PipelinePage() {
       <div className="project-page-header">
         <div>
           <h1 className="text-[20px] font-semibold tracking-tight text-primary">Pipeline</h1>
-          <p className="mt-0.5 text-[13px] text-secondary">Idées, rédaction en cours et articles à valider.</p>
+          <p className="mt-0.5 text-[14px] text-secondary">Idées, rédaction en cours et articles à valider.</p>
         </div>
       </div>
 

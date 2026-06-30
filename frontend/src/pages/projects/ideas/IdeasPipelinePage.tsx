@@ -76,7 +76,7 @@ function OpportunityBadge({ score, reason }: { score: number | null | undefined;
   if (pct === null) return <span className="text-[12px] text-tertiary">—</span>
   const color = pct >= 70 ? 'bg-success/10 text-success' : pct >= 40 ? 'bg-warning/10 text-warning' : 'bg-danger/10 text-danger'
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${color}`} title={reason ?? ''}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium ${color}`} title={reason ?? ''}>
       {pct}/100
     </span>
   )
@@ -84,7 +84,7 @@ function OpportunityBadge({ score, reason }: { score: number | null | undefined;
 
 function StatusBadgeSmall({ status }: { status: string }) {
   const match = IDEA_STATI.find((s) => s.key === status)
-  if (!match) return <span className="text-[11px] text-tertiary">{status}</span>
+  if (!match) return <span className="text-[12px] text-tertiary">{status}</span>
   return (
     <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${match.color}`}>
       {match.label}
@@ -327,7 +327,7 @@ export default function IdeasPipelinePage() {
         <div className="mb-4 flex items-center justify-between shrink-0">
           <div>
             <h1 className="text-[20px] font-semibold text-primary tracking-tight">Idées</h1>
-            <p className="mt-0.5 text-[13px] text-secondary">
+            <p className="mt-0.5 text-[14px] text-secondary">
               Backlog éditorial — idées proposées par l'IA, briefs et préparation production.
             </p>
           </div>
@@ -347,7 +347,7 @@ export default function IdeasPipelinePage() {
         {/* Info banner */}
         <div className="mb-4 flex items-start gap-2.5 rounded-[12px] border border-border bg-surface-soft px-4 py-3 shrink-0">
           <Info size={14} className="mt-0.5 shrink-0 text-tertiary" />
-          <p className="text-[13px] text-secondary leading-snug">
+          <p className="text-[14px] text-secondary leading-snug">
             Les idées sont générées par les agents IA de planification. Validez une idée pour l'envoyer en{' '}
             <button onClick={() => navigate(`/projects/${projectId}/production`)} className="text-accent hover:underline">
               Production
@@ -401,7 +401,7 @@ export default function IdeasPipelinePage() {
           {(filterCategory || filterStatus || filterSearch || filterMinScore > 0) && (
             <button
               onClick={() => { setFilterCategory(''); setFilterStatus(''); setFilterSearch(''); setFilterMinScore(0) }}
-              className="text-[11px] text-accent hover:underline"
+              className="text-[12px] text-accent hover:underline"
             >
               Réinitialiser
             </button>
@@ -413,16 +413,16 @@ export default function IdeasPipelinePage() {
           <div className="mb-3 flex items-center gap-2 rounded-[10px] bg-accent/5 px-3 py-2 shrink-0">
             <span className="text-[12px] font-medium text-secondary">{selectedIdeas.size} sélectionnée(s)</span>
             <div className="flex gap-1.5 ml-2">
-              <Button size="sm" variant="secondary" className="text-[11px] h-7 px-2" onClick={() => handleBatchAction('prioritize')}>
+              <Button size="sm" variant="secondary" className="text-[12px] h-7 px-2" onClick={() => handleBatchAction('prioritize')}>
                 <Star size={11} /> Prioriser
               </Button>
-              <Button size="sm" variant="secondary" className="text-[11px] h-7 px-2" onClick={() => handleBatchAction('reject')}>
+              <Button size="sm" variant="secondary" className="text-[12px] h-7 px-2" onClick={() => handleBatchAction('reject')}>
                 <X size={11} /> Rejeter
               </Button>
             </div>
             <button
               onClick={() => setSelectedIdeas(new Set())}
-              className="ml-auto text-[11px] text-tertiary hover:text-primary transition-colors"
+              className="ml-auto text-[12px] text-tertiary hover:text-primary transition-colors"
             >
               Annuler
             </button>
@@ -431,7 +431,7 @@ export default function IdeasPipelinePage() {
 
         {/* Action error */}
         {actionError && (
-          <div className="mb-3 flex items-center justify-between rounded-[10px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[13px] text-danger shrink-0">
+          <div className="mb-3 flex items-center justify-between rounded-[10px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[14px] text-danger shrink-0">
             <span>{actionError}</span>
             <button onClick={() => setActionError('')} className="ml-3 shrink-0 text-danger/60 hover:text-danger transition-colors">✕</button>
           </div>
@@ -456,7 +456,7 @@ export default function IdeasPipelinePage() {
               <Lightbulb size={22} />
             </div>
             <p className="text-[15px] font-medium text-primary">Aucune idée pour l'instant</p>
-            <p className="max-w-xs text-[13px] text-secondary">
+            <p className="max-w-xs text-[14px] text-secondary">
               Lancez une génération pour proposer des idées d'articles via l'IA.
             </p>
             <Button size="sm" icon={<Plus size={14} />} onClick={() => setGenerateOpen(true)}>
@@ -478,15 +478,15 @@ export default function IdeasPipelinePage() {
                       className="rounded-[4px] border-border"
                     />
                   </th>
-                  <th className="px-2 py-2 text-left"><button onClick={() => toggleSort('opportunity_score')} className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-tertiary hover:text-secondary transition-colors">Score{sortField === 'opportunity_score' && <span className="text-accent">{sortDir === 'desc' ? '↓' : '↑'}</span>}</button></th>
-                  <th className="px-2 py-2 text-left"><button onClick={() => toggleSort('priority')} className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-tertiary hover:text-secondary transition-colors">Prio{sortField === 'priority' && <span className="text-accent">{sortDir === 'desc' ? '↓' : '↑'}</span>}</button></th>
-                  <th className="px-2 py-2 text-left"><button onClick={() => toggleSort('title')} className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-tertiary hover:text-secondary transition-colors">Titre / Brief{sortField === 'title' && <span className="text-accent">{sortDir === 'desc' ? '↓' : '↑'}</span>}</button></th>
+                  <th className="px-2 py-2 text-left"><button onClick={() => toggleSort('opportunity_score')} className="flex items-center gap-1 text-[12px] font-semibold uppercase tracking-wider text-tertiary hover:text-secondary transition-colors">Score{sortField === 'opportunity_score' && <span className="text-accent">{sortDir === 'desc' ? '↓' : '↑'}</span>}</button></th>
+                  <th className="px-2 py-2 text-left"><button onClick={() => toggleSort('priority')} className="flex items-center gap-1 text-[12px] font-semibold uppercase tracking-wider text-tertiary hover:text-secondary transition-colors">Prio{sortField === 'priority' && <span className="text-accent">{sortDir === 'desc' ? '↓' : '↑'}</span>}</button></th>
+                  <th className="px-2 py-2 text-left"><button onClick={() => toggleSort('title')} className="flex items-center gap-1 text-[12px] font-semibold uppercase tracking-wider text-tertiary hover:text-secondary transition-colors">Titre / Brief{sortField === 'title' && <span className="text-accent">{sortDir === 'desc' ? '↓' : '↑'}</span>}</button></th>
                   <th className="px-2 py-2 text-left hidden md:table-cell">Catégorie</th>
                   <th className="px-2 py-2 text-left hidden lg:table-cell">Mot-clé</th>
                   <th className="px-2 py-2 text-left hidden lg:table-cell">Statut</th>
                   <th className="px-2 py-2 text-left hidden xl:table-cell">Dernier agent</th>
                   <th className="px-2 py-2 text-left hidden xl:table-cell">Prochain agent</th>
-                  <th className="px-2 py-2 text-left"><button onClick={() => toggleSort('created_at')} className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-tertiary hover:text-secondary transition-colors">Date{sortField === 'created_at' && <span className="text-accent">{sortDir === 'desc' ? '↓' : '↑'}</span>}</button></th>
+                  <th className="px-2 py-2 text-left"><button onClick={() => toggleSort('created_at')} className="flex items-center gap-1 text-[12px] font-semibold uppercase tracking-wider text-tertiary hover:text-secondary transition-colors">Date{sortField === 'created_at' && <span className="text-accent">{sortDir === 'desc' ? '↓' : '↑'}</span>}</button></th>
                   <th className="w-28 px-2 py-2 text-right">Actions</th>
                 </tr>
               </thead>
@@ -517,18 +517,18 @@ export default function IdeasPipelinePage() {
                         {article.priority > 0 ? (
                           <Star size={13} className="text-orange-500 fill-orange-500" />
                         ) : (
-                          <span className="text-tertiary text-[11px]">—</span>
+                          <span className="text-tertiary text-[12px]">—</span>
                         )}
                       </td>
                       <td className="px-2 py-2.5 max-w-[280px]">
                         <button
                           onClick={() => setPreviewIdea(article)}
-                          className="text-[13px] font-medium text-primary hover:text-accent transition-colors text-left line-clamp-1"
+                          className="text-[14px] font-medium text-primary hover:text-accent transition-colors text-left line-clamp-1"
                         >
                           {article.title}
                         </button>
                         {article.angle && (
-                          <p className="text-[11px] text-tertiary line-clamp-1 mt-0.5">{article.angle}</p>
+                          <p className="text-[12px] text-tertiary line-clamp-1 mt-0.5">{article.angle}</p>
                         )}
                       </td>
                       <td className="px-2 py-2.5 hidden md:table-cell">
@@ -549,13 +549,13 @@ export default function IdeasPipelinePage() {
                         <StatusBadgeSmall status={article.status} />
                       </td>
                       <td className="px-2 py-2.5 hidden xl:table-cell">
-                        <span className="text-[11px] text-tertiary">{lastAgent ?? '—'}</span>
+                        <span className="text-[12px] text-tertiary">{lastAgent ?? '—'}</span>
                       </td>
                       <td className="px-2 py-2.5 hidden xl:table-cell">
-                        <span className="text-[11px] font-medium text-accent">{nextAgent ?? '—'}</span>
+                        <span className="text-[12px] font-medium text-accent">{nextAgent ?? '—'}</span>
                       </td>
                       <td className="px-2 py-2.5 whitespace-nowrap">
-                        <span className="text-[11px] text-tertiary">{formatDate(article.created_at)}</span>
+                        <span className="text-[12px] text-tertiary">{formatDate(article.created_at)}</span>
                       </td>
                       <td className="px-2 py-2.5 text-right">
                         <div className="flex items-center justify-end gap-1">
@@ -610,7 +610,7 @@ export default function IdeasPipelinePage() {
 
             {filtered.length === 0 && (
               <div className="flex flex-col items-center gap-2 py-12 text-center">
-                <p className="text-[13px] text-secondary">Aucune idée ne correspond aux filtres.</p>
+                <p className="text-[14px] text-secondary">Aucune idée ne correspond aux filtres.</p>
                 <button
                   onClick={() => { setFilterCategory(''); setFilterStatus(''); setFilterSearch(''); setFilterMinScore(0) }}
                   className="text-[12px] text-accent hover:underline"
@@ -641,7 +641,7 @@ export default function IdeasPipelinePage() {
                   <Star size={10} className="fill-orange-500" /> Prioritaire
                 </span>
               )}
-              <span className="text-[11px] text-tertiary">Créé le {formatDate(previewIdea.created_at)}</span>
+              <span className="text-[12px] text-tertiary">Créé le {formatDate(previewIdea.created_at)}</span>
             </div>
 
             {/* Brief fields */}
@@ -649,81 +649,81 @@ export default function IdeasPipelinePage() {
               {previewIdea.keyword && (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Mot-clé principal</p>
-                  <p className="text-[13px] text-primary">{previewIdea.keyword}</p>
+                  <p className="text-[14px] text-primary">{previewIdea.keyword}</p>
                 </div>
               )}
               {previewIdea.recommended_format && (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Format recommandé</p>
-                  <p className="text-[13px] text-primary capitalize">{previewIdea.recommended_format}</p>
+                  <p className="text-[14px] text-primary capitalize">{previewIdea.recommended_format}</p>
                 </div>
               )}
               {previewIdea.search_intent && (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Intention de recherche</p>
-                  <p className="text-[13px] text-primary">{previewIdea.search_intent}</p>
+                  <p className="text-[14px] text-primary">{previewIdea.search_intent}</p>
                 </div>
               )}
               {previewIdea.audience && (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Audience cible</p>
-                  <p className="text-[13px] text-primary">{previewIdea.audience}</p>
+                  <p className="text-[14px] text-primary">{previewIdea.audience}</p>
                 </div>
               )}
               {previewIdea.estimated_difficulty && (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Difficulté estimée</p>
-                  <p className="text-[13px] text-primary capitalize">{previewIdea.estimated_difficulty}</p>
+                  <p className="text-[14px] text-primary capitalize">{previewIdea.estimated_difficulty}</p>
                 </div>
               )}
               {previewIdea.target_word_count && (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Longueur cible</p>
-                  <p className="text-[13px] text-primary">{previewIdea.target_word_count} mots</p>
+                  <p className="text-[14px] text-primary">{previewIdea.target_word_count} mots</p>
                 </div>
               )}
               {previewIdea.needs_faq !== null && (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">FAQ prévue</p>
-                  <p className="text-[13px] text-primary">{previewIdea.needs_faq ? 'Oui' : 'Non'}</p>
+                  <p className="text-[14px] text-primary">{previewIdea.needs_faq ? 'Oui' : 'Non'}</p>
                 </div>
               )}
               {previewIdea.needs_images !== null && (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Images nécessaires</p>
-                  <p className="text-[13px] text-primary">{previewIdea.needs_images ? 'Oui' : 'Non'}</p>
+                  <p className="text-[14px] text-primary">{previewIdea.needs_images ? 'Oui' : 'Non'}</p>
                 </div>
               )}
               {previewIdea.target_write_at && (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Date rédaction cible</p>
-                  <p className="text-[13px] text-primary">{formatDate(previewIdea.target_write_at)}</p>
+                  <p className="text-[14px] text-primary">{formatDate(previewIdea.target_write_at)}</p>
                 </div>
               )}
               {previewIdea.target_review_at && (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Date relecture cible</p>
-                  <p className="text-[13px] text-primary">{formatDate(previewIdea.target_review_at)}</p>
+                  <p className="text-[14px] text-primary">{formatDate(previewIdea.target_review_at)}</p>
                 </div>
               )}
               {previewIdea.scheduled_at && (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Date publication cible</p>
-                  <p className="text-[13px] text-primary">{formatDate(previewIdea.scheduled_at)}</p>
+                  <p className="text-[14px] text-primary">{formatDate(previewIdea.scheduled_at)}</p>
                 </div>
               )}
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Dernier agent terminé</p>
-                <p className="text-[13px] text-primary">{getLastCompletedAgent(previewIdea) ?? 'Aucun'}</p>
+                <p className="text-[14px] text-primary">{getLastCompletedAgent(previewIdea) ?? 'Aucun'}</p>
               </div>
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Prochain agent</p>
-                <p className="text-[13px] font-medium text-accent">{getNextAgent(previewIdea) ?? 'Aucun'}</p>
+                <p className="text-[14px] font-medium text-accent">{getNextAgent(previewIdea) ?? 'Aucun'}</p>
               </div>
               {previewIdea.workflow_status && (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Phase workflow</p>
-                  <p className="text-[13px] text-primary capitalize">{previewIdea.workflow_status}</p>
+                  <p className="text-[14px] text-primary capitalize">{previewIdea.workflow_status}</p>
                 </div>
               )}
             </div>
@@ -732,7 +732,7 @@ export default function IdeasPipelinePage() {
             {previewIdea.estimated_cost_json && typeof previewIdea.estimated_cost_json === 'object' && (
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Coût estimé</p>
-                <p className="text-[13px] text-primary">
+                <p className="text-[14px] text-primary">
                   {(previewIdea.estimated_cost_json as Record<string, unknown>).estimated_cost_eur != null
                     ? `${((previewIdea.estimated_cost_json as Record<string, unknown>).estimated_cost_eur as number).toFixed(4)} €`
                     : 'Non disponible'}
@@ -769,7 +769,7 @@ export default function IdeasPipelinePage() {
             {/* Agent outputs JSON */}
             {previewIdea.agent_outputs_json && (
               <details className="group">
-                <summary className="cursor-pointer text-[11px] text-secondary hover:text-primary transition-colors">
+                <summary className="cursor-pointer text-[12px] text-secondary hover:text-primary transition-colors">
                   Sorties des agents
                 </summary>
                 <pre className="mt-1 max-h-40 overflow-auto rounded-[6px] bg-surface-soft p-2 text-[10px] leading-relaxed text-primary">
@@ -781,7 +781,7 @@ export default function IdeasPipelinePage() {
             {/* Planning brief JSON */}
             {previewIdea.planning_brief_json && (
               <details className="group">
-                <summary className="cursor-pointer text-[11px] text-secondary hover:text-primary transition-colors">
+                <summary className="cursor-pointer text-[12px] text-secondary hover:text-primary transition-colors">
                   Brief planning
                 </summary>
                 <pre className="mt-1 max-h-40 overflow-auto rounded-[6px] bg-surface-soft p-2 text-[10px] leading-relaxed text-primary">
@@ -794,7 +794,7 @@ export default function IdeasPipelinePage() {
             {previewIdea.opportunity_justification && (
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Justification du score</p>
-                <p className="text-[13px] text-secondary leading-relaxed">{previewIdea.opportunity_justification}</p>
+                <p className="text-[14px] text-secondary leading-relaxed">{previewIdea.opportunity_justification}</p>
               </div>
             )}
 
@@ -802,7 +802,7 @@ export default function IdeasPipelinePage() {
             {previewIdea.main_answer_summary && (
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Réponse principale attendue</p>
-                <p className="text-[13px] text-secondary leading-relaxed">{previewIdea.main_answer_summary}</p>
+                <p className="text-[14px] text-secondary leading-relaxed">{previewIdea.main_answer_summary}</p>
               </div>
             )}
 
@@ -810,7 +810,7 @@ export default function IdeasPipelinePage() {
             {previewIdea.angle && (
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Angle éditorial</p>
-                <p className="text-[13px] text-secondary leading-relaxed">{previewIdea.angle}</p>
+                <p className="text-[14px] text-secondary leading-relaxed">{previewIdea.angle}</p>
               </div>
             )}
 
@@ -843,7 +843,7 @@ export default function IdeasPipelinePage() {
       >
         <form onSubmit={handleGenerate} className="flex flex-col gap-4">
           {generateError && (
-            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">
               {generateError}
             </div>
           )}
@@ -881,7 +881,7 @@ export default function IdeasPipelinePage() {
       >
         <div className="flex flex-col gap-4">
           {autoError && (
-            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">
               {autoError}
             </div>
           )}
@@ -889,12 +889,12 @@ export default function IdeasPipelinePage() {
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2 text-success">
                 <CheckCircle size={15} />
-                <p className="text-[13px] font-semibold">{autoResult.generated} idée(s) proposée(s)</p>
+                <p className="text-[14px] font-semibold">{autoResult.generated} idée(s) proposée(s)</p>
               </div>
               <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
                 {autoResult.ideas.map((idea) => (
                   <div key={idea.id} className="rounded-[10px] border border-border bg-surface-soft p-3">
-                    <p className="text-[13px] font-medium text-primary">{idea.title}</p>
+                    <p className="text-[14px] font-medium text-primary">{idea.title}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
                       {idea.keyword && <span className="rounded-full bg-accent/8 px-2 py-0.5 text-[10px] text-accent">{idea.keyword}</span>}
                       {normalizeOpportunityScore(idea.opportunity_score) !== null && (
@@ -918,7 +918,7 @@ export default function IdeasPipelinePage() {
               <div className="flex items-start gap-3 rounded-[12px] border border-border bg-surface-soft px-3.5 py-3">
                 <Sparkles size={15} className="mt-0.5 shrink-0 text-accent" />
                 <div>
-                  <p className="text-[13px] font-medium text-primary">Génération automatique</p>
+                  <p className="text-[14px] font-medium text-primary">Génération automatique</p>
                   <p className="mt-0.5 text-[12px] text-secondary leading-snug">
                     L'IA va proposer plusieurs idées d'articles basées sur le contexte de votre projet.
                   </p>
@@ -929,7 +929,7 @@ export default function IdeasPipelinePage() {
                 <select
                   value={autoCount}
                   onChange={(e) => setAutoCount(Number(e.target.value))}
-                  className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[13px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+                  className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[14px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
                 >
                   <option value={1}>1 idée</option>
                   <option value={3}>3 idées</option>
@@ -959,11 +959,11 @@ export default function IdeasPipelinePage() {
       >
         <form onSubmit={handleReject} className="flex flex-col gap-4">
           {rejectError && (
-            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[13px] text-danger">
+            <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">
               {rejectError}
             </div>
           )}
-          <p className="text-[13px] text-secondary">
+          <p className="text-[14px] text-secondary">
             Idée : <strong className="text-primary">{rejectTarget?.title}</strong>
           </p>
           <Input

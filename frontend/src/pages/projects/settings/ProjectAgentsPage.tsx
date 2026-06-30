@@ -24,7 +24,7 @@ function AccessDenied() {
         <span className="text-2xl text-error">🔒</span>
       </div>
       <h2 className="text-[18px] font-semibold text-primary">Accès réservé aux administrateurs</h2>
-      <p className="mt-2 max-w-sm text-[14px] text-secondary">
+      <p className="mt-2 max-w-sm text-[15px] text-secondary">
         La configuration des providers, agents et pipeline est réservée aux owners et admins du projet.
       </p>
     </div>
@@ -132,7 +132,7 @@ export default function ProjectAgentsPage() {
     return (
       <div className="flex flex-col gap-4">
         <ErrorState message={error} onRetry={fetchAll} />
-        <div className="rounded-[14px] border border-border bg-surface p-4 text-[13px] text-secondary">
+        <div className="rounded-[14px] border border-border bg-surface p-4 text-[14px] text-secondary">
           La page reste accessible aux owners/admins. Déployez le backend à jour si le registry agents n’est pas exposé.
         </div>
       </div>
@@ -146,13 +146,13 @@ export default function ProjectAgentsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-[18px] font-semibold text-primary">Agents IA</h2>
-          <p className="mt-0.5 text-[13px] text-secondary">
+          <p className="mt-0.5 text-[14px] text-secondary">
             Assignez un provider IA à chaque agent pour ce projet. Les agents sans assignation utilisent le provider par défaut du projet.
           </p>
         </div>
         <div className="flex items-center gap-2">
           {successMsg && (
-            <span className="flex items-center gap-1 text-[13px] text-green-600">
+            <span className="flex items-center gap-1 text-[14px] text-green-600">
               <CheckCircle size={14} /> {successMsg}
             </span>
           )}
@@ -163,12 +163,12 @@ export default function ProjectAgentsPage() {
       </div>
 
       {error && (
-        <div className="rounded-[12px] border border-warning/20 bg-warning/5 px-4 py-3 text-[13px] text-secondary">
+        <div className="rounded-[12px] border border-warning/20 bg-warning/5 px-4 py-3 text-[14px] text-secondary">
           {error}
         </div>
       )}
 
-      <div className="rounded-[14px] border border-border bg-[#f8f9fc] px-4 py-3 text-[13px] text-secondary leading-relaxed">
+      <div className="rounded-[14px] border border-border bg-[#f8f9fc] px-4 py-3 text-[14px] text-secondary leading-relaxed">
         <strong className="text-primary">Ordre de résolution :</strong>{' '}
         Assignment du projet &gt; provider par défaut du projet &gt; variable d&apos;environnement.
         Les agents désactivés sont ignorés par le routage IA.
@@ -176,7 +176,7 @@ export default function ProjectAgentsPage() {
 
       <div className="overflow-x-auto rounded-[16px] bg-surface">
         <div className="min-w-[980px]">
-          <div className="grid grid-cols-[1.1fr_0.65fr_1.6fr_0.7fr_1.1fr_0.75fr_0.9fr] gap-3 border-b border-border px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-tertiary">
+          <div className="grid grid-cols-[1.1fr_0.65fr_1.6fr_0.7fr_1.1fr_0.75fr_0.9fr] gap-3 border-b border-border px-4 py-3 text-[12px] font-semibold uppercase tracking-wide text-tertiary">
             <span>Agent</span>
             <span>Phase</span>
             <span>Rôle</span>
@@ -192,7 +192,7 @@ export default function ProjectAgentsPage() {
               <div key={agent.agent_id} className="grid grid-cols-[1.1fr_0.65fr_1.6fr_0.7fr_1.1fr_0.75fr_0.9fr] gap-3 border-b border-border px-4 py-3 text-[12px] last:border-0">
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-primary">{agent.name}</p>
-                  <p className="truncate text-[11px] text-tertiary">{agent.agent_id}</p>
+                  <p className="truncate text-[12px] text-tertiary">{agent.agent_id}</p>
                 </div>
                 <span className="text-secondary">{CATEGORY_LABELS[agent.category] ?? agent.category}</span>
                 <span className="min-w-0 truncate text-secondary" title={agent.description}>{agent.description}</span>
@@ -223,9 +223,9 @@ export default function ProjectAgentsPage() {
                 <span className="text-secondary">Projet puis défaut</span>
                 <span>
                   {agent.has_implementation ? (
-                    <span className="rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">Implémenté</span>
+                    <span className="rounded-full bg-success/10 px-2 py-0.5 text-[12px] font-medium text-success">Implémenté</span>
                   ) : (
-                    <span className="rounded-full bg-warning/12 px-2 py-0.5 text-[11px] font-medium text-[#a35b00]">Heuristique</span>
+                    <span className="rounded-full bg-warning/12 px-2 py-0.5 text-[12px] font-medium text-[#a35b00]">Heuristique</span>
                   )}
                 </span>
               </div>
