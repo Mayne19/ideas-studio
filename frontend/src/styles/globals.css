@@ -10,9 +10,9 @@
   --color-primary: #171717;
   --color-secondary: #4D4D4D;
   --color-tertiary: #7D7D7D;
-  --color-border: rgba(0, 0, 0, 0.05);
-  --color-border-soft: rgba(0, 0, 0, 0.05);
-  --color-border-strong: rgba(0, 0, 0, 0.10);
+  --color-border: rgba(0, 0, 0, 0.075);
+  --color-border-soft: rgba(0, 0, 0, 0.065);
+  --color-border-strong: rgba(0, 0, 0, 0.14);
   --color-accent: #0072F5;
   --color-accent-dark: #0062D1;
   --color-brand: #171717;
