@@ -355,14 +355,14 @@ export default function AnalyticsPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     layout="vertical"
-                    data={sources.slice(0, 8).map((s, i) => ({ label: s.label, visits: s.visits, fill: COUNTRY_PALETTE[i % COUNTRY_PALETTE.length] }))}
+                    data={sources.slice(0, 3).map((s, i) => ({ label: s.label, visits: s.visits, fill: COUNTRY_PALETTE[i % COUNTRY_PALETTE.length] }))}
                     margin={{ top: 2, right: 12, bottom: 2, left: 0 }}
                   >
                     <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} tickMargin={6} width={100} tick={{ fontSize: 11, fill: '#86868b' }} tickFormatter={(v: string) => v.length > 14 ? v.slice(0, 13) + '…' : v} />
                     <XAxis type="number" hide />
                     <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v) => [formatMetric(Number(v)), 'Vues']} />
                     <Bar dataKey="visits" radius={5} barSize={14}>
-                      {sources.slice(0, 8).map((s, i) => (
+                      {sources.slice(0, 3).map((s, i) => (
                         <Cell key={s.key} fill={COUNTRY_PALETTE[i % COUNTRY_PALETTE.length]} />
                       ))}
                     </Bar>
