@@ -11,11 +11,11 @@ type GaugeProps = {
   className?: string
 }
 
-const sizes: Record<GaugeSize, { box: string; stroke: number; text: string }> = {
-  tiny: { box: 'h-5 w-5', stroke: 9, text: 'text-[0]' },
-  small: { box: 'h-12 w-12', stroke: 8, text: 'text-[14px]' },
-  medium: { box: 'h-16 w-16', stroke: 8, text: 'text-[20px]' },
-  large: { box: 'h-24 w-24', stroke: 8, text: 'text-[32px]' },
+const sizes: Record<GaugeSize, { box: string; stroke: number; gap: number; text: string }> = {
+  tiny: { box: 'h-5 w-5', stroke: 9, gap: 8, text: 'text-[0]' },
+  small: { box: 'h-12 w-12', stroke: 8, gap: 9, text: 'text-[14px]' },
+  medium: { box: 'h-16 w-16', stroke: 8, gap: 10, text: 'text-[20px]' },
+  large: { box: 'h-24 w-24', stroke: 8, gap: 12, text: 'text-[32px]' },
 }
 
 export function Gauge({
@@ -29,9 +29,11 @@ export function Gauge({
   const normalized = Math.max(0, Math.min(100, Math.round(value)))
   const radius = 42
   const circumference = 2 * Math.PI * radius
-  const progressLength = circumference * (normalized / 100)
-  const trackLength = circumference - progressLength
   const config = sizes[size]
+  const segmentGap = normalized > 0 && normalized < 100 ? config.gap : 0
+  const drawableLength = circumference - segmentGap * 2
+  const progressLength = drawableLength * (normalized / 100)
+  const trackLength = drawableLength - progressLength
 
   return (
     <div
@@ -50,7 +52,7 @@ export function Gauge({
             fill="none"
             stroke={trackColor}
             strokeDasharray={`${trackLength} ${circumference}`}
-            strokeDashoffset={-progressLength}
+            strokeDashoffset={-(segmentGap + progressLength)}
             strokeLinecap="round"
             strokeWidth={config.stroke}
           />
