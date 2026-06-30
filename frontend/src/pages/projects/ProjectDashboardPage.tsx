@@ -156,7 +156,7 @@ function SeoRadialCard({
   color?: string
 }) {
   const fillColor = color ?? (score >= 75 ? '#00c950' : score >= 50 ? '#ffa51f' : '#ff3b1f')
-  const remainingColor = '#e5e5e5'
+  const remainingColor = '#d4d4d4'
   const changeColor = fillColor
   const changeLabel = changePts >= 0 ? `+${changePts} pts` : `${changePts} pts`
   const endAngle = 90 - (score / 100) * 280
