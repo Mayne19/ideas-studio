@@ -1,26 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip,
+  AreaChart, Area,
+  BarChart, Bar, Cell,
+  XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Legend,
-  Area, AreaChart,
 } from 'recharts'
-import { Gauge } from '@vercel/geistcn/components'
 import {
-  Eye,
   Globe,
   MousePointer2,
   RefreshCw,
-  Smartphone,
-  TrendingUp,
   Users,
   ExternalLink,
   AlertTriangle,
   BarChart3,
   Mail,
-  Monitor,
-  Tablet,
 } from '@/components/ui/hugeIcons'
+import { SeoRadialCard, AreaMetricCard } from '@/components/charts/TrendCards'
 import { getPerformanceSummary, getArticlesPerformance } from '@/api/performance'
 import type { ArticlePerformanceBrief, PerformanceSummary } from '@/types'
 import { Card } from '@/components/ui/Card'
@@ -107,12 +103,6 @@ function SourceMark({ referrer }: { referrer: string }) {
   return <Globe size={15} />
 }
 
-function DeviceIcon({ device }: { device: string }) {
-  const n = device.toLowerCase()
-  if (n === 'mobile') return <Smartphone size={15} />
-  if (n === 'tablet') return <Tablet size={15} />
-  return <Monitor size={15} />
-}
 
 function chartTick(period: PeriodMode, value: unknown) {
   const label = String(value)
@@ -120,72 +110,18 @@ function chartTick(period: PeriodMode, value: unknown) {
   return label.includes('-') ? label.slice(5) : label
 }
 
-function AreaMetricCard({
-  icon,
-  value,
-  label,
-  change,
-  changeColor,
-  color,
-  data,
-}: {
-  icon: React.ReactNode
-  value: string | number
-  label: string
-  change?: string | null
-  changeColor?: string
-  color: string
-  data: { v: number }[]
-}) {
-  return (
-    <div className="flex h-[148px] flex-col rounded-[8px] border-2 border-border bg-transparent p-4 shadow-none">
-      <div className="flex items-center justify-between">
-        <span className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-surface-soft text-primary">{icon}</span>
-        {change && (
-          <span className="text-[12px] font-semibold tabular-nums" style={{ color: changeColor }}>{change}</span>
-        )}
-      </div>
-      <p className="mt-2 text-[24px] font-semibold tracking-tight leading-none text-primary">{value}</p>
-      <p className="mt-1 text-[12px] text-tertiary">{label}</p>
-      <div className="mt-auto h-[44px] -mx-1">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
-            <Area
-              type="linear"
-              dataKey="v"
-              stroke={color}
-              strokeWidth={1.5}
-              fill={color}
-              fillOpacity={0.12}
-              dot={false}
-              isAnimationActive={false}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  )
+// ── Constants ────────────────────────────────────────────────────────────────
+
+const COUNTRY_PALETTE = ['#0066ff', '#34c759', '#8b5cf6', '#ff9500', '#ff3b1f', '#5856d6', '#00c2b8', '#9ca3af']
+
+const DEVICE_COLORS: Record<string, string> = {
+  desktop: '#0066ff',
+  mobile: '#34c759',
+  tablet: '#8b5cf6',
 }
 
-function SeoGaugeCard({
-  icon,
-  score,
-  label,
-}: {
-  icon: React.ReactNode
-  score: number | null
-  label: string
-}) {
-  const color = score === null ? '#9ca3af' : score >= 75 ? '#45a75a' : score >= 50 ? '#ffa51f' : '#ff3b1f'
-  return (
-    <div className="flex h-[148px] flex-col rounded-[8px] border-2 border-border bg-transparent p-4 shadow-none">
-      <span className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-surface-soft text-primary">{icon}</span>
-      <div className="mt-2 flex flex-1 items-center">
-        <Gauge showValue size="small" value={score ?? 0} color={color} />
-      </div>
-      <p className="text-[12px] text-tertiary">{label}</p>
-    </div>
-  )
+function deviceColor(device: string) {
+  return DEVICE_COLORS[device.toLowerCase()] ?? '#9ca3af'
 }
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -326,17 +262,16 @@ export default function AnalyticsPage() {
         {/* Section 1 — 4 KPIs */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <AreaMetricCard
-            icon={<Eye size={18} />}
+            title="Vues totales"
             value={formatMetric(summary.total_views)}
-            label="Vues totales"
-            change={viewsChange}
+            change={viewsChange ?? '—'}
             changeColor={viewsChange?.startsWith('-') ? '#ff3b1f' : '#0066ff'}
             color="#0066ff"
             data={viewsTrend}
           />
           <MetricCard icon={<Users size={18} />} value={formatMetric(summary.unique_pages)} label="Pages uniques" tone="success" className="h-[148px]" />
           <MetricCard icon={<BarChart3 size={18} />} value={String(articleMetrics.length)} label="Articles suivis" tone="warning" className="h-[148px]" />
-          <SeoGaugeCard icon={<TrendingUp size={18} />} score={avgSeoScore} label="Score SEO moyen" />
+          <SeoRadialCard title="Score SEO moyen" score={avgSeoScore ?? 0} changePts={0} data={[]} />
         </div>
 
         {/* Section 2 — Évolution des vues */}
@@ -344,17 +279,35 @@ export default function AnalyticsPage() {
           <SectionTitle>Évolution du trafic par canal</SectionTitle>
           <div className="relative h-[220px]">
             <ResponsiveContainer width="100%" height="100%" debounce={100}>
-              <LineChart data={channelTrend} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+              <AreaChart data={channelTrend} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+                <defs>
+                  <linearGradient id="fillOrganic" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#34c759" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#34c759" stopOpacity={0.1} />
+                  </linearGradient>
+                  <linearGradient id="fillDirect" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#007aff" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#007aff" stopOpacity={0.1} />
+                  </linearGradient>
+                  <linearGradient id="fillSocial" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#5856d6" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#5856d6" stopOpacity={0.1} />
+                  </linearGradient>
+                  <linearGradient id="fillReferral" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ff9500" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#ff9500" stopOpacity={0.1} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
                 <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} tickFormatter={(v) => chartTick(period.mode, v)} interval="preserveStartEnd" />
                 <YAxis tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} width={40} allowDecimals={false} tickFormatter={formatAxisTick} />
-                <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v) => [formatMetric(Number(v)), 'Visites']} />
+                <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v, name) => [formatMetric(Number(v)), name]} />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-                <Line type="monotone" dataKey="organic" name="Google" stroke="#34c759" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                <Line type="monotone" dataKey="direct" name="Direct" stroke="#007aff" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                <Line type="monotone" dataKey="social" name="Social" stroke="#5856d6" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                <Line type="monotone" dataKey="referral" name="Referral" stroke="#ff9500" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-              </LineChart>
+                <Area type="natural" dataKey="referral" name="Referral" stackId="a" stroke="#ff9500" fill="url(#fillReferral)" strokeWidth={1.5} dot={false} activeDot={{ r: 3 }} />
+                <Area type="natural" dataKey="social" name="Social" stackId="a" stroke="#5856d6" fill="url(#fillSocial)" strokeWidth={1.5} dot={false} activeDot={{ r: 3 }} />
+                <Area type="natural" dataKey="direct" name="Direct" stackId="a" stroke="#007aff" fill="url(#fillDirect)" strokeWidth={1.5} dot={false} activeDot={{ r: 3 }} />
+                <Area type="natural" dataKey="organic" name="Google" stackId="a" stroke="#34c759" fill="url(#fillOrganic)" strokeWidth={1.5} dot={false} activeDot={{ r: 3 }} />
+              </AreaChart>
             </ResponsiveContainer>
             {!hasChannelTrend && <ChartEmpty message="Aucune donnée de trafic pour cette période." />}
           </div>
@@ -504,29 +457,52 @@ export default function AnalyticsPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <Card>
             <SectionTitle>Pays</SectionTitle>
-            {summary.countries.length ? summary.countries.slice(0, 8).map((c, i) => (
-              <VisualRow
-                key={c.country}
-                rank={i + 1}
-                label={getCountryDisplay(c.country).label}
-                value={c.views}
-                total={summary.total_views}
-                leading={<span className="text-[15px] leading-none">{getCountryDisplay(c.country).flag}</span>}
-              />
-            )) : <InlineEmpty>Aucune donnée pays pour cette période.</InlineEmpty>}
+            {summary.countries.length ? (
+              <div className="h-[220px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={summary.countries.slice(0, 8).map((c) => ({
+                      name: `${getCountryDisplay(c.country).flag} ${getCountryDisplay(c.country).label}`,
+                      views: c.views,
+                    }))}
+                    layout="vertical"
+                    margin={{ top: 2, right: 12, bottom: 2, left: 0 }}
+                  >
+                    <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={6} width={120} tick={{ fontSize: 11, fill: '#86868b' }} />
+                    <XAxis type="number" hide allowDecimals={false} />
+                    <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v) => [formatMetric(Number(v)), 'Vues']} />
+                    <Bar dataKey="views" radius={[0, 6, 6, 0]} barSize={14}>
+                      {summary.countries.slice(0, 8).map((c, i) => (
+                        <Cell key={c.country} fill={COUNTRY_PALETTE[i % COUNTRY_PALETTE.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : <InlineEmpty>Aucune donnée pays pour cette période.</InlineEmpty>}
           </Card>
           <Card>
             <SectionTitle>Appareils</SectionTitle>
-            {summary.devices.length ? summary.devices.map((d, i) => (
-              <VisualRow
-                key={d.device}
-                rank={i + 1}
-                label={getDeviceLabel(d.device)}
-                value={d.views}
-                total={summary.total_views}
-                leading={<DeviceIcon device={d.device} />}
-              />
-            )) : <InlineEmpty>Aucune donnée appareil pour cette période.</InlineEmpty>}
+            {summary.devices.length ? (
+              <div className="h-[220px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={summary.devices.map((d) => ({ name: getDeviceLabel(d.device), views: d.views, fill: deviceColor(d.device) }))}
+                    margin={{ top: 4, right: 8, bottom: 4, left: 0 }}
+                  >
+                    <CartesianGrid vertical={false} stroke="rgba(0,0,0,0.06)" />
+                    <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 11, fill: '#86868b' }} />
+                    <YAxis tickLine={false} axisLine={false} width={36} allowDecimals={false} tick={{ fontSize: 11, fill: '#86868b' }} tickFormatter={formatAxisTick} />
+                    <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v) => [formatMetric(Number(v)), 'Vues']} />
+                    <Bar dataKey="views" radius={[6, 6, 0, 0]} barSize={40}>
+                      {summary.devices.map((d) => (
+                        <Cell key={d.device} fill={deviceColor(d.device)} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : <InlineEmpty>Aucune donnée appareil pour cette période.</InlineEmpty>}
           </Card>
         </div>
       </div>
