@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   AreaChart, Area,
-  BarChart, Bar, Cell,
+  BarChart, Bar, Cell, LabelList,
   XAxis, YAxis,
   CartesianGrid, Legend,
   ResponsiveContainer, Tooltip,
@@ -114,6 +114,16 @@ const CHART_TOOLTIP_STYLE = {
   boxShadow: 'none',
 }
 const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, info: 2 }
+
+const trafficOriginConfig = {
+  views: {
+    label: "Vues",
+    color: "#4b5563",
+  },
+  label: {
+    color: "var(--background)",
+  },
+} satisfies ChartConfig
 
 const trafficChartConfig = {
   direct: { label: "Direct", color: "#111827" },
@@ -628,26 +638,45 @@ export default function AnalyticsPage() {
           )}
         </Card>
 
-        {/* Section 5 — Origine du trafic compact */}
+        {/* Section 5 — Origine du trafic */}
         <Card>
           <SectionTitle>Origine du trafic</SectionTitle>
           {sourceChannels.length === 0 ? (
             <InlineEmpty>Aucune donnée de provenance pour cette période.</InlineEmpty>
           ) : (
-            <div className="space-y-3">
-              {sourceChannels.map((sc) => (
-                <div key={sc.channel} className="flex items-center gap-3">
-                  <span className="w-24 shrink-0 text-[13px] font-medium text-primary">{sc.channel}</span>
-                  <div className="flex-1 h-2 rounded-full bg-surface-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-[#0066ff] transition-all"
-                      style={{ width: `${Math.min(sc.share, 100)}%` }}
+            <div className="h-[220px]">
+              <ChartContainer config={trafficOriginConfig} className="h-full w-full">
+                <BarChart
+                  data={sourceChannels}
+                  layout="vertical"
+                  margin={{ right: 16, left: 0 }}
+                >
+                  <CartesianGrid horizontal={false} />
+                  <YAxis dataKey="channel" type="category" tickLine={false} axisLine={false} hide />
+                  <XAxis dataKey="views" type="number" hide />
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent indicator="line" hideLabel />}
+                  />
+                  <Bar dataKey="views" fill="#4b5563" radius={4} barSize={28}>
+                    <LabelList
+                      dataKey="channel"
+                      position="insideLeft"
+                      offset={12}
+                      className="fill-white"
+                      fontSize={12}
+                      fontWeight={500}
                     />
-                  </div>
-                  <span className="w-20 text-right text-[12px] tabular-nums text-secondary">{formatMetric(sc.views)}</span>
-                  <span className="w-10 text-right text-[12px] tabular-nums text-tertiary">{sc.share}%</span>
-                </div>
-              ))}
+                    <LabelList
+                      dataKey="views"
+                      position="right"
+                      offset={8}
+                      className="fill-primary"
+                      fontSize={12}
+                    />
+                  </Bar>
+                </BarChart>
+              </ChartContainer>
             </div>
           )}
         </Card>
