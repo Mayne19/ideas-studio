@@ -162,7 +162,7 @@ function SeoRadialCard({
 
   return (
     <article className="flex h-[148px] flex-col rounded-[10px] border-2 border-border bg-transparent px-5 py-4 shadow-none">
-      <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
+      <div className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium leading-none text-secondary">
         <span className="truncate whitespace-nowrap">{title}</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
@@ -235,7 +235,7 @@ function SparkMetricCard({
 }) {
   return (
     <article className="flex h-[148px] flex-col rounded-[10px] border-2 border-border bg-transparent px-5 py-4 shadow-none">
-      <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
+      <div className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium leading-none text-secondary">
         <span className="truncate whitespace-nowrap">{title}</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
@@ -279,7 +279,7 @@ function AreaMetricCard({
 }) {
   return (
     <article className="flex h-[148px] flex-col rounded-[10px] border-2 border-border bg-transparent px-5 py-4 shadow-none">
-      <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
+      <div className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium leading-none text-secondary">
         <span className="truncate whitespace-nowrap">{title}</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
@@ -325,7 +325,7 @@ function BarMetricCard({
 }) {
   return (
     <article className="flex h-[148px] flex-col rounded-[10px] border-2 border-border bg-transparent px-5 py-4 shadow-none">
-      <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
+      <div className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium leading-none text-secondary">
         <span className="truncate whitespace-nowrap">{title}</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
@@ -362,7 +362,7 @@ function PipelineSummaryItem({
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] bg-surface-soft text-secondary">{icon}</span>
       <span className="min-w-0 truncate text-[14px] font-medium text-secondary">{title}</span>
       <strong className="shrink-0 text-[18px] font-semibold leading-none tabular-nums text-primary">{value}</strong>
-      <span className="min-w-0 truncate text-[12px] text-tertiary">{description}</span>
+      <span className="min-w-0 truncate text-[11px] text-tertiary">{description}</span>
     </div>
   )
 }
@@ -649,7 +649,7 @@ export default function ProjectDashboardPage() {
           title="GEO moyen"
           score={geoScore || 0}
           changePts={data?.geoChangePts ?? 0}
-          color="#00c950"
+          color="#9ca3af"
           data={data?.geoMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
         />
         <AreaMetricCard
@@ -712,12 +712,12 @@ export default function ProjectDashboardPage() {
             <button
               type="button"
               onClick={() => navigate(`/projects/${projectId}/articles`)}
-              className="flex items-center gap-1.5 rounded-[6px] px-2.5 py-1 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary"
+              className="flex items-center gap-1.5 rounded-[6px] px-2.5 py-1 text-[11px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary"
             >
               Voir tout <ArrowRight size={13} />
             </button>
           </div>
-          <div className="grid h-10 grid-cols-[minmax(0,1fr)_120px_56px_110px_96px] items-center gap-6 border-b border-border px-5 text-[12px] font-medium text-tertiary">
+          <div className="grid h-10 grid-cols-[minmax(0,1fr)_120px_56px_110px_96px] items-center gap-6 border-b border-border px-5 text-[11px] font-medium text-tertiary">
             <span>Article</span>
             <span>Score SEO</span>
             <span>Vues</span>
@@ -738,7 +738,7 @@ export default function ProjectDashboardPage() {
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-[14px] font-medium text-primary">{article.title}</span>
-                    <span className="mt-0.5 flex items-center gap-1.5 text-[12px] text-tertiary">
+                    <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-tertiary">
                       <span>{formatDate(getArticleDate(article))}</span>
                       <span>·</span>
                       <span>{article.author_name ?? 'Auteur'}</span>
@@ -756,20 +756,20 @@ export default function ProjectDashboardPage() {
                       />
                     </span>
                   </span>
-                  <span className="text-[12px] text-tertiary">—</span>
+                  <span className="text-[11px] text-tertiary">—</span>
                   <span className="flex shrink-0">
                     <StatusBadge status={article.status} />
                   </span>
                   <span className="flex shrink-0">
                     {category ? (
                       <span
-                        className="inline-flex h-[22px] items-center rounded-full px-2.5 text-[12px] font-semibold whitespace-nowrap"
+                        className="inline-flex h-[22px] items-center rounded-full px-2.5 text-[11px] font-medium whitespace-nowrap"
                         style={{ backgroundColor: `${category.color ?? '#0066ff'}22`, color: category.color ?? '#0066ff' }}
                       >
                         {category.name}
                       </span>
                     ) : (
-                      <span className="text-[12px] text-tertiary">—</span>
+                      <span className="text-[11px] text-tertiary">—</span>
                     )}
                   </span>
                 </button>
@@ -793,7 +793,7 @@ export default function ProjectDashboardPage() {
                   className="grid h-10 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 text-left transition-colors hover:bg-surface-soft"
                 >
                   <span className="text-[14px] font-medium text-primary">{row.label}</span>
-                  <span className="shrink-0 pl-6 text-[12px] text-secondary">{row.detail}</span>
+                  <span className="shrink-0 pl-6 text-[11px] text-secondary">{row.detail}</span>
                 </button>
               ))}
             </div>
@@ -823,7 +823,7 @@ export default function ProjectDashboardPage() {
                         <span className="truncate text-[14px] font-medium text-primary">
                           {event.label} : {event.articleTitle}
                         </span>
-                        <span className="shrink-0 pl-6 text-[12px] font-medium text-secondary">{event.time}</span>
+                        <span className="shrink-0 pl-6 text-[11px] font-medium text-secondary">{event.time}</span>
                       </button>
                     ))}
                     {Array.from({ length: Math.max(0, 5 - visibleActivityEvents.length) }).map((_, i) => (
@@ -849,7 +849,7 @@ export default function ProjectDashboardPage() {
           <AlertCircle size={16} className="mt-0.5 shrink-0" />
           <span>
             <span className="block text-[14px] font-semibold">Complétez la configuration de votre projet</span>
-            <span className="block text-[12px]">Définissez l'audience cible et le ton éditorial.</span>
+            <span className="block text-[11px]">Définissez l'audience cible et le ton éditorial.</span>
           </span>
         </button>
       )}
