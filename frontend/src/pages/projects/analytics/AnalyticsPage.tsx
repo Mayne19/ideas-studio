@@ -58,9 +58,53 @@ function chartTick(period: PeriodMode, value: unknown) {
   return label.includes('-') ? label.slice(5) : label
 }
 
+function chartTooltipLabel(value: unknown) {
+  const label = String(value)
+  const date = new Date(label)
+  if (!Number.isNaN(date.getTime())) {
+    return date.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })
+  }
+  return label
+}
+
+function TrafficTooltip({
+  active,
+  label,
+  payload,
+}: {
+  active?: boolean
+  label?: string
+  payload?: Array<{ name?: string; value?: number; color?: string }>
+}) {
+  if (!active || !payload?.length) return null
+  const rows = payload.filter((item) => Number(item.value ?? 0) > 0)
+  if (!rows.length) return null
+
+  return (
+    <div className="rounded-[10px] border border-border bg-bg px-3 py-2 text-[12px] shadow-none">
+      <p className="mb-1.5 font-medium text-primary">{chartTooltipLabel(label)}</p>
+      <div className="space-y-1">
+        {rows.map((item) => (
+          <div key={item.name} className="flex min-w-[140px] items-center gap-2">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ backgroundColor: item.color }} />
+            <span className="text-secondary">{item.name}</span>
+            <span className="ml-auto tabular-nums text-primary">{formatMetric(Number(item.value ?? 0))}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const COUNTRY_PALETTE = ['#0066ff', '#34c759', '#8b5cf6', '#ff9500', '#ff3b1f', '#5856d6', '#00c2b8', '#9ca3af']
+const TRAFFIC_CHANNELS = [
+  { key: 'direct', label: 'Direct', color: '#15803d' },
+  { key: 'organic', label: 'Google', color: '#22c55e' },
+  { key: 'referral', label: 'Referral', color: '#86efac' },
+  { key: 'social', label: 'Social', color: '#bbf7d0' },
+] as const
 const DEVICE_ORDER = ['desktop', 'mobile', 'tablet']
 const CHART_TOOLTIP_STYLE = {
   fontSize: 12,
@@ -298,36 +342,46 @@ export default function AnalyticsPage() {
         {/* Section 2 — Évolution des vues */}
         <Card>
           <SectionTitle>Évolution du trafic par canal</SectionTitle>
-          <div className="relative h-[220px]">
+          <div className="relative h-[250px]">
             <ResponsiveContainer width="100%" height="100%" debounce={100}>
-              <AreaChart data={channelTrend} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+              <AreaChart data={channelTrend} margin={{ top: 8, right: 8, bottom: 4, left: 0 }}>
                 <defs>
-                  <linearGradient id="fillOrganic" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#34c759" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#34c759" stopOpacity={0.1} />
-                  </linearGradient>
-                  <linearGradient id="fillDirect" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#007aff" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#007aff" stopOpacity={0.1} />
-                  </linearGradient>
-                  <linearGradient id="fillSocial" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#5856d6" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#5856d6" stopOpacity={0.1} />
-                  </linearGradient>
-                  <linearGradient id="fillReferral" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ff9500" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#ff9500" stopOpacity={0.1} />
-                  </linearGradient>
+                  {TRAFFIC_CHANNELS.map((channel) => (
+                    <linearGradient key={channel.key} id={`fill-${channel.key}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={channel.color} stopOpacity={0.55} />
+                      <stop offset="95%" stopColor={channel.color} stopOpacity={0.08} />
+                    </linearGradient>
+                  ))}
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} tickFormatter={(v) => chartTick(period.mode, v)} interval="preserveStartEnd" />
-                <YAxis tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} width={40} allowDecimals={false} tickFormatter={formatAxisTick} />
-                <Tooltip cursor={false} contentStyle={CHART_TOOLTIP_STYLE} formatter={(v, name) => [formatMetric(Number(v)), name]} />
+                <CartesianGrid stroke="rgba(0,0,0,0.06)" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11, fill: '#6b7280' }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  minTickGap={32}
+                  tickFormatter={(v) => chartTick(period.mode, v)}
+                  interval="preserveStartEnd"
+                />
+                <YAxis hide domain={[0, 'dataMax']} allowDecimals={false} />
+                <Tooltip cursor={false} content={<TrafficTooltip />} />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-                <Area type="natural" dataKey="referral" name="Referral" stackId="a" stroke="#ff9500" fill="url(#fillReferral)" strokeWidth={1.5} dot={false} activeDot={{ r: 3 }} />
-                <Area type="natural" dataKey="social" name="Social" stackId="a" stroke="#5856d6" fill="url(#fillSocial)" strokeWidth={1.5} dot={false} activeDot={{ r: 3 }} />
-                <Area type="natural" dataKey="direct" name="Direct" stackId="a" stroke="#007aff" fill="url(#fillDirect)" strokeWidth={1.5} dot={false} activeDot={{ r: 3 }} />
-                <Area type="natural" dataKey="organic" name="Google" stackId="a" stroke="#34c759" fill="url(#fillOrganic)" strokeWidth={1.5} dot={false} activeDot={{ r: 3 }} />
+                {TRAFFIC_CHANNELS.map((channel) => (
+                  <Area
+                    key={channel.key}
+                    type="monotone"
+                    dataKey={channel.key}
+                    name={channel.label}
+                    stackId="a"
+                    stroke={channel.color}
+                    fill={`url(#fill-${channel.key})`}
+                    strokeWidth={1.5}
+                    dot={false}
+                    activeDot={{ r: 3, strokeWidth: 0 }}
+                    isAnimationActive={false}
+                  />
+                ))}
               </AreaChart>
             </ResponsiveContainer>
             {!hasChannelTrend && <ChartEmpty message="Aucune donnée de trafic pour cette période." />}
