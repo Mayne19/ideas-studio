@@ -3,9 +3,17 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   AreaChart, Area,
   BarChart, Bar, Cell,
-  XAxis, YAxis, Tooltip,
-  ResponsiveContainer, CartesianGrid, Legend,
+  XAxis, YAxis,
+  CartesianGrid, Legend,
+  ResponsiveContainer, Tooltip,
 } from 'recharts'
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegendContent,
+  type ChartConfig,
+} from '@/components/ui/chart'
 import {
   RefreshCw,
   AlertTriangle,
@@ -66,44 +74,6 @@ function chartTick(period: PeriodMode, value: unknown) {
   return label.includes('-') ? label.slice(5) : label
 }
 
-function chartTooltipLabel(value: unknown) {
-  const label = String(value)
-  const date = new Date(label)
-  if (!Number.isNaN(date.getTime())) {
-    return date.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })
-  }
-  return label
-}
-
-function TrafficTooltip({
-  active,
-  label,
-  payload,
-}: {
-  active?: boolean
-  label?: string
-  payload?: Array<{ name?: string; value?: number; color?: string }>
-}) {
-  if (!active || !payload?.length) return null
-  const rows = payload.filter((item) => Number(item.value ?? 0) > 0)
-  if (!rows.length) return null
-
-  return (
-    <div className="rounded-[10px] border border-border bg-bg px-3 py-2 text-[12px] shadow-none">
-      <p className="mb-1.5 font-medium text-primary">{chartTooltipLabel(label)}</p>
-      <div className="space-y-1">
-        {rows.map((item) => (
-          <div key={item.name} className="flex min-w-[140px] items-center gap-2">
-            <span className="h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ backgroundColor: item.color }} />
-            <span className="text-secondary">{item.name}</span>
-            <span className="ml-auto tabular-nums text-primary">{formatMetric(Number(item.value ?? 0))}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 function scoreColor(score: number) {
   return score >= 75 ? '#00c950' : score >= 50 ? '#ffa51f' : '#ff3b1f'
 }
@@ -144,6 +114,13 @@ const CHART_TOOLTIP_STYLE = {
   boxShadow: 'none',
 }
 const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, info: 2 }
+
+const trafficChartConfig = {
+  direct: { label: "Direct", color: "#111827" },
+  organic: { label: "Google", color: "#4b5563" },
+  referral: { label: "Referral", color: "#9ca3af" },
+  social: { label: "Social", color: "#d1d5db" },
+} satisfies ChartConfig
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -461,8 +438,8 @@ export default function AnalyticsPage() {
         <Card>
           <SectionTitle>Évolution du trafic par canal</SectionTitle>
           <div className="relative h-[250px]">
-            <ResponsiveContainer width="100%" height="100%" debounce={100}>
-              <AreaChart data={channelTrend} margin={{ top: 8, right: 8, bottom: 4, left: 0 }}>
+            <ChartContainer config={trafficChartConfig} className="h-[250px] w-full">
+              <AreaChart data={channelTrend}>
                 <defs>
                   {TRAFFIC_CHANNELS.map((channel) => (
                     <linearGradient key={channel.key} id={`fill-${channel.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -471,20 +448,32 @@ export default function AnalyticsPage() {
                     </linearGradient>
                   ))}
                 </defs>
-                <CartesianGrid stroke="rgba(0,0,0,0.06)" vertical={false} />
+                <CartesianGrid vertical={false} />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 11, fill: '#6b7280' }}
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
                   minTickGap={32}
                   tickFormatter={(v) => chartTick(period.mode, v)}
-                  interval="preserveStartEnd"
                 />
-                <YAxis hide domain={[0, 'dataMax']} allowDecimals={false} />
-                <Tooltip cursor={false} content={<TrafficTooltip />} />
-                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                <ChartTooltip
+                  cursor={false}
+                  content={
+                    <ChartTooltipContent
+                      indicator="dot"
+                      hideLabel
+                      formatter={(value: number | string, name: string) => {
+                        const num = Number(value)
+                        if (num <= 0) return <span />
+                        return [
+                          <span key="value" className="tabular-nums text-primary">{formatMetric(num)}</span>,
+                          name as string,
+                        ]
+                      }}
+                    />
+                  }
+                />
                 {TRAFFIC_CHANNELS.map((channel) => (
                   <Area
                     key={channel.key}
@@ -500,8 +489,9 @@ export default function AnalyticsPage() {
                     isAnimationActive={false}
                   />
                 ))}
+                <Legend content={<ChartLegendContent />} />
               </AreaChart>
-            </ResponsiveContainer>
+            </ChartContainer>
             {!hasChannelTrend && <ChartEmpty message="Aucune donnée de trafic pour cette période." />}
           </div>
         </Card>
