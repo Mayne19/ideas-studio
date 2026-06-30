@@ -13,3 +13,6 @@ uploads/
 .env.*.local
 *.log
 coverage/
+audit.md
+docs/geist-frontend-refactor-audit.md
+tests/e2e/

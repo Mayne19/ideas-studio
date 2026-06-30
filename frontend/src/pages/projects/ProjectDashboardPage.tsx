@@ -610,7 +610,7 @@ export default function ProjectDashboardPage() {
         </div>
       </section>
 
-      <section className="grid h-[48px] grid-cols-[1.35fr_1fr_1.15fr_1fr_1fr] items-center overflow-hidden rounded-[10px] border-2 border-border bg-transparent text-[14px] text-secondary">
+      <section className="grid h-[48px] grid-cols-[auto_auto_auto_auto_auto] items-center overflow-hidden rounded-[10px] border-2 border-border bg-transparent text-[14px] text-secondary">
         {/* Domain */}
         <div className="flex h-full min-w-0 items-center gap-2 border-r border-border px-6 font-medium text-primary">
           <Globe size={15} className="shrink-0 text-secondary" />
