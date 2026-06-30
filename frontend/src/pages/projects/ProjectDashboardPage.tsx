@@ -22,6 +22,7 @@ import { Card } from '@/components/ui/Card'
 import StatusBadge from '@/components/ui/StatusBadge'
 import LoadingState from '@/components/ui/LoadingState'
 import { formatDate } from '@/utils/format'
+import { getGeoScore } from '@/lib/scoreBadge'
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -63,12 +64,15 @@ type DashboardData = {
   pendingRecs: OptimizationRecommendation[]
   totalViews: number | null
   avgSeoScore: number | null
+  avgGeoScore: number | null
   avgReadingTime: number | null
   seoMonthly: MonthPoint[]
+  geoMonthly: MonthPoint[]
   viewsMonthly: MonthPoint[]
   timeMonthly: MonthPoint[]
   publishedMonthly: MonthPoint[]
   seoChangePts: number
+  geoChangePts: number
   timeChangeMins: number
   publishedChangePct: number
 }
@@ -138,16 +142,28 @@ function buildMonthlyMetric(articles: Article[], getValue: (arts: Article[]) => 
   })
 }
 
-function SeoRadialCard({ score, changePts, data }: { score: number; changePts: number; data: MonthPoint[] }) {
-  const changeColor = changePts >= 0 ? '#00c950' : '#ff3b1f'
+function SeoRadialCard({
+  title,
+  score,
+  changePts,
+  data,
+  color,
+}: {
+  title: string
+  score: number
+  changePts: number
+  data: MonthPoint[]
+  color?: string
+}) {
+  const fillColor = color ?? (score >= 75 ? '#00c950' : score >= 50 ? '#ffa51f' : '#ff3b1f')
+  const changeColor = fillColor
   const changeLabel = changePts >= 0 ? `+${changePts} pts` : `${changePts} pts`
-  const fillColor = score >= 75 ? '#00c950' : score >= 50 ? '#ffa51f' : '#ff3b1f'
   const endAngle = 90 - (score / 100) * 280
 
   return (
     <article className="flex h-[148px] flex-col rounded-[10px] border border-border bg-surface px-5 py-4 shadow-none">
       <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
-        <span className="truncate whitespace-nowrap">Score SEO moyen</span>
+        <span className="truncate whitespace-nowrap">{title}</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
       <div className="mt-3 flex h-8 items-center justify-between gap-3">
@@ -179,7 +195,7 @@ function SeoRadialCard({ score, changePts, data }: { score: number; changePts: n
             </PolarRadiusAxis>
           </RadialBarChart>
         </ResponsiveContainer>
-        <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{changeLabel}</span>
+        <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{changeLabel}</span>
       </div>
       <div className="mt-2 h-[60px] -mx-1">
         <ResponsiveContainer width="100%" height="100%">
@@ -225,7 +241,7 @@ function SparkMetricCard({
       </div>
       <div className="mt-3 flex h-8 items-center justify-between gap-3">
         <div className="text-[22px] font-semibold leading-none text-primary">{value}</div>
-        <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{change}</span>
+        <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{change}</span>
       </div>
       <div className="mt-2 h-[60px] -mx-1">
         <ResponsiveContainer width="100%" height="100%">
@@ -269,7 +285,7 @@ function AreaMetricCard({
       </div>
       <div className="mt-3 flex h-8 items-center justify-between gap-3">
         <div className="text-[22px] font-semibold leading-none text-primary">{value}</div>
-        <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{change}</span>
+        <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{change}</span>
       </div>
       <div className="mt-2 h-[60px] -mx-1">
         <ResponsiveContainer width="100%" height="100%">
@@ -315,7 +331,7 @@ function BarMetricCard({
       </div>
       <div className="mt-3 flex h-8 items-center justify-between gap-3">
         <div className="text-[22px] font-semibold leading-none text-primary">{value}</div>
-        <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{change}</span>
+        <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{change}</span>
       </div>
       <div className="mt-2 h-[60px] -mx-1">
         <ResponsiveContainer width="100%" height="100%">
@@ -469,6 +485,10 @@ export default function ProjectDashboardPage() {
       const avgSeoScore = scored.length > 0
         ? scored.reduce((s, a) => s + (a.seo_score ?? 0), 0) / scored.length
         : null
+      const geoScored = contentArticles.filter((a) => getGeoScore(a) !== null)
+      const avgGeoScore = geoScored.length > 0
+        ? geoScored.reduce((s, a) => s + (scoreOnHundred(getGeoScore(a)) ?? 0), 0) / geoScored.length
+        : null
       const worded = contentArticles.filter((a) => a.word_count > 0)
       const avgReadingTime = worded.length > 0
         ? Math.ceil(worded.reduce((s, a) => s + a.word_count, 0) / worded.length / 200)
@@ -478,6 +498,10 @@ export default function ProjectDashboardPage() {
       const seoMonthly = buildMonthlyMetric(
         scored,
         (arts) => Math.round(arts.reduce((s, a) => s + scoreOnHundred(a.seo_score)!, 0) / arts.length),
+      )
+      const geoMonthly = buildMonthlyMetric(
+        geoScored,
+        (arts) => Math.round(arts.reduce((s, a) => s + scoreOnHundred(getGeoScore(a))!, 0) / arts.length),
       )
       const timeMonthly = buildMonthlyMetric(
         worded,
@@ -492,6 +516,7 @@ export default function ProjectDashboardPage() {
         (arts) => arts.length,
       )
       const seoChangePts = seoMonthly[11].v - seoMonthly[10].v
+      const geoChangePts = geoMonthly[11].v - geoMonthly[10].v
       const timeChangeMins = timeMonthly[11].v - timeMonthly[10].v
       const publishedChangePct = publishedMonthly[10].v > 0
         ? Math.round(((publishedMonthly[11].v - publishedMonthly[10].v) / publishedMonthly[10].v) * 100)
@@ -518,12 +543,15 @@ export default function ProjectDashboardPage() {
             : [],
         totalViews: perf.status === 'fulfilled' ? perf.value.total_views : null,
         avgSeoScore,
+        avgGeoScore,
         avgReadingTime,
         seoMonthly,
+        geoMonthly,
         viewsMonthly,
         timeMonthly,
         publishedMonthly,
         seoChangePts,
+        geoChangePts,
         timeChangeMins,
         publishedChangePct,
       })
@@ -539,6 +567,7 @@ export default function ProjectDashboardPage() {
   const visibleActivityEvents = activityEvents.slice(0, 5)
 
   const seoScore = scoreOnHundred(data?.avgSeoScore) ?? 0
+  const geoScore = scoreOnHundred(data?.avgGeoScore) ?? 0
   const totalViews = formatCompact(data?.totalViews)
 
   const enabledProviders = providers.filter((provider) => provider.enabled)
@@ -609,17 +638,25 @@ export default function ProjectDashboardPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-4 gap-4">
+      <section className="grid grid-cols-5 gap-4">
         <SeoRadialCard
+          title="SEO moyen"
           score={seoScore || 0}
           changePts={data?.seoChangePts ?? 0}
           data={data?.seoMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
         />
+        <SeoRadialCard
+          title="GEO moyen"
+          score={geoScore || 0}
+          changePts={data?.geoChangePts ?? 0}
+          color="#8b5cf6"
+          data={data?.geoMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
+        />
         <AreaMetricCard
-          title="Vues du mois"
+          title="Vues mensuelles"
           value={totalViews}
           change={data ? (() => { const d = data.viewsMonthly; const diff = d[11].v - d[10].v; return diff >= 0 ? `+${diff}` : `${diff}` })() : '—'}
-          changeColor={!data || (data.viewsMonthly[11].v - data.viewsMonthly[10].v) >= 0 ? '#00c950' : '#ff3b1f'}
+          changeColor="#0066ff"
           color="#0066ff"
           data={data?.viewsMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
         />
@@ -627,15 +664,15 @@ export default function ProjectDashboardPage() {
           title="Temps moyen"
           value={data?.avgReadingTime != null ? `${data.avgReadingTime} min` : '—'}
           change={data ? (data.timeChangeMins >= 0 ? `+${data.timeChangeMins} min` : `${data.timeChangeMins} min`) : '—'}
-          changeColor={!data || data.timeChangeMins <= 0 ? '#00c950' : '#ff3b1f'}
+          changeColor="#ff3b1f"
           color="#ff3b1f"
           data={data?.timeMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
         />
         <BarMetricCard
-          title="Publiés"
+          title="Publié"
           value={data?.publishedCount ?? '—'}
           change={data ? (data.publishedChangePct >= 0 ? `+${data.publishedChangePct}%` : `${data.publishedChangePct}%`) : '—'}
-          changeColor={!data || data.publishedChangePct >= 0 ? '#00c950' : '#ff3b1f'}
+          changeColor="#00c950"
           color="#00c950"
           data={data?.publishedMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
         />
