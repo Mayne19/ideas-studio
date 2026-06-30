@@ -47,6 +47,7 @@ type ActivityEvent = {
 }
 
 type MonthPoint = { v: number }
+const WEEKLY_METRIC_POINTS = 52
 
 type DashboardData = {
   recentArticles: Article[]
@@ -131,15 +132,29 @@ function getArticleDate(article: Article): string {
   return article.published_at ?? article.scheduled_at ?? article.updated_at ?? article.created_at
 }
 
-function buildMonthlyMetric(articles: Article[], getValue: (arts: Article[]) => number): MonthPoint[] {
+function buildWeeklyMetric(
+  articles: Article[],
+  getValue: (arts: Article[]) => number,
+  options: { carryForward?: boolean } = {},
+): MonthPoint[] {
   const now = new Date()
   let lastValue = 0
-  return Array.from({ length: 12 }, (_, i) => {
-    const start = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1)
-    const end = new Date(now.getFullYear(), now.getMonth() - (11 - i) + 1, 1)
-    const month = articles.filter((a) => { const d = new Date(getArticleDate(a)); return d >= start && d < end })
-    if (month.length > 0) lastValue = getValue(month)
-    return { v: lastValue }
+  const carryForward = options.carryForward ?? true
+  const currentWeekStart = new Date(now)
+  currentWeekStart.setHours(0, 0, 0, 0)
+  currentWeekStart.setDate(currentWeekStart.getDate() - ((currentWeekStart.getDay() + 6) % 7))
+
+  return Array.from({ length: WEEKLY_METRIC_POINTS }, (_, i) => {
+    const start = new Date(currentWeekStart)
+    start.setDate(currentWeekStart.getDate() - (WEEKLY_METRIC_POINTS - 1 - i) * 7)
+    const end = new Date(start)
+    end.setDate(start.getDate() + 7)
+    const week = articles.filter((a) => { const d = new Date(getArticleDate(a)); return d >= start && d < end })
+    if (week.length > 0) {
+      lastValue = getValue(week)
+      return { v: lastValue }
+    }
+    return { v: carryForward ? lastValue : 0 }
   })
 }
 
@@ -467,33 +482,37 @@ export default function ProjectDashboardPage() {
         ? Math.ceil(worded.reduce((s, a) => s + a.word_count, 0) / worded.length / 200)
         : null
 
-      // Monthly data (12 derniers mois)
-      const seoMonthly = buildMonthlyMetric(
+      // Weekly data (52 dernières semaines)
+      const seoMonthly = buildWeeklyMetric(
         scored,
         (arts) => Math.round(arts.reduce((s, a) => s + scoreOnHundred(a.seo_score)!, 0) / arts.length),
       )
-      const geoMonthly = buildMonthlyMetric(
+      const geoMonthly = buildWeeklyMetric(
         geoScored,
         (arts) => Math.round(arts.reduce((s, a) => s + scoreOnHundred(getGeoScore(a))!, 0) / arts.length),
       )
-      const timeMonthly = buildMonthlyMetric(
+      const timeMonthly = buildWeeklyMetric(
         worded,
         (arts) => Math.ceil(arts.reduce((s, a) => s + a.word_count, 0) / arts.length / 200),
       )
-      const viewsMonthly = buildMonthlyMetric(
+      const viewsMonthly = buildWeeklyMetric(
         contentArticles,
         (arts) => arts.length,
+        { carryForward: false },
       )
-      const publishedMonthly = buildMonthlyMetric(
+      const publishedMonthly = buildWeeklyMetric(
         allArticles.filter((a) => a.status === 'published'),
         (arts) => arts.length,
+        { carryForward: false },
       )
-      const seoChangePts = seoMonthly[11].v - seoMonthly[10].v
-      const geoChangePts = geoMonthly[11].v - geoMonthly[10].v
-      const timeChangeMins = timeMonthly[11].v - timeMonthly[10].v
-      const publishedChangePct = publishedMonthly[10].v > 0
-        ? Math.round(((publishedMonthly[11].v - publishedMonthly[10].v) / publishedMonthly[10].v) * 100)
-        : publishedMonthly[11].v > 0 ? 100 : 0
+      const lastIndex = WEEKLY_METRIC_POINTS - 1
+      const previousIndex = WEEKLY_METRIC_POINTS - 2
+      const seoChangePts = seoMonthly[lastIndex].v - seoMonthly[previousIndex].v
+      const geoChangePts = geoMonthly[lastIndex].v - geoMonthly[previousIndex].v
+      const timeChangeMins = timeMonthly[lastIndex].v - timeMonthly[previousIndex].v
+      const publishedChangePct = publishedMonthly[previousIndex].v > 0
+        ? Math.round(((publishedMonthly[lastIndex].v - publishedMonthly[previousIndex].v) / publishedMonthly[previousIndex].v) * 100)
+        : publishedMonthly[lastIndex].v > 0 ? 100 : 0
 
       setData({
         recentArticles,
@@ -630,22 +649,22 @@ export default function ProjectDashboardPage() {
           title="SEO moyen"
           score={seoScore || 0}
           changePts={data?.seoChangePts ?? 0}
-          data={data?.seoMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
+          data={data?.seoMonthly ?? Array.from({ length: WEEKLY_METRIC_POINTS }, () => ({ v: 0 }))}
         />
         <SeoRadialCard
           title="GEO moyen"
           score={geoScore || 0}
           changePts={data?.geoChangePts ?? 0}
           color="#9ca3af"
-          data={data?.geoMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
+          data={data?.geoMonthly ?? Array.from({ length: WEEKLY_METRIC_POINTS }, () => ({ v: 0 }))}
         />
         <AreaMetricCard
-          title="Vues mensuelles"
+          title="Vues hebdo"
           value={totalViews}
-          change={data ? (() => { const d = data.viewsMonthly; const diff = d[11].v - d[10].v; return diff >= 0 ? `+${diff}` : `${diff}` })() : '—'}
+          change={data ? (() => { const d = data.viewsMonthly; const diff = d[WEEKLY_METRIC_POINTS - 1].v - d[WEEKLY_METRIC_POINTS - 2].v; return diff >= 0 ? `+${diff}` : `${diff}` })() : '—'}
           changeColor="#0066ff"
           color="#0066ff"
-          data={data?.viewsMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
+          data={data?.viewsMonthly ?? Array.from({ length: WEEKLY_METRIC_POINTS }, () => ({ v: 0 }))}
         />
         <SparkMetricCard
           title="Temps moyen"
@@ -653,7 +672,7 @@ export default function ProjectDashboardPage() {
           change={data ? (data.timeChangeMins >= 0 ? `+${data.timeChangeMins} min` : `${data.timeChangeMins} min`) : '—'}
           changeColor="#ff3b1f"
           color="#ff3b1f"
-          data={data?.timeMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
+          data={data?.timeMonthly ?? Array.from({ length: WEEKLY_METRIC_POINTS }, () => ({ v: 0 }))}
         />
         <BarMetricCard
           title="Publié"
@@ -661,7 +680,7 @@ export default function ProjectDashboardPage() {
           change={data ? (data.publishedChangePct >= 0 ? `+${data.publishedChangePct}%` : `${data.publishedChangePct}%`) : '—'}
           changeColor="#8b5cf6"
           color="#8b5cf6"
-          data={data?.publishedMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
+          data={data?.publishedMonthly ?? Array.from({ length: WEEKLY_METRIC_POINTS }, () => ({ v: 0 }))}
         />
       </section>
 
