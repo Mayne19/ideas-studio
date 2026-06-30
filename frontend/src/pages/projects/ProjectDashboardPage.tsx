@@ -162,7 +162,7 @@ function SeoRadialCard({
 
   return (
     <article className="flex h-[148px] flex-col rounded-[10px] border-2 border-border bg-transparent px-5 py-4 shadow-none">
-      <div className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium leading-none text-secondary">
+      <div className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium leading-none text-tertiary">
         <span className="truncate whitespace-nowrap">{title}</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
@@ -235,7 +235,7 @@ function SparkMetricCard({
 }) {
   return (
     <article className="flex h-[148px] flex-col rounded-[10px] border-2 border-border bg-transparent px-5 py-4 shadow-none">
-      <div className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium leading-none text-secondary">
+      <div className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium leading-none text-tertiary">
         <span className="truncate whitespace-nowrap">{title}</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
@@ -279,7 +279,7 @@ function AreaMetricCard({
 }) {
   return (
     <article className="flex h-[148px] flex-col rounded-[10px] border-2 border-border bg-transparent px-5 py-4 shadow-none">
-      <div className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium leading-none text-secondary">
+      <div className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium leading-none text-tertiary">
         <span className="truncate whitespace-nowrap">{title}</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
@@ -325,7 +325,7 @@ function BarMetricCard({
 }) {
   return (
     <article className="flex h-[148px] flex-col rounded-[10px] border-2 border-border bg-transparent px-5 py-4 shadow-none">
-      <div className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium leading-none text-secondary">
+      <div className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium leading-none text-tertiary">
         <span className="truncate whitespace-nowrap">{title}</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
@@ -362,7 +362,7 @@ function PipelineSummaryItem({
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] bg-surface-soft text-secondary">{icon}</span>
       <span className="min-w-0 truncate text-[14px] font-medium text-secondary">{title}</span>
       <strong className="shrink-0 text-[18px] font-semibold leading-none tabular-nums text-primary">{value}</strong>
-      <span className="min-w-0 truncate text-[11px] text-tertiary">{description}</span>
+      <span className="min-w-0 truncate text-[11px] font-medium text-tertiary">{description}</span>
     </div>
   )
 }
@@ -712,7 +712,7 @@ export default function ProjectDashboardPage() {
             <button
               type="button"
               onClick={() => navigate(`/projects/${projectId}/articles`)}
-              className="flex items-center gap-1.5 rounded-[6px] px-2.5 py-1 text-[11px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary"
+              className="flex items-center gap-1.5 rounded-[6px] px-2.5 py-1 text-[11px] font-medium text-tertiary transition-colors hover:bg-surface-soft hover:text-primary"
             >
               Voir tout <ArrowRight size={13} />
             </button>
@@ -738,7 +738,7 @@ export default function ProjectDashboardPage() {
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-[14px] font-medium text-primary">{article.title}</span>
-                    <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-tertiary">
+                    <span className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-tertiary">
                       <span>{formatDate(getArticleDate(article))}</span>
                       <span>·</span>
                       <span>{article.author_name ?? 'Auteur'}</span>
@@ -756,7 +756,7 @@ export default function ProjectDashboardPage() {
                       />
                     </span>
                   </span>
-                  <span className="text-[11px] text-tertiary">—</span>
+                  <span className="text-[11px] font-medium text-tertiary">—</span>
                   <span className="flex shrink-0">
                     <StatusBadge status={article.status} />
                   </span>
@@ -769,7 +769,7 @@ export default function ProjectDashboardPage() {
                         {category.name}
                       </span>
                     ) : (
-                      <span className="text-[11px] text-tertiary">—</span>
+                      <span className="text-[11px] font-medium text-tertiary">—</span>
                     )}
                   </span>
                 </button>
@@ -792,8 +792,8 @@ export default function ProjectDashboardPage() {
                   onClick={() => navigate(row.href)}
                   className="grid h-10 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 text-left transition-colors hover:bg-surface-soft"
                 >
-                  <span className="text-[11px] font-medium text-primary">{row.label}</span>
-                  <span className="shrink-0 pl-6 text-[11px] text-secondary">{row.detail}</span>
+                  <span className="text-[11px] font-medium text-tertiary">{row.label}</span>
+                  <span className="shrink-0 pl-6 text-[11px] font-medium text-tertiary">{row.detail}</span>
                 </button>
               ))}
             </div>
@@ -806,7 +806,7 @@ export default function ProjectDashboardPage() {
                 ? Array.from({ length: 5 }).map((_, i) => (
                     <div key={`empty-${i}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 py-2.5">
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-transparent" />
-                  <span className="text-[11px] text-tertiary">—</span>
+                  <span className="text-[11px] font-medium text-tertiary">—</span>
                   <span />
                     </div>
                   ))
@@ -820,10 +820,10 @@ export default function ProjectDashboardPage() {
                         className="grid h-10 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 text-left transition-colors hover:bg-surface-soft"
                       >
                         <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${['bg-[#00c950]', 'bg-[#0066ff]', 'bg-[#ffa51f]', 'bg-[#ff3b1f]'][index % 4]}`} />
-                        <span className="truncate text-[11px] font-medium text-primary">
+                        <span className="truncate text-[11px] font-medium text-tertiary">
                           {event.label} : {event.articleTitle}
                         </span>
-                        <span className="shrink-0 pl-6 text-[11px] font-medium text-secondary">{event.time}</span>
+                        <span className="shrink-0 pl-6 text-[11px] font-medium text-tertiary">{event.time}</span>
                       </button>
                     ))}
                     {Array.from({ length: Math.max(0, 5 - visibleActivityEvents.length) }).map((_, i) => (
@@ -849,7 +849,7 @@ export default function ProjectDashboardPage() {
           <AlertCircle size={16} className="mt-0.5 shrink-0" />
           <span>
             <span className="block text-[14px] font-semibold">Complétez la configuration de votre projet</span>
-            <span className="block text-[11px]">Définissez l'audience cible et le ton éditorial.</span>
+            <span className="block text-[11px] font-medium text-tertiary">Définissez l'audience cible et le ton éditorial.</span>
           </span>
         </button>
       )}
