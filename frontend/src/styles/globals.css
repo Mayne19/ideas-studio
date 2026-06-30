@@ -7,15 +7,15 @@
   --color-surface: #FCFBFA;
   --color-surface-soft: #F3F3F3;
   --color-surface-muted: #E8E8E8;
-  --color-primary: #171717;
-  --color-secondary: #4D4D4D;
-  --color-tertiary: #7D7D7D;
+  --color-primary: #2E2E2E;
+  --color-secondary: #5E5E5E;
+  --color-tertiary: #8A8A8A;
   --color-border: rgba(0, 0, 0, 0.06);
   --color-border-soft: rgba(0, 0, 0, 0.04);
   --color-border-strong: rgba(0, 0, 0, 0.12);
   --color-accent: #0072F5;
   --color-accent-dark: #0062D1;
-  --color-brand: #171717;
+  --color-brand: #2E2E2E;
   --color-brand-soft: #F2F2F2;
   --color-success: #008A2E;
   --color-warning: #A35200;
@@ -58,8 +58,8 @@ body {
   color: var(--color-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-size: 15px;
-  line-height: 1.6;
+  font-size: 16px;
+  line-height: 1.65;
 }
 
 .project-page {
