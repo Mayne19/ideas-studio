@@ -100,10 +100,10 @@ function TrafficTooltip({
 
 const COUNTRY_PALETTE = ['#0066ff', '#34c759', '#8b5cf6', '#ff9500', '#ff3b1f', '#5856d6', '#00c2b8', '#9ca3af']
 const TRAFFIC_CHANNELS = [
-  { key: 'direct', label: 'Direct', color: '#15803d' },
-  { key: 'organic', label: 'Google', color: '#22c55e' },
-  { key: 'referral', label: 'Referral', color: '#86efac' },
-  { key: 'social', label: 'Social', color: '#bbf7d0' },
+  { key: 'direct', label: 'Direct', color: '#111827' },
+  { key: 'organic', label: 'Google', color: '#4b5563' },
+  { key: 'referral', label: 'Referral', color: '#9ca3af' },
+  { key: 'social', label: 'Social', color: '#d1d5db' },
 ] as const
 const DEVICE_ORDER = ['desktop', 'mobile', 'tablet']
 const CHART_TOOLTIP_STYLE = {
