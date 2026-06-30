@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   AreaChart, Area,
-  BarChart, Bar, Cell, LabelList,
+  BarChart, Bar, Cell,
   XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Legend,
 } from 'recharts'
@@ -29,7 +29,6 @@ import {
   formatMetric,
   getCountryDisplay,
   getDeviceLabel,
-  getSourceChannel,
   getSourceDisplay,
 } from '@/utils/trafficDisplay'
 
@@ -62,12 +61,6 @@ function chartTick(period: PeriodMode, value: unknown) {
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const COUNTRY_PALETTE = ['#0066ff', '#34c759', '#8b5cf6', '#ff9500', '#ff3b1f', '#5856d6', '#00c2b8', '#9ca3af']
-const CHANNELS = [
-  { key: 'organic', source: 'Organic Search', label: 'Google', color: '#34c759' },
-  { key: 'direct', source: 'Direct', label: 'Direct', color: '#007aff' },
-  { key: 'social', source: 'Social', label: 'Social', color: '#5856d6' },
-  { key: 'referral', source: 'Referral', label: 'Referral', color: '#ff9500' },
-] as const
 const DEVICE_ORDER = ['desktop', 'mobile', 'tablet']
 const CHART_TOOLTIP_STYLE = {
   fontSize: 12,
@@ -132,7 +125,6 @@ export default function AnalyticsPage() {
         key: r.referrer || 'direct',
         label: source.label,
         raw: r.referrer,
-        channel: getSourceChannel(r.referrer),
         visits: r.views,
         share: Math.round((r.views / totalVisits) * 100),
       }
@@ -175,26 +167,6 @@ export default function AnalyticsPage() {
   const toOptimize = useMemo(
     () => articleMetrics.filter((a) => (a.seo_score ?? 100) < 70).slice(0, 6),
     [articleMetrics],
-  )
-
-  const sourceChartData = useMemo(
-    () => sources.slice(0, 3).map((s, i) => ({
-      ...s,
-      fill: COUNTRY_PALETTE[i % COUNTRY_PALETTE.length],
-    })),
-    [sources],
-  )
-
-  const channelChartData = useMemo(
-    () => CHANNELS
-      .map((channel) => ({
-        label: channel.label,
-        visits: sources.filter((s) => s.channel === channel.source).reduce((sum, s) => sum + s.visits, 0),
-        fill: channel.color,
-      }))
-      .filter((channel) => channel.visits > 0)
-      .sort((a, b) => b.visits - a.visits),
-    [sources],
   )
 
   const countryChartData = useMemo(
@@ -425,53 +397,7 @@ export default function AnalyticsPage() {
           )}
         </Card>
 
-        {/* Section 4 — Sources de trafic + Canaux */}
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
-            <SectionTitle>Sources de trafic</SectionTitle>
-            {sourceChartData.length ? (
-              <div className="h-[220px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    layout="vertical"
-                    data={sourceChartData}
-                    margin={{ top: 2, right: 12, bottom: 2, left: 0 }}
-                  >
-                    <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} tickMargin={6} width={100} tick={{ fontSize: 11, fill: '#86868b' }} tickFormatter={(v: string) => v.length > 14 ? v.slice(0, 13) + '…' : v} />
-                    <XAxis type="number" hide />
-                    <Tooltip cursor={false} contentStyle={CHART_TOOLTIP_STYLE} formatter={(v) => [formatMetric(Number(v)), 'Vues']} />
-                    <Bar dataKey="visits" radius={5} barSize={14}>
-                      {sourceChartData.map((source) => (
-                        <Cell key={source.key} fill={source.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : <InlineEmpty>Aucune source disponible pour cette période.</InlineEmpty>}
-          </Card>
-          <Card>
-            <SectionTitle>Canaux</SectionTitle>
-            {channelChartData.length ? (
-                <div className="h-[220px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart layout="vertical" data={channelChartData} margin={{ top: 2, right: 56, bottom: 2, left: 0 }}>
-                      <YAxis dataKey="label" type="category" hide />
-                      <XAxis type="number" hide />
-                      <Tooltip cursor={false} contentStyle={CHART_TOOLTIP_STYLE} formatter={(v) => [formatMetric(Number(v)), 'Vues']} />
-                      <Bar dataKey="visits" barSize={28}>
-                        {channelChartData.map((channel) => <Cell key={channel.label} fill={channel.fill} />)}
-                        <LabelList dataKey="label" position="insideLeft" offset={10} fontSize={12} fill="#fff" fontWeight={500} />
-                        <LabelList dataKey="visits" position="right" offset={8} fontSize={12} fill="#86868b" formatter={(v: unknown) => formatMetric(Number(v))} />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : <InlineEmpty>Aucun canal disponible pour cette période.</InlineEmpty>}
-          </Card>
-        </div>
-
-        {/* Section 5 — Articles à optimiser */}
+        {/* Articles à optimiser */}
         {toOptimize.length > 0 && (
           <Card>
             <SectionTitle>Articles à optimiser (SEO &lt; 70)</SectionTitle>
