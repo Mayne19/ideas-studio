@@ -108,7 +108,7 @@ function RecommendationCard({
   const isAccepted = status === 'accepted'
 
   return (
-    <div className="rounded-[16px] border border-border bg-surface p-4 shadow-none hover:shadow-none transition-shadow">
+    <div className="rounded-[16px] border-2 border-border bg-transparent p-4 shadow-none hover:shadow-none transition-shadow">
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="flex flex-col gap-1 flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">

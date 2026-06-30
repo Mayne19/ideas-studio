@@ -161,7 +161,7 @@ function SeoRadialCard({
   const endAngle = 90 - (score / 100) * 280
 
   return (
-    <article className="flex h-[148px] flex-col rounded-[10px] border border-border bg-surface px-5 py-4 shadow-none">
+    <article className="flex h-[148px] flex-col rounded-[10px] border-2 border-border bg-transparent px-5 py-4 shadow-none">
       <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
         <span className="truncate whitespace-nowrap">{title}</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
@@ -234,7 +234,7 @@ function SparkMetricCard({
   data: MonthPoint[]
 }) {
   return (
-    <article className="flex h-[148px] flex-col rounded-[10px] border border-border bg-surface px-5 py-4 shadow-none">
+    <article className="flex h-[148px] flex-col rounded-[10px] border-2 border-border bg-transparent px-5 py-4 shadow-none">
       <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
         <span className="truncate whitespace-nowrap">{title}</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
@@ -278,7 +278,7 @@ function AreaMetricCard({
   data: MonthPoint[]
 }) {
   return (
-    <article className="flex h-[148px] flex-col rounded-[10px] border border-border bg-surface px-5 py-4 shadow-none">
+    <article className="flex h-[148px] flex-col rounded-[10px] border-2 border-border bg-transparent px-5 py-4 shadow-none">
       <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
         <span className="truncate whitespace-nowrap">{title}</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
@@ -324,7 +324,7 @@ function BarMetricCard({
   data: MonthPoint[]
 }) {
   return (
-    <article className="flex h-[148px] flex-col rounded-[10px] border border-border bg-surface px-5 py-4 shadow-none">
+    <article className="flex h-[148px] flex-col rounded-[10px] border-2 border-border bg-transparent px-5 py-4 shadow-none">
       <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-none text-secondary">
         <span className="truncate whitespace-nowrap">{title}</span>
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
@@ -610,7 +610,7 @@ export default function ProjectDashboardPage() {
         </div>
       </section>
 
-      <section className="grid h-[48px] grid-cols-[1.35fr_1fr_1.15fr_1fr_1fr] items-center overflow-hidden rounded-[10px] border border-border bg-surface text-[13px] text-secondary">
+      <section className="grid h-[48px] grid-cols-[1.35fr_1fr_1.15fr_1fr_1fr] items-center overflow-hidden rounded-[10px] border-2 border-border bg-transparent text-[13px] text-secondary">
         {/* Domain */}
         <div className="flex h-full min-w-0 items-center gap-2 border-r border-border px-6 font-medium text-primary">
           <Globe size={15} className="shrink-0 text-secondary" />
@@ -678,7 +678,7 @@ export default function ProjectDashboardPage() {
         />
       </section>
 
-      <section className="grid grid-cols-4 divide-x divide-border overflow-hidden rounded-[10px] border border-border bg-surface shadow-none">
+      <section className="grid grid-cols-4 divide-x divide-border overflow-hidden rounded-[10px] border-2 border-border bg-transparent shadow-none">
         <PipelineSummaryItem
           icon={<ClipboardList size={20} />}
           title="Production"
