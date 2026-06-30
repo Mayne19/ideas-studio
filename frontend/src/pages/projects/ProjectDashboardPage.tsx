@@ -610,8 +610,8 @@ export default function ProjectDashboardPage() {
         </div>
         {/* Statut connecté */}
         <div className="flex h-full min-w-0 items-center justify-center border-r border-border px-6">
-          <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[14px] font-semibold text-white">
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-accent">
+          <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-[#00a63e] px-3 text-[14px] font-semibold text-white">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-[#00a63e]">
               <svg
                 aria-hidden="true"
                 viewBox="0 0 16 16"
@@ -626,7 +626,7 @@ export default function ProjectDashboardPage() {
                 <path d="M4.75 7.25 8 4l3.25 3.25" />
               </svg>
             </span>
-            <span className={isConnected ? 'text-[#00a63e]' : 'text-white'}>
+            <span>
               {isConnected ? 'Connecté' : 'Non connecté'}
             </span>
           </span>
