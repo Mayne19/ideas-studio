@@ -411,6 +411,12 @@ export default function AnalyticsPage() {
             color="#0066ff"
             data={viewsTrend}
           />
+          <SeoRadialCard
+            title="Score SEO moyen"
+            score={avgSeoScore ?? 0}
+            changePts={seoChangePts}
+            data={seoTrend}
+          />
           <SimpleMetricCard
             title="Pages uniques"
             value={formatMetric(summary.unique_pages)}
@@ -420,12 +426,6 @@ export default function AnalyticsPage() {
             title="Articles suivis"
             value={String(articleMetrics.length)}
             change="—"
-          />
-          <SeoRadialCard
-            title="Score SEO moyen"
-            score={avgSeoScore ?? 0}
-            changePts={seoChangePts}
-            data={seoTrend}
           />
           <SimpleMetricCard
             title="Articles à optimiser"
