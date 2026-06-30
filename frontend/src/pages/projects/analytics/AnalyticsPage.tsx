@@ -9,15 +9,12 @@ import {
 import {
   RefreshCw,
   AlertTriangle,
-  BarChart3,
-  Users,
   Eye,
 } from '@/components/ui/hugeIcons'
 import { SeoRadialCard, AreaMetricCard } from '@/components/charts/TrendCards'
 import { getPerformanceSummary, getArticlesPerformance } from '@/api/performance'
 import type { ArticlePerformanceBrief, PerformanceSummary } from '@/types'
 import { Card } from '@/components/ui/Card'
-import MetricCard from '@/components/ui/MetricCard'
 import Button from '@/components/ui/Button'
 import ErrorState from '@/components/ui/ErrorState'
 import LoadingState from '@/components/ui/LoadingState'
@@ -244,6 +241,16 @@ export default function AnalyticsPage() {
     [articleMetrics],
   )
 
+  const optimizeTrend = useMemo(
+    () => [{ v: optimizeCount }, { v: optimizeCount }],
+    [optimizeCount],
+  )
+
+  const articleCountTrend = useMemo(
+    () => [{ v: articleMetrics.length }, { v: articleMetrics.length }],
+    [articleMetrics],
+  )
+
   const topArticles = useMemo(
     () => [...articleMetrics].sort((a, b) => b.views - a.views).slice(0, 8),
     [articleMetrics],
@@ -427,7 +434,7 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="flex flex-col gap-6">
-        {/* Section 1 — 5 KPIs */}
+        {/* Section 1 — 5 KPIs uniformes */}
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
           <AreaMetricCard
             title="Vues totales"
@@ -437,20 +444,21 @@ export default function AnalyticsPage() {
             color="#0066ff"
             data={viewsTrend}
           />
-          <MetricCard
-            icon={<Users size={18} />}
+          <AreaMetricCard
+            title="Pages uniques"
             value={formatMetric(summary.unique_pages)}
-            label="Pages uniques"
-            tone="success"
-            className="h-[148px]"
+            change="—"
+            changeColor="#8A8A8A"
+            color="#4b5563"
+            data={viewsTrend}
           />
-          <MetricCard
-            icon={<BarChart3 size={18} />}
+          <AreaMetricCard
+            title="Articles suivis"
             value={String(articleMetrics.length)}
-            label="Articles suivis"
-            tone="warning"
-            trend={optimizeCount > 0 ? `${optimizeCount} à optimiser` : undefined}
-            className="h-[148px]"
+            change={optimizeCount > 0 ? `${optimizeCount} à optimiser` : '—'}
+            changeColor={optimizeCount > 0 ? '#ffa51f' : '#8A8A8A'}
+            color="#8b5cf6"
+            data={articleCountTrend}
           />
           <SeoRadialCard
             title="Score SEO moyen"
@@ -458,12 +466,13 @@ export default function AnalyticsPage() {
             changePts={seoChangePts}
             data={seoTrend}
           />
-          <MetricCard
-            icon={<AlertTriangle size={18} />}
+          <AreaMetricCard
+            title="Articles à optimiser"
             value={String(optimizeCount)}
-            label="Articles à optimiser"
-            tone="danger"
-            className="h-[148px]"
+            change="—"
+            changeColor="#8A8A8A"
+            color="#ff3b1f"
+            data={optimizeTrend}
           />
         </div>
 
