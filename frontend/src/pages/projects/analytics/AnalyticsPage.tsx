@@ -62,6 +62,19 @@ function chartTick(period: PeriodMode, value: unknown) {
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const COUNTRY_PALETTE = ['#0066ff', '#34c759', '#8b5cf6', '#ff9500', '#ff3b1f', '#5856d6', '#00c2b8', '#9ca3af']
+const CHANNELS = [
+  { key: 'organic', source: 'Organic Search', label: 'Google', color: '#34c759' },
+  { key: 'direct', source: 'Direct', label: 'Direct', color: '#007aff' },
+  { key: 'social', source: 'Social', label: 'Social', color: '#5856d6' },
+  { key: 'referral', source: 'Referral', label: 'Referral', color: '#ff9500' },
+] as const
+const DEVICE_ORDER = ['desktop', 'mobile', 'tablet']
+const CHART_TOOLTIP_STYLE = {
+  fontSize: 12,
+  borderRadius: 10,
+  border: '1px solid rgba(0,0,0,0.08)',
+  boxShadow: 'none',
+}
 
 const DEVICE_COLORS: Record<string, string> = {
   desktop: '#0066ff',
@@ -71,6 +84,10 @@ const DEVICE_COLORS: Record<string, string> = {
 
 function deviceColor(device: string) {
   return DEVICE_COLORS[device.toLowerCase()] ?? '#9ca3af'
+}
+
+function scoreColor(score: number) {
+  return score >= 75 ? '#00c950' : score >= 50 ? '#ffa51f' : '#ff3b1f'
 }
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -87,7 +104,9 @@ export default function AnalyticsPage() {
   useEffect(() => {
     if (!projectId) return
     let cancelled = false
-    setLoadStatus('loading')
+    queueMicrotask(() => {
+      if (!cancelled) setLoadStatus('loading')
+    })
     const periodParams = { period_type: period.mode, start_date: period.startDate, end_date: period.endDate }
     Promise.all([
       getPerformanceSummary(projectId, periodParams),
@@ -140,9 +159,56 @@ export default function AnalyticsPage() {
     return Math.round(withScore.reduce((sum, a) => sum + (a.seo_score ?? 0), 0) / withScore.length)
   }, [articleMetrics])
 
+  const seoTrend = useMemo(
+    () => articleMetrics
+      .filter((a) => a.seo_score !== null)
+      .sort((a, b) => (a.published_at ?? '').localeCompare(b.published_at ?? ''))
+      .map((a) => ({ v: a.seo_score ?? 0 })),
+    [articleMetrics],
+  )
+
+  const seoChangePts = useMemo(() => {
+    if (seoTrend.length < 2) return 0
+    return seoTrend[seoTrend.length - 1].v - seoTrend[seoTrend.length - 2].v
+  }, [seoTrend])
+
   const toOptimize = useMemo(
     () => articleMetrics.filter((a) => (a.seo_score ?? 100) < 70).slice(0, 6),
     [articleMetrics],
+  )
+
+  const sourceChartData = useMemo(
+    () => sources.slice(0, 3).map((s, i) => ({
+      ...s,
+      fill: COUNTRY_PALETTE[i % COUNTRY_PALETTE.length],
+    })),
+    [sources],
+  )
+
+  const channelChartData = useMemo(
+    () => CHANNELS
+      .map((channel) => ({
+        label: channel.label,
+        visits: sources.filter((s) => s.channel === channel.source).reduce((sum, s) => sum + s.visits, 0),
+        fill: channel.color,
+      }))
+      .filter((channel) => channel.visits > 0)
+      .sort((a, b) => b.visits - a.visits),
+    [sources],
+  )
+
+  const countryChartData = useMemo(
+    () => (summary?.countries ?? []).slice(0, 8).map((country, i) => {
+      const display = getCountryDisplay(country.country)
+      return {
+        key: country.country,
+        flag: display.flag,
+        label: display.label,
+        views: country.views,
+        fill: COUNTRY_PALETTE[i % COUNTRY_PALETTE.length],
+      }
+    }),
+    [summary],
   )
 
   const deviceMonthlyData = useMemo(() => {
@@ -167,6 +233,19 @@ export default function AnalyticsPage() {
         return entry
       })
   }, [summary])
+
+  const deviceKeys = useMemo(() => {
+    const keys = new Set<string>()
+    for (const row of deviceMonthlyData) {
+      Object.keys(row).forEach((key) => {
+        if (key !== 'month') keys.add(key)
+      })
+    }
+    return [
+      ...DEVICE_ORDER.filter((key) => keys.has(key)),
+      ...Array.from(keys).filter((key) => !DEVICE_ORDER.includes(key)),
+    ]
+  }, [deviceMonthlyData])
 
   function handleExportJson() {
     downloadJson(`ideas-studio-analytics-${period.startDate}-${period.endDate}.json`, {
@@ -241,7 +320,7 @@ export default function AnalyticsPage() {
           />
           <MetricCard icon={<Users size={18} />} value={formatMetric(summary.unique_pages)} label="Pages uniques" tone="success" className="h-[148px]" />
           <MetricCard icon={<BarChart3 size={18} />} value={String(articleMetrics.length)} label="Articles suivis" tone="warning" className="h-[148px]" />
-          <SeoRadialCard title="Score SEO moyen" score={avgSeoScore ?? 0} changePts={0} data={[]} />
+          <SeoRadialCard title="Score SEO moyen" score={avgSeoScore ?? 0} changePts={seoChangePts} data={seoTrend} />
         </div>
 
         {/* Section 2 — Évolution des vues */}
@@ -271,7 +350,7 @@ export default function AnalyticsPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
                 <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} tickFormatter={(v) => chartTick(period.mode, v)} interval="preserveStartEnd" />
                 <YAxis tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} width={40} allowDecimals={false} tickFormatter={formatAxisTick} />
-                <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v, name) => [formatMetric(Number(v)), name]} />
+                <Tooltip cursor={false} contentStyle={CHART_TOOLTIP_STYLE} formatter={(v, name) => [formatMetric(Number(v)), name]} />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
                 <Area type="natural" dataKey="referral" name="Referral" stackId="a" stroke="#ff9500" fill="url(#fillReferral)" strokeWidth={1.5} dot={false} activeDot={{ r: 3 }} />
                 <Area type="natural" dataKey="social" name="Social" stackId="a" stroke="#5856d6" fill="url(#fillSocial)" strokeWidth={1.5} dot={false} activeDot={{ r: 3 }} />
@@ -331,7 +410,7 @@ export default function AnalyticsPage() {
                                 className="block h-full rounded-full transition-all"
                                 style={{
                                   width: `${Math.min(a.seo_score, 100)}%`,
-                                  backgroundColor: a.seo_score >= 75 ? '#00c950' : a.seo_score >= 50 ? '#ffa51f' : '#ff3b1f',
+                                  backgroundColor: scoreColor(a.seo_score),
                                 }}
                               />
                             </span>
@@ -350,20 +429,20 @@ export default function AnalyticsPage() {
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
             <SectionTitle>Sources de trafic</SectionTitle>
-            {sources.length ? (
+            {sourceChartData.length ? (
               <div className="h-[220px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     layout="vertical"
-                    data={sources.slice(0, 3).map((s, i) => ({ label: s.label, visits: s.visits, fill: COUNTRY_PALETTE[i % COUNTRY_PALETTE.length] }))}
+                    data={sourceChartData}
                     margin={{ top: 2, right: 12, bottom: 2, left: 0 }}
                   >
                     <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} tickMargin={6} width={100} tick={{ fontSize: 11, fill: '#86868b' }} tickFormatter={(v: string) => v.length > 14 ? v.slice(0, 13) + '…' : v} />
                     <XAxis type="number" hide />
-                    <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v) => [formatMetric(Number(v)), 'Vues']} />
+                    <Tooltip cursor={false} contentStyle={CHART_TOOLTIP_STYLE} formatter={(v) => [formatMetric(Number(v)), 'Vues']} />
                     <Bar dataKey="visits" radius={5} barSize={14}>
-                      {sources.slice(0, 3).map((s, i) => (
-                        <Cell key={s.key} fill={COUNTRY_PALETTE[i % COUNTRY_PALETTE.length]} />
+                      {sourceChartData.map((source) => (
+                        <Cell key={source.key} fill={source.fill} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -373,38 +452,22 @@ export default function AnalyticsPage() {
           </Card>
           <Card>
             <SectionTitle>Canaux</SectionTitle>
-            {(() => {
-              const CHANNEL_COLORS: Record<string, string> = {
-                'Organic Search': '#34c759',
-                'Direct': '#007aff',
-                'Social': '#5856d6',
-                'Referral': '#ff9500',
-              }
-              const channels = ['Organic Search', 'Direct', 'Social', 'Referral']
-                .map((ch) => ({
-                  label: ch === 'Organic Search' ? 'Google' : ch,
-                  visits: sources.filter((s) => s.channel === ch).reduce((sum, s) => sum + s.visits, 0),
-                  fill: CHANNEL_COLORS[ch],
-                }))
-                .filter((ch) => ch.visits > 0)
-                .sort((a, b) => b.visits - a.visits)
-              return channels.length ? (
+            {channelChartData.length ? (
                 <div className="h-[220px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart layout="vertical" data={channels} margin={{ top: 2, right: 56, bottom: 2, left: 0 }}>
+                    <BarChart layout="vertical" data={channelChartData} margin={{ top: 2, right: 56, bottom: 2, left: 0 }}>
                       <YAxis dataKey="label" type="category" hide />
                       <XAxis type="number" hide />
-                      <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v) => [formatMetric(Number(v)), 'Vues']} />
+                      <Tooltip cursor={false} contentStyle={CHART_TOOLTIP_STYLE} formatter={(v) => [formatMetric(Number(v)), 'Vues']} />
                       <Bar dataKey="visits" barSize={28}>
-                        {channels.map((ch) => <Cell key={ch.label} fill={ch.fill} />)}
+                        {channelChartData.map((channel) => <Cell key={channel.label} fill={channel.fill} />)}
                         <LabelList dataKey="label" position="insideLeft" offset={10} fontSize={12} fill="#fff" fontWeight={500} />
                         <LabelList dataKey="visits" position="right" offset={8} fontSize={12} fill="#86868b" formatter={(v: unknown) => formatMetric(Number(v))} />
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              ) : <InlineEmpty>Aucun canal disponible pour cette période.</InlineEmpty>
-            })()}
+              ) : <InlineEmpty>Aucun canal disponible pour cette période.</InlineEmpty>}
           </Card>
         </div>
 
@@ -444,25 +507,20 @@ export default function AnalyticsPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <Card>
             <SectionTitle>Pays</SectionTitle>
-            {summary.countries.length ? (
+            {countryChartData.length ? (
               <div className="h-[220px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={summary.countries.slice(0, 8).map((c, i) => ({
-                      flag: getCountryDisplay(c.country).flag,
-                      label: getCountryDisplay(c.country).label,
-                      views: c.views,
-                      fill: COUNTRY_PALETTE[i % COUNTRY_PALETTE.length],
-                    }))}
+                    data={countryChartData}
                     layout="vertical"
                     margin={{ top: 2, right: 12, bottom: 2, left: 0 }}
                   >
                     <YAxis dataKey="flag" type="category" tickLine={false} axisLine={false} tickMargin={6} width={28} tick={{ fontSize: 16, fill: '#86868b' }} />
                     <XAxis type="number" hide />
-                    <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v, _name, entry) => [formatMetric(Number(v)), (entry.payload as { label: string }).label]} />
+                    <Tooltip cursor={false} contentStyle={CHART_TOOLTIP_STYLE} formatter={(v, _name, entry) => [formatMetric(Number(v)), (entry.payload as { label: string }).label]} />
                     <Bar dataKey="views" radius={5} barSize={14}>
-                      {summary.countries.slice(0, 8).map((c, i) => (
-                        <Cell key={c.country} fill={COUNTRY_PALETTE[i % COUNTRY_PALETTE.length]} />
+                      {countryChartData.map((country) => (
+                        <Cell key={country.key} fill={country.fill} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -479,17 +537,17 @@ export default function AnalyticsPage() {
                     <CartesianGrid vertical={false} stroke="rgba(0,0,0,0.06)" />
                     <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 11, fill: '#86868b' }} />
                     <YAxis tickLine={false} axisLine={false} width={36} allowDecimals={false} tick={{ fontSize: 11, fill: '#86868b' }} tickFormatter={formatAxisTick} />
-                    <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v, name) => [formatMetric(Number(v)), name]} />
+                    <Tooltip cursor={false} contentStyle={CHART_TOOLTIP_STYLE} formatter={(v, name) => [formatMetric(Number(v)), name]} />
                     <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-                    {summary.devices.map((d, i) => (
+                    {deviceKeys.map((device, i) => (
                       <Bar
-                        key={d.device}
-                        dataKey={d.device.toLowerCase()}
-                        name={getDeviceLabel(d.device)}
+                        key={device}
+                        dataKey={device}
+                        name={getDeviceLabel(device)}
                         stackId="a"
-                        fill={deviceColor(d.device)}
+                        fill={deviceColor(device)}
                         radius={
-                          i === summary.devices.length - 1 ? [4, 4, 0, 0]
+                          i === deviceKeys.length - 1 ? [4, 4, 0, 0]
                           : i === 0 ? [0, 0, 4, 4]
                           : [0, 0, 0, 0]
                         }

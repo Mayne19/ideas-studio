@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import type { DateRange } from 'react-day-picker'
@@ -138,31 +138,22 @@ export function ExportButtons({
   className?: string
 }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    if (open) document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [open])
 
   return (
-    <div className={cn('relative', className)} ref={ref}>
-      <Button type="button" size="sm" variant="secondary" icon={<Download size={13} />} onClick={() => setOpen(!open)}>
-        Exporter
-      </Button>
-      {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 min-w-[175px] overflow-hidden rounded-[12px] border-2 border-border bg-transparent p-1 shadow-lg">
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" size="sm" variant="secondary" icon={<Download size={13} />} className={className}>
+          Exporter
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="min-w-[175px] p-1">
           <button type="button" onClick={() => { onJson(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[9px] px-3 py-2 text-[14px] text-primary transition-colors hover:bg-surface-soft">
             Exporter en JSON
           </button>
           <button type="button" onClick={() => { onPdf(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[9px] px-3 py-2 text-[14px] text-primary transition-colors hover:bg-surface-soft">
             Exporter en PDF
           </button>
-        </div>
-      )}
-    </div>
+      </PopoverContent>
+    </Popover>
   )
 }
