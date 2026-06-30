@@ -734,7 +734,7 @@ export default function ProjectDashboardPage() {
                   key={article.id}
                   type="button"
                   onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
-                  className="grid grid-cols-[minmax(0,1fr)_120px_56px_110px_96px] items-center gap-6 px-5 py-3 text-left transition-colors hover:bg-surface-soft"
+                  className="grid grid-cols-[minmax(0,1fr)_120px_56px_110px_96px] items-center gap-6 px-5 py-1.5 text-left transition-colors hover:bg-surface-soft"
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-[14px] font-medium text-primary">{article.title}</span>
