@@ -2,19 +2,16 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   AreaChart, Area,
-  BarChart, Bar, Cell,
+  BarChart, Bar, Cell, LabelList,
   XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Legend,
 } from 'recharts'
 import {
-  Globe,
-  MousePointer2,
   RefreshCw,
-  Users,
   ExternalLink,
   AlertTriangle,
   BarChart3,
-  Mail,
+  Users,
 } from '@/components/ui/hugeIcons'
 import { SeoRadialCard, AreaMetricCard } from '@/components/charts/TrendCards'
 import { getPerformanceSummary, getArticlesPerformance } from '@/api/performance'
@@ -32,10 +29,8 @@ import {
   formatMetric,
   getCountryDisplay,
   getDeviceLabel,
-  getFaviconUrl,
   getSourceChannel,
   getSourceDisplay,
-  percentOf,
 } from '@/utils/trafficDisplay'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -56,52 +51,6 @@ function ChartEmpty({ message }: { message: string }) {
   )
 }
 
-function VisualRow({
-  rank,
-  label,
-  value,
-  total,
-  leading,
-  meta,
-}: {
-  rank?: number
-  label: string
-  value: number
-  total: number
-  leading: React.ReactNode
-  meta?: React.ReactNode
-}) {
-  const pct = percentOf(value, total)
-  return (
-    <div className="flex items-center gap-2.5 rounded-[10px] px-2 py-1 hover:bg-surface-soft">
-      {rank !== undefined && <span className="w-4 shrink-0 text-[12px] font-medium text-tertiary">{rank}</span>}
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-surface-soft text-secondary">{leading}</span>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-3">
-          <span className="truncate text-[14px] font-medium text-primary" title={label}>{label}</span>
-          <span className="shrink-0 text-[12px] font-semibold text-secondary">{formatMetric(value)}</span>
-        </div>
-        <div className="mt-1 flex items-center gap-2">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-soft">
-            <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
-          </div>
-          <span className="w-8 text-right text-[12px] text-tertiary">{pct}%</span>
-        </div>
-        {meta && <div className="mt-0.5 text-[12px] text-tertiary">{meta}</div>}
-      </div>
-    </div>
-  )
-}
-
-function SourceMark({ referrer }: { referrer: string }) {
-  const source = getSourceDisplay(referrer)
-  const favicon = getFaviconUrl(source.domain)
-  const [failed, setFailed] = useState(false)
-  if (source.kind === 'direct') return <MousePointer2 size={15} />
-  if (favicon && !failed) return <img src={favicon} alt="" className="h-4 w-4 rounded-[4px]" onError={() => setFailed(true)} />
-  if (source.domain.includes('newsletter')) return <Mail size={15} />
-  return <Globe size={15} />
-}
 
 
 function chartTick(period: PeriodMode, value: unknown) {
@@ -166,12 +115,10 @@ export default function AnalyticsPage() {
         raw: r.referrer,
         channel: getSourceChannel(r.referrer),
         visits: r.views,
-        share: percentOf(r.views, totalVisits),
+        share: Math.round((r.views / totalVisits) * 100),
       }
     }).sort((a, b) => b.visits - a.visits)
   }, [summary])
-
-  const totalVisits = sources.reduce((sum, s) => sum + s.visits, 0)
 
   const channelTrend = summary?.channel_trend_by_day ?? []
   const hasChannelTrend = channelTrend.length > 0 && summary && summary.total_views > 0
@@ -399,48 +346,65 @@ export default function AnalyticsPage() {
           )}
         </Card>
 
-        {/* Section 4 — Sources de trafic */}
+        {/* Section 4 — Sources de trafic + Canaux */}
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
             <SectionTitle>Sources de trafic</SectionTitle>
-            <div className="flex flex-col gap-1">
-              {sources.length ? sources.slice(0, 8).map((s, i) => (
-                <VisualRow
-                  key={s.key}
-                  rank={i + 1}
-                  label={s.label}
-                  value={s.visits}
-                  total={totalVisits}
-                  leading={<SourceMark referrer={s.raw} />}
-                  meta={<span>{s.channel} · {s.share}% du trafic</span>}
-                />
-              )) : <InlineEmpty>Aucune source disponible pour cette période.</InlineEmpty>}
-            </div>
+            {sources.length ? (
+              <div className="h-[220px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    layout="vertical"
+                    data={sources.slice(0, 8).map((s, i) => ({ label: s.label, visits: s.visits, fill: COUNTRY_PALETTE[i % COUNTRY_PALETTE.length] }))}
+                    margin={{ top: 2, right: 12, bottom: 2, left: 0 }}
+                  >
+                    <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} tickMargin={6} width={100} tick={{ fontSize: 11, fill: '#86868b' }} tickFormatter={(v: string) => v.length > 14 ? v.slice(0, 13) + '…' : v} />
+                    <XAxis type="number" hide />
+                    <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v) => [formatMetric(Number(v)), 'Vues']} />
+                    <Bar dataKey="visits" radius={5} barSize={14}>
+                      {sources.slice(0, 8).map((s, i) => (
+                        <Cell key={s.key} fill={COUNTRY_PALETTE[i % COUNTRY_PALETTE.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : <InlineEmpty>Aucune source disponible pour cette période.</InlineEmpty>}
           </Card>
           <Card>
             <SectionTitle>Canaux</SectionTitle>
-            <div className="flex flex-col gap-1">
-              {(() => {
-                const channels = ['Organic Search', 'Direct', 'Social', 'Referral'].map((ch) => ({
-                  channel: ch,
+            {(() => {
+              const CHANNEL_COLORS: Record<string, string> = {
+                'Organic Search': '#34c759',
+                'Direct': '#007aff',
+                'Social': '#5856d6',
+                'Referral': '#ff9500',
+              }
+              const channels = ['Organic Search', 'Direct', 'Social', 'Referral']
+                .map((ch) => ({
+                  label: ch === 'Organic Search' ? 'Google' : ch,
                   visits: sources.filter((s) => s.channel === ch).reduce((sum, s) => sum + s.visits, 0),
-                })).filter((ch) => ch.visits > 0).sort((a, b) => b.visits - a.visits)
-                return channels.length ? channels.map((ch) => (
-                  <VisualRow
-                    key={ch.channel}
-                    label={ch.channel}
-                    value={ch.visits}
-                    total={totalVisits}
-                    leading={
-                      ch.channel === 'Organic Search' ? <Globe size={15} /> :
-                      ch.channel === 'Direct' ? <MousePointer2 size={15} /> :
-                      ch.channel === 'Social' ? <Users size={15} /> :
-                      <ExternalLink size={15} />
-                    }
-                  />
-                )) : <InlineEmpty>Aucun canal disponible pour cette période.</InlineEmpty>
-              })()}
-            </div>
+                  fill: CHANNEL_COLORS[ch],
+                }))
+                .filter((ch) => ch.visits > 0)
+                .sort((a, b) => b.visits - a.visits)
+              return channels.length ? (
+                <div className="h-[220px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart layout="vertical" data={channels} margin={{ top: 2, right: 56, bottom: 2, left: 0 }}>
+                      <YAxis dataKey="label" type="category" hide />
+                      <XAxis type="number" hide />
+                      <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v) => [formatMetric(Number(v)), 'Vues']} />
+                      <Bar dataKey="visits" barSize={28}>
+                        {channels.map((ch) => <Cell key={ch.label} fill={ch.fill} />)}
+                        <LabelList dataKey="label" position="insideLeft" offset={10} fontSize={12} fill="#fff" fontWeight={500} />
+                        <LabelList dataKey="visits" position="right" offset={8} fontSize={12} fill="#86868b" formatter={(v: unknown) => formatMetric(Number(v))} />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : <InlineEmpty>Aucun canal disponible pour cette période.</InlineEmpty>
+            })()}
           </Card>
         </div>
 
@@ -484,17 +448,19 @@ export default function AnalyticsPage() {
               <div className="h-[220px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={summary.countries.slice(0, 8).map((c) => ({
-                      name: `${getCountryDisplay(c.country).flag} ${getCountryDisplay(c.country).label}`,
+                    data={summary.countries.slice(0, 8).map((c, i) => ({
+                      flag: getCountryDisplay(c.country).flag,
+                      label: getCountryDisplay(c.country).label,
                       views: c.views,
+                      fill: COUNTRY_PALETTE[i % COUNTRY_PALETTE.length],
                     }))}
                     layout="vertical"
                     margin={{ top: 2, right: 12, bottom: 2, left: 0 }}
                   >
-                    <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={6} width={120} tick={{ fontSize: 11, fill: '#86868b' }} />
-                    <XAxis type="number" hide allowDecimals={false} />
-                    <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v) => [formatMetric(Number(v)), 'Vues']} />
-                    <Bar dataKey="views" radius={[0, 6, 6, 0]} barSize={14}>
+                    <YAxis dataKey="flag" type="category" tickLine={false} axisLine={false} tickMargin={6} width={28} tick={{ fontSize: 16, fill: '#86868b' }} />
+                    <XAxis type="number" hide />
+                    <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v, _name, entry) => [formatMetric(Number(v)), (entry.payload as { label: string }).label]} />
+                    <Bar dataKey="views" radius={5} barSize={14}>
                       {summary.countries.slice(0, 8).map((c, i) => (
                         <Cell key={c.country} fill={COUNTRY_PALETTE[i % COUNTRY_PALETTE.length]} />
                       ))}
