@@ -359,7 +359,7 @@ function PipelineSummaryItem({
 }) {
   return (
     <div className="flex h-[56px] min-w-0 items-center gap-2.5 px-5">
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] bg-surface-soft text-secondary">{icon}</span>
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] text-secondary">{icon}</span>
       <span className="min-w-0 truncate text-[14px] font-medium text-secondary">{title}</span>
       <strong className="shrink-0 text-[18px] font-semibold leading-none tabular-nums text-primary">{value}</strong>
       <span className="min-w-0 truncate text-[11px] font-medium text-tertiary">{description}</span>
