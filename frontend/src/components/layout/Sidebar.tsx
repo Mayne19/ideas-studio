@@ -40,7 +40,7 @@ function SidebarLink({ to, icon, label, disabled = false, collapsed = false }: N
     return (
       <span
         title={label}
-        className="flex h-8 items-center gap-2 rounded-[6px] px-2.5 text-[12px] font-medium text-tertiary cursor-not-allowed opacity-50"
+        className="flex h-8 items-center gap-2 rounded-[6px] px-2.5 text-[11px] font-medium text-tertiary cursor-not-allowed opacity-50"
       >
         <span className="shrink-0">{icon}</span>
         {!collapsed && label}
@@ -54,7 +54,7 @@ function SidebarLink({ to, icon, label, disabled = false, collapsed = false }: N
       title={collapsed ? label : undefined}
       className={({ isActive }) =>
         cn(
-          'flex h-8 items-center gap-2 rounded-[6px] px-2.5 text-[12px] font-medium transition-colors duration-150',
+          'flex h-8 items-center gap-2 rounded-[6px] px-2.5 text-[11px] font-medium transition-colors duration-150',
           collapsed ? 'justify-center px-2' : '',
           isActive
             ? 'bg-surface-muted text-primary'
@@ -185,7 +185,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                     <NavLink
                       to={`/projects/${projectId}/settings`}
                       onClick={() => setSettingsOpen(true)}
-                      className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-1.5 text-[12px] font-medium"
+                      className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-1.5 text-[11px] font-medium"
                     >
                       <HugeIcon icon={Setting06Icon} size={15} className="shrink-0" />
                       <span className="truncate">Paramètres</span>
@@ -207,7 +207,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                           end={item.end}
                           className={({ isActive }) =>
                             cn(
-                              'rounded-[6px] px-2 py-1.5 text-[12px] font-medium transition-colors',
+                              'rounded-[6px] px-2 py-1.5 text-[11px] font-medium transition-colors',
                               isActive ? 'text-primary' : 'text-secondary hover:text-primary',
                             )
                           }
@@ -245,7 +245,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                 {!collapsed && (
                   <>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[12px] font-medium text-primary leading-tight">{project.name}</p>
+                      <p className="truncate text-[11px] font-medium text-primary leading-tight">{project.name}</p>
                       <p className="truncate text-[10px] text-tertiary leading-tight">{project.domain ?? 'Sans domaine'}</p>
                     </div>
                     <ChevronDown size={11} className={cn('shrink-0 text-tertiary transition-transform', projectsOpen && 'rotate-180')} />
@@ -256,7 +256,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
               {projectsOpen && (
                 <div className="absolute bottom-full left-0 right-0 mb-1 z-50 rounded-[8px] border-2 border-border bg-transparent shadow-md overflow-hidden">
                   {projects.length === 0 ? (
-                    <p className="px-3 py-2.5 text-[12px] text-tertiary">Aucun autre projet</p>
+                    <p className="px-3 py-2.5 text-[11px] text-tertiary">Aucun autre projet</p>
                   ) : (
                     projects.map((p) => (
                       <button
@@ -268,7 +268,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                           {p.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="truncate text-[12px] font-medium text-primary">{p.name}</p>
+                          <p className="truncate text-[11px] font-medium text-primary">{p.name}</p>
                           <p className="truncate text-[10px] text-tertiary">{p.domain ?? 'Sans domaine'}</p>
                         </div>
                         {p.id === projectId && <Check size={11} className="text-accent shrink-0" />}
@@ -279,7 +279,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                     <Link
                       to="/projects"
                       onClick={() => setProjectsOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 text-[12px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors"
+                      className="flex items-center gap-2 px-3 py-2 text-[11px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors"
                     >
                       <FolderOpen size={12} />
                       Tous les projets
@@ -298,7 +298,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                 title={collapsed ? 'Paramètres' : undefined}
                 className={({ isActive }) =>
                   cn(
-                    'flex h-7 w-full items-center gap-2 rounded-[6px] px-2 text-[12px] font-medium transition-colors',
+                    'flex h-7 w-full items-center gap-2 rounded-[6px] px-2 text-[11px] font-medium transition-colors',
                     collapsed && 'justify-center',
                     isActive ? 'bg-surface-muted text-primary' : 'text-secondary hover:bg-surface-soft hover:text-primary',
                   )
@@ -313,7 +313,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
               onClick={() => setLogoutConfirmOpen(true)}
               title={collapsed ? 'Se déconnecter' : undefined}
               className={cn(
-                'flex h-7 w-full items-center gap-2 rounded-[6px] px-2 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary',
+                'flex h-7 w-full items-center gap-2 rounded-[6px] px-2 text-[11px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary',
                 collapsed && 'justify-center',
               )}
             >
