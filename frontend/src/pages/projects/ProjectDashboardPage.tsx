@@ -342,15 +342,11 @@ function PipelineSummaryItem({
   description: string
 }) {
   return (
-    <div className="flex min-w-0 flex-col justify-center gap-1 px-6 py-4">
-      <div className="flex items-center gap-2">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-surface-soft text-secondary">{icon}</span>
-        <span className="min-w-0 truncate text-[12px] font-medium text-secondary">{title}</span>
-      </div>
-      <div className="flex items-baseline gap-2 pl-0.5">
-        <strong className="shrink-0 text-[26px] font-bold leading-none tabular-nums text-primary">{value}</strong>
-        <span className="min-w-0 truncate text-[12px] text-tertiary">{description}</span>
-      </div>
+    <div className="flex h-[56px] min-w-0 items-center gap-2.5 px-5">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] bg-surface-soft text-secondary">{icon}</span>
+      <span className="min-w-0 truncate text-[13px] font-medium text-secondary">{title}</span>
+      <strong className="shrink-0 text-[18px] font-semibold leading-none tabular-nums text-primary">{value}</strong>
+      <span className="min-w-0 truncate text-[12px] text-tertiary">{description}</span>
     </div>
   )
 }
