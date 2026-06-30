@@ -34,7 +34,7 @@ function timeAgo(iso: string): string {
   return formatDate(iso)
 }
 
-const RECENT_ARTICLES_LIMIT = 5
+const RECENT_ARTICLES_LIMIT = 6
 
 type ActivityEvent = {
   id: string
