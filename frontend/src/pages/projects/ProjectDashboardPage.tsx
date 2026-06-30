@@ -24,6 +24,7 @@ import LoadingState from '@/components/ui/LoadingState'
 import { formatDate } from '@/utils/format'
 import { getGeoScore } from '@/lib/scoreBadge'
 import { SeoRadialCard, AreaMetricCard, type MonthPoint } from '@/components/charts/TrendCards'
+import { NEUTRAL_CHART_COLORS } from '@/utils/chartPalette'
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -582,24 +583,24 @@ export default function ProjectDashboardPage() {
           title="Vues mensuelles"
           value={totalViews}
           change={data ? (() => { const d = data.viewsMonthly; const diff = d[MONTHLY_METRIC_POINTS - 1].v - d[MONTHLY_METRIC_POINTS - 2].v; return diff >= 0 ? `+${diff}` : `${diff}` })() : '—'}
-          changeColor="#0066ff"
-          color="#0066ff"
+          changeColor={NEUTRAL_CHART_COLORS.primary}
+          color={NEUTRAL_CHART_COLORS.primary}
           data={data?.viewsMonthly ?? Array.from({ length: MONTHLY_METRIC_POINTS }, () => ({ v: 0 }))}
         />
         <SparkMetricCard
           title="Temps moyen"
           value={data?.avgReadingTime != null ? `${data.avgReadingTime} min` : '—'}
           change={data ? (data.timeChangeMins >= 0 ? `+${data.timeChangeMins} min` : `${data.timeChangeMins} min`) : '—'}
-          changeColor="#ff3b1f"
-          color="#ff3b1f"
+          changeColor={NEUTRAL_CHART_COLORS.secondary}
+          color={NEUTRAL_CHART_COLORS.secondary}
           data={data?.timeMonthly ?? Array.from({ length: MONTHLY_METRIC_POINTS }, () => ({ v: 0 }))}
         />
         <BarMetricCard
           title="Publié"
           value={data?.publishedCount ?? '—'}
           change={data ? (data.publishedChangePct >= 0 ? `+${data.publishedChangePct}%` : `${data.publishedChangePct}%`) : '—'}
-          changeColor="#8b5cf6"
-          color="#8b5cf6"
+          changeColor={NEUTRAL_CHART_COLORS.primary}
+          color={NEUTRAL_CHART_COLORS.primary}
           data={data?.publishedMonthly ?? Array.from({ length: WEEKLY_METRIC_POINTS }, () => ({ v: 0 }))}
         />
       </section>
@@ -690,7 +691,7 @@ export default function ProjectDashboardPage() {
                     {category ? (
                       <span
                         className="inline-flex h-[22px] items-center rounded-full px-2.5 text-[11px] font-medium whitespace-nowrap"
-                        style={{ backgroundColor: `${category.color ?? '#0066ff'}22`, color: category.color ?? '#0066ff' }}
+                        style={{ backgroundColor: `${category.color ?? NEUTRAL_CHART_COLORS.secondary}22`, color: category.color ?? NEUTRAL_CHART_COLORS.secondary }}
                       >
                         {category.name}
                       </span>
@@ -745,7 +746,7 @@ export default function ProjectDashboardPage() {
                         onClick={() => navigate(event.href)}
                         className="grid h-10 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 text-left transition-colors hover:bg-surface-soft"
                       >
-                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${['bg-[#00c950]', 'bg-[#0066ff]', 'bg-[#ffa51f]', 'bg-[#ff3b1f]'][index % 4]}`} />
+                        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: [NEUTRAL_CHART_COLORS.primary, NEUTRAL_CHART_COLORS.secondary, NEUTRAL_CHART_COLORS.tertiary, NEUTRAL_CHART_COLORS.muted][index % 4] }} />
                         <span className="truncate text-[11px] font-medium text-tertiary">
                           {event.label} : {event.articleTitle}
                         </span>

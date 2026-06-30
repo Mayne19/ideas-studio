@@ -37,6 +37,7 @@ import {
   getSourceDisplay,
   getSourceChannel,
 } from '@/utils/trafficDisplay'
+import { NEUTRAL_CHART_COLORS, COUNTRY_PALETTE as SHARED_COUNTRY_PALETTE, DEVICE_COLORS, scoreColor } from '@/utils/chartPalette'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -74,17 +75,8 @@ function chartTick(period: PeriodMode, value: unknown) {
   return label.includes('-') ? label.slice(5) : label
 }
 
-function scoreColor(score: number) {
-  return score >= 75 ? '#00c950' : score >= 50 ? '#ffa51f' : '#ff3b1f'
-}
-
 function deviceColor(device: string) {
-  const colors: Record<string, string> = {
-    desktop: '#0066ff',
-    mobile: '#34c759',
-    tablet: '#8b5cf6',
-  }
-  return colors[device.toLowerCase()] ?? '#9ca3af'
+  return (DEVICE_COLORS as Record<string, string>)[device.toLowerCase()] ?? NEUTRAL_CHART_COLORS.tertiary
 }
 
 function articleSignal(a: ArticlePerformanceBrief) {
@@ -99,7 +91,7 @@ function articleSignal(a: ArticlePerformanceBrief) {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const COUNTRY_PALETTE = ['#0066ff', '#34c759', '#8b5cf6', '#ff9500', '#ff3b1f', '#5856d6', '#00c2b8', '#9ca3af']
+const COUNTRY_PALETTE = SHARED_COUNTRY_PALETTE
 const TRAFFIC_CHANNELS = [
   { key: 'direct', label: 'Direct', color: '#111827' },
   { key: 'organic', label: 'Google', color: '#4b5563' },
@@ -417,8 +409,8 @@ export default function AnalyticsPage() {
             title="Vues totales"
             value={formatMetric(summary.total_views)}
             change={viewsChange ?? '—'}
-            changeColor={viewsChange?.startsWith('-') ? '#ff3b1f' : '#0066ff'}
-            color="#0066ff"
+            changeColor={viewsChange?.startsWith('-') ? '#ef4444' : NEUTRAL_CHART_COLORS.primary}
+            color={NEUTRAL_CHART_COLORS.primary}
             data={viewsTrend}
           />
           <SeoRadialCard

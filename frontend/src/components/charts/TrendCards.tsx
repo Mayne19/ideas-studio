@@ -1,6 +1,7 @@
 import { Area, AreaChart, ResponsiveContainer } from 'recharts'
 import { HelpCircle } from '@/components/ui/hugeIcons'
 import { Gauge } from '@vercel/geistcn/components'
+import { scoreColor } from '@/utils/chartPalette'
 
 export type MonthPoint = { v: number }
 
@@ -17,7 +18,7 @@ export function SeoRadialCard({
   data: MonthPoint[]
   color?: string
 }) {
-  const fillColor = color ?? (score >= 75 ? '#45a75a' : score >= 50 ? '#ffa51f' : '#ff3b1f')
+  const fillColor = color ?? scoreColor(score)
   const changeColor = fillColor
   const changeLabel = changePts >= 0 ? `+${changePts} pts` : `${changePts} pts`
 
