@@ -8,10 +8,10 @@ import {
 } from 'recharts'
 import {
   RefreshCw,
-  ExternalLink,
   AlertTriangle,
   BarChart3,
   Users,
+  Eye,
 } from '@/components/ui/hugeIcons'
 import { SeoRadialCard, AreaMetricCard } from '@/components/charts/TrendCards'
 import { getPerformanceSummary, getArticlesPerformance } from '@/api/performance'
@@ -30,7 +30,20 @@ import {
   getCountryDisplay,
   getDeviceLabel,
   getSourceDisplay,
+  getSourceChannel,
 } from '@/utils/trafficDisplay'
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+type AuditItem = {
+  id: string
+  article_id: string
+  title: string
+  reason: string
+  priority: 'high' | 'medium' | 'info'
+  seo_score: number | null
+  views: number
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -49,8 +62,6 @@ function ChartEmpty({ message }: { message: string }) {
     </div>
   )
 }
-
-
 
 function chartTick(period: PeriodMode, value: unknown) {
   const label = String(value)
@@ -96,6 +107,29 @@ function TrafficTooltip({
   )
 }
 
+function scoreColor(score: number) {
+  return score >= 75 ? '#00c950' : score >= 50 ? '#ffa51f' : '#ff3b1f'
+}
+
+function deviceColor(device: string) {
+  const colors: Record<string, string> = {
+    desktop: '#0066ff',
+    mobile: '#34c759',
+    tablet: '#8b5cf6',
+  }
+  return colors[device.toLowerCase()] ?? '#9ca3af'
+}
+
+function articleSignal(a: ArticlePerformanceBrief) {
+  if (a.views === 0 && a.seo_score === null) return { label: 'Nouveau', color: 'text-tertiary' }
+  if (a.seo_score !== null && a.seo_score < 60) return { label: 'À optimiser', color: 'text-danger' }
+  if (a.variation !== null && a.variation < -10) return { label: 'En baisse', color: 'text-danger' }
+  if (a.seo_score !== null && a.seo_score < 70) return { label: 'À optimiser', color: 'text-warning' }
+  if (a.seo_score !== null && a.seo_score < 80) return { label: 'À surveiller', color: 'text-orange-500' }
+  if (a.views === 0) return { label: 'Nouveau', color: 'text-tertiary' }
+  return { label: 'Performant', color: 'text-success' }
+}
+
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const COUNTRY_PALETTE = ['#0066ff', '#34c759', '#8b5cf6', '#ff9500', '#ff3b1f', '#5856d6', '#00c2b8', '#9ca3af']
@@ -112,20 +146,7 @@ const CHART_TOOLTIP_STYLE = {
   border: '1px solid rgba(0,0,0,0.08)',
   boxShadow: 'none',
 }
-
-const DEVICE_COLORS: Record<string, string> = {
-  desktop: '#0066ff',
-  mobile: '#34c759',
-  tablet: '#8b5cf6',
-}
-
-function deviceColor(device: string) {
-  return DEVICE_COLORS[device.toLowerCase()] ?? '#9ca3af'
-}
-
-function scoreColor(score: number) {
-  return score >= 75 ? '#00c950' : score >= 50 ? '#ffa51f' : '#ff3b1f'
-}
+const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, info: 2 }
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -159,6 +180,8 @@ export default function AnalyticsPage() {
     return () => { cancelled = true }
   }, [projectId, period, tick])
 
+  // ── Derived data (useMemo) ─────────────────────────────────────────────────
+
   const sources = useMemo(() => {
     if (!summary) return []
     const rows = summary.referrers.length ? summary.referrers : [{ referrer: '', views: summary.total_views }]
@@ -175,13 +198,21 @@ export default function AnalyticsPage() {
     }).sort((a, b) => b.visits - a.visits)
   }, [summary])
 
-  const channelTrend = summary?.channel_trend_by_day ?? []
-  const hasChannelTrend = channelTrend.length > 0 && summary && summary.total_views > 0
+  const channelTrend = useMemo(
+    () => summary?.channel_trend_by_day ?? [],
+    [summary],
+  )
+
+  const hasChannelTrend = useMemo(
+    () => channelTrend.length > 0 && summary !== null && summary.total_views > 0,
+    [channelTrend, summary],
+  )
 
   const viewsTrend = useMemo(
     () => (summary?.trend_by_day ?? []).map((d) => ({ v: d.views })),
     [summary],
   )
+
   const viewsChange = useMemo(() => {
     const points = summary?.trend_by_day ?? []
     if (points.length < 2) return null
@@ -208,8 +239,13 @@ export default function AnalyticsPage() {
     return seoTrend[seoTrend.length - 1].v - seoTrend[seoTrend.length - 2].v
   }, [seoTrend])
 
-  const toOptimize = useMemo(
-    () => articleMetrics.filter((a) => (a.seo_score ?? 100) < 70).slice(0, 6),
+  const optimizeCount = useMemo(
+    () => articleMetrics.filter((a) => (a.seo_score ?? 100) < 70).length,
+    [articleMetrics],
+  )
+
+  const topArticles = useMemo(
+    () => [...articleMetrics].sort((a, b) => b.views - a.views).slice(0, 8),
     [articleMetrics],
   )
 
@@ -263,6 +299,71 @@ export default function AnalyticsPage() {
     ]
   }, [deviceMonthlyData])
 
+  const auditItems = useMemo(() => {
+    const withMetrics = articleMetrics.filter((a) => a.views > 0 || a.seo_score !== null)
+    if (withMetrics.length === 0) return []
+    const sortedByViews = [...withMetrics].sort((a, b) => a.views - b.views)
+    const medianViews = sortedByViews.length > 0
+      ? sortedByViews[Math.floor(sortedByViews.length / 2)].views
+      : 0
+
+    const scored = withMetrics.map((a): AuditItem | null => {
+      let priority: 'high' | 'medium' | 'info' = 'info'
+      let reason = ''
+
+      if (a.seo_score !== null && a.seo_score < 60) {
+        priority = 'high'
+        reason = 'Score SEO critique'
+      } else if (a.seo_score !== null && a.seo_score < 70) {
+        priority = 'medium'
+        reason = 'Score SEO insuffisant'
+      } else if (a.variation !== null && a.variation < -15) {
+        priority = 'medium'
+        reason = 'Trafic en baisse'
+      } else if (a.views === 0) {
+        priority = 'info'
+        reason = 'Aucun trafic détecté'
+      } else if (a.views >= medianViews && a.seo_score !== null && a.seo_score < 80) {
+        priority = 'high'
+        reason = 'Fort potentiel SEO'
+      }
+
+      if (!reason) return null
+
+      return {
+        id: a.article_id,
+        article_id: a.article_id,
+        title: a.title,
+        reason,
+        priority,
+        seo_score: a.seo_score,
+        views: a.views,
+      }
+    }).filter((item): item is AuditItem => item !== null)
+
+    return scored.sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]).slice(0, 5)
+  }, [articleMetrics])
+
+  const sourceChannels = useMemo(() => {
+    if (!summary?.referrers?.length) return []
+    const map = new Map<string, number>()
+    for (const ref of summary.referrers) {
+      const channel = getSourceChannel(ref.referrer)
+      map.set(channel, (map.get(channel) ?? 0) + ref.views)
+    }
+    const total = Math.max(1, Array.from(map.values()).reduce((s, v) => s + v, 0))
+    return Array.from(map.entries())
+      .map(([channel, views]) => ({
+        channel,
+        views,
+        share: Math.round((views / total) * 100),
+      }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 4)
+  }, [summary])
+
+  // ── Export handlers ──────────────────────────────────────────────────────
+
   function handleExportJson() {
     downloadJson(`ideas-studio-analytics-${period.startDate}-${period.endDate}.json`, {
       project_id: projectId,
@@ -298,10 +399,12 @@ export default function AnalyticsPage() {
     ])
   }
 
+  // ── Loading / Error states ───────────────────────────────────────────────
+
   if (loadStatus === 'loading') return <LoadingState />
   if (loadStatus === 'error' || !summary) return <ErrorState onRetry={() => setTick((t) => t + 1)} />
 
-  const topArticles = [...articleMetrics].sort((a, b) => b.views - a.views).slice(0, 8)
+  // ── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="project-page project-page--wide">
@@ -324,8 +427,8 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="flex flex-col gap-6">
-        {/* Section 1 — 4 KPIs */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Section 1 — 5 KPIs */}
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
           <AreaMetricCard
             title="Vues totales"
             value={formatMetric(summary.total_views)}
@@ -334,12 +437,37 @@ export default function AnalyticsPage() {
             color="#0066ff"
             data={viewsTrend}
           />
-          <MetricCard icon={<Users size={18} />} value={formatMetric(summary.unique_pages)} label="Pages uniques" tone="success" className="h-[148px]" />
-          <MetricCard icon={<BarChart3 size={18} />} value={String(articleMetrics.length)} label="Articles suivis" tone="warning" className="h-[148px]" />
-          <SeoRadialCard title="Score SEO moyen" score={avgSeoScore ?? 0} changePts={seoChangePts} data={seoTrend} />
+          <MetricCard
+            icon={<Users size={18} />}
+            value={formatMetric(summary.unique_pages)}
+            label="Pages uniques"
+            tone="success"
+            className="h-[148px]"
+          />
+          <MetricCard
+            icon={<BarChart3 size={18} />}
+            value={String(articleMetrics.length)}
+            label="Articles suivis"
+            tone="warning"
+            trend={optimizeCount > 0 ? `${optimizeCount} à optimiser` : undefined}
+            className="h-[148px]"
+          />
+          <SeoRadialCard
+            title="Score SEO moyen"
+            score={avgSeoScore ?? 0}
+            changePts={seoChangePts}
+            data={seoTrend}
+          />
+          <MetricCard
+            icon={<AlertTriangle size={18} />}
+            value={String(optimizeCount)}
+            label="Articles à optimiser"
+            tone="danger"
+            className="h-[148px]"
+          />
         </div>
 
-        {/* Section 2 — Évolution des vues */}
+        {/* Section 2 — Évolution du trafic par canal */}
         <Card>
           <SectionTitle>Évolution du trafic par canal</SectionTitle>
           <div className="relative h-[250px]">
@@ -388,102 +516,163 @@ export default function AnalyticsPage() {
           </div>
         </Card>
 
-        {/* Section 3 — Top articles */}
-        <Card>
-          <SectionTitle>Top articles</SectionTitle>
-          {topArticles.length === 0 ? (
-            <InlineEmpty>Aucun article suivi pour cette période.</InlineEmpty>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[520px]">
-                <thead>
-                  <tr className="border-b border-border text-[12px] font-medium uppercase tracking-wide text-tertiary">
-                    <th className="px-3 pb-2 text-left font-medium">Titre</th>
-                    <th className="px-3 pb-2 text-right font-medium tabular-nums">Vues</th>
-                    <th className="px-3 pb-2 text-right font-medium">Variation</th>
-                    <th className="px-3 pb-2 text-right font-medium">Score SEO</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topArticles.map((a) => (
-                    <tr
-                      key={a.article_id}
-                      className="group border-b border-border/30 text-[14px] transition-colors hover:bg-surface-soft last:border-0"
-                    >
-                      <td className="py-2.5 px-3">
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/projects/${projectId}/articles/${a.article_id}/edit`)}
-                          className="truncate text-left font-medium text-primary hover:text-accent max-w-[280px] block"
-                        >
-                          {a.title}
-                        </button>
-                      </td>
-                      <td className="py-2.5 px-3 text-right tabular-nums text-secondary">{formatMetric(a.views)}</td>
-                      <td className="py-2.5 px-3 text-right">
-                        {a.variation !== null ? (
-                          <span className={`inline-flex items-center gap-0.5 text-[12px] font-medium ${a.variation >= 0 ? 'text-success' : 'text-danger'}`}>
-                            {a.variation >= 0 ? '+' : ''}{a.variation}%
-                          </span>
-                        ) : <span className="text-tertiary">—</span>}
-                      </td>
-                      <td className="py-2.5 px-3">
-                        {a.seo_score !== null ? (
-                          <span className="flex items-center justify-end gap-2">
-                            <span className="w-6 shrink-0 text-right text-[12px] font-semibold tabular-nums text-primary">{a.seo_score}</span>
-                            <span className="h-[6px] w-[60px] shrink-0 overflow-hidden rounded-full bg-surface-muted">
-                              <span
-                                className="block h-full rounded-full transition-all"
-                                style={{
-                                  width: `${Math.min(a.seo_score, 100)}%`,
-                                  backgroundColor: scoreColor(a.seo_score),
-                                }}
-                              />
-                            </span>
-                          </span>
-                        ) : <span className="block text-right text-tertiary">—</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-
-        {/* Articles à optimiser */}
-        {toOptimize.length > 0 && (
+        {/* Section 3 — À auditer maintenant */}
+        {auditItems.length > 0 && (
           <Card>
-            <SectionTitle>Articles à optimiser (SEO &lt; 70)</SectionTitle>
+            <SectionTitle>À auditer maintenant</SectionTitle>
             <div className="flex flex-col">
-              {toOptimize.map((a) => (
+              {auditItems.map((item) => (
                 <div
-                  key={a.article_id}
-                  className="group flex items-center justify-between gap-3 border-b border-border/30 px-2 py-2.5 transition-colors hover:bg-surface-soft last:border-0"
+                  key={item.id}
+                  className="group flex items-center justify-between gap-3 border-b border-border/30 px-2 py-3 transition-colors hover:bg-surface-soft last:border-0"
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <AlertTriangle size={14} className="shrink-0 text-warning" />
-                    <span className="truncate text-[14px] font-medium text-primary">{a.title}</span>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className={`text-[12px] font-medium tabular-nums ${a.seo_score !== null && a.seo_score < 60 ? 'text-danger' : 'text-warning'}`}>
-                      SEO {a.seo_score ?? '—'}
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <span className={`mt-0.5 shrink-0 ${
+                      item.priority === 'high' ? 'text-danger'
+                      : item.priority === 'medium' ? 'text-warning'
+                      : 'text-tertiary'
+                    }`}>
+                      <AlertTriangle size={14} />
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/projects/${projectId}/articles/${a.article_id}/edit`)}
-                      className="flex h-6 w-6 items-center justify-center rounded-[8px] text-tertiary opacity-0 transition-opacity hover:text-primary group-hover:opacity-100"
-                    >
-                      <ExternalLink size={12} />
-                    </button>
+                    <div className="min-w-0">
+                      <p className="truncate text-[14px] font-medium text-primary">{item.title}</p>
+                      <p className="mt-0.5 text-[12px] text-secondary">
+                        {item.reason}
+                        {item.seo_score !== null && (
+                          <span className="ml-2 inline-flex items-center gap-1">
+                            <span
+                              className="inline-block h-2 w-2 rounded-full"
+                              style={{ backgroundColor: scoreColor(item.seo_score) }}
+                            />
+                            SEO {item.seo_score}
+                          </span>
+                        )}
+                        {item.views > 0 && (
+                          <span className="ml-2">· {formatMetric(item.views)} vues</span>
+                        )}
+                      </p>
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/projects/${projectId}/articles/${item.article_id}/edit`)}
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] text-tertiary opacity-0 transition-all hover:text-primary group-hover:opacity-100"
+                    title="Éditer l'article"
+                  >
+                    <Eye size={13} />
+                  </button>
                 </div>
               ))}
             </div>
           </Card>
         )}
 
-        {/* Country + devices */}
+        {/* Section 4 — Top articles avec diagnostic */}
+        <Card>
+          <SectionTitle>Top articles</SectionTitle>
+          {topArticles.length === 0 ? (
+            <InlineEmpty>Aucun article suivi pour cette période.</InlineEmpty>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[700px]">
+                <thead>
+                  <tr className="border-b border-border text-[12px] font-medium uppercase tracking-wide text-tertiary">
+                    <th className="px-3 pb-2 text-left font-medium">Article</th>
+                    <th className="px-3 pb-2 text-right font-medium tabular-nums">Vues</th>
+                    <th className="px-3 pb-2 text-right font-medium">Variation</th>
+                    <th className="px-3 pb-2 text-right font-medium">Score SEO</th>
+                    <th className="px-3 pb-2 text-left font-medium">Signal</th>
+                    <th className="px-3 pb-2 text-center font-medium">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topArticles.map((a) => {
+                    const signal = articleSignal(a)
+                    return (
+                      <tr
+                        key={a.article_id}
+                        className="group border-b border-border/30 text-[14px] transition-colors hover:bg-surface-soft last:border-0"
+                      >
+                        <td className="py-2.5 px-3">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/projects/${projectId}/articles/${a.article_id}/edit`)}
+                            className="truncate text-left font-medium text-primary hover:text-accent max-w-[220px] block"
+                          >
+                            {a.title}
+                          </button>
+                        </td>
+                        <td className="py-2.5 px-3 text-right tabular-nums text-secondary">{formatMetric(a.views)}</td>
+                        <td className="py-2.5 px-3 text-right">
+                          {a.variation !== null ? (
+                            <span className={`inline-flex items-center gap-0.5 text-[12px] font-medium ${a.variation >= 0 ? 'text-success' : 'text-danger'}`}>
+                              {a.variation >= 0 ? '+' : ''}{a.variation}%
+                            </span>
+                          ) : <span className="text-tertiary">—</span>}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          {a.seo_score !== null ? (
+                            <span className="flex items-center justify-end gap-2">
+                              <span className="w-6 shrink-0 text-right text-[12px] font-semibold tabular-nums text-primary">{a.seo_score}</span>
+                              <span className="h-[6px] w-[60px] shrink-0 overflow-hidden rounded-full bg-surface-muted">
+                                <span
+                                  className="block h-full rounded-full transition-all"
+                                  style={{
+                                    width: `${Math.min(a.seo_score, 100)}%`,
+                                    backgroundColor: scoreColor(a.seo_score),
+                                  }}
+                                />
+                              </span>
+                            </span>
+                          ) : <span className="block text-right text-tertiary">—</span>}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className={`text-[12px] font-medium ${signal.color}`}>{signal.label}</span>
+                        </td>
+                        <td className="py-2.5 px-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/projects/${projectId}/articles/${a.article_id}/edit`)}
+                            className="flex h-6 w-6 items-center justify-center rounded-[6px] border border-border text-tertiary transition-colors hover:border-border/50 hover:text-primary mx-auto"
+                            title="Éditer l'article"
+                          >
+                            <Eye size={12} />
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+
+        {/* Section 5 — Origine du trafic compact */}
+        <Card>
+          <SectionTitle>Origine du trafic</SectionTitle>
+          {sourceChannels.length === 0 ? (
+            <InlineEmpty>Aucune donnée de provenance pour cette période.</InlineEmpty>
+          ) : (
+            <div className="space-y-3">
+              {sourceChannels.map((sc) => (
+                <div key={sc.channel} className="flex items-center gap-3">
+                  <span className="w-24 shrink-0 text-[13px] font-medium text-primary">{sc.channel}</span>
+                  <div className="flex-1 h-2 rounded-full bg-surface-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[#0066ff] transition-all"
+                      style={{ width: `${Math.min(sc.share, 100)}%` }}
+                    />
+                  </div>
+                  <span className="w-20 text-right text-[12px] tabular-nums text-secondary">{formatMetric(sc.views)}</span>
+                  <span className="w-10 text-right text-[12px] tabular-nums text-tertiary">{sc.share}%</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        {/* Section 6 — Pays + Appareils */}
         <div className="grid gap-4 sm:grid-cols-2">
           <Card>
             <SectionTitle>Pays</SectionTitle>
