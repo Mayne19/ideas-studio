@@ -198,6 +198,29 @@ export default function AnalyticsPage() {
     [articleMetrics],
   )
 
+  const deviceMonthlyData = useMemo(() => {
+    const trend = summary?.trend_by_day ?? []
+    const devices = summary?.devices ?? []
+    if (!trend.length || !devices.length) return []
+    const totalViews = Math.max(1, devices.reduce((sum, d) => sum + d.views, 0))
+    const shares = devices.map((d) => ({ key: d.device.toLowerCase(), share: d.views / totalViews }))
+    const byMonth = new Map<string, number>()
+    for (const point of trend) {
+      const month = point.date.slice(0, 7)
+      byMonth.set(month, (byMonth.get(month) ?? 0) + point.views)
+    }
+    return [...byMonth.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, total]) => {
+        const label = new Date(`${month}-01`).toLocaleDateString('fr-FR', { month: 'short' })
+        const entry: Record<string, string | number> = { month: label }
+        for (const { key, share } of shares) {
+          entry[key] = Math.round(total * share)
+        }
+        return entry
+      })
+  }, [summary])
+
   function handleExportJson() {
     downloadJson(`ideas-studio-analytics-${period.startDate}-${period.endDate}.json`, {
       project_id: projectId,
@@ -483,22 +506,29 @@ export default function AnalyticsPage() {
           </Card>
           <Card>
             <SectionTitle>Appareils</SectionTitle>
-            {summary.devices.length ? (
+            {deviceMonthlyData.length ? (
               <div className="h-[220px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={summary.devices.map((d) => ({ name: getDeviceLabel(d.device), views: d.views, fill: deviceColor(d.device) }))}
-                    margin={{ top: 4, right: 8, bottom: 4, left: 0 }}
-                  >
+                  <BarChart data={deviceMonthlyData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
                     <CartesianGrid vertical={false} stroke="rgba(0,0,0,0.06)" />
-                    <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 11, fill: '#86868b' }} />
+                    <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 11, fill: '#86868b' }} />
                     <YAxis tickLine={false} axisLine={false} width={36} allowDecimals={false} tick={{ fontSize: 11, fill: '#86868b' }} tickFormatter={formatAxisTick} />
-                    <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v) => [formatMetric(Number(v)), 'Vues']} />
-                    <Bar dataKey="views" radius={[6, 6, 0, 0]} barSize={40}>
-                      {summary.devices.map((d) => (
-                        <Cell key={d.device} fill={deviceColor(d.device)} />
-                      ))}
-                    </Bar>
+                    <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} />
+                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                    {summary.devices.map((d, i) => (
+                      <Bar
+                        key={d.device}
+                        dataKey={d.device.toLowerCase()}
+                        name={getDeviceLabel(d.device)}
+                        stackId="a"
+                        fill={deviceColor(d.device)}
+                        radius={
+                          i === summary.devices.length - 1 ? [4, 4, 0, 0]
+                          : i === 0 ? [0, 0, 4, 4]
+                          : [0, 0, 0, 0]
+                        }
+                      />
+                    ))}
                   </BarChart>
                 </ResponsiveContainer>
               </div>
