@@ -513,7 +513,7 @@ export default function AnalyticsPage() {
                     <CartesianGrid vertical={false} stroke="rgba(0,0,0,0.06)" />
                     <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 11, fill: '#86868b' }} />
                     <YAxis tickLine={false} axisLine={false} width={36} allowDecimals={false} tick={{ fontSize: 11, fill: '#86868b' }} tickFormatter={formatAxisTick} />
-                    <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} />
+                    <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v, name) => [formatMetric(Number(v)), name]} />
                     <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
                     {summary.devices.map((d, i) => (
                       <Bar
