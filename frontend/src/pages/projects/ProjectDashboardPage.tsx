@@ -617,7 +617,7 @@ export default function ProjectDashboardPage() {
           <span className="truncate">{project?.domain ?? '—'}</span>
         </div>
         {/* Statut connecté */}
-        <div className="flex h-full min-w-0 items-center border-r border-border px-6">
+        <div className="flex h-full min-w-0 items-center justify-center border-r border-border px-6">
           <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[14px] font-semibold text-white">
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-accent">
               <ArrowUp size={11} />
