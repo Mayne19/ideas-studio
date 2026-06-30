@@ -692,7 +692,7 @@ export default function ProjectDashboardPage() {
           </div>
           <div className="grid h-10 grid-cols-[minmax(0,1fr)_120px_56px_110px_96px] items-center gap-6 border-b border-border px-5 text-[11px] font-medium text-tertiary">
             <span>Article</span>
-            <span>Score SEO</span>
+            <span>Score Global</span>
             <span>Vues</span>
             <span>Statut</span>
             <span>Catégorie</span>
@@ -700,7 +700,7 @@ export default function ProjectDashboardPage() {
           <div className="flex flex-col divide-y divide-border">
             {(data?.recentArticles ?? []).map((article) => {
               const category = data?.categories.find((item) => item.id === article.category_id)
-              const score = scoreOnHundred(article.seo_score)
+              const score = scoreOnHundred(article.global_score)
               const scoreColor = (score ?? 0) >= 75 ? '#00c950' : (score ?? 0) >= 50 ? '#ffa51f' : '#ff3b1f'
               return (
                 <button
