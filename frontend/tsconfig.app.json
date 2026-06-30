@@ -23,7 +23,8 @@
 
     /* Path aliases */
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@vercel/geistcn/components": ["./src/lib/vercel-geistcn/components.ts"]
     }
   },
   "include": ["src"]

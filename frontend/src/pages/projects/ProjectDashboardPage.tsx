@@ -21,7 +21,7 @@ import type { AIProviderPublic } from '@/api/aiProviders'
 import { Card } from '@/components/ui/Card'
 import StatusBadge from '@/components/ui/StatusBadge'
 import LoadingState from '@/components/ui/LoadingState'
-import { Gauge } from '@/components/ui/Gauge'
+import { Gauge } from '@vercel/geistcn/components'
 import { formatDate } from '@/utils/format'
 import { getGeoScore } from '@/lib/scoreBadge'
 
