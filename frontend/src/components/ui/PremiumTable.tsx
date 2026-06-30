@@ -67,7 +67,7 @@ export default function PremiumTable({
   }
 
   return (
-    <div className={cn('flex flex-col overflow-hidden rounded-[8px] bg-surface shadow-none', className)}>
+    <div className={cn('flex flex-col overflow-hidden rounded-[8px] border-2 border-border bg-transparent shadow-none', className)}>
       <div className={cn('hidden gap-2.5 border-b border-border/40 px-4 py-3 text-[12px] font-medium text-secondary lg:grid')}
         style={{ gridTemplateColumns: columns.map((col) => col.className ?? '1fr').join(' ') }}
       >

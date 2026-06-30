@@ -5,7 +5,7 @@ export function TableRoot({ className, ...props }: HTMLAttributes<HTMLDivElement
   return (
     <div
       className={cn(
-        'w-full overflow-x-auto rounded-[12px] bg-surface',
+        'w-full overflow-x-auto rounded-[12px] border-2 border-border bg-transparent',
         className,
       )}
       {...props}

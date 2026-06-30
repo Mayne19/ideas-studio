@@ -17,7 +17,7 @@ export function Skeleton({ className }: SkeletonProps) {
 
 export function SkeletonCard() {
   return (
-    <div className="rounded-[8px] border border-border bg-surface p-5 shadow-none">
+    <div className="rounded-[8px] border-2 border-border bg-transparent p-5 shadow-none">
       <div className="flex flex-col gap-3">
         <Skeleton className="h-4 w-2/3" />
         <Skeleton className="h-3 w-1/2" />

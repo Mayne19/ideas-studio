@@ -37,7 +37,7 @@ export default function MetricCard({
   return (
     <div
       className={cn(
-        'rounded-[8px] border border-border bg-surface p-4 flex flex-col justify-between gap-2 shadow-none',
+        'rounded-[8px] border-2 border-border bg-transparent p-4 flex flex-col justify-between gap-2 shadow-none',
         onClick && 'cursor-pointer transition-colors hover:bg-surface-soft',
         className,
       )}
