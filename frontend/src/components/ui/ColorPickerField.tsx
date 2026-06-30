@@ -19,7 +19,7 @@ export default function ColorPickerField({
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
         <label className="text-[13px] font-medium text-primary">{label}</label>
-        <div className="flex items-center gap-2 rounded-[10px] border border-border bg-[#f9f9fb] px-2 py-1">
+        <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface-soft px-2 py-1">
           <span
             className="h-4 w-4 rounded-full border border-black/10"
             style={{ backgroundColor: selected }}

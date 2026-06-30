@@ -44,7 +44,7 @@ function ArticleRow({
   const category = categories.find((c) => c.id === article.category_id)
 
   return (
-    <div className={`grid gap-2.5 rounded-[12px] bg-surface px-3 py-3 transition-colors hover:bg-[#f5f5f7] lg:items-center ${TABLE_GRID}`}>
+    <div className={`grid gap-2.5 rounded-[12px] bg-surface px-3 py-3 transition-colors hover:bg-surface-soft lg:items-center ${TABLE_GRID}`}>
       <div className="min-w-0">
         <button
           type="button"

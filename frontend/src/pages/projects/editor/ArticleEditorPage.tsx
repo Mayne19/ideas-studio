@@ -1335,7 +1335,7 @@ export default function ArticleEditorPage() {
                 {faqOpen && (
                   <div className="mt-3 flex flex-col gap-3">
                     {faqItems.map((item, i) => (
-                      <div key={i} className="rounded-[10px] border border-border bg-[#f9f9fb] p-3 flex flex-col gap-2">
+                      <div key={i} className="rounded-[10px] border border-border bg-surface-soft p-3 flex flex-col gap-2">
                         <div className="flex items-start gap-2">
                           <input
                             type="text"
@@ -1480,7 +1480,7 @@ export default function ArticleEditorPage() {
                         </button>
                       )}
                       {publishMode === 'schedule' && (
-                        <div className="flex flex-col gap-2 rounded-[10px] bg-[#f9f9fb] border border-border p-3">
+                        <div className="flex flex-col gap-2 rounded-[10px] bg-surface-soft border border-border p-3">
                           <Field label="Date">
                             <input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} className={INPUT} />
                           </Field>
@@ -1852,7 +1852,7 @@ export default function ArticleEditorPage() {
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handleSendInlineComment() }
             }}
             placeholder="Votre commentaire…"
-            className="w-full rounded-[8px] border border-border bg-[#f9f9fb] px-2.5 py-1.5 text-[12px] text-primary placeholder:text-tertiary resize-none focus:outline-none focus:ring-1 focus:ring-accent/50 focus:border-accent/60 transition-colors"
+            className="w-full rounded-[8px] border border-border bg-surface-soft px-2.5 py-1.5 text-[12px] text-primary placeholder:text-tertiary resize-none focus:outline-none focus:ring-1 focus:ring-accent/50 focus:border-accent/60 transition-colors"
           />
           <div className="flex gap-1.5">
             <button

@@ -415,7 +415,7 @@ export default function CategoriesPage() {
         </div>
 
         {/* Sync from site */}
-        <div className="mb-5 flex items-start gap-3 rounded-[14px] border border-border bg-[#f9f9fb] px-4 py-3">
+        <div className="mb-5 flex items-start gap-3 rounded-[14px] border border-border bg-surface-soft px-4 py-3">
           <Info size={15} className="mt-0.5 shrink-0 text-tertiary" />
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-medium text-primary">Synchronisation depuis votre site</p>
@@ -552,7 +552,7 @@ export default function CategoriesPage() {
             placeholder="Articles sur les techniques SEO..."
             rows={2}
           />
-          <div className="rounded-[16px] bg-[#f9f9fb] p-3">
+          <div className="rounded-[16px] bg-surface-soft p-3">
             <div className="mb-2 flex items-center gap-2 text-[12px] font-medium uppercase tracking-[0.04em] text-tertiary">
               <Palette size={13} />
               Apparence
@@ -591,7 +591,7 @@ export default function CategoriesPage() {
             placeholder="Éduquer sur les bonnes pratiques, générer des leads..."
             rows={2}
           />
-          <div className="flex items-center justify-between rounded-[12px] bg-[#f9f9fb] px-3.5 py-3">
+          <div className="flex items-center justify-between rounded-[12px] bg-surface-soft px-3.5 py-3">
             <div>
               <p className="text-[13px] font-medium text-primary">Inclure dans le pipeline</p>
               <p className="mt-0.5 text-[12px] text-secondary">Génération automatique d'idées activée.</p>

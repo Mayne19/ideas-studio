@@ -67,8 +67,8 @@ export default function PremiumTable({
   }
 
   return (
-    <div className={cn('flex flex-col overflow-hidden rounded-[8px] border border-border bg-surface shadow-none', className)}>
-      <div className={cn('hidden gap-2.5 border-b border-border px-4 py-3 text-[12px] font-medium text-secondary lg:grid')}
+    <div className={cn('flex flex-col overflow-hidden rounded-[8px] bg-surface shadow-none', className)}>
+      <div className={cn('hidden gap-2.5 border-b border-border/40 px-4 py-3 text-[12px] font-medium text-secondary lg:grid')}
         style={{ gridTemplateColumns: columns.map((col) => col.className ?? '1fr').join(' ') }}
       >
         {columns.map((col) => (
@@ -77,7 +77,7 @@ export default function PremiumTable({
           </div>
         ))}
       </div>
-      <div className="flex flex-col divide-y divide-border-soft">
+      <div className="flex flex-col divide-y divide-border/20">
         {data.map((item, i) => renderRow(item, i))}
       </div>
     </div>

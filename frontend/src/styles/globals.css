@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
 @theme {
-  /* Colors — Vercel Geist neutral light theme */
-  --color-bg: #FAFAFA;
-  --color-app: #FAFAFA;
+  /* Colors — Warm & clean */
+  --color-bg: #F8F6F3;
+  --color-app: #F8F6F3;
   --color-surface: #FFFFFF;
-  --color-surface-soft: #F7F7F7;
-  --color-surface-muted: #EBEBEB;
+  --color-surface-soft: #F3F3F3;
+  --color-surface-muted: #E8E8E8;
   --color-primary: #171717;
   --color-secondary: #4D4D4D;
   --color-tertiary: #7D7D7D;
-  --color-border: rgba(0, 0, 0, 0.075);
-  --color-border-soft: rgba(0, 0, 0, 0.065);
-  --color-border-strong: rgba(0, 0, 0, 0.14);
+  --color-border: rgba(0, 0, 0, 0.06);
+  --color-border-soft: rgba(0, 0, 0, 0.04);
+  --color-border-strong: rgba(0, 0, 0, 0.12);
   --color-accent: #0072F5;
   --color-accent-dark: #0062D1;
   --color-brand: #171717;
@@ -34,17 +34,9 @@
   --shadow-card: none;
   --shadow-float: none;
 
-  /* Typography */
-  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Display",
-    "SF Pro Text", Inter, "Segoe UI", sans-serif;
-}
-
-@font-face {
-  font-family: "Geist";
-  src: url("https://vercel.com/vc-ap-b3331f/_next/static/immutable/media/Geist_Variable-s.p.2v-cf9syxr5ni.woff2") format("woff2");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
+  /* Typography — Inter */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display",
+    "SF Pro Text", "Segoe UI", sans-serif;
 }
 
 * {
@@ -60,8 +52,8 @@ body,
 }
 
 body {
-  font-family: "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Display",
-    "SF Pro Text", Inter, "Segoe UI", sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display",
+    "SF Pro Text", "Segoe UI", sans-serif;
   background-color: var(--color-bg);
   color: var(--color-primary);
   -webkit-font-smoothing: antialiased;

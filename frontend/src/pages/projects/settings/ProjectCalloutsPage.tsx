@@ -176,13 +176,13 @@ export default function ProjectCalloutsPage() {
         }
       >
         {callouts.length === 0 ? (
-          <div className="rounded-[14px] bg-[#f9f9fb] px-4 py-5 text-[13px] text-secondary">
+          <div className="rounded-[14px] bg-surface-soft px-4 py-5 text-[13px] text-secondary">
             Aucun callout configuré pour ce projet. Importez-les depuis le site connecté ou créez un template manuel.
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {callouts.map((callout) => (
-              <div key={callout.id} className="rounded-[16px] border border-border bg-[#f9f9fb] p-4">
+              <div key={callout.id} className="rounded-[16px] border border-border bg-surface-soft p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-[14px] font-semibold text-primary">{callout.label}</p>

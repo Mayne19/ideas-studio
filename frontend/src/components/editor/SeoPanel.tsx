@@ -138,7 +138,7 @@ function ScoreSummary({
           </button>
         ))}
       </div>
-      <div className="mt-3 rounded-[10px] bg-[#f9f9fb] px-3 py-2 text-[11px] leading-snug text-secondary">
+      <div className="mt-3 rounded-[10px] bg-surface-soft px-3 py-2 text-[11px] leading-snug text-secondary">
         <span className="font-semibold text-primary">{current.label}</span> : {current.detail}
       </div>
     </div>
@@ -397,11 +397,11 @@ export default function SeoPanel({
             )}
 
             <div className="grid grid-cols-2 gap-3 text-[11px]">
-              <div className="rounded-[10px] border border-border bg-[#fafafc] p-2.5">
+              <div className="rounded-[10px] border border-border bg-surface-soft p-2.5">
                 <p className="font-medium text-secondary">Checks valides</p>
                 <p className="mt-1 text-primary">{expertReview.passed_checks.length}</p>
               </div>
-              <div className="rounded-[10px] border border-border bg-[#fafafc] p-2.5">
+              <div className="rounded-[10px] border border-border bg-surface-soft p-2.5">
                 <p className="font-medium text-secondary">Checks en echec</p>
                 <p className="mt-1 text-primary">{expertReview.failed_checks.length}</p>
               </div>

@@ -47,7 +47,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 function InlineEmpty({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-[12px] bg-[#f9f9fb] px-3 py-3 text-[13px] text-secondary">{children}</p>
+  return <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">{children}</p>
 }
 
 function ChartEmpty({ message }: { message: string }) {
@@ -75,7 +75,7 @@ function VisualRow({
 }) {
   const pct = percentOf(value, total)
   return (
-    <div className="flex items-center gap-2.5 rounded-[10px] px-2 py-1 hover:bg-[#f9f9fb]">
+    <div className="flex items-center gap-2.5 rounded-[10px] px-2 py-1 hover:bg-surface-soft">
       {rank !== undefined && <span className="w-4 shrink-0 text-[11px] font-medium text-tertiary">{rank}</span>}
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-surface-soft text-secondary">{leading}</span>
       <div className="min-w-0 flex-1">
@@ -296,7 +296,7 @@ export default function AnalyticsPage() {
                   {topArticles.map((a) => (
                     <tr
                       key={a.article_id}
-                      className="group border-b border-[#f0f0f0] text-[13px] transition-colors hover:bg-[#fafafa] last:border-0"
+                      className="group border-b border-border/30 text-[13px] transition-colors hover:bg-surface-soft last:border-0"
                     >
                       <td className="py-2.5 px-3">
                         <button
@@ -383,7 +383,7 @@ export default function AnalyticsPage() {
               {toOptimize.map((a) => (
                 <div
                   key={a.article_id}
-                  className="group flex items-center justify-between gap-3 border-b border-[#f0f0f0] px-2 py-2.5 transition-colors hover:bg-[#fafafa] last:border-0"
+                  className="group flex items-center justify-between gap-3 border-b border-border/30 px-2 py-2.5 transition-colors hover:bg-surface-soft last:border-0"
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <AlertTriangle size={14} className="shrink-0 text-warning" />

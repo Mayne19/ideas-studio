@@ -27,13 +27,13 @@ export default function GeoPanel({ article }: { article: EditorArticle }) {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-[8px] border border-border bg-[#f9f9fb] px-2.5 py-2">
+        <div className="rounded-[8px] border border-border bg-surface-soft px-2.5 py-2">
           <div className="text-[10px] text-tertiary">Score GEO</div>
           <div className={`text-[13px] font-medium ${statusColor}`}>
             {score != null ? `${score}/100` : '—'}
           </div>
         </div>
-        <div className="rounded-[8px] border border-border bg-[#f9f9fb] px-2.5 py-2">
+        <div className="rounded-[8px] border border-border bg-surface-soft px-2.5 py-2">
           <div className="text-[10px] text-tertiary">Statut</div>
           <div className={`text-[13px] font-medium ${statusColor}`}>{statusLabel}</div>
         </div>

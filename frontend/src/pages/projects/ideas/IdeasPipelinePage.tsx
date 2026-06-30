@@ -345,7 +345,7 @@ export default function IdeasPipelinePage() {
         </div>
 
         {/* Info banner */}
-        <div className="mb-4 flex items-start gap-2.5 rounded-[12px] border border-border bg-[#f9f9fb] px-4 py-3 shrink-0">
+        <div className="mb-4 flex items-start gap-2.5 rounded-[12px] border border-border bg-surface-soft px-4 py-3 shrink-0">
           <Info size={14} className="mt-0.5 shrink-0 text-tertiary" />
           <p className="text-[13px] text-secondary leading-snug">
             Les idées sont générées par les agents IA de planification. Validez une idée pour l'envoyer en{' '}
@@ -500,7 +500,7 @@ export default function IdeasPipelinePage() {
                   return (
                     <tr
                       key={article.id}
-                      className={`border-b border-border/50 hover:bg-[#f9f9fb] transition-colors ${isRejected ? 'opacity-60' : ''}`}
+                      className={`border-b border-border/30 hover:bg-surface-soft transition-colors ${isRejected ? 'opacity-60' : ''}`}
                     >
                       <td className="px-2 py-2.5">
                         <input
@@ -893,7 +893,7 @@ export default function IdeasPipelinePage() {
               </div>
               <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
                 {autoResult.ideas.map((idea) => (
-                  <div key={idea.id} className="rounded-[10px] border border-border bg-[#f9f9fb] p-3">
+                  <div key={idea.id} className="rounded-[10px] border border-border bg-surface-soft p-3">
                     <p className="text-[13px] font-medium text-primary">{idea.title}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
                       {idea.keyword && <span className="rounded-full bg-accent/8 px-2 py-0.5 text-[10px] text-accent">{idea.keyword}</span>}
@@ -915,7 +915,7 @@ export default function IdeasPipelinePage() {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              <div className="flex items-start gap-3 rounded-[12px] border border-border bg-[#f9f9fb] px-3.5 py-3">
+              <div className="flex items-start gap-3 rounded-[12px] border border-border bg-surface-soft px-3.5 py-3">
                 <Sparkles size={15} className="mt-0.5 shrink-0 text-accent" />
                 <div>
                   <p className="text-[13px] font-medium text-primary">Génération automatique</p>

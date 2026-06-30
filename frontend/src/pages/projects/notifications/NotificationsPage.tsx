@@ -117,7 +117,7 @@ export default function NotificationsPage() {
                 key={n.id}
                 onClick={() => { if (n.link) navigate(n.link); if (!n.read_at) handleRead(n.id) }}
                 className={`flex items-start gap-3 rounded-[14px] border px-4 py-3 transition-colors ${
-                  n.link ? 'cursor-pointer hover:bg-[#f7f7f9]' : ''
+                  n.link ? 'cursor-pointer hover:bg-surface-soft' : ''
                 } ${
                   isUnread
                     ? 'border-border bg-surface'

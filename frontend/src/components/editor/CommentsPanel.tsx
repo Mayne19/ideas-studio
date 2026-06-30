@@ -53,7 +53,7 @@ function CommentItem({
         selected
           ? 'border-accent bg-accent/6'
           : comment.resolved
-            ? 'border-border bg-[#f9f9fb] opacity-65'
+            ? 'border-border bg-surface-soft opacity-65'
             : 'border-border bg-surface'
       } ${onSelect ? 'cursor-pointer hover:border-accent/50' : ''}`}
     >
@@ -161,7 +161,7 @@ export default function CommentsPanel({
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="rounded-[8px] bg-[#f9f9fb] px-2.5 py-2 text-[11px] leading-snug text-secondary">
+      <p className="rounded-[8px] bg-surface-soft px-2.5 py-2 text-[11px] leading-snug text-secondary">
         Pour ajouter un commentaire, passez en mode Commentaire et selectionnez un passage dans l'article.
       </p>
 

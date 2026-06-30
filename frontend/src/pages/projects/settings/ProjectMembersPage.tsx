@@ -117,7 +117,7 @@ function MemberRow({
   const isOwnerMember = member.role === 'owner'
 
   return (
-    <div className="flex items-center gap-3 rounded-[14px] bg-[#f9f9fb] px-4 py-3">
+    <div className="flex items-center gap-3 rounded-[14px] bg-surface-soft px-4 py-3">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent text-[12px] font-semibold">
         {displayName.charAt(0).toUpperCase()}
       </div>
@@ -361,7 +361,7 @@ export default function ProjectMembersPage() {
               return (
                 <div
                   key={invitation.id}
-                  className="flex items-center gap-3 rounded-[14px] bg-[#f9f9fb] px-4 py-3"
+                  className="flex items-center gap-3 rounded-[14px] bg-surface-soft px-4 py-3"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-medium text-primary truncate">
@@ -430,7 +430,7 @@ export default function ProjectMembersPage() {
             const RoleIcon = item.icon
 
             return (
-              <div key={item.role} className="flex flex-col rounded-[14px] bg-[#f9f9fb] px-3 py-2.5">
+              <div key={item.role} className="flex flex-col rounded-[14px] bg-surface-soft px-3 py-2.5">
                 <div className="flex items-center gap-1.5">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[8px] bg-white text-tertiary">
                     <RoleIcon size={13} />
@@ -463,7 +463,7 @@ export default function ProjectMembersPage() {
           </div>
         )}
         {activityStatus === 'error' && (
-          <div className="flex items-start gap-3 rounded-[16px] bg-[#f9f9fb] px-4 py-4">
+          <div className="flex items-start gap-3 rounded-[16px] bg-surface-soft px-4 py-4">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-surface-soft text-tertiary">
               <Activity size={16} />
             </span>
@@ -476,7 +476,7 @@ export default function ProjectMembersPage() {
           </div>
         )}
         {activityStatus === 'success' && activityLogs.length === 0 && (
-          <div className="flex items-start gap-3 rounded-[16px] bg-[#f9f9fb] px-4 py-4">
+          <div className="flex items-start gap-3 rounded-[16px] bg-surface-soft px-4 py-4">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-surface-soft text-tertiary">
               <Activity size={16} />
             </span>
@@ -491,7 +491,7 @@ export default function ProjectMembersPage() {
         {activityStatus === 'success' && activityLogs.length > 0 && (
           <div className="flex flex-col gap-1.5">
             {activityLogs.map((log) => (
-              <div key={log.id} className="flex items-start gap-3 rounded-[10px] bg-[#f9f9fb] px-3 py-2.5">
+              <div key={log.id} className="flex items-start gap-3 rounded-[10px] bg-surface-soft px-3 py-2.5">
                 <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent text-[9px] font-bold">
                   {(log.user_name || '?').charAt(0).toUpperCase()}
                 </div>
@@ -530,7 +530,7 @@ export default function ProjectMembersPage() {
               className={`flex-1 px-3 py-2 text-[12px] font-medium transition-colors ${
                 addType === 'username'
                   ? 'bg-accent text-white'
-                  : 'bg-[#f5f5f7] text-tertiary hover:text-secondary'
+                  : 'bg-surface-soft text-tertiary hover:text-secondary'
               }`}
             >
               <AtSign size={13} className="inline mr-1" />
@@ -542,7 +542,7 @@ export default function ProjectMembersPage() {
               className={`flex-1 px-3 py-2 text-[12px] font-medium transition-colors ${
                 addType === 'email'
                   ? 'bg-accent text-white'
-                  : 'bg-[#f5f5f7] text-tertiary hover:text-secondary'
+                  : 'bg-surface-soft text-tertiary hover:text-secondary'
               }`}
             >
               <Mail size={13} className="inline mr-1" />

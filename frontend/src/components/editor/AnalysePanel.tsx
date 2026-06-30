@@ -363,7 +363,7 @@ function ScoreDetailPanel({
       </div>
 
       <div className="flex flex-col gap-3">
-        <div className="rounded-[10px] bg-[#f9f9fb] px-3 py-2">
+        <div className="rounded-[10px] bg-surface-soft px-3 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-secondary mb-1">Comment ce score est calculé</p>
           <p className="text-[11px] leading-snug text-secondary">{CALCULATION_TEXT[selected]}</p>
         </div>
@@ -430,7 +430,7 @@ function ScoreDetailPanel({
         )}
 
         {!hasProblems && !hasActions && whatWorks.length === 0 && (
-          <div className="flex items-center gap-2 rounded-[10px] bg-[#f9f9fb] px-3 py-2.5 text-[11px] text-tertiary">
+          <div className="flex items-center gap-2 rounded-[10px] bg-surface-soft px-3 py-2.5 text-[11px] text-tertiary">
             <HelpCircle size={12} className="shrink-0" />
             <span>Lancez une analyse pour obtenir les détails de ce score.</span>
           </div>
@@ -511,7 +511,7 @@ function ExpertReviewSection({
                   ['EEAT Expert', expertReview.eeat_score],
                   ['Lisibilité Expert', expertReview.readability_score],
                 ] as const).map(([label, val]) => (
-                  <div key={label} className="rounded-[10px] border border-border bg-[#fafafc] p-2.5">
+                  <div key={label} className="rounded-[10px] border border-border bg-surface-soft p-2.5">
                     <p className="text-[10px] text-tertiary">{label}</p>
                     <p className={`mt-0.5 text-[14px] font-bold ${scoreTone(val)}`}>{Math.round(val)}</p>
                   </div>
@@ -547,11 +547,11 @@ function ExpertReviewSection({
               )}
 
               <div className="grid grid-cols-2 gap-2 text-[11px]">
-                <div className="rounded-[10px] border border-border bg-[#fafafc] p-2.5">
+                <div className="rounded-[10px] border border-border bg-surface-soft p-2.5">
                   <p className="text-[10px] text-tertiary">Contrôles validés</p>
                   <p className="mt-0.5 text-[14px] font-bold text-success">{expertReview.passed_checks.length}</p>
                 </div>
-                <div className="rounded-[10px] border border-border bg-[#fafafc] p-2.5">
+                <div className="rounded-[10px] border border-border bg-surface-soft p-2.5">
                   <p className="text-[10px] text-tertiary">Contrôles en échec</p>
                   <p className="mt-0.5 text-[14px] font-bold text-danger">{expertReview.failed_checks.length}</p>
                 </div>

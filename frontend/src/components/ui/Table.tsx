@@ -5,7 +5,7 @@ export function TableRoot({ className, ...props }: HTMLAttributes<HTMLDivElement
   return (
     <div
       className={cn(
-        'w-full overflow-x-auto rounded-[12px] border border-border bg-surface',
+        'w-full overflow-x-auto rounded-[12px] bg-surface',
         className,
       )}
       {...props}
@@ -25,7 +25,7 @@ export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>)
 export function TableHeader({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
   return (
     <thead
-      className={cn('border-b border-border bg-surface-soft', className)}
+      className={cn('border-b border-border/40', className)}
       {...props}
     />
   )
@@ -38,7 +38,7 @@ export function TableBody({
 }: HTMLAttributes<HTMLTableSectionElement> & { bordered?: boolean }) {
   return (
     <tbody
-      className={cn(bordered && 'divide-y divide-border', className)}
+      className={cn(bordered && 'divide-y divide-border/30', className)}
       {...props}
     />
   )

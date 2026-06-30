@@ -375,7 +375,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
               return (
                 <div
                   key={article.id}
-                  className="group grid grid-cols-[20px_56px_minmax(0,1fr)_140px_140px_100px_80px_130px] items-center gap-3 border-b border-[#f0f0f0] px-3 py-2.5 transition-colors hover:bg-[#fafafa]"
+                  className="group grid grid-cols-[20px_56px_minmax(0,1fr)_140px_140px_100px_80px_130px] items-center gap-3 border-b border-border/30 px-3 py-2.5 transition-colors hover:bg-surface-soft"
                 >
                   <input type="checkbox" checked={selectedIds.has(article.id)} onChange={(e) => toggle(article.id, e.target.checked)} />
                   <ScoreBadge label="Score" value={score} valid={article.global_score_valid} />
@@ -537,7 +537,7 @@ function WritingTab({ projectId }: { projectId: string }) {
         {articles.map((article) => (
           <div
             key={article.id}
-            className="group grid grid-cols-[minmax(0,1fr)_180px_140px_120px_40px] items-center gap-3 border-b border-[#f0f0f0] px-3 py-3 transition-colors hover:bg-[#fafafa]"
+            className="group grid grid-cols-[minmax(0,1fr)_180px_140px_120px_40px] items-center gap-3 border-b border-border/30 px-3 py-3 transition-colors hover:bg-surface-soft"
           >
             <p className="truncate text-[13px] font-medium text-primary">{article.title || '(sans titre)'}</p>
             <span className="truncate text-[12px] text-secondary">{article.category_id || '—'}</span>
@@ -709,7 +709,7 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
               return (
                 <div
                   key={article.id}
-                  className="group grid grid-cols-[minmax(0,1fr)_90px_120px_160px] items-center gap-3 border-b border-[#f0f0f0] px-3 py-3 transition-colors hover:bg-[#fafafa]"
+                  className="group grid grid-cols-[minmax(0,1fr)_90px_120px_160px] items-center gap-3 border-b border-border/30 px-3 py-3 transition-colors hover:bg-surface-soft"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-[13px] font-medium text-primary">{article.title || '(sans titre)'}</p>

@@ -224,7 +224,7 @@ export default function AccountPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
               <label className="text-[12px] font-medium text-secondary">Email</label>
-              <div className="flex items-center gap-2 rounded-[10px] border border-border bg-[#f5f5f7] px-3 py-2">
+              <div className="flex items-center gap-2 rounded-[10px] border border-border bg-surface-soft px-3 py-2">
                 <Mail size={14} className="text-tertiary shrink-0" />
                 <span className="text-[13px] text-tertiary">{user?.email ?? '—'}</span>
               </div>
@@ -275,7 +275,7 @@ export default function AccountPage() {
             {/* Profile preview */}
             <div className="flex flex-col gap-1">
               <label className="text-[12px] font-medium text-secondary">Aperçu du profil</label>
-              <div className="flex items-center gap-3 rounded-[10px] border border-border bg-[#f9f9fb] px-3 py-2.5">
+              <div className="flex items-center gap-3 rounded-[10px] border border-border bg-surface-soft px-3 py-2.5">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent text-[11px] font-bold">
                   {initials}
                 </div>

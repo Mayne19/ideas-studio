@@ -726,10 +726,10 @@ export default function EditorToolbar({
               ) : (
                 <>
                   <div className="grid grid-cols-2 gap-2">
-                    <button type="button" onClick={() => currentEditor.chain().focus().addRowAfter().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-[#f5f5f7]">+ ligne</button>
-                    <button type="button" onClick={() => currentEditor.chain().focus().deleteRow().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-[#f5f5f7]">- ligne</button>
-                    <button type="button" onClick={() => currentEditor.chain().focus().addColumnAfter().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-[#f5f5f7]">+ colonne</button>
-                    <button type="button" onClick={() => currentEditor.chain().focus().deleteColumn().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-[#f5f5f7]">- colonne</button>
+                    <button type="button" onClick={() => currentEditor.chain().focus().addRowAfter().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-surface-soft">+ ligne</button>
+                    <button type="button" onClick={() => currentEditor.chain().focus().deleteRow().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-surface-soft">- ligne</button>
+                    <button type="button" onClick={() => currentEditor.chain().focus().addColumnAfter().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-surface-soft">+ colonne</button>
+                    <button type="button" onClick={() => currentEditor.chain().focus().deleteColumn().run()} className="rounded-[8px] border border-border px-2 py-1.5 text-[12px] text-secondary hover:bg-surface-soft">- colonne</button>
                   </div>
                   <button type="button" onClick={() => { currentEditor.chain().focus().deleteTable().run(); closePopover('table') }} className="mt-1 rounded-[8px] px-2 py-1.5 text-[12px] font-medium text-danger hover:bg-danger/5">
                     Supprimer le tableau
@@ -749,7 +749,7 @@ export default function EditorToolbar({
                     setCreateCalloutOpen((open) => !open)
                     setCalloutError('')
                   }}
-                  className="inline-flex items-center gap-1 rounded-[8px] border border-border px-2 py-1 text-[11px] font-medium text-secondary hover:bg-[#f5f5f7]"
+                  className="inline-flex items-center gap-1 rounded-[8px] border border-border px-2 py-1 text-[11px] font-medium text-secondary hover:bg-surface-soft"
                 >
                   <Plus size={12} />
                   Créer
@@ -757,7 +757,7 @@ export default function EditorToolbar({
               </div>
 
               {createCalloutOpen && (
-                <div className="rounded-[12px] border border-border bg-[#f9f9fb] p-3">
+                <div className="rounded-[12px] border border-border bg-surface-soft p-3">
                   <div className="flex flex-col gap-3">
                     <label className="flex flex-col gap-1 text-[11px] text-secondary">
                       Nom
@@ -820,7 +820,7 @@ export default function EditorToolbar({
                         className={`flex items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-[12px] transition-colors ${
                           selectedCalloutId === template.id
                             ? 'bg-accent/8 text-accent font-medium'
-                            : 'text-secondary hover:bg-[#f5f5f7]'
+                            : 'text-secondary hover:bg-surface-soft'
                         }`}
                       >
                         <span
@@ -885,7 +885,7 @@ export default function EditorToolbar({
                     type="button"
                     onClick={() => fileRef.current?.click()}
                     disabled={uploading}
-                    className="rounded-[9px] border border-border px-2.5 py-2 text-[12px] font-medium text-secondary hover:bg-[#f5f5f7] disabled:opacity-50"
+                    className="rounded-[9px] border border-border px-2.5 py-2 text-[12px] font-medium text-secondary hover:bg-surface-soft disabled:opacity-50"
                   >
                     {uploading ? 'Upload en cours...' : currentEditor.isActive('image') ? "Remplacer avec un fichier" : 'Choisir un fichier'}
                   </button>
@@ -939,7 +939,7 @@ export default function EditorToolbar({
                           key={item.id}
                           type="button"
                           onClick={() => insertImageFromMedia(item)}
-                          className="group relative aspect-square overflow-hidden rounded-[8px] border border-border bg-[#f5f5f7] hover:border-accent/60 transition-colors"
+                          className="group relative aspect-square overflow-hidden rounded-[8px] border border-border bg-surface-soft hover:border-accent/60 transition-colors"
                         >
                           <img
                             src={item.public_url ?? item.url}
@@ -964,7 +964,7 @@ export default function EditorToolbar({
                       type="button"
                       onClick={() => setImageWidth(String(preset))}
                       className={`rounded-[8px] px-2 py-1 text-[11px] font-medium ${
-                        Number(imageWidth) === preset ? 'bg-accent text-white' : 'border border-border text-secondary hover:bg-[#f5f5f7]'
+                        Number(imageWidth) === preset ? 'bg-accent text-white' : 'border border-border text-secondary hover:bg-surface-soft'
                       }`}
                     >
                       {preset}%

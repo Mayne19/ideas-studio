@@ -56,7 +56,7 @@ function InfoRow({
   mono?: boolean
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 rounded-[12px] bg-[#f9f9fb] px-4 py-3">
+    <div className="flex items-start justify-between gap-3 rounded-[12px] bg-surface-soft px-4 py-3">
       <div className="min-w-0 flex-1">
         <p className="text-[11px] font-medium uppercase tracking-wider text-tertiary">{label}</p>
         <p className={`mt-0.5 truncate text-[13px] text-primary ${mono ? 'font-mono' : ''}`}>{value}</p>
@@ -188,7 +188,7 @@ export default function ProjectIntegrationPage() {
         <div className="flex flex-col gap-3">
           <div
             className={`flex flex-wrap items-center justify-between gap-3 rounded-[14px] px-4 py-3 ${
-              isConnected ? 'bg-success/8' : 'bg-[#f9f9fb]'
+              isConnected ? 'bg-success/8' : 'bg-surface-soft'
             }`}
           >
             <div className="flex min-w-0 items-center gap-3">
@@ -338,7 +338,7 @@ export default function ProjectIntegrationPage() {
             {Object.entries(info.public_api_endpoints).map(([key, url]) => (
               <div
                 key={key}
-                className="flex items-start justify-between gap-3 rounded-[12px] bg-[#f9f9fb] px-4 py-3"
+                className="flex items-start justify-between gap-3 rounded-[12px] bg-surface-soft px-4 py-3"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-tertiary">
@@ -444,7 +444,7 @@ export default function ProjectIntegrationPage() {
       </FormCard>
 
       {/* Key notice */}
-      <div className="flex items-start gap-2.5 rounded-[16px] bg-[#f9f9fb] px-4 py-3">
+      <div className="flex items-start gap-2.5 rounded-[16px] bg-surface-soft px-4 py-3">
         <Key size={14} className="mt-0.5 shrink-0 text-tertiary" />
         <p className="text-[12px] text-secondary leading-relaxed">
           La clé API secrète n'est jamais renvoyée en clair au frontend. Utilisez uniquement les valeurs publiques pour le tracking et contactez un administrateur si une rotation de clé est nécessaire.

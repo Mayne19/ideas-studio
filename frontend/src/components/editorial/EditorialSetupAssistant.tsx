@@ -86,7 +86,7 @@ export default function EditorialSetupAssistant({ projectId, open, onClose, onAp
 
         {step === 'idle' && (
           <div className="flex flex-col gap-4">
-            <div className="rounded-[16px] bg-[#f9f9fb] p-5 flex flex-col items-center gap-3 text-center">
+            <div className="rounded-[16px] bg-surface-soft p-5 flex flex-col items-center gap-3 text-center">
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent">
                 <Wand2 size={22} />
               </span>
@@ -130,7 +130,7 @@ export default function EditorialSetupAssistant({ projectId, open, onClose, onAp
             )}
 
             {/* Sources */}
-            <details className="rounded-[12px] border border-border bg-[#f9f9fb] px-3 py-2.5">
+            <details className="rounded-[12px] border border-border bg-surface-soft px-3 py-2.5">
               <summary className="cursor-pointer text-[12px] font-medium text-secondary hover:text-primary">
                 Sources utilisées
               </summary>

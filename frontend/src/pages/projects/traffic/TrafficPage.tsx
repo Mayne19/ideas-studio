@@ -170,7 +170,7 @@ function ChartEmpty({ message }: { message: string }) {
 }
 
 function InlineEmpty({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-[12px] bg-[#f9f9fb] px-3 py-3 text-[13px] text-secondary">{children}</p>
+  return <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">{children}</p>
 }
 
 function VisualRow({
@@ -192,7 +192,7 @@ function VisualRow({
 }) {
   const pct = percentOf(value, total)
   return (
-    <div className="flex items-center gap-2.5 rounded-[10px] px-2 py-1 hover:bg-[#f9f9fb]">
+    <div className="flex items-center gap-2.5 rounded-[10px] px-2 py-1 hover:bg-surface-soft">
       {rank !== undefined && <span className="w-4 shrink-0 text-[11px] font-medium text-tertiary">{rank}</span>}
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-surface-soft text-secondary">{leading}</span>
       <div className="min-w-0 flex-1">
@@ -449,7 +449,7 @@ export default function TrafficPage() {
             </Card>
             <Card>
               <SectionTitle>Trafic organique / mots-clés</SectionTitle>
-              <p className="rounded-[12px] bg-[#f9f9fb] px-3 py-3 text-[13px] text-secondary">
+              <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">
                 Connectez Google Search Console depuis les <a href={`/projects/${projectId}/settings/integration`} className="text-accent hover:underline">paramètres du projet</a> pour voir les mots-clés organiques.
               </p>
             </Card>
@@ -485,7 +485,7 @@ export default function TrafficPage() {
                 />
               ))}
               {!sources.some((source) => source.channel === 'Referral' || source.channel === 'Social') && (
-                <p className="rounded-[12px] bg-[#f9f9fb] px-3 py-3 text-[13px] text-secondary">Aucun référent externe disponible sur cette période.</p>
+                <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[13px] text-secondary">Aucun référent externe disponible sur cette période.</p>
               )}
             </Card>
           </div>

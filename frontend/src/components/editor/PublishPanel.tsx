@@ -178,7 +178,7 @@ export default function PublishPanel({
         )}
 
         {scheduleOpen && (
-          <div className="rounded-[10px] border border-border bg-[#f9f9fb] p-3 flex flex-col gap-2">
+          <div className="rounded-[10px] border border-border bg-surface-soft p-3 flex flex-col gap-2">
             <label className="text-[11px] text-secondary">Date et heure de publication</label>
             <input
               type="datetime-local"

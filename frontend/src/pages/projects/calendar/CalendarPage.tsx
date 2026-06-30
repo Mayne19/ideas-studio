@@ -128,7 +128,7 @@ function PublicationHeatmapPanel({
         <select
           value={heatmapYear}
           onChange={(event) => onYearChange(Number(event.target.value))}
-          className="h-9 w-[92px] rounded-[10px] bg-[#f5f5f7] px-3 text-[12px] text-secondary outline-none transition-colors hover:bg-[#eeeeef] focus:ring-1 focus:ring-accent/20"
+          className="h-9 w-[92px] rounded-[10px] bg-surface-soft px-3 text-[12px] text-secondary outline-none transition-colors hover:bg-surface-muted focus:ring-1 focus:ring-accent/20"
           aria-label="Année de la heatmap"
         >
           {yearOptions.map((option) => (
@@ -403,7 +403,7 @@ export default function CalendarPage() {
           {/* Calendar grid */}
           <div className="grid grid-cols-7 gap-px bg-border rounded-[12px] overflow-hidden">
             {getMonthDays(year, month).map((day, i) => {
-              if (!day) return <div key={`empty-${i}`} className="bg-[#f9f9fb] min-h-[80px] p-1" />
+              if (!day) return <div key={`empty-${i}`} className="bg-surface-soft min-h-[80px] p-1" />
               const dayArts = articlesForDay(day)
               const isToday = day.toDateString() === new Date().toDateString()
               return (

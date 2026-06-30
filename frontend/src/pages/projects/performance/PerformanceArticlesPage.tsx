@@ -122,9 +122,9 @@ export default function PerformanceArticlesPage() {
         />
       )}
       {loadStatus === 'success' && articles.length > 0 && (
-        <div className="rounded-[16px] border border-border bg-surface overflow-hidden">
+        <div className="rounded-[16px] bg-surface overflow-hidden">
           {/* Table header */}
-          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2.5 border-b border-border bg-[#f9f9fb]">
+          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2.5 border-b border-border/40 bg-surface-soft">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-tertiary">Article</span>
             <span className="text-[11px] font-semibold uppercase tracking-wide text-tertiary w-16 text-right">Vues</span>
             <span className="text-[11px] font-semibold uppercase tracking-wide text-tertiary w-24 text-right hidden sm:block">Score SEO</span>
@@ -132,11 +132,11 @@ export default function PerformanceArticlesPage() {
           </div>
 
           {/* Rows */}
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-border/30">
             {articles.map((article) => (
               <div
                 key={article.article_id}
-                className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-3 items-center hover:bg-[#f9f9fb] transition-colors group"
+                className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-3 items-center hover:bg-surface-soft transition-colors group"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="min-w-0 flex-1">
