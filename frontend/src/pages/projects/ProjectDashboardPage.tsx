@@ -585,9 +585,14 @@ export default function ProjectDashboardPage() {
         </div>
       </section>
 
-      <section className="flex h-[48px] items-center overflow-hidden rounded-[10px] border border-border bg-surface text-[13px] text-secondary">
+      <section className="grid h-[48px] grid-cols-[1.35fr_1fr_1.15fr_1fr_1fr] items-center overflow-hidden rounded-[10px] border border-border bg-surface text-[13px] text-secondary">
+        {/* Domain */}
+        <div className="flex h-full min-w-0 items-center gap-2 border-r border-border px-6 font-medium text-primary">
+          <Globe size={15} className="shrink-0 text-secondary" />
+          <span className="truncate">{project?.domain ?? '—'}</span>
+        </div>
         {/* Statut connecté */}
-        <div className="flex h-full shrink-0 items-center border-r border-border px-5">
+        <div className="flex h-full min-w-0 items-center border-r border-border px-6">
           <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[13px] font-semibold text-white">
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-accent">
               <ArrowUp size={11} />
@@ -595,21 +600,16 @@ export default function ProjectDashboardPage() {
             {isConnected ? 'Connecté' : 'Non connecté'}
           </span>
         </div>
-        {/* Domain */}
-        <div className="flex h-full min-w-[240px] shrink-0 items-center gap-2 border-r border-border px-6 font-medium text-primary">
-          <Globe size={15} className="shrink-0 text-secondary" />
-          {project?.domain ?? '—'}
-        </div>
         {/* Pipeline + runs */}
-        <div className="flex h-full min-w-[188px] shrink-0 items-center gap-2 border-r border-border px-6">
+        <div className="flex h-full min-w-0 items-center gap-2 border-r border-border px-6">
           <Clock size={15} className="shrink-0" />
-          Pipeline : <strong className="text-primary">{pipelineActive ? 'Actif' : 'Inactif'}</strong>
+          <span className="truncate">Pipeline : <strong className="text-primary">{pipelineActive ? 'Actif' : 'Inactif'}</strong></span>
         </div>
-        <div className="flex h-full min-w-[170px] shrink-0 items-center border-r border-border px-6">
-          Dernier run : <strong className="ml-1 text-primary">{lastRunLabel}</strong>
+        <div className="flex h-full min-w-0 items-center border-r border-border px-6">
+          <span className="truncate">Dernier run : <strong className="text-primary">{lastRunLabel}</strong></span>
         </div>
-        <div className="flex h-full min-w-[170px] shrink-0 items-center px-6">
-          Prochain run : <strong className="ml-1 text-primary">—</strong>
+        <div className="flex h-full min-w-0 items-center px-6">
+          <span className="truncate">Prochain run : <strong className="text-primary">—</strong></span>
         </div>
       </section>
 
