@@ -599,7 +599,7 @@ export default function ProjectDashboardPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-none flex-col gap-5">
-      <section className="flex items-start justify-between gap-6 px-6 pb-2 pt-3">
+      <section className="flex items-start justify-between gap-6 pb-2 pt-3">
         <div>
           <h1 className="text-[22px] font-semibold leading-tight text-primary">
             {firstName ? `Bonjour, ${firstName} 👋` : 'Bonjour 👋'}
