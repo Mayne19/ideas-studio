@@ -792,7 +792,7 @@ export default function ProjectDashboardPage() {
                   onClick={() => navigate(row.href)}
                   className="grid h-10 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 text-left transition-colors hover:bg-surface-soft"
                 >
-                  <span className="text-[14px] font-medium text-primary">{row.label}</span>
+                  <span className="text-[11px] font-medium text-primary">{row.label}</span>
                   <span className="shrink-0 pl-6 text-[11px] text-secondary">{row.detail}</span>
                 </button>
               ))}
@@ -806,8 +806,8 @@ export default function ProjectDashboardPage() {
                 ? Array.from({ length: 5 }).map((_, i) => (
                     <div key={`empty-${i}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 py-2.5">
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-transparent" />
-                      <span className="text-[14px] text-tertiary">—</span>
-                      <span />
+                  <span className="text-[11px] text-tertiary">—</span>
+                  <span />
                     </div>
                   ))
                 : (
@@ -820,7 +820,7 @@ export default function ProjectDashboardPage() {
                         className="grid h-10 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 text-left transition-colors hover:bg-surface-soft"
                       >
                         <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${['bg-[#00c950]', 'bg-[#0066ff]', 'bg-[#ffa51f]', 'bg-[#ff3b1f]'][index % 4]}`} />
-                        <span className="truncate text-[14px] font-medium text-primary">
+                        <span className="truncate text-[11px] font-medium text-primary">
                           {event.label} : {event.articleTitle}
                         </span>
                         <span className="shrink-0 pl-6 text-[11px] font-medium text-secondary">{event.time}</span>
