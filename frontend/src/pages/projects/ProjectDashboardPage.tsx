@@ -649,7 +649,7 @@ export default function ProjectDashboardPage() {
           title="GEO moyen"
           score={geoScore || 0}
           changePts={data?.geoChangePts ?? 0}
-          color="#8b5cf6"
+          color="#00c950"
           data={data?.geoMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
         />
         <AreaMetricCard
@@ -672,8 +672,8 @@ export default function ProjectDashboardPage() {
           title="Publié"
           value={data?.publishedCount ?? '—'}
           change={data ? (data.publishedChangePct >= 0 ? `+${data.publishedChangePct}%` : `${data.publishedChangePct}%`) : '—'}
-          changeColor="#00c950"
-          color="#00c950"
+          changeColor="#8b5cf6"
+          color="#8b5cf6"
           data={data?.publishedMonthly ?? Array.from({ length: 12 }, () => ({ v: 0 }))}
         />
       </section>
@@ -717,7 +717,7 @@ export default function ProjectDashboardPage() {
               Voir tout <ArrowRight size={13} />
             </button>
           </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_120px_56px_110px_96px] gap-6 border-b border-border px-5 py-2 text-[12px] font-medium text-tertiary">
+          <div className="grid h-10 grid-cols-[minmax(0,1fr)_120px_56px_110px_96px] items-center gap-6 border-b border-border px-5 text-[12px] font-medium text-tertiary">
             <span>Article</span>
             <span>Score SEO</span>
             <span>Vues</span>
