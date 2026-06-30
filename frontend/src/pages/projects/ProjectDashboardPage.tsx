@@ -673,7 +673,7 @@ export default function ProjectDashboardPage() {
       </section>
 
       <section className="grid items-stretch gap-4 lg:grid-cols-[1.62fr_1fr]">
-        <Card padding="none" className="flex min-h-[500px] flex-col overflow-hidden rounded-[10px]">
+        <Card padding="none" className="flex h-full flex-col overflow-hidden rounded-[10px]">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
             <h2 className="text-[14px] font-semibold text-primary">Articles récents</h2>
             <button
