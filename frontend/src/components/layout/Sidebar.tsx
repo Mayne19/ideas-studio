@@ -40,7 +40,7 @@ function SidebarLink({ to, icon, label, disabled = false, collapsed = false }: N
     return (
       <span
         title={label}
-        className="flex h-8 items-center gap-2 rounded-[6px] px-2.5 text-[11px] font-medium text-tertiary cursor-not-allowed opacity-50"
+        className="flex h-8 items-center gap-2 rounded-[6px] px-2.5 text-[14px] font-medium text-tertiary cursor-not-allowed opacity-50"
       >
         <span className="shrink-0">{icon}</span>
         {!collapsed && label}
@@ -54,7 +54,7 @@ function SidebarLink({ to, icon, label, disabled = false, collapsed = false }: N
       title={collapsed ? label : undefined}
       className={({ isActive }) =>
         cn(
-          'flex h-8 items-center gap-2 rounded-[6px] px-2.5 text-[11px] font-medium transition-colors duration-150',
+          'flex h-8 items-center gap-2 rounded-[6px] px-2.5 text-[14px] font-medium transition-colors duration-150',
           collapsed ? 'justify-center px-2' : '',
           isActive
             ? 'bg-surface-muted text-primary'
