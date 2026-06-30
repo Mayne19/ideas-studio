@@ -151,16 +151,16 @@ function SeoRadialCard({ score, changePts, data }: { score: number; changePts: n
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
       <div className="mt-3 flex h-8 items-center justify-between gap-3">
-        <ResponsiveContainer width={72} height={72}>
+        <ResponsiveContainer width={48} height={48}>
           <RadialBarChart
             data={[{ v: score, fill: fillColor }]}
             startAngle={90}
             endAngle={endAngle}
-            outerRadius={34}
-            innerRadius={24}
+            outerRadius={22}
+            innerRadius={16}
             margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
           >
-            <PolarGrid gridType="circle" radialLines={false} stroke="none" polarRadius={[34, 24]} />
+            <PolarGrid gridType="circle" radialLines={false} stroke="none" polarRadius={[22, 16]} />
             <RadialBar dataKey="v" background={{ fill: 'var(--color-surface-muted, #f1f5f9)' }} cornerRadius={6} />
             <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
               <Label
@@ -168,7 +168,7 @@ function SeoRadialCard({ score, changePts, data }: { score: number; changePts: n
                   if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
                     return (
                       <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                        <tspan x={viewBox.cx} y={viewBox.cy} style={{ fontSize: '14px', fontWeight: '700', fill: 'var(--color-primary, #111)' }}>
+                        <tspan x={viewBox.cx} y={viewBox.cy} style={{ fontSize: '12px', fontWeight: '700', fill: 'var(--color-primary, #111)' }}>
                           {score}
                         </tspan>
                       </text>
@@ -190,7 +190,7 @@ function SeoRadialCard({ score, changePts, data }: { score: number; changePts: n
               stroke={fillColor}
               strokeWidth={1.5}
               fill={fillColor}
-              fillOpacity={0.4}
+              fillOpacity={0.22}
               dot={{ r: 1.5, fill: fillColor, strokeWidth: 0 }}
               activeDot={{ r: 2.5, fill: fillColor, strokeWidth: 0 }}
               isAnimationActive={false}
@@ -280,7 +280,7 @@ function AreaMetricCard({
               stroke={color}
               strokeWidth={1.5}
               fill={color}
-              fillOpacity={0.15}
+              fillOpacity={0.08}
               dot={{ r: 1.5, fill: color, strokeWidth: 0 }}
               activeDot={{ r: 2.5, fill: color, strokeWidth: 0 }}
               isAnimationActive={false}
