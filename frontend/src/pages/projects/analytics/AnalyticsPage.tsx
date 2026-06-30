@@ -11,7 +11,7 @@ import {
   AlertTriangle,
   Eye,
 } from '@/components/ui/hugeIcons'
-import { SeoRadialCard, AreaMetricCard } from '@/components/charts/TrendCards'
+import { SeoRadialCard, AreaMetricCard, SimpleMetricCard } from '@/components/charts/TrendCards'
 import { getPerformanceSummary, getArticlesPerformance } from '@/api/performance'
 import type { ArticlePerformanceBrief, PerformanceSummary } from '@/types'
 import { Card } from '@/components/ui/Card'
@@ -241,16 +241,6 @@ export default function AnalyticsPage() {
     [articleMetrics],
   )
 
-  const optimizeTrend = useMemo(
-    () => [{ v: optimizeCount }, { v: optimizeCount }],
-    [optimizeCount],
-  )
-
-  const articleCountTrend = useMemo(
-    () => [{ v: articleMetrics.length }, { v: articleMetrics.length }],
-    [articleMetrics],
-  )
-
   const topArticles = useMemo(
     () => [...articleMetrics].sort((a, b) => b.views - a.views).slice(0, 8),
     [articleMetrics],
@@ -444,21 +434,15 @@ export default function AnalyticsPage() {
             color="#0066ff"
             data={viewsTrend}
           />
-          <AreaMetricCard
+          <SimpleMetricCard
             title="Pages uniques"
             value={formatMetric(summary.unique_pages)}
             change="—"
-            changeColor="#8A8A8A"
-            color="#4b5563"
-            data={viewsTrend}
           />
-          <AreaMetricCard
+          <SimpleMetricCard
             title="Articles suivis"
             value={String(articleMetrics.length)}
-            change={optimizeCount > 0 ? `${optimizeCount} à optimiser` : '—'}
-            changeColor={optimizeCount > 0 ? '#ffa51f' : '#8A8A8A'}
-            color="#8b5cf6"
-            data={articleCountTrend}
+            change="—"
           />
           <SeoRadialCard
             title="Score SEO moyen"
@@ -466,13 +450,10 @@ export default function AnalyticsPage() {
             changePts={seoChangePts}
             data={seoTrend}
           />
-          <AreaMetricCard
+          <SimpleMetricCard
             title="Articles à optimiser"
             value={String(optimizeCount)}
             change="—"
-            changeColor="#8A8A8A"
-            color="#ff3b1f"
-            data={optimizeTrend}
           />
         </div>
 
