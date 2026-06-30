@@ -650,23 +650,24 @@ export default function AnalyticsPage() {
                   data={sourceChannels}
                   layout="vertical"
                   margin={{ top: 0, right: 16, bottom: 0, left: 0 }}
+                  barCategoryGap={8}
                 >
                   <CartesianGrid horizontal={false} />
-                  <YAxis dataKey="channel" type="category" tickLine={false} axisLine={false} hide />
+                  <YAxis
+                    dataKey="channel"
+                    type="category"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tick={{ fontSize: 12, fill: '#5E5E5E', fontWeight: 500 }}
+                    width={80}
+                  />
                   <XAxis dataKey="views" type="number" hide />
                   <ChartTooltip
                     cursor={false}
                     content={<ChartTooltipContent indicator="line" hideLabel />}
                   />
                   <Bar dataKey="views" fill="#4b5563" radius={4} barSize={28}>
-                    <LabelList
-                      dataKey="channel"
-                      position="insideLeft"
-                      offset={12}
-                      className="fill-white"
-                      fontSize={12}
-                      fontWeight={500}
-                    />
                     <LabelList
                       dataKey="views"
                       position="right"
