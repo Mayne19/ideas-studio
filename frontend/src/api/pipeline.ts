@@ -6,6 +6,9 @@ export type PipelineSettings = {
   enabled: boolean
   active_days: string[]
   launch_hour: number
+  ideas_day_of_month: number | null
+  publish_hour_start: number
+  publish_hour_end: number
   articles_per_week: number
   category_priorities: Record<string, number>
   cost_limit_per_article_eur: number | null
@@ -26,6 +29,9 @@ export type PipelineSettingsUpdate = {
   enabled?: boolean
   active_days?: string[]
   launch_hour?: number
+  ideas_day_of_month?: number | null
+  publish_hour_start?: number
+  publish_hour_end?: number
   articles_per_week?: number
   category_priorities?: Record<string, number>
   cost_limit_per_article_eur?: number | null

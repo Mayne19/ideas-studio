@@ -63,6 +63,9 @@ def _model_to_settings(pipe: ProjectPipeline, db: Session | None = None) -> Pipe
         enabled=pipe.enabled,
         active_days=_parse_json_field(pipe.active_days, []),
         launch_hour=pipe.launch_hour,
+        ideas_day_of_month=pipe.ideas_day_of_month,
+        publish_hour_start=pipe.publish_hour_start if pipe.publish_hour_start is not None else 8,
+        publish_hour_end=pipe.publish_hour_end if pipe.publish_hour_end is not None else 10,
         articles_per_week=pipe.articles_per_week,
         category_priorities=_parse_json_field(pipe.category_priorities, {}),
         ideas_per_week=pipe.ideas_per_week,
@@ -94,12 +97,16 @@ def get_or_create_pipeline(db: Session, project_id: str) -> ProjectPipeline:
 def get_pipeline(db: Session, project_id: str) -> PipelineSettingsPublic | None:
     pipe = db.query(ProjectPipeline).filter(ProjectPipeline.project_id == project_id).first()
     if not pipe:
+        total_monthly, categories_freqs = _category_frequency_summary(db, project_id)
         return PipelineSettingsPublic(
             id="",
             project_id=project_id,
             enabled=False,
             active_days=[],
             launch_hour=8,
+            ideas_day_of_month=None,
+            publish_hour_start=8,
+            publish_hour_end=10,
             articles_per_week=5,
             category_priorities={},
             ideas_per_week=5,
@@ -109,8 +116,8 @@ def get_pipeline(db: Session, project_id: str) -> PipelineSettingsPublic | None:
             default_quality_mode="quality",
             launch_hours=None,
             cost_limit_per_article_eur=None,
-            total_monthly_from_categories=_category_frequency_summary(db, project_id)[0],
-            categories_frequencies=_category_frequency_summary(db, project_id)[1],
+            total_monthly_from_categories=total_monthly,
+            categories_frequencies=categories_freqs,
             automation_notes="Pipeline non créé. Configurez-le avant automatisation ; lancement manuel disponible après création.",
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),

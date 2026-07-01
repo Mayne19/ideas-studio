@@ -22,6 +22,9 @@ class PipelineSettingsUpdate(BaseModel):
     enabled: Optional[bool] = None
     active_days: Optional[list[str]] = None
     launch_hour: Optional[int] = None
+    ideas_day_of_month: Optional[int] = None
+    publish_hour_start: Optional[int] = None
+    publish_hour_end: Optional[int] = None
     articles_per_week: Optional[int] = None
     category_priorities: Optional[dict[str, int]] = None
     ideas_per_week: Optional[int] = None
@@ -56,6 +59,9 @@ class PipelineSettingsPublic(BaseModel):
     paused_until: Optional[datetime] = None
     paused_indefinitely: Optional[bool] = None
     default_quality_mode: Optional[str] = None
+    ideas_day_of_month: Optional[int] = None
+    publish_hour_start: Optional[int] = 8
+    publish_hour_end: Optional[int] = 10
     launch_hours: Optional[list[str]] = None
     cost_limit_per_article_eur: Optional[float] = None
     total_monthly_from_categories: Optional[int] = None
