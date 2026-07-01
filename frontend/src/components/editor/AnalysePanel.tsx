@@ -6,7 +6,7 @@ import {
 import { analyzeArticle, readyCheck } from '@/api/seo'
 import { ApiError } from '@/api/client'
 import type { AnalysisBrief, SeoAnalysis, SeoIssue, ReadyCheck, EditorArticle, SeoExpertReview } from '@/types'
-import { finiteScore, scoreTone, getOriginalityScore, getGeoScore } from '@/lib/scoreBadge'
+import { finiteScore, getOriginalityScore, getGeoScore } from '@/lib/scoreBadge'
 import Button from '@/components/ui/Button'
 import { Gauge } from '@/lib/vercel-geistcn/components'
 
@@ -39,7 +39,6 @@ const SCORE_TILES = [
 ] as const
 
 type ScoreKey = typeof SCORE_TILES[number]['key']
-const SCORE_GAUGES = SCORE_TILES.filter((tile) => tile.key !== 'Synthèse')
 
 function resolveScore(article: EditorArticle, brief: AnalysisBrief | SeoAnalysis | null, expertReview: SeoExpertReview | null, key: ScoreKey): number | null {
   switch (key) {
@@ -57,6 +56,13 @@ function gaugeColor(score: number): string {
   if (score >= 80) return 'var(--color-success)'
   if (score >= 60) return 'var(--color-warning)'
   return 'var(--color-danger)'
+}
+
+function scoreBadgeClass(score: number | null): string {
+  if (score === null) return 'border-border bg-surface-soft text-tertiary'
+  if (score >= 80) return 'border-success/20 bg-success/8 text-success'
+  if (score >= 60) return 'border-warning/20 bg-warning/8 text-warning'
+  return 'border-danger/20 bg-danger/8 text-danger'
 }
 
 /* ─── Issues helpers ────────────────────────────────────────── */
@@ -127,34 +133,12 @@ function ScoreSynthesisCard({
   selected: ScoreKey
   onSelect: (key: ScoreKey) => void
 }) {
-  const globalScore = resolveScore(article, brief, expertReview, 'Synthèse')
-
   return (
     <div className="rounded-[14px] border border-border bg-bg p-4">
       <p className="text-[12px] font-semibold text-primary mb-3">Synthèse des scores</p>
 
-      <button
-        type="button"
-        onClick={() => onSelect('Synthèse')}
-        className={`mb-4 flex w-full items-center gap-4 rounded-[12px] border p-3 text-left transition-colors ${
-          selected === 'Synthèse' ? 'border-border-strong bg-surface-soft' : 'border-border bg-transparent hover:bg-surface-soft'
-        }`}
-      >
-        <div className="flex h-20 w-20 shrink-0 items-center justify-center">
-          {globalScore === null ? (
-            <span className="text-[20px] font-semibold text-tertiary">—</span>
-          ) : (
-            <Gauge showValue size="medium" value={globalScore} color={gaugeColor(globalScore)} />
-          )}
-        </div>
-        <div className="text-[12px] leading-snug text-secondary">
-          <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-tertiary">Global</span>
-          Score global calculé à partir de l'ensemble des critères de qualité, SEO, lisibilité et fiabilité.
-        </div>
-      </button>
-
       <div className="grid grid-cols-2 gap-2">
-        {SCORE_GAUGES.map((tile) => {
+        {SCORE_TILES.map((tile) => {
           const score = resolveScore(article, brief, expertReview, tile.key)
           return (
             <button
@@ -352,8 +336,11 @@ function ScoreDetailPanel({
   return (
     <div className="rounded-[14px] border border-border bg-surface p-4">
       <div className="flex items-center gap-3 mb-4">
-        <span className={`inline-flex rounded-full px-3 py-1 text-[14px] font-semibold ${scoreTone(score)}`}>
-          {selected} : {score === null ? '—' : Math.round(score)}
+        <span className={`inline-flex min-w-[86px] items-center justify-center rounded-full border px-3 py-2 text-[14px] font-semibold leading-tight ${scoreBadgeClass(score)}`}>
+          <span>
+            <span className="block text-[12px]">{selected}</span>
+            <span className="block">{score === null ? '—' : Math.round(score)}</span>
+          </span>
         </span>
         <span className="text-[12px] text-tertiary leading-snug">
           {selected === 'Synthèse' ? 'Vue d\'ensemble de l\'article' : 'Détail du score sélectionné'}
