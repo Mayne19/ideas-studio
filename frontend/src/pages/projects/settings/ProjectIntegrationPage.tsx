@@ -59,20 +59,22 @@ function InfoRow({
   mono?: boolean
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 rounded-[12px] bg-surface-soft px-4 py-3">
-      <div className="min-w-0 flex-1">
+    <div className="flex flex-col gap-2 rounded-[12px] border border-border bg-surface px-4 py-3">
+      <div className="min-w-0">
         <div className="flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wider text-tertiary">
           {icon}
           {label}
         </div>
-        <p className={`mt-0.5 truncate text-[12px] text-secondary ${mono ? 'font-mono' : ''}`}>{value}</p>
       </div>
-      {(action || canCopy) && (
-        <div className="flex shrink-0 items-center gap-2">
-          {action}
-          {canCopy && <CopyButton value={copyValue ?? value} disabled={!(copyValue ?? value)} className="shrink-0" />}
-        </div>
-      )}
+      <div className="flex min-w-0 items-center justify-between gap-3 rounded-[10px] border border-border bg-surface-soft px-3 py-2">
+        <p className={`min-w-0 truncate text-[12px] text-tertiary ${mono ? 'font-mono' : ''}`}>{value}</p>
+        {(action || canCopy) && (
+          <div className="flex shrink-0 items-center gap-2">
+            {action}
+            {canCopy && <CopyButton value={copyValue ?? value} disabled={!(copyValue ?? value)} className="shrink-0" />}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
