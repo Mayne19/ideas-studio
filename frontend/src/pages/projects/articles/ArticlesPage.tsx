@@ -61,10 +61,11 @@ function ArticleRow({
   const isEditable = EDITABLE_STATUSES.has(article.status)
   const originalityScore = getOriginalityScore(article)
   const rowCellClass = 'border-y-2 border-border bg-transparent py-2.5 transition-colors first:rounded-l-[12px] first:border-l-2 last:rounded-r-[12px] last:border-r-2 group-hover:bg-surface-soft'
+  const scoreCellClass = `w-[58px] text-center ${rowCellClass}`
 
   return (
     <TableRow className="group hover:bg-transparent">
-      <TableCell className={`min-w-0 max-w-[280px] ${rowCellClass}`}>
+      <TableCell className={`min-w-0 ${rowCellClass} pr-8`}>
         <button
           type="button"
           className="block w-full truncate text-left text-[14px] font-medium leading-snug text-primary transition-colors hover:text-accent"
@@ -88,32 +89,32 @@ function ArticleRow({
           <span>{article.word_count > 0 ? `${article.word_count} mots` : '— mots'}</span>
         </div>
       </TableCell>
-      <TableCell className={`w-[48px] text-center ${rowCellClass}`}>
+      <TableCell className={`${scoreCellClass} border-l-2 border-l-border pl-5`}>
         <ScoreBadge label="G" value={finiteScore(article.global_score)} compact showLabel={false} />
       </TableCell>
-      <TableCell className={`w-[48px] text-center ${rowCellClass}`}>
+      <TableCell className={scoreCellClass}>
         <ScoreBadge label="S" value={finiteScore(article.seo_score)} compact showLabel={false} />
       </TableCell>
-      <TableCell className={`w-[48px] text-center ${rowCellClass}`}>
+      <TableCell className={scoreCellClass}>
         <ScoreBadge label="GEO" value={getGeoScore(article)} compact showLabel={false} />
       </TableCell>
-      <TableCell className={`w-[48px] text-center ${rowCellClass}`}>
+      <TableCell className={scoreCellClass}>
         <ScoreBadge label="Q" value={finiteScore(article.quality_score)} compact showLabel={false} />
       </TableCell>
-      <TableCell className={`w-[48px] text-center ${rowCellClass}`}>
+      <TableCell className={scoreCellClass}>
         <ScoreBadge label="L" value={finiteScore(article.readability_score)} compact showLabel={false} />
       </TableCell>
-      <TableCell className={`w-[48px] text-center ${rowCellClass}`}>
+      <TableCell className={scoreCellClass}>
         <ScoreBadge label="O" value={originalityScore} compact showLabel={false} />
       </TableCell>
-      <TableCell className={`w-[48px] text-center ${rowCellClass}`}>
+      <TableCell className={`${scoreCellClass} pr-5`}>
         <ScoreBadge label="E" value={finiteScore(article.eeat_score)} compact showLabel={false} />
       </TableCell>
-      <TableCell className={`w-[90px] ${rowCellClass}`}>
+      <TableCell className={`w-[124px] border-l-2 border-l-border text-center ${rowCellClass} px-5`}>
         <StatusBadge status={article.status} />
       </TableCell>
-      <TableCell className={`w-[116px] ${rowCellClass}`}>
-        <div className="flex items-center justify-end gap-1.5">
+      <TableCell className={`w-[206px] border-l-2 border-l-border ${rowCellClass} pl-5`}>
+        <div className="flex items-center justify-end gap-2">
           <Button
             size="sm"
             icon={<Edit3 size={12} />}
@@ -125,7 +126,7 @@ function ArticleRow({
           </Button>
           <select
             onChange={(e) => { if (e.target.value) { onAction(e.target.value, article); e.target.value = '' } }}
-            className="h-8 w-[84px] cursor-pointer rounded-[8px] border border-border bg-transparent px-2 text-[12px] text-secondary transition-colors hover:bg-surface-muted"
+            className="h-8 w-[92px] cursor-pointer rounded-[8px] border border-border bg-transparent px-2 text-[12px] text-secondary transition-colors hover:bg-surface-muted"
             defaultValue=""
             aria-label={`Actions pour ${article.title}`}
           >
@@ -514,16 +515,16 @@ export default function ArticlesPage() {
               <Table className="border-separate border-spacing-y-2">
                 <TableHeader className="border-0">
                   <TableRow className="hover:bg-transparent">
-                  <TableHead className="max-w-[280px]">Titre</TableHead>
-                  <TableHead className="w-[48px] text-center text-[11px] font-medium">Glob.</TableHead>
-                  <TableHead className="w-[48px] text-center text-[11px] font-medium">SEO</TableHead>
-                  <TableHead className="w-[48px] text-center text-[11px] font-medium">GEO</TableHead>
-                  <TableHead className="w-[48px] text-center text-[11px] font-medium">Qual.</TableHead>
-                  <TableHead className="w-[48px] text-center text-[11px] font-medium">Lisi.</TableHead>
-                  <TableHead className="w-[48px] text-center text-[11px] font-medium">Orig.</TableHead>
-                  <TableHead className="w-[48px] text-center text-[11px] font-medium">EEAT</TableHead>
-                  <TableHead className="w-[90px]">Statut</TableHead>
-                  <TableHead className="w-[116px] text-right">Actions</TableHead>
+                  <TableHead className="pr-8">Titre</TableHead>
+                  <TableHead className="w-[58px] border-l-2 border-l-border pl-5 text-center text-[11px] font-medium">Glob.</TableHead>
+                  <TableHead className="w-[58px] text-center text-[11px] font-medium">SEO</TableHead>
+                  <TableHead className="w-[58px] text-center text-[11px] font-medium">GEO</TableHead>
+                  <TableHead className="w-[58px] text-center text-[11px] font-medium">Qual.</TableHead>
+                  <TableHead className="w-[58px] text-center text-[11px] font-medium">Lisi.</TableHead>
+                  <TableHead className="w-[58px] text-center text-[11px] font-medium">Orig.</TableHead>
+                  <TableHead className="w-[58px] pr-5 text-center text-[11px] font-medium">EEAT</TableHead>
+                  <TableHead className="w-[124px] border-l-2 border-l-border px-5 text-center">Statut</TableHead>
+                  <TableHead className="w-[206px] border-l-2 border-l-border pl-5 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
