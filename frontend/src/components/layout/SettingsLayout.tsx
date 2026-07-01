@@ -29,7 +29,7 @@ export default function SettingsLayout() {
                   cn(
                     'rounded-[12px] px-3 py-2.5 transition-colors',
                     isActive
-                      ? 'text-primary ring-1 ring-border'
+                      ? 'bg-accent/6 text-primary ring-1 ring-accent/20'
                       : 'text-secondary hover:bg-surface-soft hover:text-primary',
                   )
                 }

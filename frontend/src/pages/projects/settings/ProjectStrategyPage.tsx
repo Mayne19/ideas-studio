@@ -10,22 +10,6 @@ import { Card } from '@/components/ui/Card'
 import LoadingState from '@/components/ui/LoadingState'
 import EditorialSetupAssistant from '@/components/editorial/EditorialSetupAssistant'
 
-const textFields = [
-  ['audience', 'Audience cible', 'Décrivez les lecteurs prioritaires, leurs objectifs et leurs freins.'],
-  ['editorial_goal', 'Objectif éditorial', 'Acquisition SEO, éducation marché, conversion, autorité, support produit...'],
-  ['value_proposition', 'Proposition de valeur', 'Pourquoi ce contenu est différent et utile.'],
-  ['allowed_topics', 'Sujets autorisés', 'Thèmes, angles et familles de contenus que l’IA peut traiter.'],
-  ['forbidden_topics', 'Sujets interdits', 'Zones à éviter, promesses interdites, sujets hors périmètre.'],
-  ['words_to_avoid', 'Mots à éviter', 'Expressions, jargon ou tournures à bannir.'],
-  ['preferred_formats', 'Formats préférés', 'Guides, comparatifs, listes, tutoriels, analyses, FAQ...'],
-  ['seo_rules', 'Règles SEO spécifiques', 'Structure Hn, intentions, metas, mots-clés, contraintes de longueur.'],
-  ['geo_rules', 'Règles GEO spécifiques', 'Consignes pour les réponses IA, citations, passages synthétiques.'],
-  ['source_guidelines', 'Consignes de sources', 'Types de sources acceptées, fraîcheur attendue, citation.'],
-  ['internal_linking_guidelines', 'Maillage interne', 'Règles de liens vers contenus existants, ancres, priorités.'],
-  ['external_linking_guidelines', 'Maillage externe', 'Sources externes autorisées, nofollow, domaines à éviter.'],
-  ['style_examples', 'Exemples de style', 'Collez ici un extrait représentatif du ton attendu.'],
-] as const
-
 const TONE_OPTIONS = [
   { value: '', label: 'Non défini' },
   { value: 'Professionnel clair', label: 'Professionnel clair' },
@@ -257,19 +241,6 @@ export default function ProjectStrategyPage() {
             hint="Ces paramètres sont transmis au contexte de génération et contraignent le brief rédactionnel."
           />
         </Card>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        {textFields.filter(([key]) => key !== 'audience').map(([key, label, placeholder]) => (
-          <Textarea
-            key={key}
-            label={label}
-            value={form[key]}
-            onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-            placeholder={placeholder}
-            rows={key === 'style_examples' ? 5 : 3}
-          />
-        ))}
-      </div>
 
       <div className="flex items-center gap-3">
         <Button type="submit" size="sm" loading={saving} icon={<Save size={13} />}>

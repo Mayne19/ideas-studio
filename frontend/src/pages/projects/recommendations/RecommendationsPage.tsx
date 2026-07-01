@@ -140,7 +140,7 @@ function RecommendationCard({
         {rec.article_id && (
           <button
             onClick={() => onNavigate(rec.article_id!)}
-            className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[12px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors"
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-soft px-2.5 py-1 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-muted hover:text-primary"
           >
             <Pencil size={11} />
             Voir l'article
@@ -150,7 +150,7 @@ function RecommendationCard({
           <button
             onClick={() => doAction('apply')}
             disabled={busy}
-            className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[12px] text-secondary hover:bg-accent/8 hover:text-accent transition-colors disabled:opacity-40"
+            className="inline-flex items-center gap-1 rounded-full border border-accent/20 bg-accent/8 px-2.5 py-1 text-[12px] font-medium text-accent transition-colors hover:bg-accent/12 disabled:opacity-40"
           >
             {loadingAction === 'apply' ? <Loader2 size={11} className="animate-spin" /> : <Zap size={11} />}
             Appliquer
@@ -161,7 +161,7 @@ function RecommendationCard({
             <button
               onClick={() => doAction('accept')}
               disabled={busy}
-              className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[12px] text-secondary hover:bg-success/8 hover:text-[#1a7a3a] transition-colors disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-full border border-success/20 bg-success/8 px-2.5 py-1 text-[12px] font-medium text-[#1a7a3a] transition-colors hover:bg-success/12 disabled:opacity-40"
             >
               {loadingAction === 'accept' ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
               Accepter
@@ -169,7 +169,7 @@ function RecommendationCard({
             <button
               onClick={() => doAction('reject')}
               disabled={busy}
-              className="flex items-center gap-1 rounded-[6px] px-2 py-1 text-[12px] text-tertiary hover:bg-danger/5 hover:text-danger transition-colors disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-full border border-danger/20 bg-danger/5 px-2.5 py-1 text-[12px] font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-40"
             >
               {loadingAction === 'reject' ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
               Rejeter
