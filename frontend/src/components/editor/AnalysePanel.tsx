@@ -1,16 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   AlertCircle, AlertTriangle, Info, RefreshCw, CheckCircle,
-  HelpCircle, ChevronDown, ChevronRight, Download,
+  HelpCircle, Download,
 } from '@/components/ui/hugeIcons'
-import { analyzeArticle, readyCheck, runSeoExpertReview } from '@/api/seo'
+import { analyzeArticle, readyCheck } from '@/api/seo'
 import { ApiError } from '@/api/client'
 import type { AnalysisBrief, SeoAnalysis, SeoIssue, ReadyCheck, EditorArticle, SeoExpertReview } from '@/types'
 import { finiteScore, scoreTone, getOriginalityScore, getGeoScore } from '@/lib/scoreBadge'
 import Button from '@/components/ui/Button'
-import CostPanel from './CostPanel'
-import StructuredDataPanel from './StructuredDataPanel'
-import GeoPanel from './GeoPanel'
 import { Gauge } from '@/lib/vercel-geistcn/components'
 
 /* ─── Error translation ─────────────────────────────────────── */
@@ -111,25 +108,6 @@ const CALCULATION_TEXT: Record<string, string> = {
   GEO: 'Le score GEO (Generative Engine Optimization) évalue l\'adaptation du contenu aux moteurs de recherche génératifs : réponse directe aux questions, sections autonomes, définitions claires, contenu extractible, et structure adaptée aux LLM.',
   EEAT: 'Le score EEAT évalue l\'expertise, l\'autorité et la fiabilité du contenu : présence de liens externes vers des sources fiables, exemples concrets ou données chiffrées, contenu actionnable, et crédibilité éditoriale.',
   Synthèse: 'Le score Global est une pondération des scores SEO, Qualité, Lisibilité, Originalité, GEO et EEAT. Il détermine si l\'article est prêt à être publié. Un score sous les seuils de validation bloque la publication.',
-}
-
-/* ─── Accordion sub-component ───────────────────────────────── */
-
-function Accordion({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
-  const [open, setOpen] = useState(defaultOpen)
-  return (
-    <div className="rounded-[12px] border border-border bg-surface">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-[12px] font-semibold text-primary"
-      >
-        {title}
-        {open ? <ChevronDown size={14} className="text-tertiary" /> : <ChevronRight size={14} className="text-tertiary" />}
-      </button>
-      {open && <div className="border-t border-border px-3.5 py-3">{children}</div>}
-    </div>
-  )
 }
 
 /* ─── Score synthesis card ──────────────────────────────────── */
@@ -468,122 +446,6 @@ const keywordsMap: Partial<Record<ScoreKey, { kw: string; label: string }[]>> = 
   EEAT: EEAT_KEYWORDS,
 }
 
-/* ─── Expert review sub-component ───────────────────────────── */
-
-function ExpertReviewSection({
-  expertReview, expertLoading, expertError, expertSuccess, isOpen, onToggle, onRun,
-}: {
-  expertReview: SeoExpertReview | null
-  expertLoading: boolean
-  expertError: string
-  expertSuccess: string
-  isOpen: boolean
-  onToggle: () => void
-  onRun: () => void
-}) {
-  return (
-    <div className="rounded-[12px] border border-border bg-surface">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-[12px] font-semibold text-primary"
-      >
-        SEO Expert
-        {isOpen ? <ChevronDown size={14} className="text-tertiary" /> : <ChevronRight size={14} className="text-tertiary" />}
-      </button>
-      {isOpen && (
-        <div className="border-t border-border px-3.5 py-3 flex flex-col gap-3">
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-[12px] leading-snug text-tertiary">
-              Analyse SEO avancée avec audit éditorial, EEAT, lisibilité et recommandations personnalisées.
-            </p>
-            <Button size="sm" variant="secondary" icon={<RefreshCw size={12} />} loading={expertLoading} className="shrink-0" onClick={onRun}>
-              Lancer l'audit
-            </Button>
-          </div>
-
-          {expertError && (
-            <div className="flex items-start gap-2 rounded-[8px] border border-danger/20 bg-danger/5 px-2.5 py-2 text-[12px] text-danger">
-              <AlertCircle size={12} className="mt-0.5 shrink-0" />
-              <span className="leading-snug">{expertError}</span>
-            </div>
-          )}
-
-          {expertSuccess && !expertError && (
-            <div className="flex items-start gap-2 rounded-[8px] border border-success/20 bg-success/8 px-2.5 py-2 text-[12px] text-success">
-              <CheckCircle size={12} className="mt-0.5 shrink-0" />
-              <span className="leading-snug">{expertSuccess}</span>
-            </div>
-          )}
-
-          {expertReview ? (
-            <div className="flex flex-col gap-3">
-              <div className="grid grid-cols-2 gap-2 text-[12px]">
-                {([
-                  ['Global', expertReview.score_global],
-                  ['SEO Expert', expertReview.seo_score],
-                  ['EEAT Expert', expertReview.eeat_score],
-                  ['Lisibilité Expert', expertReview.readability_score],
-                ] as const).map(([label, val]) => (
-                  <div key={label} className="rounded-[10px] border border-border bg-surface-soft p-2.5">
-                    <p className="text-[10px] text-tertiary">{label}</p>
-                    <p className={`mt-0.5 text-[15px] font-bold ${scoreTone(val)}`}>{Math.round(val)}</p>
-                  </div>
-                ))}
-              </div>
-
-              {expertReview.issues.length > 0 && (
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-[10px] font-medium uppercase tracking-wide text-secondary">Issues</p>
-                  {expertReview.issues.map((issue, i) => {
-                    const Icon = issue.severity === 'critical' ? AlertCircle : issue.severity === 'warning' ? AlertTriangle : Info
-                    const iconColor = issue.severity === 'critical' ? 'text-danger' : issue.severity === 'warning' ? 'text-warning' : 'text-accent'
-                    return (
-                      <div key={i} className="flex items-start gap-1.5 text-[12px]">
-                        <Icon size={11} className={`mt-0.5 shrink-0 ${iconColor}`} />
-                        <div>
-                          <p className="leading-snug text-primary">{issue.message}</p>
-                          <p className="text-[10px] text-tertiary">{issue.check}</p>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-
-              {expertReview.recommendations.length > 0 && (
-                <div className="flex flex-col gap-1">
-                  <p className="text-[10px] font-medium uppercase tracking-wide text-secondary">Recommandations</p>
-                  {expertReview.recommendations.map((rec, i) => (
-                    <p key={i} className="text-[12px] leading-snug text-secondary">- {rec}</p>
-                  ))}
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-2 text-[12px]">
-                <div className="rounded-[10px] border border-border bg-surface-soft p-2.5">
-                  <p className="text-[10px] text-tertiary">Contrôles validés</p>
-                  <p className="mt-0.5 text-[15px] font-bold text-success">{expertReview.passed_checks.length}</p>
-                </div>
-                <div className="rounded-[10px] border border-border bg-surface-soft p-2.5">
-                  <p className="text-[10px] text-tertiary">Contrôles en échec</p>
-                  <p className="mt-0.5 text-[15px] font-bold text-danger">{expertReview.failed_checks.length}</p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            !expertLoading && (
-              <p className="text-[12px] text-tertiary">
-                Aucun rapport SEO Expert enregistré pour cet article.
-              </p>
-            )
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
 /* ─── Main AnalysePanel ─────────────────────────────────────── */
 
 type AnalysePanelProps = {
@@ -600,21 +462,16 @@ type AnalysePanelProps = {
 export default function AnalysePanel({
   article, projectId, onBeforeAnalyze,
   initialAnalysis = null, initialReadiness = null,
-  onAnalysisUpdate, onReadinessUpdate, onExpertReviewUpdate,
+  onAnalysisUpdate, onReadinessUpdate,
 }: AnalysePanelProps) {
   const [analysis, setAnalysis] = useState<SeoAnalysis | null>(initialAnalysis)
   const [readiness, setReadiness] = useState<ReadyCheck | null>(initialReadiness)
-  const [expertReviewOverride, setExpertReviewOverride] = useState<SeoExpertReview | null>(null)
   const [loading, setLoading] = useState(false)
-  const [expertLoading, setExpertLoading] = useState(false)
   const [error, setError] = useState('')
-  const [expertError, setExpertError] = useState('')
-  const [expertSuccess, setExpertSuccess] = useState('')
   const [selectedScore, setSelectedScore] = useState<ScoreKey>('Synthèse')
-  const [expertOpen, setExpertOpen] = useState(false)
 
   const brief = analysis ?? article.latest_analysis
-  const expertReview = expertReviewOverride ?? article.seo_review_json ?? null
+  const expertReview = article.seo_review_json ?? null
 
   const autoTriggeredRef = useRef(false)
   useEffect(() => {
@@ -645,23 +502,6 @@ export default function AnalysePanel({
       setError(translateError(err))
     } finally {
       setLoading(false)
-    }
-  }
-
-  async function runExpertAnalysis() {
-    setExpertLoading(true)
-    setExpertError('')
-    setExpertSuccess('')
-    try {
-      await onBeforeAnalyze()
-      const result = await runSeoExpertReview(projectId, article.id)
-      setExpertReviewOverride(result)
-      onExpertReviewUpdate(result)
-      setExpertSuccess('Audit SEO Expert mis à jour.')
-    } catch (err) {
-      setExpertError(translateError(err))
-    } finally {
-      setExpertLoading(false)
     }
   }
 
@@ -718,29 +558,6 @@ export default function AnalysePanel({
           <span className="leading-snug">{error}</span>
         </div>
       )}
-
-      {/* Accordions */}
-      <ExpertReviewSection
-        expertReview={expertReview}
-        expertLoading={expertLoading}
-        expertError={expertError}
-        expertSuccess={expertSuccess}
-        isOpen={expertOpen}
-        onToggle={() => setExpertOpen(!expertOpen)}
-        onRun={runExpertAnalysis}
-      />
-
-      <Accordion title="Commentaires & coûts">
-        <CostPanel article={article} />
-      </Accordion>
-
-      <Accordion title="Données structurées">
-        <StructuredDataPanel article={article} />
-      </Accordion>
-
-      <Accordion title="Analyse GEO">
-        <GeoPanel article={article} />
-      </Accordion>
 
       {/* Action buttons */}
       <div className="flex gap-2 pt-1">
