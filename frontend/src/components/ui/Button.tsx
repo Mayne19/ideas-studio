@@ -19,7 +19,7 @@ const variants: Record<ButtonVariant, string> = {
   secondary:
     'border-2 border-border bg-transparent text-primary hover:bg-surface-soft active:bg-surface-muted',
   ghost:
-    'border border-transparent bg-transparent text-primary hover:bg-surface-soft active:bg-surface-muted',
+    'border-2 border-border bg-transparent text-primary hover:bg-primary hover:text-bg active:opacity-85',
   danger:
     'border border-danger bg-danger text-white hover:opacity-90 active:opacity-80',
 }

@@ -171,7 +171,9 @@ export default function CommentsPanel({
 
       {!loading && comments.length === 0 && (
         <div className="flex flex-col items-center gap-2 py-6 text-center">
-          <MessageCircle size={18} className="text-tertiary opacity-40" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-[12px] border border-border bg-transparent text-tertiary">
+            <MessageCircle size={18} />
+          </div>
           <p className="text-[12px] text-tertiary">Aucun commentaire pour l'instant.</p>
         </div>
       )}

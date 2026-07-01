@@ -98,7 +98,7 @@ export default function NotificationsPage() {
 
       {status !== 'error' && notifications.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-20 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-surface-soft text-tertiary">
+          <div className="flex h-12 w-12 items-center justify-center rounded-[16px] border border-border bg-transparent text-tertiary">
             <Bell size={22} />
           </div>
           <div>
