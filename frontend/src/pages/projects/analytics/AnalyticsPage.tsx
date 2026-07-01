@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  BarChart, Bar, Cell, LabelList,
+  BarChart, Bar, Cell,
   XAxis, YAxis,
   CartesianGrid,
 } from 'recharts'
@@ -664,41 +664,25 @@ export default function AnalyticsPage() {
             <div className="h-[140px]">
               <ChartContainer config={trafficOriginConfig} className="h-full w-full">
                 <BarChart
+                  accessibilityLayer
                   data={sourceChannels}
                   layout="vertical"
-                  margin={{ top: 0, right: 16, bottom: 0, left: 0 }}
-                  barCategoryGap={8}
+                  margin={{ left: -20 }}
                 >
-                  <CartesianGrid horizontal={false} />
+                  <XAxis type="number" dataKey="views" hide />
                   <YAxis
                     dataKey="label"
                     type="category"
                     tickLine={false}
+                    tickMargin={10}
                     axisLine={false}
-                    hide
+                    tick={{ fontSize: 12, fill: '#5E5E5E', fontWeight: 500 }}
                   />
-                  <XAxis dataKey="views" type="number" hide />
                   <ChartTooltip
                     cursor={false}
-                    content={<ChartTooltipContent indicator="line" hideLabel />}
+                    content={<ChartTooltipContent hideLabel />}
                   />
-                  <Bar dataKey="views" fill="var(--color-views)" radius={4} barSize={28}>
-                    <LabelList
-                      dataKey="label"
-                      position="insideLeft"
-                      offset={8}
-                      className="fill-bg"
-                      fontSize={12}
-                    />
-                    <LabelList
-                      dataKey="views"
-                      position="right"
-                      offset={8}
-                      className="fill-primary"
-                      fontSize={12}
-                      formatter={(value: unknown) => formatMetric(Number(value ?? 0))}
-                    />
-                  </Bar>
+                  <Bar dataKey="views" fill="var(--color-views)" radius={5} barSize={24} />
                 </BarChart>
               </ChartContainer>
             </div>
