@@ -1642,30 +1642,6 @@ export default function ArticleEditorPage() {
                             placeholder="ex: marketing digital"
                           />
                         </Field>
-                        <Field label="Format de contenu" hint="Calibre le scoring v2.1">
-                          <select
-                            value={metaFields.content_format}
-                            onChange={(e) => handleMetaChange('content_format', e.target.value)}
-                            className={INPUT}
-                          >
-                            <option value="">— Inféré depuis le volume —</option>
-                            <option value="short">Court (400–800 mots)</option>
-                            <option value="medium">Moyen (800–1500 mots)</option>
-                            <option value="long">Long (1500–2500 mots)</option>
-                            <option value="pillar">Pilier (2500+ mots)</option>
-                          </select>
-                        </Field>
-                        <Field label="Volume cible (mots)" hint="Optionnel si format déclaré">
-                          <input
-                            type="number"
-                            min={100}
-                            step={100}
-                            value={metaFields.target_word_count}
-                            onChange={(e) => handleMetaChange('target_word_count', e.target.value)}
-                            className={INPUT}
-                            placeholder="ex: 1200"
-                          />
-                        </Field>
                       </div>
                       <div className="p-3">
                         <Field label="Slug" hint="URL de l'article">
