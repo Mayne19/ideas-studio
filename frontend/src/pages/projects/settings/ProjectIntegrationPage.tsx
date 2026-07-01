@@ -254,7 +254,7 @@ export default function ProjectIntegrationPage() {
         title="Identifiants"
         description="Utilisez ces clés pour connecter votre blog à l'API publique."
       >
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 rounded-[10px] bg-accent/6 px-4 py-3">
           <InfoRow
             label="Project ID"
             value={info?.project_id ?? '—'}
