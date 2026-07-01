@@ -124,6 +124,22 @@ const CALCULATION_TEXT: Record<string, string> = {
 
 /* ─── Score synthesis card ──────────────────────────────────── */
 
+const SCORE_PAIRS: [ScoreKey, ScoreKey][] = [
+  ['SEO', 'GEO'],
+  ['Lisibilité', 'Originalité'],
+  ['EEAT', 'Qualité'],
+]
+
+const SCORE_LABEL: Record<ScoreKey, string> = {
+  Synthèse: 'Global',
+  SEO: 'SEO',
+  Qualité: 'Qualité',
+  Lisibilité: 'Lisibilité',
+  Originalité: 'Originalité',
+  GEO: 'GEO',
+  EEAT: 'EEAT',
+}
+
 function ScoreSynthesisCard({
   article, brief, expertReview, selected, onSelect,
 }: {
@@ -133,31 +149,54 @@ function ScoreSynthesisCard({
   selected: ScoreKey
   onSelect: (key: ScoreKey) => void
 }) {
+  const globalScore = resolveScore(article, brief, expertReview, 'Synthèse')
+
   return (
     <div className="rounded-[14px] border border-border bg-bg p-4">
-      <p className="text-[12px] font-semibold text-primary mb-3">Synthèse des scores</p>
 
-      <div className="grid grid-cols-2 gap-2">
-        {SCORE_TILES.map((tile) => {
-          const score = resolveScore(article, brief, expertReview, tile.key)
-          return (
-            <button
-              key={tile.key}
-              type="button"
-              onClick={() => onSelect(tile.key)}
-              className={`flex min-h-[106px] flex-col items-center justify-center gap-2 rounded-[12px] border px-2.5 py-3 text-center transition-colors ${
-                selected === tile.key ? 'border-border-strong bg-surface-soft' : 'border-border bg-transparent hover:bg-surface-soft'
-              }`}
-            >
-              <span className="block text-[10px] font-medium uppercase tracking-wide text-tertiary">{tile.label}</span>
-              {score === null ? (
-                <span className="flex h-12 w-12 items-center justify-center text-[16px] font-semibold text-tertiary">—</span>
-              ) : (
-                <Gauge showValue size="small" value={score} color={gaugeColor(score)} />
-              )}
-            </button>
-          )
-        })}
+      {/* Global — full width, gauge left + label right */}
+      <div className="mb-3">
+        <button
+          type="button"
+          onClick={() => onSelect('Synthèse')}
+          className={`flex w-full items-center gap-4 rounded-[12px] border px-5 py-4 text-left transition-colors ${
+            selected === 'Synthèse' ? 'border-border-strong bg-surface-soft' : 'border-border bg-transparent hover:bg-surface-soft'
+          }`}
+        >
+          <Gauge showValue size="large" value={globalScore ?? 0} color={gaugeColor(globalScore ?? 0)} />
+          <div className="flex-1">
+            <p className="text-[17px] font-semibold text-primary">Global</p>
+            <p className="text-[12px] text-tertiary">Vue d'ensemble de l'article</p>
+          </div>
+        </button>
+      </div>
+
+      {/* Secondary scores — 2-column rows */}
+      <div className="flex flex-col gap-2">
+        {SCORE_PAIRS.map(([left, right]) => (
+          <div key={`${left}-${right}`} className="grid grid-cols-2 gap-2">
+            {[left, right].map((key) => {
+              const score = resolveScore(article, brief, expertReview, key)
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => onSelect(key)}
+                  className={`flex flex-col items-center gap-2 rounded-[12px] border px-2.5 py-3 text-center transition-colors ${
+                    selected === key ? 'border-border-strong bg-surface-soft' : 'border-border bg-transparent hover:bg-surface-soft'
+                  }`}
+                >
+                  <span className="block text-[10px] font-medium uppercase tracking-wide text-tertiary">{SCORE_LABEL[key]}</span>
+                  {score === null ? (
+                    <span className="flex h-12 w-12 items-center justify-center text-[16px] font-semibold text-tertiary">—</span>
+                  ) : (
+                    <Gauge showValue size="small" value={score} color={gaugeColor(score)} />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        ))}
       </div>
     </div>
   )
