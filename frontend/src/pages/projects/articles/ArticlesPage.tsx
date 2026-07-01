@@ -21,6 +21,7 @@ import { TableRoot, Table, TableHeader, TableHead, TableBody, TableRow, TableCel
 import { finiteScore, getGeoScore, getOriginalityScore } from '@/lib/scoreBadge'
 import ScoreBadge from '@/components/ui/ScoreBadge'
 import { useProject } from '@/context/ProjectContext'
+import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxList, ComboboxItem } from '@/components/ui/combobox'
 
 const PAGE_SIZE = 20
 
@@ -59,6 +60,14 @@ function ArticleRow({
   const category = categories.find((c) => c.id === article.category_id)
   const isPublished = PUBLISHED_STATUSES.has(article.status)
   const isEditable = EDITABLE_STATUSES.has(article.status)
+  const [actionValue, setActionValue] = useState('')
+  const actionItems = [
+    ...(isPublished ? [{ value: 'view-site', label: 'Voir sur le site' }] : []),
+    ...(isEditable ? [{ value: 'analyze-seo', label: 'Analyser SEO' }] : []),
+    ...(isPublished ? [{ value: 'unpublish', label: 'Dépublier' }] : []),
+    ...(!isPublished ? [{ value: 'archive', label: 'Archiver' }] : []),
+    { value: 'delete', label: 'Supprimer' },
+  ]
   const originalityScore = getOriginalityScore(article)
   const rowCellClass = 'border-y-2 border-border bg-transparent py-2.5 transition-colors first:rounded-l-[12px] first:border-l-2 last:rounded-r-[12px] last:border-r-2 group-hover:bg-surface-soft'
   const scoreCellClass = `w-[40px] px-1 text-center ${rowCellClass}`
@@ -124,19 +133,21 @@ function ArticleRow({
           >
             Éditer
           </Button>
-          <select
-            onChange={(e) => { if (e.target.value) { onAction(e.target.value, article); e.target.value = '' } }}
-            className="h-8 w-[92px] cursor-pointer rounded-[8px] border border-border bg-transparent px-2 text-[12px] text-secondary transition-colors hover:bg-surface-muted"
-            defaultValue=""
-            aria-label={`Actions pour ${article.title}`}
-          >
-            <option value="" disabled>Actions</option>
-            {isPublished && <option value="view-site">Voir sur le site</option>}
-            {isEditable && <option value="analyze-seo">Analyser SEO</option>}
-            {isPublished && <option value="unpublish">Dépublier</option>}
-            {!isPublished && <option value="archive">Archiver</option>}
-            <option value="delete">Supprimer</option>
-          </select>
+          <div className="relative">
+            <Combobox items={actionItems} value={actionValue} onValueChange={(v) => { onAction(v, article); setActionValue('') }}>
+              <ComboboxInput placeholder="Actions" className="h-8 w-[92px] text-[12px]" />
+              <ComboboxContent>
+                <ComboboxEmpty>Aucune action</ComboboxEmpty>
+                <ComboboxList>
+                  {(item) => (
+                    <ComboboxItem key={item.value} value={item.value}>
+                      {item.label}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          </div>
         </div>
       </TableCell>
     </TableRow>

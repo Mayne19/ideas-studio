@@ -1,4 +1,5 @@
 import type { Category } from '@/types'
+import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxList, ComboboxItem } from '@/components/ui/combobox'
 
 export type MetaFields = {
   title: string
@@ -58,8 +59,6 @@ export default function MetaPanel({
   onChange: (name: keyof MetaFields, value: string) => void
   categories?: Category[]
 }) {
-  const selectBase = "w-full rounded-[8px] border border-border bg-surface px-2.5 py-1.5 text-[12px] text-primary focus:outline-none focus:ring-1 focus:ring-accent/50 focus:border-accent/60 transition-colors"
-
   return (
     <div className="flex flex-col gap-3">
       <MetaField label="Titre" name="title" value={fields.title} onChange={onChange} />
@@ -68,18 +67,28 @@ export default function MetaPanel({
       {categories.length > 0 && (
         <div>
           <label className="block text-[12px] font-medium text-secondary mb-1">Catégorie</label>
-          <select
-            value={fields.category_id}
-            onChange={(e) => onChange('category_id', e.target.value)}
-            className={selectBase}
-          >
-            <option value="">— Aucune catégorie —</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <Combobox
+              items={[
+                { value: '', label: '— Aucune catégorie —' },
+                ...categories.map((cat) => ({ value: cat.id, label: cat.name })),
+              ]}
+              value={fields.category_id}
+              onValueChange={(v) => onChange('category_id', v)}
+            >
+              <ComboboxInput placeholder="— Aucune catégorie —" />
+              <ComboboxContent>
+                <ComboboxEmpty>Aucun résultat</ComboboxEmpty>
+                <ComboboxList>
+                  {(item) => (
+                    <ComboboxItem key={item.value} value={item.value}>
+                      {item.label}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          </div>
         </div>
       )}
       <MetaField label="Extrait" name="excerpt" value={fields.excerpt} onChange={onChange} multiline />

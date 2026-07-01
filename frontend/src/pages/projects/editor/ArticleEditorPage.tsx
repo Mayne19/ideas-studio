@@ -47,6 +47,7 @@ import ErrorState from '@/components/ui/ErrorState'
 import StatusBadge from '@/components/ui/StatusBadge'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/Popover'
 import Button from '@/components/ui/Button'
+import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxList, ComboboxItem } from '@/components/ui/combobox'
 import { useAuth } from '@/context/AuthContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -1550,32 +1551,49 @@ export default function ArticleEditorPage() {
                       <span className="text-[12px] font-medium text-secondary">Chemin éditorial</span>
                       <div className="grid grid-cols-2 gap-2">
                         <Field label="Niche">
-                          <select
-                            value={effectivePathNiche}
-                            onChange={(e) => handlePathNicheChange(e.target.value)}
-                            className={INPUT}
-                            disabled={nicheOptions.length === 0}
-                          >
-                            <option value="">Choisir une niche</option>
-                            {nicheOptions.map((niche) => (
-                              <option key={niche.value} value={niche.value}>
-                                {niche.label}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="relative">
+                            <Combobox
+                              items={[{ value: '', label: 'Choisir une niche' }, ...nicheOptions]}
+                              value={effectivePathNiche}
+                              onValueChange={handlePathNicheChange}
+                            >
+                              <ComboboxInput placeholder="Choisir une niche" disabled={nicheOptions.length === 0} />
+                              <ComboboxContent>
+                                <ComboboxEmpty>Aucun résultat</ComboboxEmpty>
+                                <ComboboxList>
+                                  {(item) => (
+                                    <ComboboxItem key={item.value} value={item.value}>
+                                      {item.label}
+                                    </ComboboxItem>
+                                  )}
+                                </ComboboxList>
+                              </ComboboxContent>
+                            </Combobox>
+                          </div>
                         </Field>
                         <Field label="Catégorie">
-                          <select
-                            value={metaFields.category_id}
-                            onChange={(e) => handlePathCategoryChange(e.target.value)}
-                            className={INPUT}
-                            disabled={!effectivePathNiche || categoriesForPath.length === 0}
-                          >
-                            <option value="">Choisir une catégorie</option>
-                            {categoriesForPath.map((cat) => (
-                              <option key={cat.id} value={cat.id}>{cat.name}</option>
-                            ))}
-                          </select>
+                          <div className="relative">
+                            <Combobox
+                              items={[
+                                { value: '', label: 'Choisir une catégorie' },
+                                ...categoriesForPath.map((cat) => ({ value: cat.id, label: cat.name })),
+                              ]}
+                              value={metaFields.category_id}
+                              onValueChange={handlePathCategoryChange}
+                            >
+                              <ComboboxInput placeholder="Choisir une catégorie" disabled={!effectivePathNiche || categoriesForPath.length === 0} />
+                              <ComboboxContent>
+                                <ComboboxEmpty>Aucun résultat</ComboboxEmpty>
+                                <ComboboxList>
+                                  {(item) => (
+                                    <ComboboxItem key={item.value} value={item.value}>
+                                      {item.label}
+                                    </ComboboxItem>
+                                  )}
+                                </ComboboxList>
+                              </ComboboxContent>
+                            </Combobox>
+                          </div>
                         </Field>
                       </div>
                     </div>

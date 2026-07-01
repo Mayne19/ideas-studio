@@ -5,6 +5,7 @@ import { api } from '@/api/client'
 import { Card } from '@/components/ui/Card'
 import ToggleSwitch from '@/components/ui/ToggleSwitch'
 import { useProject } from '@/context/ProjectContext'
+import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxList, ComboboxItem } from '@/components/ui/combobox'
 
 type AIProviderConfig = {
   id: string
@@ -369,25 +370,29 @@ export default function ProjectProvidersPage() {
             {!editingId && (
               <div className="flex flex-col gap-1.5">
                 <label className="text-[12px] font-medium text-secondary">Type de provider</label>
-                <select
-                  value={form.provider}
-                  onChange={(e) => {
-                    const def = getProviderDef(e.target.value)
+                <div className="relative">
+                  <Combobox items={SUPPORTED_PROVIDERS.map(p => ({ value: p.key, label: p.label }))} value={form.provider} onValueChange={(v) => {
+                    const def = getProviderDef(v)
                     setForm({
                       ...form,
-                      provider: e.target.value,
-                      label: def?.label ?? e.target.value,
+                      provider: v,
+                      label: def?.label ?? v,
                       model: def?.default_model ?? '',
                       base_url: def?.default_base_url ?? '',
                     })
-                    setAdvancedOpen(e.target.value === 'custom' || e.target.value === 'ollama')
-                  }}
-                  className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
-                >
-                  {SUPPORTED_PROVIDERS.map((p) => (
-                    <option key={p.key} value={p.key}>{p.label}</option>
-                  ))}
-                </select>
+                    setAdvancedOpen(v === 'custom' || v === 'ollama')
+                  }}>
+                    <ComboboxInput placeholder="Choisir un provider" />
+                    <ComboboxContent>
+                      <ComboboxEmpty>Aucun résultat</ComboboxEmpty>
+                      <ComboboxList>
+                        {(item) => (
+                          <ComboboxItem key={item.value} value={item.value}>{item.label}</ComboboxItem>
+                        )}
+                      </ComboboxList>
+                    </ComboboxContent>
+                  </Combobox>
+                </div>
               </div>
             )}
             <div className="flex flex-col gap-1.5">

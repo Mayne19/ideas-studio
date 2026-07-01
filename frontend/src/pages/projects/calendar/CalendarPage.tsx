@@ -10,6 +10,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import { Card } from '@/components/ui/Card'
+import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxList, ComboboxItem } from '@/components/ui/combobox'
 
 type ViewMode = 'list' | 'month'
 
@@ -125,16 +126,19 @@ function PublicationHeatmapPanel({
             {heatmapTotal} article{heatmapTotal > 1 ? 's' : ''} publié{heatmapTotal > 1 ? 's' : ''} en {heatmapYear}.
           </p>
         </div>
-        <select
-          value={heatmapYear}
-          onChange={(event) => onYearChange(Number(event.target.value))}
-          className="h-10 w-[96px] rounded-[10px] border border-border bg-transparent px-3 text-[12px] text-secondary outline-none transition-colors hover:bg-surface-muted focus:ring-1 focus:ring-accent/20"
-          aria-label="Année de la heatmap"
-        >
-          {yearOptions.map((option) => (
-            <option key={option} value={option}>{option}</option>
-          ))}
-        </select>
+        <div className="relative">
+          <Combobox items={yearOptions.map(y => ({ value: String(y), label: String(y) }))} value={String(heatmapYear)} onValueChange={(v) => onYearChange(Number(v))}>
+            <ComboboxInput placeholder="Année" className="h-10 w-[96px] text-[12px]" />
+            <ComboboxContent>
+              <ComboboxEmpty>Aucune année</ComboboxEmpty>
+              <ComboboxList>
+                {(item) => (
+                  <ComboboxItem key={item.value} value={item.value}>{item.label}</ComboboxItem>
+                )}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+        </div>
       </div>
 
       <div className="pb-2">

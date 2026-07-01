@@ -31,6 +31,7 @@ import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import StatusBadge from '@/components/ui/StatusBadge'
 import ArticleScoreBadges from '@/components/ui/ArticleScoreBadges'
+import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxList, ComboboxItem } from '@/components/ui/combobox'
 
 type ColumnDef = {
   status: string
@@ -654,16 +655,19 @@ export default function KanbanPage() {
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-[12px] font-medium text-secondary">Catégorie</label>
-            <select
-              value={createCategoryId}
-              onChange={(e) => setCreateCategoryId(e.target.value)}
-              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[14px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
-            >
-              <option value="">Sans catégorie</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <Combobox items={[{ value: '', label: 'Sans catégorie' }, ...categories.map((cat) => ({ value: cat.id, label: cat.name }))]} value={createCategoryId} onValueChange={setCreateCategoryId}>
+                <ComboboxInput placeholder="Choisir une catégorie" />
+                <ComboboxContent>
+                  <ComboboxEmpty>Aucune catégorie</ComboboxEmpty>
+                  <ComboboxList>
+                    {(item) => (
+                      <ComboboxItem key={item.value} value={item.value}>{item.label}</ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+            </div>
           </div>
           <div className="flex gap-2 pt-1">
             <Button type="button" variant="secondary" size="sm" className="flex-1 justify-center" onClick={() => setCreateStatus('')}>

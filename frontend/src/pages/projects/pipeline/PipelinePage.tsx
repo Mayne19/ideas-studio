@@ -29,12 +29,12 @@ import { finiteScore } from '@/lib/scoreBadge'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
-import Select from '@/components/ui/Select'
 import EmptyState from '@/components/ui/EmptyState'
 import ErrorState from '@/components/ui/ErrorState'
 import ScoreBadge from '@/components/ui/ScoreBadge'
 import StatusBadge from '@/components/ui/StatusBadge'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxList, ComboboxItem } from '@/components/ui/combobox'
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -69,6 +69,8 @@ const SCORE_THRESHOLD_OPTIONS = [
   { value: '80', label: 'Score ≥ 80' },
   { value: '75', label: 'Score ≥ 75' },
 ]
+
+const BULK_COUNT_ITEMS = [3, 5, 10, 20].map((n) => ({ value: String(n), label: `${n} idées` }))
 
 // ── Tab button ──────────────────────────────────────────────────────────────
 
@@ -312,9 +314,51 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
               className="h-10 rounded-[10px] border border-border bg-transparent pl-8 pr-3 text-[14px] text-primary placeholder:text-tertiary focus:outline-none focus:ring-2 focus:ring-accent/30"
             />
           </div>
-          <Select options={categoryOptions} value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-44" />
-          <Select options={STATUS_OPTIONS} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-44" />
-          <Select options={SCORE_OPTIONS} value={scoreFilter} onChange={(e) => setScoreFilter(e.target.value)} className="w-36" />
+          <div className="relative w-44">
+            <Combobox items={categoryOptions} value={categoryFilter} onValueChange={setCategoryFilter}>
+              <ComboboxInput placeholder="Toutes les catégories" />
+              <ComboboxContent>
+                <ComboboxEmpty>Aucun résultat</ComboboxEmpty>
+                <ComboboxList>
+                  {(item) => (
+                    <ComboboxItem key={item.value} value={item.value}>
+                      {item.label}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          </div>
+          <div className="relative w-44">
+            <Combobox items={STATUS_OPTIONS} value={statusFilter} onValueChange={setStatusFilter}>
+              <ComboboxInput placeholder="Tous les statuts" />
+              <ComboboxContent>
+                <ComboboxEmpty>Aucun résultat</ComboboxEmpty>
+                <ComboboxList>
+                  {(item) => (
+                    <ComboboxItem key={item.value} value={item.value}>
+                      {item.label}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          </div>
+          <div className="relative w-36">
+            <Combobox items={SCORE_OPTIONS} value={scoreFilter} onValueChange={setScoreFilter}>
+              <ComboboxInput placeholder="Tous les scores" />
+              <ComboboxContent>
+                <ComboboxEmpty>Aucun résultat</ComboboxEmpty>
+                <ComboboxList>
+                  {(item) => (
+                    <ComboboxItem key={item.value} value={item.value}>
+                      {item.label}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="secondary" icon={<Sparkles size={13} />} onClick={() => setBulkGenerateOpen(true)}>
@@ -471,13 +515,21 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
         <div className="flex flex-col gap-3">
           <div>
             <label className="mb-1 block text-[12px] font-medium text-secondary">Nombre d'idées</label>
-            <select
-              value={bulkCount}
-              onChange={(e) => setBulkCount(Number(e.target.value))}
-              className="w-full rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary focus:outline-none focus:ring-2 focus:ring-accent/30"
-            >
-              {[3, 5, 10, 20].map((n) => <option key={n} value={n}>{n} idées</option>)}
-            </select>
+            <div className="relative">
+              <Combobox items={BULK_COUNT_ITEMS} value={String(bulkCount)} onValueChange={(v) => setBulkCount(Number(v))}>
+                <ComboboxInput placeholder="Nombre d'idées" />
+                <ComboboxContent>
+                  <ComboboxEmpty>Aucun résultat</ComboboxEmpty>
+                  <ComboboxList>
+                    {(item) => (
+                      <ComboboxItem key={item.value} value={item.value}>
+                        {item.label}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+            </div>
           </div>
           {generateResult && <p className="rounded-[10px] bg-surface-soft px-3 py-2 text-[14px] text-secondary">{generateResult}</p>}
           <div className="flex gap-2">
@@ -654,13 +706,21 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
       {/* Bulk validate by score header */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <select
-            value={scoreThreshold}
-            onChange={(e) => setScoreThreshold(Number(e.target.value))}
-            className="h-10 rounded-[10px] border border-border bg-transparent px-3 text-[14px] text-primary focus:outline-none focus:ring-2 focus:ring-accent/30"
-          >
-            {SCORE_THRESHOLD_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
+          <div className="relative">
+            <Combobox items={SCORE_THRESHOLD_OPTIONS} value={String(scoreThreshold)} onValueChange={(v) => setScoreThreshold(Number(v))}>
+              <ComboboxInput placeholder="Seuil de score" />
+              <ComboboxContent>
+                <ComboboxEmpty>Aucun résultat</ComboboxEmpty>
+                <ComboboxList>
+                  {(item) => (
+                    <ComboboxItem key={item.value} value={item.value}>
+                      {item.label}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          </div>
           <Button
             size="sm"
             icon={<CheckCircle size={13} />}
@@ -671,13 +731,21 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
             Valider tout ce qui dépasse ce score ({eligibleCount})
           </Button>
         </div>
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value as ValidateFilter)}
-          className="h-10 rounded-[10px] border border-border bg-transparent px-3 text-[14px] text-primary focus:outline-none focus:ring-2 focus:ring-accent/30"
-        >
-          {VALIDATE_FILTER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
+        <div className="relative">
+          <Combobox items={VALIDATE_FILTER_OPTIONS} value={filter} onValueChange={(v) => setFilter(v as ValidateFilter)}>
+            <ComboboxInput placeholder="Filtrer" />
+            <ComboboxContent>
+              <ComboboxEmpty>Aucun résultat</ComboboxEmpty>
+              <ComboboxList>
+                {(item) => (
+                  <ComboboxItem key={item.value} value={item.value}>
+                    {item.label}
+                  </ComboboxItem>
+                )}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+        </div>
       </div>
 
       {error && <div className="mb-3 rounded-[10px] border border-danger/20 bg-danger/5 px-3 py-2 text-[14px] text-danger">{error}</div>}

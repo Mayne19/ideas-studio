@@ -16,6 +16,7 @@ import Input from '@/components/ui/Input'
 import Textarea from '@/components/ui/Textarea'
 import ErrorState from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxList, ComboboxItem } from '@/components/ui/combobox'
 
 const IDEA_STATUSES_TO_FETCH = [
   'idea_proposed', 'idea_priority', 'idea_rejected',
@@ -368,36 +369,75 @@ export default function IdeasPipelinePage() {
             />
           </div>
           {categories.length > 0 && (
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="h-10 rounded-[10px] border border-border bg-transparent px-3 text-[12px] text-secondary cursor-pointer"
-            >
-              <option value="">Toutes catégories</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <Combobox
+                items={[
+                  { value: '', label: 'Toutes catégories' },
+                  ...categories.map((c) => ({ value: c.id, label: c.name })),
+                ]}
+                value={filterCategory}
+                onValueChange={(v) => setFilterCategory(v)}
+              >
+                <ComboboxInput placeholder="Toutes catégories" />
+                <ComboboxContent>
+                  <ComboboxEmpty>Aucun résultat</ComboboxEmpty>
+                  <ComboboxList>
+                    {(item) => (
+                      <ComboboxItem key={item.value} value={item.value}>
+                        {item.label}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+            </div>
           )}
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="h-10 rounded-[10px] border border-border bg-transparent px-3 text-[12px] text-secondary cursor-pointer"
-          >
-            {IDEA_STATI.map((s) => (
-              <option key={s.key} value={s.key}>{s.label}</option>
-            ))}
-          </select>
-          <select
-            value={filterMinScore}
-            onChange={(e) => setFilterMinScore(Number(e.target.value))}
-            className="h-10 rounded-[10px] border border-border bg-transparent px-3 text-[12px] text-secondary cursor-pointer"
-          >
-            <option value={0}>Tous scores</option>
-            <option value={70}>Score ≥ 70</option>
-            <option value={50}>Score ≥ 50</option>
-            <option value={30}>Score ≥ 30</option>
-          </select>
+          <div className="relative">
+            <Combobox
+              items={[
+                { value: '', label: 'Tous statuts' },
+                ...IDEA_STATI.filter((s) => s.key).map((s) => ({ value: s.key, label: s.label })),
+              ]}
+              value={filterStatus}
+              onValueChange={(v) => setFilterStatus(v)}
+            >
+              <ComboboxInput placeholder="Tous statuts" />
+              <ComboboxContent>
+                <ComboboxEmpty>Aucun résultat</ComboboxEmpty>
+                <ComboboxList>
+                  {(item) => (
+                    <ComboboxItem key={item.value} value={item.value}>
+                      {item.label}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          </div>
+          <div className="relative">
+            <Combobox
+              items={[
+                { value: '0', label: 'Tous scores' },
+                { value: '70', label: 'Score ≥ 70' },
+                { value: '50', label: 'Score ≥ 50' },
+                { value: '30', label: 'Score ≥ 30' },
+              ]}
+              value={String(filterMinScore)}
+              onValueChange={(v) => setFilterMinScore(Number(v))}
+            >
+              <ComboboxInput placeholder="Tous scores" />
+              <ComboboxContent>
+                <ComboboxEmpty>Aucun résultat</ComboboxEmpty>
+                <ComboboxList>
+                  {(item) => (
+                    <ComboboxItem key={item.value} value={item.value}>
+                      {item.label}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          </div>
           {(filterCategory || filterStatus || filterSearch || filterMinScore > 0) && (
             <button
               onClick={() => { setFilterCategory(''); setFilterStatus(''); setFilterSearch(''); setFilterMinScore(0) }}
@@ -926,16 +966,30 @@ export default function IdeasPipelinePage() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[12px] font-medium text-secondary">Nombre d'idées</label>
-                <select
-                  value={autoCount}
-                  onChange={(e) => setAutoCount(Number(e.target.value))}
-                  className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[14px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
-                >
-                  <option value={1}>1 idée</option>
-                  <option value={3}>3 idées</option>
-                  <option value={5}>5 idées</option>
-                  <option value={10}>10 idées</option>
-                </select>
+                <div className="relative">
+                  <Combobox
+                    items={[
+                      { value: '1', label: '1 idée' },
+                      { value: '3', label: '3 idées' },
+                      { value: '5', label: '5 idées' },
+                      { value: '10', label: '10 idées' },
+                    ]}
+                    value={String(autoCount)}
+                    onValueChange={(v) => setAutoCount(Number(v))}
+                  >
+                    <ComboboxInput placeholder="Nombre d'idées" />
+                    <ComboboxContent>
+                      <ComboboxEmpty>Aucun résultat</ComboboxEmpty>
+                      <ComboboxList>
+                        {(item) => (
+                          <ComboboxItem key={item.value} value={item.value}>
+                            {item.label}
+                          </ComboboxItem>
+                        )}
+                      </ComboboxList>
+                    </ComboboxContent>
+                  </Combobox>
+                </div>
               </div>
               <div className="flex gap-2 pt-1">
                 <Button variant="secondary" size="sm" className="flex-1 justify-center" onClick={() => { setAutoOpen(false); setAutoResult(null) }}>

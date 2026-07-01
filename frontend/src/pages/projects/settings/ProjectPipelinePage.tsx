@@ -9,6 +9,7 @@ import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import ToggleSwitch from '@/components/ui/ToggleSwitch'
 import { useProject } from '@/context/ProjectContext'
+import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxList, ComboboxItem } from '@/components/ui/combobox'
 
 const DAYS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
 const DAYS_EN = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
@@ -24,6 +25,9 @@ function hourLabel(h: number): string {
 }
 
 const ARTICLES_OPTIONS = [1, 2, 3, 5, 7, 10, 15, 20]
+
+const HOUR_ITEMS = HOURS.map((h) => ({ value: String(h), label: hourLabel(h) }))
+const ARTICLE_ITEMS = ARTICLES_OPTIONS.map((n) => ({ value: String(n), label: String(n) }))
 
 function AccessDenied() {
   return (
@@ -256,28 +260,40 @@ export default function ProjectPipelinePage() {
 
             <div className="mb-3">
               <label className="mb-1 block text-[12px] text-secondary">Heure de lancement</label>
-              <select
-                value={launchHour}
-                onChange={(e) => { setLaunchHour(Number(e.target.value)); setDirty(true) }}
-                className="h-10 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
-              >
-                {HOURS.map((h) => (
-                  <option key={h} value={h}>{hourLabel(h)}</option>
-                ))}
-              </select>
+              <div className="relative">
+                <Combobox items={HOUR_ITEMS} value={String(launchHour)} onValueChange={(v) => { setLaunchHour(Number(v)); setDirty(true) }}>
+                  <ComboboxInput placeholder="Heure" />
+                  <ComboboxContent>
+                    <ComboboxEmpty>Aucun résultat</ComboboxEmpty>
+                    <ComboboxList>
+                      {(item) => (
+                        <ComboboxItem key={item.value} value={item.value}>
+                          {item.label}
+                        </ComboboxItem>
+                      )}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
+              </div>
             </div>
 
             <div>
               <label className="mb-1 block text-[12px] text-secondary">Cadence de sécurité hebdomadaire</label>
-              <select
-                value={articlesPerWeek}
-                onChange={(e) => { setArticlesPerWeek(Number(e.target.value)); setDirty(true) }}
-                className="h-10 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
-              >
-                {ARTICLES_OPTIONS.map((n) => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
+              <div className="relative">
+                <Combobox items={ARTICLE_ITEMS} value={String(articlesPerWeek)} onValueChange={(v) => { setArticlesPerWeek(Number(v)); setDirty(true) }}>
+                  <ComboboxInput placeholder="Articles/semaine" />
+                  <ComboboxContent>
+                    <ComboboxEmpty>Aucun résultat</ComboboxEmpty>
+                    <ComboboxList>
+                      {(item) => (
+                        <ComboboxItem key={item.value} value={item.value}>
+                          {item.label}
+                        </ComboboxItem>
+                      )}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
+              </div>
               <p className="mt-1 text-[12px] text-tertiary">
                 Le volume éditorial vient des catégories. Cette valeur limite l'exécution hebdomadaire du pipeline.
               </p>
