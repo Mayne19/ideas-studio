@@ -61,7 +61,7 @@ function ArticleRow({
   const isEditable = EDITABLE_STATUSES.has(article.status)
   const originalityScore = getOriginalityScore(article)
   const rowCellClass = 'border-y-2 border-border bg-transparent py-2.5 transition-colors first:rounded-l-[12px] first:border-l-2 last:rounded-r-[12px] last:border-r-2 group-hover:bg-surface-soft'
-  const scoreCellClass = `w-[40px] text-center ${rowCellClass}`
+  const scoreCellClass = `w-[35px] text-center ${rowCellClass}`
 
   return (
     <TableRow className="group hover:bg-transparent">
@@ -516,13 +516,13 @@ export default function ArticlesPage() {
                 <TableHeader className="border-0">
                   <TableRow className="hover:bg-transparent">
                   <TableHead className="pr-8">Titre</TableHead>
-                  <TableHead className="w-[40px] pl-5 text-center text-[11px] font-medium">Glob.</TableHead>
-                  <TableHead className="w-[40px] text-center text-[11px] font-medium">SEO</TableHead>
-                  <TableHead className="w-[40px] text-center text-[11px] font-medium">GEO</TableHead>
-                  <TableHead className="w-[40px] text-center text-[11px] font-medium">Qual.</TableHead>
-                  <TableHead className="w-[40px] text-center text-[11px] font-medium">Lisi.</TableHead>
-                  <TableHead className="w-[40px] text-center text-[11px] font-medium">Orig.</TableHead>
-                  <TableHead className="w-[40px] pr-5 text-center text-[11px] font-medium">EEAT</TableHead>
+                  <TableHead className="w-[35px] pl-5 text-center text-[11px] font-medium">Glob.</TableHead>
+                  <TableHead className="w-[35px] text-center text-[11px] font-medium">SEO</TableHead>
+                  <TableHead className="w-[35px] text-center text-[11px] font-medium">GEO</TableHead>
+                  <TableHead className="w-[35px] text-center text-[11px] font-medium">Qual.</TableHead>
+                  <TableHead className="w-[35px] text-center text-[11px] font-medium">Lisi.</TableHead>
+                  <TableHead className="w-[35px] text-center text-[11px] font-medium">Orig.</TableHead>
+                  <TableHead className="w-[35px] pr-5 text-center text-[11px] font-medium">EEAT</TableHead>
                   <TableHead className="w-[124px] px-5 text-center">Statut</TableHead>
                   <TableHead className="w-[206px] pl-5 text-right">Actions</TableHead>
                   </TableRow>
