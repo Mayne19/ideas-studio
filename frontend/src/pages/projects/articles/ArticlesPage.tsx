@@ -112,19 +112,20 @@ function ArticleRow({
       <TableCell className={`w-[90px] ${rowCellClass}`}>
         <StatusBadge status={article.status} />
       </TableCell>
-      <TableCell className={`w-[130px] ${rowCellClass}`}>
-        <div className="flex items-center gap-2 justify-end">
+      <TableCell className={`w-[116px] ${rowCellClass}`}>
+        <div className="flex items-center justify-end gap-1.5">
           <Button
             size="sm"
             icon={<Pencil size={12} />}
             onClick={() => onEdit(article)}
             title="Éditer"
+            className="h-8 px-2.5 text-[12px]"
           >
             Éditer
           </Button>
           <select
             onChange={(e) => { if (e.target.value) { onAction(e.target.value, article); e.target.value = '' } }}
-            className="h-10 w-[96px] cursor-pointer rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-secondary transition-colors hover:bg-surface-muted"
+            className="h-8 w-[84px] cursor-pointer rounded-[8px] border border-border bg-transparent px-2 text-[12px] text-secondary transition-colors hover:bg-surface-muted"
             defaultValue=""
             aria-label={`Actions pour ${article.title}`}
           >
@@ -522,7 +523,7 @@ export default function ArticlesPage() {
                   <TableHead className="w-[48px] text-center text-[11px] font-medium">Orig.</TableHead>
                   <TableHead className="w-[48px] text-center text-[11px] font-medium">EEAT</TableHead>
                   <TableHead className="w-[90px]">Statut</TableHead>
-                  <TableHead className="w-[130px] text-right">Actions</TableHead>
+                  <TableHead className="w-[116px] text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
