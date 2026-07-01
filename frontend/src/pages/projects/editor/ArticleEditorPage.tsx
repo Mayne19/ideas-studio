@@ -870,13 +870,6 @@ export default function ArticleEditorPage() {
     scheduleAutosave(editor?.getHTML() ?? '')
   }
 
-  function handleFeaturedChange(value: boolean) {
-    featuredRef.current = value
-    setFeatured(value)
-    setArticle((prev) => prev ? { ...prev, featured: value } : prev)
-    scheduleAutosave(editor?.getHTML() ?? '')
-  }
-
   function handleTitleInput(e: React.ChangeEvent<HTMLTextAreaElement>) {
     handleMetaChange('title', e.target.value)
     e.currentTarget.style.height = 'auto'
@@ -1624,15 +1617,6 @@ export default function ArticleEditorPage() {
                             placeholder="ex: comparateurs IA"
                           />
                         </Field>
-                        <label className="flex items-center justify-between rounded-[8px] border border-border bg-surface px-3 py-2 text-[12px]">
-                          <span className="font-medium text-secondary">Mis en avant</span>
-                          <input
-                            type="checkbox"
-                            checked={featured}
-                            onChange={(e) => handleFeaturedChange(e.target.checked)}
-                            className="h-4 w-4 accent-accent"
-                          />
-                        </label>
                         <Field label="Mot-clé principal" hint="Pour l'analyse SEO">
                           <input
                             type="text"
