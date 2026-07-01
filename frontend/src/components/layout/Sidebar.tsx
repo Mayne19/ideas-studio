@@ -57,7 +57,7 @@ function SidebarLink({ to, icon, label, disabled = false, collapsed = false }: N
           'flex h-8 items-center gap-2 rounded-[6px] px-2.5 text-[14px] font-medium transition-colors duration-150',
           collapsed ? 'justify-center px-2' : '',
           isActive
-            ? 'bg-surface-muted text-primary'
+            ? 'bg-accent/6 text-primary'
             : 'text-secondary hover:bg-surface-soft hover:text-primary',
         )
       }
@@ -187,7 +187,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                   <div
                     className={cn(
                       'flex h-8 items-center rounded-[6px] transition-colors duration-150',
-                      inSettings ? 'bg-surface-muted text-primary' : 'text-secondary hover:bg-surface-soft hover:text-primary',
+                      inSettings ? 'bg-accent/6 text-primary' : 'text-secondary hover:bg-surface-soft hover:text-primary',
                     )}
                   >
                     <NavLink

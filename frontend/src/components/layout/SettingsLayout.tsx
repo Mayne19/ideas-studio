@@ -19,7 +19,7 @@ export default function SettingsLayout() {
             </p>
           </div>
 
-          <nav className="flex flex-col gap-1 rounded-[18px] border-2 border-border bg-transparent p-2">
+          <nav className="flex flex-col gap-0.5 rounded-[18px] border-2 border-border bg-transparent p-1.5">
             {tabs.map((tab) => (
               <NavLink
                 key={tab.key}
@@ -27,9 +27,9 @@ export default function SettingsLayout() {
                 end={tab.end}
                 className={({ isActive }) =>
                   cn(
-                    'rounded-[12px] px-3 py-2.5 transition-colors',
+                    'rounded-[12px] px-3 py-2 transition-colors',
                     isActive
-                      ? 'bg-accent/6 text-primary ring-1 ring-accent/20'
+                      ? 'bg-accent/6 text-primary'
                       : 'text-secondary hover:bg-surface-soft hover:text-primary',
                   )
                 }
