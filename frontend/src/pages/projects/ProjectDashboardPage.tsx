@@ -560,8 +560,7 @@ export default function ProjectDashboardPage() {
                 strokeLinejoin="round"
                 strokeWidth="2.4"
               >
-                <path d="M8 12V4" />
-                <path d="M4.75 7.25 8 4l3.25 3.25" />
+                <path d="M3.5 8.5 6.5 11.5 12.5 4.5" />
               </svg>
             </span>
             <span>
