@@ -16,7 +16,6 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import Toolbar from '@/components/ui/Toolbar'
 import ArticleScoreBadges from '@/components/ui/ArticleScoreBadges'
 import { finiteScore, getGeoScore, getOriginalityScore } from '@/lib/scoreBadge'
-import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxList, ComboboxItem } from '@/components/ui/combobox'
 
 const PAGE_SIZE = 20
 
@@ -43,13 +42,6 @@ function ArticleRow({
   onAction: (key: string, a: Article) => void
 }) {
   const category = categories.find((c) => c.id === article.category_id)
-  const [actionValue, setActionValue] = useState('')
-  const actionItems = [
-    { value: 'preview', label: 'Voir aperçu' },
-    { value: 'restore', label: 'Restaurer en production' },
-    { value: 'republish', label: 'Republier directement' },
-    { value: 'delete', label: 'Supprimer' },
-  ]
 
   return (
     <div className={`grid gap-2.5 rounded-[12px] bg-surface px-3 py-3 transition-colors hover:bg-surface-soft lg:items-center ${TABLE_GRID}`}>
@@ -105,21 +97,18 @@ function ArticleRow({
           <Pencil size={12} />
           Éditer
         </button>
-        <div className="relative">
-          <Combobox items={actionItems} value={actionValue} onValueChange={(v) => { onAction(v, article); setActionValue('') }}>
-            <ComboboxInput placeholder="Actions" className="h-10 w-[96px] text-[12px]" />
-            <ComboboxContent>
-              <ComboboxEmpty>Aucune action</ComboboxEmpty>
-              <ComboboxList>
-                {(item) => (
-                  <ComboboxItem key={item.value} value={item.value}>
-                    {item.label}
-                  </ComboboxItem>
-                )}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
-        </div>
+        <select
+          onChange={(e) => { if (e.target.value) { onAction(e.target.value, article); e.target.value = '' } }}
+          className="h-10 w-[96px] cursor-pointer rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-secondary transition-colors hover:bg-surface-muted"
+          defaultValue=""
+          aria-label={`Actions pour ${article.title}`}
+        >
+          <option value="" disabled>Actions</option>
+          <option value="preview">Voir aperçu</option>
+          <option value="restore">Restaurer en production</option>
+          <option value="republish">Republier directement</option>
+          <option value="delete">Supprimer</option>
+        </select>
       </div>
     </div>
   )
