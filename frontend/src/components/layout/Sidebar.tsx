@@ -254,7 +254,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
               </button>
 
               {projectsOpen && (
-                <div className="absolute bottom-full left-0 right-0 mb-1 z-50 rounded-[8px] border-2 border-border bg-transparent shadow-md overflow-hidden">
+                <div className="absolute bottom-full left-0 right-0 mb-1 z-50 overflow-hidden rounded-[8px] border-2 border-border bg-bg shadow-none">
                   {projects.length === 0 ? (
                     <p className="px-3 py-2.5 text-[11px] text-tertiary">Aucun autre projet</p>
                   ) : (

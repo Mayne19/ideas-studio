@@ -154,7 +154,7 @@ export default function Topbar() {
               />
             </div>
             {searchFocused && searchQuery && (
-              <div className="absolute right-0 top-10 z-50 w-80 rounded-[8px] border-2 border-border bg-transparent p-2 shadow-none">
+              <div className="absolute right-0 top-10 z-50 w-80 rounded-[8px] border-2 border-border bg-bg p-2 shadow-none">
                 {searching ? (
                   <div className="flex items-center justify-center py-4">
                     <Loader2 size={16} className="animate-spin text-tertiary" />
@@ -206,7 +206,7 @@ export default function Topbar() {
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 top-10 z-50 w-80 rounded-[8px] border-2 border-border bg-transparent p-2 shadow-none">
+              <div className="absolute right-0 top-10 z-50 w-80 rounded-[8px] border-2 border-border bg-bg p-2 shadow-none">
                 <div className="flex items-center justify-between mb-1 px-1">
                   <p className="text-[14px] font-semibold text-primary">Notifications</p>
                   <button
@@ -269,7 +269,7 @@ export default function Topbar() {
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-10 z-50 min-w-[200px] rounded-[8px] border-2 border-border bg-transparent p-1.5 shadow-none">
+            <div className="absolute right-0 top-10 z-50 min-w-[200px] rounded-[8px] border-2 border-border bg-bg p-1.5 shadow-none">
               <div className="px-3 py-2 border-b border-border mb-1">
                 <p className="text-[14px] font-medium text-primary truncate">{user?.name}</p>
                 <p className="text-[12px] text-tertiary truncate">{user?.email}</p>

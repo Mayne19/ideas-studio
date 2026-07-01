@@ -43,7 +43,7 @@ export default function Modal({ open, onClose, title, size = 'md', children }: M
       />
       <div
         className={cn(
-          'relative w-full rounded-[12px] border-2 border-border bg-transparent shadow-none',
+          'relative w-full rounded-[12px] border-2 border-border bg-bg shadow-none',
           'animate-in zoom-in-95 fade-in duration-200',
           sizes[size],
         )}

@@ -34,7 +34,7 @@ export default function Drawer({
       />
       <div
         className={cn(
-          'absolute top-0 h-full w-full max-w-md border-r-2 border-border bg-transparent shadow-none animate-in duration-200',
+          'absolute top-0 h-full w-full max-w-md border-r-2 border-border bg-bg shadow-none animate-in duration-200',
           side === 'right' ? 'right-0 slide-in-from-right-4' : 'left-0 slide-in-from-left-4',
           className,
         )}
