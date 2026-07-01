@@ -24,12 +24,12 @@ const IDEA_STATUSES_TO_FETCH = [
 
 const IDEA_STATI: { key: string; label: string; color: string }[] = [
   { key: '', label: 'Tous', color: '' },
-  { key: 'idea_proposed', label: 'Proposée', color: 'bg-blue-100 text-blue-700' },
-  { key: 'idea_priority', label: 'Prioritaire', color: 'bg-orange-100 text-orange-700' },
-  { key: 'idea_rejected', label: 'Rejetée', color: 'bg-red-100 text-red-700' },
-  { key: 'writing_requested', label: 'Rédaction demandée', color: 'bg-purple-100 text-purple-700' },
-  { key: 'writing_in_progress', label: 'En rédaction', color: 'bg-purple-100 text-purple-700' },
-  { key: 'draft_ready', label: 'Brouillon prêt', color: 'bg-green-100 text-green-700' },
+  { key: 'idea_proposed', label: 'Proposée', color: 'bg-accent/8 text-accent' },
+  { key: 'idea_priority', label: 'Prioritaire', color: 'bg-warning/8 text-warning' },
+  { key: 'idea_rejected', label: 'Rejetée', color: 'bg-danger/8 text-danger' },
+  { key: 'writing_requested', label: 'Rédaction demandée', color: 'bg-accent/8 text-accent' },
+  { key: 'writing_in_progress', label: 'En rédaction', color: 'bg-accent/8 text-accent' },
+  { key: 'draft_ready', label: 'Brouillon prêt', color: 'bg-success/8 text-success' },
 ]
 
 function translateIdeaError(err: unknown, context: 'action' | 'generate' | 'reject'): string {
@@ -74,7 +74,7 @@ function normalizeOpportunityScore(score: number | null | undefined): number | n
 function OpportunityBadge({ score, reason }: { score: number | null | undefined; reason?: string | null }) {
   const pct = normalizeOpportunityScore(score)
   if (pct === null) return <span className="text-[12px] text-tertiary">—</span>
-  const color = pct >= 70 ? 'bg-success/10 text-success' : pct >= 40 ? 'bg-warning/10 text-warning' : 'bg-danger/10 text-danger'
+  const color = pct >= 70 ? 'bg-success/8 text-success' : pct >= 40 ? 'bg-warning/10 text-warning' : 'bg-danger/10 text-danger'
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium ${color}`} title={reason ?? ''}>
       {pct}/100
@@ -515,7 +515,7 @@ export default function IdeasPipelinePage() {
                       </td>
                       <td className="px-2 py-2.5">
                         {article.priority > 0 ? (
-                          <Star size={13} className="text-orange-500 fill-orange-500" />
+                          <Star size={13} className="fill-warning text-warning" />
                         ) : (
                           <span className="text-tertiary text-[12px]">—</span>
                         )}
@@ -564,7 +564,7 @@ export default function IdeasPipelinePage() {
                               {article.status === 'idea_proposed' && (
                                 <button
                                   onClick={() => handleAction('prioritize', article)}
-                                  className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                                  className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary transition-colors hover:bg-warning/8 hover:text-warning"
                                   title="Prioriser"
                                 >
                                   <Star size={12} />
@@ -572,7 +572,7 @@ export default function IdeasPipelinePage() {
                               )}
                               <button
                                 onClick={() => handleAction('start-writing', article)}
-                                className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-purple-50 hover:text-purple-600 transition-colors"
+                                className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary transition-colors hover:bg-accent/8 hover:text-accent"
                                 title="Lancer la rédaction"
                               >
                                 <Pencil size={12} />
@@ -637,8 +637,8 @@ export default function IdeasPipelinePage() {
               <OpportunityBadge score={previewIdea.opportunity_score} />
               <StatusBadgeSmall status={previewIdea.status} />
               {previewIdea.priority > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-orange-700">
-                  <Star size={10} className="fill-orange-500" /> Prioritaire
+                <span className="inline-flex items-center gap-1 rounded-full bg-warning/8 px-2 py-0.5 text-[10px] font-medium text-warning">
+                  <Star size={10} className="fill-warning" /> Prioritaire
                 </span>
               )}
               <span className="text-[12px] text-tertiary">Créé le {formatDate(previewIdea.created_at)}</span>

@@ -71,7 +71,7 @@ export function SimpleMetricCard({
       </div>
       <div className="mt-auto flex h-8 items-center justify-between gap-3">
         <div className="text-[22px] font-semibold leading-none text-primary">{value}</div>
-        <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor ?? '#8A8A8A' }}>{change}</span>
+        <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor ?? NEUTRAL_CHART_COLORS.tertiary }}>{change}</span>
       </div>
       <div className="min-h-0 flex-1" />
     </article>

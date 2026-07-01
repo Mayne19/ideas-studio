@@ -112,15 +112,15 @@ function TabButton({
 function StepBadge({ status }: { status: string }) {
   if (status === 'writing_in_progress') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-2.5 py-1 text-[12px] font-medium text-purple-700">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-500" />
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/8 px-2.5 py-1 text-[12px] font-medium text-accent">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
         En cours…
       </span>
     )
   }
   if (status === 'outline_ready') {
     return (
-      <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-1 text-[12px] font-medium text-blue-700">
+      <span className="inline-flex items-center rounded-full bg-accent/8 px-2.5 py-1 text-[12px] font-medium text-accent">
         Plan prêt
       </span>
     )
@@ -396,7 +396,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
                         title={article.status === 'idea_priority' ? 'Retirer priorité' : 'Prioriser'}
                         onClick={() => handlePrioritize(article)}
                         disabled={actionLoading === article.id + '-prioritize'}
-                        className={`flex h-7 w-7 items-center justify-center rounded-[8px] transition-colors hover:bg-surface-soft ${article.status === 'idea_priority' ? 'text-orange-500' : 'text-tertiary'}`}
+                        className={`flex h-7 w-7 items-center justify-center rounded-[8px] transition-colors hover:bg-surface-soft ${article.status === 'idea_priority' ? 'text-warning' : 'text-tertiary'}`}
                       >
                         <Star size={14} />
                       </button>

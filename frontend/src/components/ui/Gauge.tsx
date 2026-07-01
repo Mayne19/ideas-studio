@@ -22,8 +22,8 @@ export function Gauge({
   value,
   size = 'small',
   showValue = false,
-  color = '#45a75a',
-  trackColor = '#e8e8e8',
+  color = 'var(--color-success)',
+  trackColor = 'rgba(0, 0, 0, 0.08)',
   className,
 }: GaugeProps) {
   const normalized = Math.max(0, Math.min(100, Math.round(value)))
@@ -71,7 +71,7 @@ export function Gauge({
         )}
       </svg>
       {showValue && (
-        <span className={cn('absolute font-semibold leading-none text-[#111111] tabular-nums', config.text)}>
+        <span className={cn('absolute font-semibold leading-none text-primary tabular-nums', config.text)}>
           {normalized}
         </span>
       )}

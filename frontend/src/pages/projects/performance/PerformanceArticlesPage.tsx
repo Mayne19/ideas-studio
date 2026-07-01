@@ -8,6 +8,7 @@ import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
+import { SEMANTIC_COLORS } from '@/utils/chartPalette'
 
 type Period = '1d' | '7d' | '30d' | '90d' | '180d' | '365d'
 
@@ -23,7 +24,7 @@ const PERIODS: { value: Period; label: string }[] = [
 function SeoBar({ score }: { score: number | null }) {
   if (score === null) return <span className="text-[12px] text-tertiary">—</span>
   const val = Math.round(score)
-  const color = val >= 70 ? '#34c759' : val >= 40 ? '#ff9500' : '#ff3b30'
+  const color = val >= 70 ? SEMANTIC_COLORS.success : val >= 40 ? SEMANTIC_COLORS.warning : SEMANTIC_COLORS.danger
   return (
     <div className="flex items-center gap-2 min-w-[80px]">
       <div className="h-1.5 flex-1 rounded-full bg-surface-muted">

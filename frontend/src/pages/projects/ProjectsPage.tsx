@@ -98,9 +98,9 @@ function ProjectCard({
       {/* Badges */}
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-          isConnected ? 'bg-success/10 text-[#1a7a3a]' : 'bg-surface-soft text-tertiary'
+          isConnected ? 'bg-success/8 text-success' : 'bg-surface-soft text-tertiary'
         }`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-[#1a7a3a]' : 'bg-[#c8c8cc]'}`} />
+          <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-success' : 'bg-[#c8c8cc]'}`} />
           {isConnected ? 'Connecté' : 'Non connecté'}
         </span>
         {project.language && (

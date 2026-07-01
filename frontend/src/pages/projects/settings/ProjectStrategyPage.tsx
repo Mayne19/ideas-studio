@@ -246,7 +246,7 @@ export default function ProjectStrategyPage() {
         <Button type="submit" size="sm" loading={saving} icon={<Save size={13} />}>
           Enregistrer
         </Button>
-        {saved && <span className="text-[12px] text-[#1a7a3a]">Sauvegardé ✓</span>}
+        {saved && <span className="text-[12px] text-success">Sauvegardé ✓</span>}
       </div>
     </form>
   )

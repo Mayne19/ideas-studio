@@ -1,14 +1,14 @@
 export const NEUTRAL_CHART_COLORS = {
-  primary: '#111827',
-  secondary: '#4b5563',
-  tertiary: '#9ca3af',
-  muted: '#d1d5db',
+  primary: '#2E2E2E',
+  secondary: '#5E5E5E',
+  tertiary: '#8A8A8A',
+  muted: '#D7D7D7',
 } as const
 
 export const SEMANTIC_COLORS = {
-  success: '#00a63e',
-  warning: '#f59e0b',
-  danger: '#ef4444',
+  success: '#008A2E',
+  warning: '#A35200',
+  danger: '#E5484D',
 } as const
 
 export const COUNTRY_PALETTE = [

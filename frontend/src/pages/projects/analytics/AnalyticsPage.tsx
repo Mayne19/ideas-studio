@@ -37,7 +37,7 @@ import {
   getSourceDisplay,
   getSourceChannel,
 } from '@/utils/trafficDisplay'
-import { NEUTRAL_CHART_COLORS, COUNTRY_PALETTE as SHARED_COUNTRY_PALETTE, DEVICE_COLORS, scoreColor } from '@/utils/chartPalette'
+import { NEUTRAL_CHART_COLORS, SEMANTIC_COLORS, COUNTRY_PALETTE as SHARED_COUNTRY_PALETTE, DEVICE_COLORS, scoreColor } from '@/utils/chartPalette'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -84,7 +84,7 @@ function articleSignal(a: ArticlePerformanceBrief) {
   if (a.seo_score !== null && a.seo_score < 60) return { label: 'À optimiser', color: 'text-danger' }
   if (a.variation !== null && a.variation < -10) return { label: 'En baisse', color: 'text-danger' }
   if (a.seo_score !== null && a.seo_score < 70) return { label: 'À optimiser', color: 'text-warning' }
-  if (a.seo_score !== null && a.seo_score < 80) return { label: 'À surveiller', color: 'text-orange-500' }
+  if (a.seo_score !== null && a.seo_score < 80) return { label: 'À surveiller', color: 'text-warning' }
   if (a.views === 0) return { label: 'Nouveau', color: 'text-tertiary' }
   return { label: 'Performant', color: 'text-success' }
 }
@@ -414,7 +414,7 @@ export default function AnalyticsPage() {
             title="Vues totales"
             value={formatMetric(summary.total_views)}
             change={viewsChange ?? '—'}
-            changeColor={viewsChange?.startsWith('-') ? '#ef4444' : NEUTRAL_CHART_COLORS.primary}
+            changeColor={viewsChange?.startsWith('-') ? SEMANTIC_COLORS.danger : NEUTRAL_CHART_COLORS.primary}
             color={NEUTRAL_CHART_COLORS.primary}
             data={viewsTrend}
           />

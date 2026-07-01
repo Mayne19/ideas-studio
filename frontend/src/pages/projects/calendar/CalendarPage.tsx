@@ -69,7 +69,7 @@ function heatmapTone(count: number): string {
   if (count <= 0) return 'bg-surface-soft'
   if (count === 1) return 'bg-success/20'
   if (count === 2) return 'bg-success/35'
-  if (count <= 4) return 'bg-success/55'
+  if (count <= 4) return 'bg-success/85'
   return 'bg-success'
 }
 
@@ -425,13 +425,13 @@ export default function CalendarPage() {
                           a.status === 'scheduled'
                             ? 'bg-accent/10 text-accent hover:bg-accent/20'
                             : a.status === 'published'
-                            ? 'bg-success/10 text-[#1a7a3a] hover:bg-success/20'
+                            ? 'bg-success/8 text-success hover:bg-success/12'
                             : a.status === 'idea_proposed' || a.status === 'idea_priority'
-                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                            ? 'bg-accent/8 text-accent hover:bg-accent/12'
                             : a.status === 'writing_requested' || a.status === 'writing_in_progress' || a.status === 'draft_ready'
-                            ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                            ? 'bg-accent/8 text-accent hover:bg-accent/12'
                             : a.status === 'review_needed' || a.status === 'ready_to_publish'
-                            ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                            ? 'bg-warning/8 text-warning hover:bg-warning/12'
                             : 'bg-surface-soft text-secondary hover:bg-surface-muted'
                         }`}
                         title={a.title}
@@ -451,11 +451,11 @@ export default function CalendarPage() {
           {/* Legend */}
           <div className="mt-3 flex flex-wrap items-center gap-3 text-[12px] text-tertiary">
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-blue-400" />
+              <span className="h-2 w-2 rounded-full bg-accent" />
               Idée
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-purple-400" />
+              <span className="h-2 w-2 rounded-full bg-tertiary" />
               En rédaction
             </span>
             <span className="flex items-center gap-1.5">

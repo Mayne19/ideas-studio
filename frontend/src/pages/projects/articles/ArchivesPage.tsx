@@ -74,7 +74,7 @@ function ArticleRow({
         {(() => {
           const cost = getCost(article)
           return cost !== null ? (
-            <span className="inline-flex items-center rounded-full bg-[#eef2ff] px-1.5 py-0.5 text-[10px] font-medium text-[#4f46e5]">
+            <span className="inline-flex items-center rounded-full bg-accent/8 px-1.5 py-0.5 text-[10px] font-medium text-accent">
               {cost.toFixed(4)} €
             </span>
           ) : (
@@ -423,8 +423,8 @@ export default function ArchivesPage() {
         size="sm"
       >
         <div className="flex flex-col gap-4">
-          <div className="flex items-start gap-3 rounded-[12px] border border-success/20 bg-success/5 px-3.5 py-3">
-            <Send size={15} className="mt-0.5 shrink-0 text-[#1a7a3a]" />
+          <div className="flex items-start gap-3 rounded-[12px] border border-success/20 bg-success/8 px-3.5 py-3">
+            <Send size={15} className="mt-0.5 shrink-0 text-success" />
             <div>
               <p className="text-[14px] font-medium text-primary">{republishTarget?.title}</p>
               <p className="mt-0.5 text-[12px] text-secondary leading-snug">

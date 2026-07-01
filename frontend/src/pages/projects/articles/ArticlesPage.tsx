@@ -559,7 +559,7 @@ export default function ArticlesPage() {
       >
         <div className="flex flex-col gap-4">
           <div className="flex items-start gap-3 rounded-[12px] border border-warning/20 bg-warning/5 px-3.5 py-3">
-            <EyeOff size={15} className="mt-0.5 shrink-0 text-[#9B6B19]" />
+            <EyeOff size={15} className="mt-0.5 shrink-0 text-warning" />
             <div>
               <p className="text-[14px] font-medium text-primary">{unpublishTarget?.title}</p>
               <p className="mt-0.5 text-[12px] text-secondary leading-snug">
@@ -689,8 +689,8 @@ export default function ArticlesPage() {
       >
         {generateResult ? (
           <div className="flex flex-col gap-4">
-            <div className="flex items-start gap-3 rounded-[12px] border border-success/20 bg-success/5 px-3.5 py-3">
-              <CheckCircle size={15} className="mt-0.5 shrink-0 text-[#1a7a3a]" />
+            <div className="flex items-start gap-3 rounded-[12px] border border-success/20 bg-success/8 px-3.5 py-3">
+              <CheckCircle size={15} className="mt-0.5 shrink-0 text-success" />
               <div>
                 <p className="text-[14px] font-medium text-primary">{generateResult.title}</p>
                 <p className="mt-0.5 text-[12px] text-secondary">Article généré avec succès</p>

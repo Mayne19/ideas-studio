@@ -343,7 +343,7 @@ export default function ProjectMembersPage() {
       </FormCard>
 
       {revokeSuccess && (
-        <div className="rounded-[10px] bg-success/10 px-3.5 py-2.5 text-[14px] text-[#1a7a3a]">
+        <div className="rounded-[10px] bg-success/10 px-3.5 py-2.5 text-[14px] text-success">
           {revokeSuccess}
         </div>
       )}
@@ -380,10 +380,10 @@ export default function ProjectMembersPage() {
                   <span
                     className={`inline-flex items-center rounded-full px-2 py-0.5 text-[12px] font-medium ${
                       accepted
-                        ? 'bg-success/10 text-[#1a7a3a]'
+                        ? 'bg-success/8 text-success'
                         : expired
                           ? 'bg-danger/10 text-danger'
-                          : 'bg-warning/10 text-[#c07000]'
+                          : 'bg-warning/10 text-warning'
                     }`}
                   >
                     {accepted

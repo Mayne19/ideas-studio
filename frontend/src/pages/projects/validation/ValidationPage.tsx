@@ -285,7 +285,7 @@ export default function ValidationPage() {
                     <ScoreBadge value={getOriginalityScore(article)} label="Orig." className="w-full justify-center" />
                     <ScoreBadge value={getGeoScore(article)} label="GEO" className="w-full justify-center" />
                     <ScoreBadge value={finiteScore(article.eeat_score)} label="EEAT" className="w-full justify-center" />
-                    <span className={`inline-flex items-center justify-center gap-1 rounded-full px-2 py-1 text-[12px] font-medium ${criticalCount > 0 ? 'bg-danger/10 text-danger' : 'bg-success/10 text-[#1f6d3d]'}`}>
+                    <span className={`inline-flex items-center justify-center gap-1 rounded-full px-2 py-1 text-[12px] font-medium ${criticalCount > 0 ? 'bg-danger/10 text-danger' : 'bg-success/8 text-success'}`}>
                       {criticalCount > 0 ? <AlertTriangle size={11} /> : <CheckCircle size={11} />}
                       {criticalCount}
                     </span>

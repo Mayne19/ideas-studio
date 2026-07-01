@@ -139,7 +139,7 @@ export default function ArticlePerformancePage() {
                     contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }}
                     formatter={(v) => [Number(v).toLocaleString('fr-FR'), 'Vues']}
                   />
-                  <Line type="monotone" dataKey="views" stroke="#007aff" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="views" stroke="var(--color-primary)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             </Card>

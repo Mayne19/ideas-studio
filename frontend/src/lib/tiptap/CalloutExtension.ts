@@ -33,17 +33,17 @@ function getDefaultColors(style?: string) {
   switch (style) {
     case 'conseil':
     case 'success':
-      return { background: '#f0fdf4', border: '#10b981', text: '#065f46' }
+      return { background: 'rgba(0, 138, 46, 0.08)', border: 'var(--color-success)', text: 'var(--color-success)' }
     case 'attention':
     case 'warning':
-      return { background: '#fffbeb', border: '#f59e0b', text: '#92400e' }
+      return { background: 'rgba(163, 82, 0, 0.08)', border: 'var(--color-warning)', text: 'var(--color-warning)' }
     case 'erreur':
     case 'error':
-      return { background: '#fef2f2', border: '#ef4444', text: '#991b1b' }
+      return { background: 'rgba(229, 72, 77, 0.08)', border: 'var(--color-danger)', text: 'var(--color-danger)' }
     case 'succes':
-      return { background: '#f5f3ff', border: '#8b5cf6', text: '#5b21b6' }
+      return { background: 'rgba(0, 138, 46, 0.08)', border: 'var(--color-success)', text: 'var(--color-success)' }
     default:
-      return { background: '#eff6ff', border: '#3b82f6', text: '#1e3a8a' }
+      return { background: 'rgba(46, 46, 46, 0.06)', border: 'var(--color-accent)', text: 'var(--color-primary)' }
   }
 }
 

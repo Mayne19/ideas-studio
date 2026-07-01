@@ -239,8 +239,8 @@ export default function Topbar() {
                       >
                         <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] ${
                           n.level === 'error' ? 'bg-danger/10 text-danger' :
-                          n.level === 'warning' ? 'bg-warning/10 text-[#c07000]' :
-                          n.level === 'success' ? 'bg-success/10 text-[#1a7a3a]' :
+                          n.level === 'warning' ? 'bg-warning/10 text-warning' :
+                          n.level === 'success' ? 'bg-success/8 text-success' :
                           'bg-surface-soft text-secondary'
                         }`}>
                           <HugeIcon icon={BellIcon} size={11} />

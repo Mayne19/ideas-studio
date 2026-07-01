@@ -26,6 +26,7 @@ import Button from '@/components/ui/Button'
 import PeriodNavigator, { ExportButtons } from '@/components/ui/PeriodNavigator'
 import { downloadJson, printReport } from '@/utils/exportReport'
 import { currentPeriod, type PeriodMode, type PeriodRange } from '@/utils/periodNavigator'
+import { NEUTRAL_CHART_COLORS } from '@/utils/chartPalette'
 import {
   formatAxisTick,
   formatMetric,
@@ -371,10 +372,10 @@ export default function TrafficPage() {
                     <YAxis tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} width={44} allowDecimals={false} domain={[0, 'dataMax']} tickFormatter={formatAxisTick} />
                     <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} formatter={(v) => [formatMetric(Number(v)), 'Visites']} />
                     <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-                    <Line type="monotone" dataKey="organic" name="Google" stroke="#34c759" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="direct" name="Direct" stroke="#007aff" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="social" name="Social" stroke="#5856d6" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="referral" name="Referral" stroke="#ff9500" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="organic" name="Google" stroke={NEUTRAL_CHART_COLORS.primary} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="direct" name="Direct" stroke={NEUTRAL_CHART_COLORS.secondary} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="social" name="Social" stroke={NEUTRAL_CHART_COLORS.tertiary} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="referral" name="Referral" stroke={NEUTRAL_CHART_COLORS.muted} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
                   </LineChart>
                 </ResponsiveContainer>
                 {!hasChannelTrend && <ChartEmpty message="Aucune évolution par canal disponible pour cette période." />}

@@ -16,8 +16,8 @@ function timeAgo(iso: string): string {
 }
 
 function levelColor(level: string): string {
-  if (level === 'success') return 'bg-success/10 text-[#1a7a3a]'
-  if (level === 'warning') return 'bg-warning/10 text-[#c07000]'
+  if (level === 'success') return 'bg-success/8 text-success'
+  if (level === 'warning') return 'bg-warning/10 text-warning'
   if (level === 'error') return 'bg-danger/10 text-danger'
   return 'bg-accent/10 text-accent'
 }

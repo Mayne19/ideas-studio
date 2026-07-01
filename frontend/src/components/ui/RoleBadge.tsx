@@ -19,11 +19,11 @@ const ROLE_COLORS: Record<ProjectRole, RoleBadgeVariant> = {
 }
 
 const variantClasses: Record<RoleBadgeVariant, string> = {
-  purple: 'border-purple-200 bg-purple-50 text-purple-700',
-  blue:   'border-blue-200 bg-blue-50 text-blue-700',
-  green:  'border-green-200 bg-green-50 text-green-700',
-  orange: 'border-amber-200 bg-amber-50 text-amber-700',
-  pink:   'border-pink-200 bg-pink-50 text-pink-700',
+  purple: 'border-accent/20 bg-accent/8 text-accent',
+  blue:   'border-accent/20 bg-accent/8 text-accent',
+  green:  'border-success/20 bg-success/8 text-success',
+  orange: 'border-warning/20 bg-warning/8 text-warning',
+  pink:   'border-danger/20 bg-danger/8 text-danger',
   gray:   'border-border bg-surface-soft text-secondary',
 }
 

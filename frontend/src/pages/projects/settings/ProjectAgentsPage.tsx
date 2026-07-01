@@ -152,7 +152,7 @@ export default function ProjectAgentsPage() {
         </div>
         <div className="flex items-center gap-2">
           {successMsg && (
-            <span className="flex items-center gap-1 text-[14px] text-green-600">
+            <span className="flex items-center gap-1 text-[14px] text-success">
               <CheckCircle size={14} /> {successMsg}
             </span>
           )}
@@ -223,9 +223,9 @@ export default function ProjectAgentsPage() {
                 <span className="text-secondary">Projet puis défaut</span>
                 <span>
                   {agent.has_implementation ? (
-                    <span className="rounded-full bg-success/10 px-2 py-0.5 text-[12px] font-medium text-success">Implémenté</span>
+                    <span className="rounded-full bg-success/8 px-2 py-0.5 text-[12px] font-medium text-success">Implémenté</span>
                   ) : (
-                    <span className="rounded-full bg-warning/12 px-2 py-0.5 text-[12px] font-medium text-[#a35b00]">Heuristique</span>
+                    <span className="rounded-full bg-warning/12 px-2 py-0.5 text-[12px] font-medium text-warning">Heuristique</span>
                   )}
                 </span>
               </div>

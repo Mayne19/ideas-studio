@@ -40,14 +40,14 @@ type ColumnDef = {
 }
 
 const COLUMNS: ColumnDef[] = [
-  { status: 'outline_ready',       label: 'Brief à préparer', color: '#0072F5' },
-  { status: 'writing_requested',   label: 'Brief prêt',       color: '#0072F5' },
-  { status: 'draft_ready',         label: 'Brouillon IA',     color: '#4D4D4D' },
-  { status: 'writing_in_progress', label: 'En rédaction',     color: '#4D4D4D' },
-  { status: 'review_needed',       label: 'En relecture',     color: '#A35200' },
-  { status: 'correction_needed',   label: 'SEO à corriger',   color: '#E5484D' },
-  { status: 'ready_to_publish',    label: 'Prêt validation',  color: '#008A2E' },
-  { status: 'failed',              label: 'Échecs',           color: '#E5484D' },
+  { status: 'outline_ready',       label: 'Brief à préparer', color: 'var(--color-accent)' },
+  { status: 'writing_requested',   label: 'Brief prêt',       color: 'var(--color-accent)' },
+  { status: 'draft_ready',         label: 'Brouillon IA',     color: 'var(--color-secondary)' },
+  { status: 'writing_in_progress', label: 'En rédaction',     color: 'var(--color-secondary)' },
+  { status: 'review_needed',       label: 'En relecture',     color: 'var(--color-warning)' },
+  { status: 'correction_needed',   label: 'SEO à corriger',   color: 'var(--color-danger)' },
+  { status: 'ready_to_publish',    label: 'Prêt validation',  color: 'var(--color-success)' },
+  { status: 'failed',              label: 'Échecs',           color: 'var(--color-danger)' },
 ]
 
 const QUICK_ACTIONS: Partial<Record<ArticleStatus, { key: string; label: string }[]>> = {
@@ -507,7 +507,7 @@ export default function KanbanPage() {
   )).map((status) => ({
     status,
     label: fallbackColumnLabel(status),
-    color: '#8e8e93',
+    color: 'var(--color-tertiary)',
     custom: true,
   }))
   const allColumns = [...COLUMNS, ...customColumns, ...unknownColumns]

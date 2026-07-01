@@ -49,7 +49,7 @@ export default function CopyButton({ value, label = 'Copier', className, disable
           : isError
             ? 'bg-danger/10 text-danger'
             : isCopied
-          ? 'bg-success/10 text-[#1a7a3a]'
+          ? 'bg-success/8 text-success'
           : 'bg-surface-soft text-secondary hover:bg-surface-muted hover:text-primary',
         className,
       )}

@@ -825,7 +825,7 @@ export default function EditorToolbar({
                       >
                         <span
                           className="h-2.5 w-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: template.color_border ?? '#3b82f6' }}
+                          style={{ backgroundColor: template.color_border ?? 'var(--color-accent)' }}
                         />
                         <span className="flex-1 text-left">{template.label}</span>
                       </button>

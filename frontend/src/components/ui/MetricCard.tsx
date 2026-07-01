@@ -16,22 +16,22 @@ type MetricCardProps = {
 
 const toneStyles: Record<MetricCardTone, string> = {
   accent:  'bg-surface-soft text-primary',
-  sky:     'bg-blue-50 text-blue-700',
-  indigo:  'bg-indigo-50 text-indigo-700',
-  violet:  'bg-violet-50 text-violet-700',
-  orange:  'bg-orange-50 text-orange-700',
-  success: 'bg-green-50 text-green-700',
-  warning: 'bg-amber-50 text-amber-700',
-  danger:  'bg-red-50 text-red-700',
+  sky:     'bg-accent/8 text-accent',
+  indigo:  'bg-accent/8 text-accent',
+  violet:  'bg-accent/8 text-accent',
+  orange:  'bg-warning/8 text-warning',
+  success: 'bg-success/8 text-success',
+  warning: 'bg-warning/8 text-warning',
+  danger:  'bg-danger/8 text-danger',
 }
 
 export default function MetricCard({
   icon, value, label, suffix, trend, onClick, tone = 'accent', className,
 }: MetricCardProps) {
   const trendClass = trend?.startsWith('+')
-    ? 'border-green-200 bg-green-50 text-green-700'
+    ? 'border-success/20 bg-success/8 text-success'
     : trend?.startsWith('-')
-      ? 'border-red-200 bg-red-50 text-red-700'
+      ? 'border-danger/20 bg-danger/8 text-danger'
       : 'border-border bg-surface-soft text-tertiary'
 
   return (

@@ -531,8 +531,8 @@ export default function ProjectDashboardPage() {
         </div>
         {/* Statut connecté */}
         <div className="flex h-full min-w-0 items-center justify-center border-r border-border px-6">
-          <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-[#00a63e] px-3 text-[14px] font-semibold text-white">
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-[#00a63e]">
+          <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-success px-3 text-[14px] font-semibold text-white">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-success">
               <svg
                 aria-hidden="true"
                 viewBox="0 0 16 16"
@@ -576,7 +576,7 @@ export default function ProjectDashboardPage() {
           title="GEO moyen"
           score={geoScore || 0}
           changePts={data?.geoChangePts ?? 0}
-          color="#9ca3af"
+          color={NEUTRAL_CHART_COLORS.tertiary}
           data={data?.geoMonthly ?? Array.from({ length: MONTHLY_METRIC_POINTS }, () => ({ v: 0 }))}
         />
         <AreaMetricCard
@@ -655,7 +655,7 @@ export default function ProjectDashboardPage() {
             {(data?.recentArticles ?? []).map((article) => {
               const category = data?.categories.find((item) => item.id === article.category_id)
               const score = scoreOnHundred(article.global_score)
-              const scoreColor = (score ?? 0) >= 75 ? '#00c950' : (score ?? 0) >= 50 ? '#ffa51f' : '#ff3b1f'
+              const scoreColor = (score ?? 0) >= 75 ? 'var(--color-success)' : (score ?? 0) >= 50 ? 'var(--color-warning)' : 'var(--color-danger)'
               return (
                 <button
                   key={article.id}
@@ -771,7 +771,7 @@ export default function ProjectDashboardPage() {
         <button
           type="button"
           onClick={() => navigate(`/projects/${projectId}/settings`)}
-          className="flex items-start gap-3 rounded-[8px] border border-amber-200 bg-amber-50 px-4 py-3 text-left text-amber-800"
+          className="flex items-start gap-3 rounded-[8px] border border-warning/20 bg-warning/8 px-4 py-3 text-left text-warning"
         >
           <AlertCircle size={16} className="mt-0.5 shrink-0" />
           <span>

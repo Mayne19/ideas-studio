@@ -69,8 +69,8 @@ function CommentItem({
             disabled={toggling}
             className={`flex h-5 w-5 items-center justify-center rounded-full transition-colors ${
               comment.resolved
-                ? 'bg-success/10 text-[#1a7a3a]'
-                : 'text-tertiary hover:bg-success/10 hover:text-[#1a7a3a]'
+                ? 'bg-success/8 text-success'
+                : 'text-tertiary hover:bg-success/8 hover:text-success'
             }`}
             title={comment.resolved ? 'Resolu' : 'Valider le commentaire'}
           >
@@ -96,7 +96,7 @@ function CommentItem({
       )}
       <p className="text-[12px] leading-snug text-primary">{comment.text}</p>
       {comment.resolved && (
-        <span className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-[#1a7a3a]">
+        <span className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-success">
           <Check size={9} />
           Resolu
         </span>

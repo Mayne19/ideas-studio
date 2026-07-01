@@ -205,9 +205,9 @@ export default function ProjectCalloutsPage() {
                 <div
                   className="mt-3 rounded-[12px] border px-3 py-2"
                   style={{
-                    backgroundColor: callout.color_background ?? '#eff6ff',
-                    borderColor: callout.color_border ?? '#3b82f6',
-                    color: callout.color_text ?? '#1e3a8a',
+                    backgroundColor: callout.color_background ?? 'rgba(46, 46, 46, 0.06)',
+                    borderColor: callout.color_border ?? 'var(--color-accent)',
+                    color: callout.color_text ?? 'var(--color-primary)',
                   }}
                 >
                   <p className="text-[12px] font-semibold">{callout.default_title || callout.label}</p>

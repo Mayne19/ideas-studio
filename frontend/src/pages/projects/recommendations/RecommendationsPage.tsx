@@ -40,9 +40,9 @@ const STATUS_LABELS: Record<RecommendationStatus, string> = {
 
 const STATUS_CLASSES: Record<RecommendationStatus, string> = {
   pending: 'bg-accent/8 text-accent',
-  accepted: 'bg-success/10 text-[#1a7a3a]',
+  accepted: 'bg-success/8 text-success',
   rejected: 'bg-surface-soft text-tertiary',
-  applied: 'bg-success/15 text-[#1a7a3a] font-medium',
+  applied: 'bg-success/15 text-success font-medium',
 }
 
 function priorityDot(priority: number) {
@@ -161,7 +161,7 @@ function RecommendationCard({
             <button
               onClick={() => doAction('accept')}
               disabled={busy}
-              className="inline-flex items-center gap-1 rounded-full border border-success/20 bg-success/8 px-2.5 py-1 text-[12px] font-medium text-[#1a7a3a] transition-colors hover:bg-success/12 disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-full border border-success/20 bg-success/8 px-2.5 py-1 text-[12px] font-medium text-success transition-colors hover:bg-success/12 disabled:opacity-40"
             >
               {loadingAction === 'accept' ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
               Accepter
@@ -277,7 +277,7 @@ export default function RecommendationsPage() {
         </div>
       )}
       {reviewSuccess && (
-        <div className="mb-4 rounded-[10px] border border-success/20 bg-success/5 px-4 py-2.5 text-[14px] text-[#1a7a3a]">
+        <div className="mb-4 rounded-[10px] border border-success/20 bg-success/8 px-4 py-2.5 text-[14px] text-success">
           {reviewSuccess}
         </div>
       )}

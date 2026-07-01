@@ -48,8 +48,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             key={item.id}
             className={cn(
               'flex items-start gap-2.5 rounded-[14px] px-4 py-3 shadow-lg min-w-[280px] max-w-[400px] animate-in slide-in-from-right-4 fade-in duration-200',
-              item.variant === 'success' && 'bg-[#e8f5e9] border border-success/20 text-[#1a7a3a]',
-              item.variant === 'error' && 'bg-[#fef2f2] border border-danger/20 text-danger',
+              item.variant === 'success' && 'bg-success/8 border border-success/20 text-success',
+              item.variant === 'error' && 'bg-danger/8 border border-danger/20 text-danger',
               item.variant === 'info' && 'bg-transparent border-2 border-border text-primary',
             )}
           >

@@ -37,7 +37,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 function ScoreRing({ label, score }: { label: string; score: number | null }) {
   const val = score ?? 0
-  const color = val >= 70 ? '#31c96b' : val >= 40 ? '#ffad33' : '#ff6258'
+  const color = val >= 70 ? 'var(--color-success)' : val >= 40 ? 'var(--color-warning)' : 'var(--color-danger)'
   const r = 42
   const circ = 2 * Math.PI * r
   const dash = (val / 100) * circ
@@ -81,8 +81,8 @@ function finiteScore(value: unknown): number | null {
 
 function scoreTone(score: number | null) {
   if (score === null) return 'bg-surface-soft text-tertiary'
-  if (score >= 85) return 'bg-success/10 text-[#16723a]'
-  if (score >= 65) return 'bg-warning/12 text-[#a35b00]'
+  if (score >= 85) return 'bg-success/8 text-success'
+  if (score >= 65) return 'bg-warning/12 text-warning'
   return 'bg-danger/10 text-danger'
 }
 
@@ -202,7 +202,7 @@ function ReadinessBlock({ check, hasTitleH1 }: { check: ReadyCheck; hasTitleH1: 
   const criticalWarnings = check.critical_warnings ?? []
   const hasBlocking = blockingIssues.length > 0 || criticalWarnings.length > 0 || check.global_score_valid === false
   const config = check.can_publish || !hasBlocking
-    ? { icon: <CheckCircle size={13} />, label: 'Publication readiness: pret ou a verifier', cls: 'bg-success/10 text-success' }
+    ? { icon: <CheckCircle size={13} />, label: 'Publication readiness: pret ou a verifier', cls: 'bg-success/8 text-success' }
     : { icon: <XCircle size={13} />, label: 'Publication readiness: bloque', cls: 'bg-danger/8 text-danger' }
 
   return (

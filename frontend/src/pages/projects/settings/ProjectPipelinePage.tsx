@@ -347,7 +347,7 @@ export default function ProjectPipelinePage() {
                       </p>
                     </div>
                     <span className={`text-[12px] font-medium ${
-                      log.status === 'completed' ? 'text-[#1a7a3a]' : 'text-danger'
+                      log.status === 'completed' ? 'text-success' : 'text-danger'
                     }`}>
                       {log.status === 'completed' ? 'OK' : 'Échec'}
                     </span>

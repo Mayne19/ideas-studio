@@ -16,7 +16,7 @@ type LoadState = 'loading' | 'success' | 'error'
 
 function StatusPill({ ok, label }: { ok: boolean; label: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium ${ok ? 'bg-success/10 text-success' : 'bg-warning/12 text-[#a35b00]'}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium ${ok ? 'bg-success/8 text-success' : 'bg-warning/12 text-warning'}`}>
       {ok ? <CheckCircle size={11} /> : <AlertTriangle size={11} />}
       {label}
     </span>
@@ -30,8 +30,8 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 function MetricCard({ icon, label, value, tone = 'accent' }: { icon: React.ReactNode; label: string; value: React.ReactNode; tone?: 'accent' | 'success' | 'warning' | 'danger' }) {
   const toneClass = {
     accent: 'bg-accent/10 text-accent',
-    success: 'bg-success/10 text-success',
-    warning: 'bg-warning/12 text-[#a35b00]',
+    success: 'bg-success/8 text-success',
+    warning: 'bg-warning/12 text-warning',
     danger: 'bg-danger/10 text-danger',
   }[tone]
   return (
@@ -150,7 +150,7 @@ export default function GeneratePage() {
         <div className="mb-4 rounded-[12px] border border-danger/20 bg-danger/5 px-4 py-3 text-[14px] text-danger">Le lancement manuel a échoué. Consultez l’historique ou les providers.</div>
       )}
       {runState === 'done' && (
-        <div className="mb-4 rounded-[12px] border border-success/20 bg-success/5 px-4 py-3 text-[14px] text-success">Pipeline lancé. L’historique a été rafraîchi.</div>
+        <div className="mb-4 rounded-[12px] border border-success/20 bg-success/8 px-4 py-3 text-[14px] text-success">Pipeline lancé. L’historique a été rafraîchi.</div>
       )}
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">

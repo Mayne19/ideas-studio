@@ -281,10 +281,10 @@ export default function ProjectProvidersPage() {
                     <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">Par défaut</span>
                   )}
                   {config.last_test_status === 'connected' && (
-                    <span className="rounded-full bg-[#e8f5e9] px-2 py-0.5 text-[10px] font-medium text-[#1a7a3a]">Connecté</span>
+                    <span className="rounded-full bg-success/8 px-2 py-0.5 text-[10px] font-medium text-success">Connecté</span>
                   )}
                   {config.last_test_status === 'error' && (
-                    <span className="rounded-full bg-[#fce4ec] px-2 py-0.5 text-[10px] font-medium text-danger">Erreur</span>
+                    <span className="rounded-full bg-danger/8 px-2 py-0.5 text-[10px] font-medium text-danger">Erreur</span>
                   )}
                 </div>
                 <p className="mt-0.5 text-[12px] text-tertiary">
@@ -325,7 +325,7 @@ export default function ProjectProvidersPage() {
             )}
 
             {testResult && testResult.id === config.id && (
-              <div className={`rounded-[8px] p-2 text-[12px] mb-2 ${testResult.status === 'connected' ? 'bg-[#e8f5e9] text-[#1a7a3a]' : 'bg-[#fce4ec] text-danger'}`}>
+              <div className={`rounded-[8px] p-2 text-[12px] mb-2 ${testResult.status === 'connected' ? 'bg-success/8 text-success' : 'bg-danger/8 text-danger'}`}>
                 {testResult.status === 'connected' ? <CheckCircle size={11} className="inline mr-1" /> : <XCircle size={11} className="inline mr-1" />}
                 {testResult.message}
               </div>

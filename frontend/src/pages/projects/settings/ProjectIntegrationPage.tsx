@@ -192,11 +192,11 @@ export default function ProjectIntegrationPage() {
             }`}
           >
             <div className="flex min-w-0 items-center gap-3">
-              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] ${isConnected ? 'bg-success/10 text-success' : 'bg-surface-soft text-tertiary'}`}>
+              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] ${isConnected ? 'bg-success/8 text-success' : 'bg-surface-soft text-tertiary'}`}>
                 {isConnected ? <Wifi size={18} /> : <WifiOff size={18} />}
               </span>
               <div className="min-w-0">
-                <p className={`text-[15px] font-semibold ${isConnected ? 'text-[#1a7a3a]' : 'text-primary'}`}>
+                <p className={`text-[15px] font-semibold ${isConnected ? 'text-success' : 'text-primary'}`}>
                   {isConnected ? 'Site connecté' : 'En attente de connexion'}
                 </p>
                 <p className="text-[12px] text-secondary">

@@ -34,6 +34,7 @@ import { finiteScore, getOriginalityScore, getGeoScore } from '@/lib/scoreBadge'
 import { downloadJson, printReport } from '@/utils/exportReport'
 import { currentPeriod, type PeriodMode, type PeriodRange } from '@/utils/periodNavigator'
 import { formatAxisTick, formatMetric, percentOf } from '@/utils/trafficDisplay'
+import { NEUTRAL_CHART_COLORS } from '@/utils/chartPalette'
 
 type ArticleMetric = {
   article: Article
@@ -58,10 +59,15 @@ const STATUS_LABELS: Record<string, string> = {
   archived: 'Archivé',
 }
 
-const TOP_ARTICLE_BAR_COLOR = '#8f63d8'
+const TOP_ARTICLE_BAR_COLOR = NEUTRAL_CHART_COLORS.secondary
 
 function categoryColor(category: Category | null | undefined, fallbackIndex = 0) {
-  const palette = ['#007aff', '#34c759', '#ff9500', '#ff3b30', '#5856d6', '#00a7a7']
+  const palette = [
+    NEUTRAL_CHART_COLORS.primary,
+    NEUTRAL_CHART_COLORS.secondary,
+    NEUTRAL_CHART_COLORS.tertiary,
+    NEUTRAL_CHART_COLORS.muted,
+  ]
   return category?.color || palette[fallbackIndex % palette.length]
 }
 
@@ -133,11 +139,11 @@ const ACTION_SHORT: Record<string, string> = {
 function ActionBadge({ action }: { action: string }) {
   const styles: Record<string, string> = {
     'Mettre à jour': 'bg-accent/10 text-accent',
-    'Optimiser le titre': 'bg-warning/12 text-[#a35b00]',
-    'Ajouter liens internes': 'bg-[#eef2ff] text-[#4f46e5]',
-    'Améliorer meta description': 'bg-[#f0f9ff] text-[#0369a1]',
+    'Optimiser le titre': 'bg-warning/12 text-warning',
+    'Ajouter liens internes': 'bg-accent/8 text-accent',
+    'Améliorer meta description': 'bg-accent/8 text-accent',
     'Améliorer introduction': 'bg-danger/10 text-danger',
-    Surveiller: 'bg-success/10 text-[#16723a]',
+    Surveiller: 'bg-success/8 text-success',
   }
   return (
     <span
@@ -245,7 +251,7 @@ function TrendList({ title, items, type }: { title: string; items: ArticleMetric
       <div className="flex flex-col gap-2">
         {items.length ? items.map((item) => (
           <div key={item.article.id} className="flex items-center gap-3 rounded-[12px] px-2 py-2 hover:bg-surface-soft">
-            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] ${type === 'up' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
+            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] ${type === 'up' ? 'bg-success/8 text-success' : 'bg-danger/10 text-danger'}`}>
               {type === 'up' ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}
             </span>
             <div className="min-w-0 flex-1">
@@ -481,7 +487,7 @@ export default function PerformanceDashboardPage() {
                     <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} tickFormatter={(v) => trendTick(period.mode, v)} interval="preserveStartEnd" />
                     <YAxis tick={{ fontSize: 11, fill: '#86868b' }} tickLine={false} axisLine={false} width={44} allowDecimals={false} domain={[0, 'dataMax']} tickFormatter={formatAxisTick} />
                     <Tooltip cursor={false} contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }} labelStyle={{ color: '#1d1d1f', fontWeight: 600 }} formatter={(v) => [formatMetric(Number(v)), 'Vues']} />
-                    <Line type="monotone" dataKey="views" stroke="#007aff" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#007aff' }} />
+                    <Line type="monotone" dataKey="views" stroke={NEUTRAL_CHART_COLORS.primary} strokeWidth={2} dot={false} activeDot={{ r: 4, fill: NEUTRAL_CHART_COLORS.primary }} />
                   </LineChart>
                 </ResponsiveContainer>
                 {!hasTrendData && <ChartEmpty message="Aucune donnée pour cette période." />}
@@ -524,7 +530,7 @@ export default function PerformanceDashboardPage() {
               <div className="flex flex-col gap-2">
                 {optimizeItems.length ? optimizeItems.map((item) => (
                   <div key={item.article.id} className="flex items-start gap-3 rounded-[12px] px-2 py-2 hover:bg-surface-soft">
-                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-warning/10 text-[#b46a00]"><Lightbulb size={15} /></span>
+                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-warning/10 text-warning"><Lightbulb size={15} /></span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[14px] font-medium text-primary">{item.article.title}</p>
                       <div className="mt-1"><ActionBadge action={item.recommendation} /></div>
