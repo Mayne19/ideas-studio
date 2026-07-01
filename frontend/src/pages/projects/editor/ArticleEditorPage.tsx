@@ -46,7 +46,6 @@ import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import StatusBadge from '@/components/ui/StatusBadge'
 import { useAuth } from '@/context/AuthContext'
-import { formatDate } from '@/utils/format'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -299,7 +298,6 @@ export default function ArticleEditorPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [calloutTemplates, setCalloutTemplates] = useState<CalloutTemplate[]>([])
   const [members, setMembers] = useState<ProjectMember[]>([])
-  const [selectedAuthorId, setSelectedAuthorId] = useState('')
   const [manualAuthorName, setManualAuthorName] = useState('')
   const [manualReadingTime, setManualReadingTime] = useState<number | null>(null)
   const [featured, setFeatured] = useState(false)
@@ -475,7 +473,7 @@ export default function ArticleEditorPage() {
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
     const pid = projectId
     const aid = articleId
-    if (!pid || !aid) return
+    if (!pid || !aid) return false
     setAutosaveStatus('saving')
     try {
       const content = editor?.getHTML() ?? ''
@@ -528,11 +526,21 @@ export default function ArticleEditorPage() {
       } : prev)
       setAutosaveStatus('saved')
       setTimeout(() => setAutosaveStatus('idle'), 3000)
+      return true
     } catch {
       pendingSaveRef.current = false
       setAutosaveStatus('error')
+      return false
     }
   }, [articleId, editor, projectId])
+
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return
+    void handleSaveNow().then((saved) => {
+      if (saved) blocker.proceed?.()
+      else blocker.reset?.()
+    })
+  }, [blocker, handleSaveNow])
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -570,7 +578,6 @@ export default function ArticleEditorPage() {
         setMembers(mems)
         setLatestSeoAnalysis(null)
         setLatestReadyCheck(null)
-        setSelectedAuthorId(mems.find((m) => m.user_id === user?.id)?.user_id ?? mems[0]?.user_id ?? '')
         setArticle(art)
         const meta: MetaFields = {
           title: art.title ?? '',
@@ -1126,20 +1133,6 @@ export default function ArticleEditorPage() {
 
   return (
     <div className="flex h-full flex-col min-h-0">
-
-      {/* Navigation blocker */}
-      {blocker.state === 'blocked' && (
-        <div className="flex items-center justify-between gap-3 bg-warning/8 border-b border-warning/20 px-4 py-2 shrink-0">
-          <span className="text-[12px] text-warning">
-            Sauvegarde en cours — quitter maintenant pourrait entraîner une perte de données.
-          </span>
-          <div className="flex items-center gap-2">
-            <button onClick={() => blocker.reset?.()} className="rounded-[6px] px-2.5 py-1 text-[12px] font-medium text-warning hover:bg-warning/10">Rester</button>
-            <button onClick={() => blocker.proceed?.()} className="rounded-[6px] px-2.5 py-1 text-[12px] font-medium text-danger hover:bg-danger/8">Quitter</button>
-          </div>
-        </div>
-      )}
-
       {/* Generation overlay */}
       {(isGenerating || generationTimedOut) && (
         <div className="flex flex-1 items-center justify-center">
@@ -1410,261 +1403,179 @@ export default function ArticleEditorPage() {
               {activeRightTab === 'publish' && (
                 <div className="flex flex-col divide-y divide-border">
 
-                  {/* Zone 1 — Statut */}
-                  <div className="p-3 flex items-center justify-between">
-                    <span className="text-[12px] font-medium text-secondary">Statut</span>
-                    <StatusBadge status={article.status} />
-                  </div>
+                  {/* Paramètres éditoriaux */}
+                  <div className="p-3 flex flex-col gap-3">
+                    <Field label="Mot-clé">
+                      <input
+                        type="text"
+                        value={metaFields.keyword}
+                        onChange={(e) => handleMetaChange('keyword', e.target.value)}
+                        className={INPUT}
+                        placeholder="ex: marketing digital"
+                      />
+                    </Field>
 
-                  {/* Zone 1 — Actions de publication */}
-                  {article.status === 'published' ? (
-                    <div className="p-3 flex flex-col gap-2">
-                      {showUpdateButton ? (
+                    <Field label="Slug">
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          value={metaFields.slug}
+                          onChange={(e) => handleMetaChange('slug', e.target.value)}
+                          className={INPUT}
+                          placeholder="/mon-article"
+                        />
                         <button
-                          onClick={() => void handlePromote()}
-                          disabled={busy || actionLoading === 'promote'}
-                          className="w-full rounded-[8px] bg-accent py-2 text-[12px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
+                          type="button"
+                          onClick={() => {
+                            const s = slugify(metaFields.title || 'item')
+                            handleMetaChange('slug', s)
+                            slugManuallyEditedRef.current = false
+                          }}
+                          className="shrink-0 rounded-[8px] border border-border bg-surface px-2 text-[12px] text-secondary transition-colors hover:bg-surface-soft hover:text-primary"
+                          title="Régénérer depuis le titre"
                         >
-                          {actionLoading === 'promote' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
-                          Mettre à jour
-                        </button>
-                      ) : (
-                        <div className="w-full rounded-[8px] border border-success/20 bg-success/8 py-2 text-center text-[12px] font-medium text-success">
-                          Publié
-                        </div>
-                      )}
-                      <button
-                        onClick={() => doAction('unpublish')}
-                        disabled={busy}
-                        className="w-full rounded-[8px] border border-border py-2 text-[12px] font-medium text-secondary hover:bg-surface-soft transition-colors disabled:opacity-40"
-                      >
-                        Dépublier
-                      </button>
-                      {showUpdateButton && (
-                        <p className="text-[10px] text-tertiary text-center">
-                          Les modifications locales seront sauvegardees sans depublier l'article.
-                        </p>
-                      )}
-                    </div>
-                  ) : article.status !== 'archived' ? (
-                    <div className="p-3 flex flex-col gap-3">
-                      <div className="flex rounded-[8px] border border-border overflow-hidden">
-                        <button
-                          onClick={() => setPublishMode('now')}
-                          className={`flex-1 py-1.5 text-[12px] font-medium transition-colors ${publishMode === 'now' ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'}`}
-                        >
-                          Maintenant
-                        </button>
-                        <button
-                          onClick={() => setPublishMode('schedule')}
-                          className={`flex-1 py-1.5 text-[12px] font-medium transition-colors ${publishMode === 'schedule' ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'}`}
-                        >
-                          Programmer
+                          ↻
                         </button>
                       </div>
-                      {publishMode === 'now' && (
-                        <button
-                          onClick={() => doAction('publish')}
-                          disabled={busy}
-                          className="w-full rounded-[8px] bg-accent py-2 text-[12px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
-                        >
-                          {actionLoading === 'publish' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
-                          Publier maintenant
-                        </button>
-                      )}
-                      {publishMode === 'schedule' && (
-                        <div className="flex flex-col gap-2 rounded-[10px] bg-surface-soft border border-border p-3">
-                          <Field label="Date">
-                            <input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} className={INPUT} />
-                          </Field>
-                          <Field label="Heure">
-                            <input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} className={INPUT} />
-                          </Field>
+                    </Field>
+
+                    <Field label="Meta description">
+                      <textarea
+                        rows={3}
+                        value={metaFields.meta_description}
+                        onChange={(e) => handleMetaChange('meta_description', e.target.value)}
+                        className={`${INPUT} resize-none`}
+                        placeholder="Description pour les moteurs de recherche..."
+                      />
+                    </Field>
+
+                    <div className="flex flex-col gap-2">
+                      <span className="text-[12px] font-medium text-secondary">Couverture</span>
+                      <MediaPanel coverImageUrl={coverImageUrl} onChange={handleCoverChange} projectId={projectId!} />
+                    </div>
+
+                    <Field label="Catégorie">
+                      <select
+                        value={metaFields.category_id}
+                        onChange={(e) => handleMetaChange('category_id', e.target.value)}
+                        className={INPUT}
+                        disabled={categories.length === 0}
+                      >
+                        <option value="">Aucune catégorie</option>
+                        {categories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+                    </Field>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Field label="Durée de lecture">
+                        <input
+                          type="number"
+                          min={1}
+                          value={manualReadingTime ?? ''}
+                          placeholder={`${calculatedReadingTime} min`}
+                          onChange={(e) => handleReadingTimeChange(e.target.value)}
+                          className={INPUT}
+                        />
+                      </Field>
+                      <Field label="Nom de l'auteur">
+                        <input
+                          type="text"
+                          value={manualAuthorName}
+                          onChange={(e) => handleAuthorNameChange(e.target.value)}
+                          placeholder={user?.name ?? "Nom d'auteur"}
+                          className={INPUT}
+                        />
+                      </Field>
+                    </div>
+                  </div>
+
+                  {/* Publication */}
+                  <div className="p-3 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12px] font-medium text-secondary">Statut</span>
+                      <StatusBadge status={article.status} />
+                    </div>
+
+                    {article.status === 'published' ? (
+                      <div className="flex flex-col gap-2">
+                        {showUpdateButton ? (
                           <button
-                            onClick={handleSchedule}
-                            disabled={!scheduleDate || !scheduleTime || busy}
-                            className="w-full rounded-[8px] bg-accent py-1.5 text-[12px] font-medium text-white hover:bg-accent/90 disabled:opacity-40 transition-colors"
+                            onClick={() => void handlePromote()}
+                            disabled={busy || actionLoading === 'promote'}
+                            className="w-full rounded-[8px] bg-accent py-2 text-[12px] font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-40"
                           >
-                            {actionLoading === 'schedule' ? '…' : 'Programmer la publication'}
+                            {actionLoading === 'promote' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
+                            Mettre à jour la publication
+                          </button>
+                        ) : (
+                          <div className="w-full rounded-[8px] border border-success/20 bg-success/8 py-2 text-center text-[12px] font-medium text-success">
+                            Publié
+                          </div>
+                        )}
+                      </div>
+                    ) : article.status !== 'archived' ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="flex overflow-hidden rounded-[8px] border border-border">
+                          <button
+                            onClick={() => setPublishMode('now')}
+                            className={`flex-1 py-1.5 text-[12px] font-medium transition-colors ${publishMode === 'now' ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'}`}
+                          >
+                            Publier
+                          </button>
+                          <button
+                            onClick={() => setPublishMode('schedule')}
+                            className={`flex-1 py-1.5 text-[12px] font-medium transition-colors ${publishMode === 'schedule' ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'}`}
+                          >
+                            Programmer
                           </button>
                         </div>
-                      )}
-                    </div>
-                  ) : null}
 
-                  {/* Actions secondaires */}
-                  <div className="p-3 flex flex-col gap-1.5">
-                    <button
-                      onClick={handleSaveNow}
-                      disabled={busy}
-                      className="w-full flex items-center justify-center gap-1.5 rounded-[8px] border border-border py-2 text-[12px] font-medium text-secondary hover:bg-surface-soft transition-colors disabled:opacity-40"
-                    >
-                      {autosaveStatus === 'saved' ? <Check size={13} className="text-success" /> : null}
-                      Sauvegarder
-                    </button>
-                    {!['ready_to_publish', 'published', 'archived'].includes(article.status) && (
-                      <button
-                        onClick={() => doAction('mark-ready')}
-                        disabled={busy}
-                        className="w-full rounded-[8px] border border-border py-2 text-[12px] font-medium text-secondary hover:bg-surface-soft transition-colors disabled:opacity-40"
-                      >
-                        {actionLoading === 'mark-ready' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
-                        Marquer prêt
-                      </button>
+                        {publishMode === 'now' ? (
+                          <button
+                            onClick={() => doAction('publish')}
+                            disabled={busy}
+                            className="w-full rounded-[8px] bg-accent py-2 text-[12px] font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-40"
+                          >
+                            {actionLoading === 'publish' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
+                            Publier maintenant
+                          </button>
+                        ) : (
+                          <div className="flex flex-col gap-2 rounded-[10px] border border-border bg-surface p-3">
+                            <Field label="Date">
+                              <input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} className={INPUT} />
+                            </Field>
+                            <Field label="Heure">
+                              <input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} className={INPUT} />
+                            </Field>
+                            <button
+                              onClick={handleSchedule}
+                              disabled={!scheduleDate || !scheduleTime || busy}
+                              className="w-full rounded-[8px] bg-accent py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-40"
+                            >
+                              {actionLoading === 'schedule' ? '...' : 'Programmer la publication'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="w-full rounded-[8px] border border-border bg-surface py-2 text-center text-[12px] font-medium text-secondary">
+                        Article archivé
+                      </div>
                     )}
+
                     {article.status !== 'archived' && (
                       <button
                         onClick={() => doAction('archive')}
                         disabled={busy}
-                        className="w-full rounded-[8px] py-2 text-[12px] font-medium text-danger/70 hover:text-danger hover:bg-danger/5 transition-colors disabled:opacity-40"
+                        className="w-full rounded-[8px] border border-border py-2 text-[12px] font-medium text-danger/70 transition-colors hover:bg-danger/5 hover:text-danger disabled:opacity-40"
                       >
+                        {actionLoading === 'archive' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
                         Archiver
                       </button>
                     )}
                   </div>
-
-                  {/* Zone 2 — À compléter */}
-                  <div className="p-3 flex flex-col gap-2">
-                    <span className="text-[12px] font-medium text-secondary">Image de couverture</span>
-                    <MediaPanel coverImageUrl={coverImageUrl} onChange={handleCoverChange} projectId={projectId!} />
-                  </div>
-
-                  <div className="p-3 flex flex-col gap-2">
-                    <div className="flex items-center justify-between text-[12px]">
-                      <span className="text-secondary">Auteur (publication)</span>
-                      <input
-                        type="text"
-                        value={manualAuthorName}
-                        onChange={(e) => handleAuthorNameChange(e.target.value)}
-                        placeholder="Nom d'auteur"
-                        className="max-w-[190px] bg-transparent text-right text-primary text-[12px] border-none outline-none placeholder:text-tertiary"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between text-[12px]">
-                      <span className="text-secondary">Responsable</span>
-                      {members.length > 0 ? (
-                        <select
-                          value={selectedAuthorId}
-                          onChange={(e) => setSelectedAuthorId(e.target.value)}
-                          className="max-w-[190px] bg-transparent text-right text-primary text-[12px] border-none outline-none cursor-pointer"
-                        >
-                          {members.map((m) => (
-                            <option key={m.user_id} value={m.user_id}>
-                              {m.user_name ?? m.user_email ?? m.user_id}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span className="text-primary">{user?.name ?? '—'}</span>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between text-[12px]">
-                      <span className="text-secondary">Temps de lecture (min)</span>
-                      <input
-                        type="number"
-                        min={1}
-                        value={manualReadingTime ?? ''}
-                        placeholder={String(calculatedReadingTime)}
-                        onChange={(e) => handleReadingTimeChange(e.target.value)}
-                        className="w-16 rounded-[7px] border border-border bg-surface px-2 py-1 text-right text-[12px] text-primary outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/40"
-                      />
-                    </div>
-                  </div>
-
-                  {article.scheduled_at && (
-                    <div className="p-3 flex flex-col gap-1.5">
-                      {article.published_at && (
-                        <div className="flex items-center justify-between text-[12px]">
-                          <span className="text-secondary">Publié le</span>
-                          <span className="text-primary">{formatDate(article.published_at)}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between text-[12px]">
-                        <span className="text-secondary">Date programmée</span>
-                        <span className="text-primary font-medium">{formatDate(article.scheduled_at)}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Zone 3 — Paramètres SEO (collapsible) */}
-                  <details className="group order-first">
-                    <summary className="flex cursor-pointer list-none select-none items-center justify-between p-3 text-[12px] font-medium text-secondary hover:text-primary">
-                      <span>Paramètres SEO</span>
-                      <ChevronDown size={12} className="transition-transform group-open:rotate-180" />
-                    </summary>
-                    <div className="flex flex-col divide-y divide-border border-t border-border">
-                      <div className="p-3 flex flex-col gap-2">
-                        {categories.length > 0 && (
-                          <Field label="Catégorie">
-                            <select
-                              value={metaFields.category_id}
-                              onChange={(e) => handleMetaChange('category_id', e.target.value)}
-                              className={INPUT}
-                            >
-                              <option value="">— Aucune —</option>
-                              {categories.map((cat) => (
-                                <option key={cat.id} value={cat.id}>{cat.name}</option>
-                              ))}
-                            </select>
-                          </Field>
-                        )}
-                        <Field label="Sous-niche" hint="Filtre public Fiindt">
-                          <input
-                            type="text"
-                            value={metaFields.sub_niche}
-                            onChange={(e) => handleMetaChange('sub_niche', e.target.value)}
-                            className={INPUT}
-                            placeholder="ex: comparateurs IA"
-                          />
-                        </Field>
-                        <Field label="Mot-clé principal" hint="Pour l'analyse SEO">
-                          <input
-                            type="text"
-                            value={metaFields.keyword}
-                            onChange={(e) => handleMetaChange('keyword', e.target.value)}
-                            className={INPUT}
-                            placeholder="ex: marketing digital"
-                          />
-                        </Field>
-                      </div>
-                      <div className="p-3">
-                        <Field label="Slug" hint="URL de l'article">
-                          <div className="flex gap-1.5">
-                            <input
-                              type="text"
-                              value={metaFields.slug}
-                              onChange={(e) => handleMetaChange('slug', e.target.value)}
-                              className={INPUT}
-                              placeholder="/mon-article"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const s = slugify(metaFields.title || 'item')
-                                handleMetaChange('slug', s)
-                                slugManuallyEditedRef.current = false
-                              }}
-                              className="shrink-0 rounded-[8px] border border-border bg-surface px-2 text-[12px] text-secondary hover:bg-surface-soft hover:text-primary transition-colors"
-                              title="Régénérer depuis le titre"
-                            >
-                              ↻
-                            </button>
-                          </div>
-                        </Field>
-                      </div>
-                      <div className="p-3">
-                        <Field label="Meta description">
-                          <textarea
-                            rows={3}
-                            value={metaFields.meta_description}
-                            onChange={(e) => handleMetaChange('meta_description', e.target.value)}
-                            className={`${INPUT} resize-none`}
-                            placeholder="Description pour les moteurs de recherche…"
-                          />
-                        </Field>
-                      </div>
-                    </div>
-                  </details>
 
                   {/* Commentaires éditoriaux */}
                   <div className="p-3">
@@ -1706,7 +1617,7 @@ export default function ArticleEditorPage() {
                 <AnalysePanel
                   article={{ ...article, title: metaFields.title }}
                   projectId={projectId!}
-                  onBeforeAnalyze={handleSaveNow}
+                  onBeforeAnalyze={async () => { await handleSaveNow() }}
                   initialAnalysis={latestSeoAnalysis}
                   initialReadiness={latestReadyCheck}
                   onAnalysisUpdate={(analysis) => {
