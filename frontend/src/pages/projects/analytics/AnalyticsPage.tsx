@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  AreaChart, Area,
   BarChart, Bar, Cell, LabelList,
   XAxis, YAxis,
   CartesianGrid,
@@ -28,7 +27,8 @@ import ErrorState from '@/components/ui/ErrorState'
 import LoadingState from '@/components/ui/LoadingState'
 import PeriodNavigator, { ExportButtons } from '@/components/ui/PeriodNavigator'
 import { downloadJson, printReport } from '@/utils/exportReport'
-import { currentPeriod, type PeriodMode, type PeriodRange } from '@/utils/periodNavigator'
+import { currentPeriod, type PeriodRange } from '@/utils/periodNavigator'
+import { getPeriodBarLayout, getPeriodBucketKey, getPeriodBuckets } from '@/utils/periodChart'
 import {
   formatAxisTick,
   formatMetric,
@@ -67,12 +67,6 @@ function ChartEmpty({ message }: { message: string }) {
       <span className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[12px] text-secondary">{message}</span>
     </div>
   )
-}
-
-function chartTick(period: PeriodMode, value: unknown) {
-  const label = String(value)
-  if (period === 'year') return label.slice(0, 7)
-  return label.includes('-') ? label.slice(5) : label
 }
 
 function deviceColor(device: string) {
@@ -178,14 +172,38 @@ export default function AnalyticsPage() {
     }).sort((a, b) => b.visits - a.visits)
   }, [summary])
 
-  const channelTrend = useMemo(
-    () => summary?.channel_trend_by_day ?? [],
-    [summary],
-  )
+  const channelTrend = useMemo(() => {
+    const buckets = getPeriodBuckets(period)
+    const rows = buckets.map((bucket) => ({
+      date: bucket.label,
+      direct: 0,
+      organic: 0,
+      referral: 0,
+      social: 0,
+    }))
+    const byKey = new Map(buckets.map((bucket, index) => [bucket.key, rows[index]]))
+
+    for (const point of summary?.channel_trend_by_day ?? []) {
+      const key = getPeriodBucketKey(point.date, period)
+      const row = key ? byKey.get(key) : null
+      if (!row) continue
+      row.direct += point.direct
+      row.organic += point.organic
+      row.referral += point.referral
+      row.social += point.social
+    }
+
+    return rows
+  }, [period, summary])
 
   const hasChannelTrend = useMemo(
-    () => channelTrend.length > 0 && summary !== null && summary.total_views > 0,
-    [channelTrend, summary],
+    () => channelTrend.some((point) => point.direct + point.organic + point.referral + point.social > 0),
+    [channelTrend],
+  )
+
+  const channelBarLayout = useMemo(
+    () => getPeriodBarLayout(channelTrend.length),
+    [channelTrend.length],
   )
 
   const viewsTrend = useMemo(
@@ -243,41 +261,47 @@ export default function AnalyticsPage() {
     [summary],
   )
 
-  const deviceMonthlyData = useMemo(() => {
+  const devicePeriodData = useMemo(() => {
     const trend = summary?.trend_by_day ?? []
     const devices = summary?.devices ?? []
     if (!trend.length || !devices.length) return []
     const totalViews = Math.max(1, devices.reduce((sum, d) => sum + d.views, 0))
     const shares = devices.map((d) => ({ key: d.device.toLowerCase(), share: d.views / totalViews }))
-    const byMonth = new Map<string, number>()
+    const buckets = getPeriodBuckets(period)
+    const totals = new Map(buckets.map((bucket) => [bucket.key, 0]))
     for (const point of trend) {
-      const month = point.date.slice(0, 7)
-      byMonth.set(month, (byMonth.get(month) ?? 0) + point.views)
+      const key = getPeriodBucketKey(point.date, period)
+      if (!key || !totals.has(key)) continue
+      totals.set(key, (totals.get(key) ?? 0) + point.views)
     }
-    return [...byMonth.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, total]) => {
-        const label = new Date(`${month}-01`).toLocaleDateString('fr-FR', { month: 'short' })
-        const entry: Record<string, string | number> = { month: label }
-        for (const { key, share } of shares) {
-          entry[key] = Math.round(total * share)
-        }
-        return entry
-      })
-  }, [summary])
+
+    return buckets.map((bucket) => {
+      const total = totals.get(bucket.key) ?? 0
+      const entry: Record<string, string | number> = { date: bucket.label }
+      for (const { key, share } of shares) {
+        entry[key] = Math.round(total * share)
+      }
+      return entry
+    })
+  }, [period, summary])
 
   const deviceKeys = useMemo(() => {
     const keys = new Set<string>()
-    for (const row of deviceMonthlyData) {
+    for (const row of devicePeriodData) {
       Object.keys(row).forEach((key) => {
-        if (key !== 'month') keys.add(key)
+        if (key !== 'date') keys.add(key)
       })
     }
     return [
       ...DEVICE_ORDER.filter((key) => keys.has(key)),
       ...Array.from(keys).filter((key) => !DEVICE_ORDER.includes(key)),
     ]
-  }, [deviceMonthlyData])
+  }, [devicePeriodData])
+
+  const deviceBarLayout = useMemo(
+    () => getPeriodBarLayout(devicePeriodData.length),
+    [devicePeriodData.length],
+  )
 
   const auditItems = useMemo(() => {
     const withMetrics = articleMetrics.filter((a) => a.views > 0 || a.seo_score !== null)
@@ -445,60 +469,56 @@ export default function AnalyticsPage() {
         <Card>
           <SectionTitle>Évolution du trafic par canal</SectionTitle>
           <div className="relative h-[250px]">
-            <ChartContainer config={trafficChartConfig} className="h-[250px] w-full">
-              <AreaChart data={channelTrend}>
-                <defs>
-                  {TRAFFIC_CHANNELS.map((channel) => (
-                    <linearGradient key={channel.key} id={`fill-${channel.key}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={channel.color} stopOpacity={0.55} />
-                      <stop offset="95%" stopColor={channel.color} stopOpacity={0.08} />
-                    </linearGradient>
-                  ))}
-                </defs>
-                <CartesianGrid vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  minTickGap={32}
-                  tickFormatter={(v) => chartTick(period.mode, v)}
-                />
-                <ChartTooltip
-                  cursor={false}
-                  content={
-                    <ChartTooltipContent
-                      indicator="dot"
-                      hideLabel
-                      formatter={(value: number | string, name: string) => {
-                        const num = Number(value)
-                        if (num <= 0) return <span />
-                        return [
-                          <span key="value" className="tabular-nums text-primary">{formatMetric(num)}</span>,
-                          name as string,
-                        ]
-                      }}
+            <div className={`flex h-[250px] ${channelBarLayout.centered ? 'justify-center' : ''}`}>
+              <div className="h-full" style={{ width: channelBarLayout.chartWidth }}>
+                <ChartContainer config={trafficChartConfig} className="h-full w-full">
+                  <BarChart data={channelTrend} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      interval={0}
                     />
-                  }
-                />
-                {TRAFFIC_CHANNELS.map((channel) => (
-                  <Area
-                    key={channel.key}
-                    type="monotone"
-                    dataKey={channel.key}
-                    name={channel.label}
-                    stackId="a"
-                    stroke={channel.color}
-                    fill={`url(#fill-${channel.key})`}
-                    strokeWidth={1.5}
-                    dot={false}
-                    activeDot={{ r: 3, strokeWidth: 0 }}
-                    isAnimationActive={false}
-                  />
-                ))}
-                <ChartLegend content={<ChartLegendContent />} />
-              </AreaChart>
-            </ChartContainer>
+                    <YAxis tickLine={false} axisLine={false} width={36} allowDecimals={false} tickFormatter={formatAxisTick} />
+                    <ChartTooltip
+                      cursor={false}
+                      content={
+                        <ChartTooltipContent
+                          indicator="dot"
+                          formatter={(value: number | string, name: string) => {
+                            const num = Number(value)
+                            if (num <= 0) return <span />
+                            return [
+                              <span key="value" className="tabular-nums text-primary">{formatMetric(num)}</span>,
+                              name as string,
+                            ]
+                          }}
+                        />
+                      }
+                    />
+                    <ChartLegend content={<ChartLegendContent />} />
+                    {TRAFFIC_CHANNELS.map((channel, index) => (
+                      <Bar
+                        key={channel.key}
+                        dataKey={channel.key}
+                        name={channel.label}
+                        stackId="a"
+                        fill={channel.color}
+                        barSize={channelBarLayout.barSize}
+                        radius={
+                          index === TRAFFIC_CHANNELS.length - 1 ? [4, 4, 0, 0]
+                          : index === 0 ? [0, 0, 4, 4]
+                          : [0, 0, 0, 0]
+                        }
+                        isAnimationActive
+                      />
+                    ))}
+                  </BarChart>
+                </ChartContainer>
+              </div>
+            </div>
             {!hasChannelTrend && <ChartEmpty message="Aucune donnée de trafic pour cette période." />}
           </div>
         </Card>
@@ -729,31 +749,37 @@ export default function AnalyticsPage() {
           </Card>
           <Card>
             <SectionTitle>Appareils</SectionTitle>
-            {deviceMonthlyData.length ? (
+            {devicePeriodData.length ? (
               <div className="h-[220px]">
-                <ChartContainer config={deviceChartConfig} className="h-full w-full">
-                  <BarChart data={deviceMonthlyData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
-                    <YAxis tickLine={false} axisLine={false} width={36} allowDecimals={false} tickFormatter={formatAxisTick} />
-                    <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    {deviceKeys.map((device, i) => (
-                      <Bar
-                        key={device}
-                        dataKey={device}
-                        name={getDeviceLabel(device)}
-                        stackId="a"
-                        fill={deviceColor(device)}
-                        radius={
-                          i === deviceKeys.length - 1 ? [4, 4, 0, 0]
-                          : i === 0 ? [0, 0, 4, 4]
-                          : [0, 0, 0, 0]
-                        }
-                      />
-                    ))}
-                  </BarChart>
-                </ChartContainer>
+                <div className={`flex h-full ${deviceBarLayout.centered ? 'justify-center' : ''}`}>
+                  <div className="h-full" style={{ width: deviceBarLayout.chartWidth }}>
+                    <ChartContainer config={deviceChartConfig} className="h-full w-full">
+                      <BarChart data={devicePeriodData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+                        <CartesianGrid vertical={false} />
+                        <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} interval={0} />
+                        <YAxis tickLine={false} axisLine={false} width={36} allowDecimals={false} tickFormatter={formatAxisTick} />
+                        <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+                        <ChartLegend content={<ChartLegendContent />} />
+                        {deviceKeys.map((device, i) => (
+                          <Bar
+                            key={device}
+                            dataKey={device}
+                            name={getDeviceLabel(device)}
+                            stackId="a"
+                            fill={deviceColor(device)}
+                            barSize={deviceBarLayout.barSize}
+                            radius={
+                              i === deviceKeys.length - 1 ? [4, 4, 0, 0]
+                              : i === 0 ? [0, 0, 4, 4]
+                              : [0, 0, 0, 0]
+                            }
+                            isAnimationActive
+                          />
+                        ))}
+                      </BarChart>
+                    </ChartContainer>
+                  </div>
+                </div>
               </div>
             ) : <InlineEmpty>Aucune donnée appareil pour cette période.</InlineEmpty>}
           </Card>
