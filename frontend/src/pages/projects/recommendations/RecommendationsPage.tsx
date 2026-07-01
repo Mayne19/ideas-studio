@@ -256,7 +256,7 @@ export default function RecommendationsPage() {
       {/* Header */}
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-[20px] font-semibold text-primary tracking-tight">Recommandations</h1>
+          <h1 className="text-[20px] font-semibold text-primary tracking-tight">Optimisations</h1>
           <p className="mt-0.5 text-[14px] text-secondary">Optimisez vos contenus publiés.</p>
         </div>
         <Button
