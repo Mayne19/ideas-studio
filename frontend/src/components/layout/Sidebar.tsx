@@ -84,7 +84,7 @@ function SidebarSection({ title, children, collapsed }: { title?: string; childr
 
 export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const { projectId } = useParams<{ projectId?: string }>()
-  const { project, isAdminOrOwner } = useProject()
+  const { project } = useProject()
   const { logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -110,7 +110,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
   }, [projectsOpen])
 
   const sidebarWidth = collapsed ? 'w-14' : 'w-52'
-  const settingsSections = getSettingsSections(projectId, { showAdminOnly: isAdminOrOwner })
+  const settingsSections = getSettingsSections(projectId)
 
   async function handleLogout() {
     setLoggingOut(true)
