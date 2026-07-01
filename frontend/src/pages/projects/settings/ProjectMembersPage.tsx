@@ -46,11 +46,21 @@ const ROLE_GUIDE: Array<{
   title: string
   icon: HugeIconComponent
   permissions: string[]
+  theme: {
+    card: string
+    icon: string
+    dot: string
+  }
 }> = [
   {
     role: 'owner',
     title: 'Owner',
     icon: Crown,
+    theme: {
+      card: 'border-violet-200 bg-violet-50/55',
+      icon: 'bg-violet-100 text-violet-700',
+      dot: 'bg-violet-500',
+    },
     permissions: [
       'Contrôle total du projet',
       'Peut supprimer le projet',
@@ -61,6 +71,11 @@ const ROLE_GUIDE: Array<{
     role: 'admin',
     title: 'Admin',
     icon: Shield,
+    theme: {
+      card: 'border-sky-200 bg-sky-50/55',
+      icon: 'bg-sky-100 text-sky-700',
+      dot: 'bg-sky-500',
+    },
     permissions: [
       'Gère le projet',
       'Peut publier',
@@ -72,6 +87,11 @@ const ROLE_GUIDE: Array<{
     role: 'editor',
     title: 'Editor',
     icon: FilePenLine,
+    theme: {
+      card: 'border-success/20 bg-success/5',
+      icon: 'bg-success/10 text-success',
+      dot: 'bg-success',
+    },
     permissions: [
       'Corrige les contenus',
       'Modifie tous les articles',
@@ -82,6 +102,11 @@ const ROLE_GUIDE: Array<{
     role: 'writer',
     title: 'Writer',
     icon: PenLine,
+    theme: {
+      card: 'border-warning/20 bg-warning/5',
+      icon: 'bg-warning/10 text-warning',
+      dot: 'bg-warning',
+    },
     permissions: [
       'Crée des brouillons',
       'Écrit du contenu',
@@ -93,6 +118,11 @@ const ROLE_GUIDE: Array<{
     role: 'viewer',
     title: 'Viewer',
     icon: Eye,
+    theme: {
+      card: 'border-border bg-bg',
+      icon: 'bg-surface-soft text-secondary',
+      dot: 'bg-tertiary',
+    },
     permissions: [
       'Lecture seule',
       'Consulte articles et analyses',
@@ -430,18 +460,22 @@ export default function ProjectMembersPage() {
             const RoleIcon = item.icon
 
             return (
-              <div key={item.role} className="flex flex-col rounded-[14px] bg-surface-soft px-3 py-2.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[8px] bg-white text-tertiary">
+              <div
+                key={item.role}
+                className={`flex min-h-[170px] flex-col rounded-[14px] border px-3 py-3 ${item.theme.card}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] ${item.theme.icon}`}>
                     <RoleIcon size={13} />
                   </span>
-                  <p className="text-[12px] font-semibold text-primary">{item.title}</p>
-                  <RoleBadge role={item.role} />
+                  <RoleBadge role={item.role} className="shrink-0" />
                 </div>
-                <ul className="mt-1.5 flex flex-col gap-0.5">
+                <p className="mt-3 text-[14px] font-semibold text-primary">{item.title}</p>
+                <ul className="mt-2 flex flex-col gap-1.5">
                   {item.permissions.map((permission) => (
-                    <li key={permission} className="text-[12px] leading-snug text-secondary">
-                      {permission}
+                    <li key={permission} className="flex items-start gap-2 text-[12px] leading-snug text-secondary">
+                      <span className={`mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full ${item.theme.dot}`} />
+                      <span>{permission}</span>
                     </li>
                   ))}
                 </ul>
