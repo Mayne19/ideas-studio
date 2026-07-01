@@ -59,7 +59,7 @@ function InfoRow({
   mono?: boolean
 }) {
   return (
-    <div className="flex flex-col gap-2 rounded-[12px] border border-border bg-surface px-4 py-3">
+    <div className="flex flex-col gap-2 px-4 py-3">
       <div className="min-w-0">
         <div className="flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wider text-tertiary">
           {icon}
