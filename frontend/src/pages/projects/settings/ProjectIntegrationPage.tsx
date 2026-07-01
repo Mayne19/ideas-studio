@@ -57,12 +57,10 @@ function InfoRow({
   mono?: boolean
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 rounded-[12px] bg-surface-soft px-4 py-3">
-      <div className="min-w-0 flex-1">
-        <p className="text-[12px] font-medium uppercase tracking-wider text-tertiary">{label}</p>
-        <p className={`mt-0.5 truncate text-[14px] text-primary ${mono ? 'font-mono' : ''}`}>{value}</p>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
+    <div className="flex items-center justify-between gap-3 rounded-[12px] px-4 py-2.5">
+      <p className="min-w-0 shrink-0 text-[12px] font-medium uppercase tracking-wider text-tertiary">{label}</p>
+      <div className="flex min-w-0 flex-1 items-center justify-end gap-2 rounded-[8px] bg-surface-soft px-3 py-2">
+        <p className={`truncate text-[14px] text-primary ${mono ? 'font-mono' : ''}`}>{value}</p>
         {action}
         {canCopy && <CopyButton value={copyValue ?? value} disabled={!(copyValue ?? value)} className="shrink-0" />}
       </div>
@@ -254,7 +252,7 @@ export default function ProjectIntegrationPage() {
         title="Identifiants"
         description="Utilisez ces clés pour connecter votre blog à l'API publique."
       >
-        <div className="flex flex-col gap-2 rounded-[10px] bg-accent/6 px-4 py-3">
+        <div className="flex flex-col gap-2">
           <InfoRow
             label="Project ID"
             value={info?.project_id ?? '—'}
