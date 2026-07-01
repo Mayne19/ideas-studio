@@ -3,20 +3,20 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  /* Colors — Warm & clean */
-  --color-bg: #F8F6F3;
-  --color-app: #F8F6F3;
-  --color-surface: #FCFBFA;
-  --color-surface-soft: #F3F3F3;
-  --color-surface-muted: #E8E8E8;
+  /* Colors — soft neutral */
+  --color-bg: #FAFAFA;
+  --color-app: #FAFAFA;
+  --color-surface: #FFFFFF;
+  --color-surface-soft: #F5F5F5;
+  --color-surface-muted: #EDEDED;
   --color-primary: #2E2E2E;
   --color-secondary: #5E5E5E;
   --color-tertiary: #8A8A8A;
-  --color-border: rgba(0, 0, 0, 0.06);
-  --color-border-soft: rgba(0, 0, 0, 0.04);
-  --color-border-strong: rgba(0, 0, 0, 0.12);
-  --color-accent: #0072F5;
-  --color-accent-dark: #0062D1;
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-border-soft: rgba(0, 0, 0, 0.05);
+  --color-border-strong: rgba(0, 0, 0, 0.14);
+  --color-accent: #2E2E2E;
+  --color-accent-dark: #1F1F1F;
   --color-brand: #2E2E2E;
   --color-brand-soft: #F2F2F2;
   --color-success: #008A2E;
@@ -323,5 +323,4 @@ body {
   height: 0;
   pointer-events: none;
 }
-
 

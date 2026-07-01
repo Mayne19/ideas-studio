@@ -4,13 +4,13 @@ import {
   AreaChart, Area,
   BarChart, Bar, Cell, LabelList,
   XAxis, YAxis,
-  CartesianGrid, Legend,
-  ResponsiveContainer, Tooltip,
+  CartesianGrid,
 } from 'recharts'
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
+  ChartLegend,
   ChartLegendContent,
   type ChartConfig,
 } from '@/components/ui/chart'
@@ -93,24 +93,18 @@ function articleSignal(a: ArticlePerformanceBrief) {
 
 const COUNTRY_PALETTE = SHARED_COUNTRY_PALETTE
 const TRAFFIC_CHANNELS = [
-  { key: 'direct', label: 'Direct', color: '#111827' },
-  { key: 'organic', label: 'Google', color: '#4b5563' },
-  { key: 'referral', label: 'Referral', color: '#9ca3af' },
-  { key: 'social', label: 'Social', color: '#d1d5db' },
+  { key: 'direct', label: 'Direct', color: NEUTRAL_CHART_COLORS.primary },
+  { key: 'organic', label: 'Google', color: NEUTRAL_CHART_COLORS.secondary },
+  { key: 'referral', label: 'Referral', color: NEUTRAL_CHART_COLORS.tertiary },
+  { key: 'social', label: 'Social', color: NEUTRAL_CHART_COLORS.muted },
 ] as const
 const DEVICE_ORDER = ['desktop', 'mobile', 'tablet']
-const CHART_TOOLTIP_STYLE = {
-  fontSize: 12,
-  borderRadius: 10,
-  border: '1px solid rgba(0,0,0,0.08)',
-  boxShadow: 'none',
-}
 const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, info: 2 }
 
 const trafficOriginConfig = {
   views: {
     label: "Vues",
-    color: "#4b5563",
+    color: NEUTRAL_CHART_COLORS.secondary,
   },
   label: {
     color: "var(--background)",
@@ -118,10 +112,20 @@ const trafficOriginConfig = {
 } satisfies ChartConfig
 
 const trafficChartConfig = {
-  direct: { label: "Direct", color: "#111827" },
-  organic: { label: "Google", color: "#4b5563" },
-  referral: { label: "Referral", color: "#9ca3af" },
-  social: { label: "Social", color: "#d1d5db" },
+  direct: { label: "Direct", color: NEUTRAL_CHART_COLORS.primary },
+  organic: { label: "Google", color: NEUTRAL_CHART_COLORS.secondary },
+  referral: { label: "Referral", color: NEUTRAL_CHART_COLORS.tertiary },
+  social: { label: "Social", color: NEUTRAL_CHART_COLORS.muted },
+} satisfies ChartConfig
+
+const countryChartConfig = {
+  views: { label: "Vues", color: NEUTRAL_CHART_COLORS.secondary },
+} satisfies ChartConfig
+
+const deviceChartConfig = {
+  desktop: { label: "Desktop", color: DEVICE_COLORS.desktop },
+  mobile: { label: "Mobile", color: DEVICE_COLORS.mobile },
+  tablet: { label: "Tablette", color: DEVICE_COLORS.tablet },
 } satisfies ChartConfig
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -331,6 +335,7 @@ export default function AnalyticsPage() {
     return Array.from(map.entries())
       .map(([channel, views]) => ({
         channel,
+        label: TRAFFIC_CHANNELS.find((item) => item.key === channel)?.label ?? channel,
         views,
         share: Math.round((views / total) * 100),
       }))
@@ -491,7 +496,7 @@ export default function AnalyticsPage() {
                     isAnimationActive={false}
                   />
                 ))}
-                <Legend content={<ChartLegendContent />} />
+                <ChartLegend content={<ChartLegendContent />} />
               </AreaChart>
             </ChartContainer>
             {!hasChannelTrend && <ChartEmpty message="Aucune donnée de trafic pour cette période." />}
@@ -579,7 +584,7 @@ export default function AnalyticsPage() {
                           <button
                             type="button"
                             onClick={() => navigate(`/projects/${projectId}/articles/${a.article_id}/edit`)}
-                            className="truncate text-left font-medium text-primary hover:text-accent max-w-[220px] block"
+                            className="truncate text-left font-medium text-primary hover:text-secondary max-w-[220px] block"
                           >
                             {a.title}
                           </button>
@@ -638,7 +643,7 @@ export default function AnalyticsPage() {
           ) : (
             <div className="h-[140px]">
               <ChartContainer config={trafficOriginConfig} className="h-full w-full">
-                  <BarChart
+                <BarChart
                   data={sourceChannels}
                   layout="vertical"
                   margin={{ top: 0, right: 16, bottom: 0, left: 0 }}
@@ -646,26 +651,32 @@ export default function AnalyticsPage() {
                 >
                   <CartesianGrid horizontal={false} />
                   <YAxis
-                    dataKey="channel"
+                    dataKey="label"
                     type="category"
                     tickLine={false}
                     axisLine={false}
-                    tickMargin={8}
-                    tick={{ fontSize: 12, fill: '#5E5E5E', fontWeight: 500 }}
-                    width={80}
+                    hide
                   />
                   <XAxis dataKey="views" type="number" hide />
                   <ChartTooltip
                     cursor={false}
                     content={<ChartTooltipContent indicator="line" hideLabel />}
                   />
-                  <Bar dataKey="views" fill="#4b5563" radius={4} barSize={28}>
+                  <Bar dataKey="views" fill="var(--color-views)" radius={4} barSize={28}>
+                    <LabelList
+                      dataKey="label"
+                      position="insideLeft"
+                      offset={8}
+                      className="fill-bg"
+                      fontSize={12}
+                    />
                     <LabelList
                       dataKey="views"
                       position="right"
                       offset={8}
                       className="fill-primary"
                       fontSize={12}
+                      formatter={(value: unknown) => formatMetric(Number(value ?? 0))}
                     />
                   </Bar>
                 </BarChart>
@@ -680,22 +691,39 @@ export default function AnalyticsPage() {
             <SectionTitle>Pays</SectionTitle>
             {countryChartData.length ? (
               <div className="h-[220px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ChartContainer config={countryChartConfig} className="h-full w-full">
                   <BarChart
                     data={countryChartData}
                     layout="vertical"
                     margin={{ top: 2, right: 12, bottom: 2, left: 0 }}
                   >
-                    <YAxis dataKey="flag" type="category" tickLine={false} axisLine={false} tickMargin={6} width={28} tick={{ fontSize: 16, fill: '#86868b' }} />
+                    <YAxis dataKey="flag" type="category" tickLine={false} axisLine={false} tickMargin={6} width={28} tick={{ fontSize: 16 }} />
                     <XAxis type="number" hide />
-                    <Tooltip cursor={false} contentStyle={CHART_TOOLTIP_STYLE} formatter={(v, _name, entry) => [formatMetric(Number(v)), (entry.payload as { label: string }).label]} />
+                    <ChartTooltip
+                      cursor={false}
+                      content={
+                        <ChartTooltipContent
+                          indicator="line"
+                          hideLabel
+                          formatter={(value: number | string, _name: string, entry: { payload?: { label?: string } }) => {
+                            const label = entry.payload?.label ?? 'Pays'
+                            return (
+                              <div className="flex min-w-[120px] items-center justify-between gap-3">
+                                <span className="text-secondary">{label}</span>
+                                <span className="tabular-nums text-primary">{formatMetric(Number(value))}</span>
+                              </div>
+                            )
+                          }}
+                        />
+                      }
+                    />
                     <Bar dataKey="views" radius={5} barSize={14}>
                       {countryChartData.map((country) => (
                         <Cell key={country.key} fill={country.fill} />
                       ))}
                     </Bar>
                   </BarChart>
-                </ResponsiveContainer>
+                </ChartContainer>
               </div>
             ) : <InlineEmpty>Aucune donnée pays pour cette période.</InlineEmpty>}
           </Card>
@@ -703,13 +731,13 @@ export default function AnalyticsPage() {
             <SectionTitle>Appareils</SectionTitle>
             {deviceMonthlyData.length ? (
               <div className="h-[220px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ChartContainer config={deviceChartConfig} className="h-full w-full">
                   <BarChart data={deviceMonthlyData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-                    <CartesianGrid vertical={false} stroke="rgba(0,0,0,0.06)" />
-                    <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} tick={{ fontSize: 11, fill: '#86868b' }} />
-                    <YAxis tickLine={false} axisLine={false} width={36} allowDecimals={false} tick={{ fontSize: 11, fill: '#86868b' }} tickFormatter={formatAxisTick} />
-                    <Tooltip cursor={false} contentStyle={CHART_TOOLTIP_STYLE} formatter={(v, name) => [formatMetric(Number(v)), name]} />
-                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                    <YAxis tickLine={false} axisLine={false} width={36} allowDecimals={false} tickFormatter={formatAxisTick} />
+                    <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+                    <ChartLegend content={<ChartLegendContent />} />
                     {deviceKeys.map((device, i) => (
                       <Bar
                         key={device}
@@ -725,7 +753,7 @@ export default function AnalyticsPage() {
                       />
                     ))}
                   </BarChart>
-                </ResponsiveContainer>
+                </ChartContainer>
               </div>
             ) : <InlineEmpty>Aucune donnée appareil pour cette période.</InlineEmpty>}
           </Card>

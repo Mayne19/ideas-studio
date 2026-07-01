@@ -61,7 +61,7 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
             className={cn(
               'h-8 rounded-[9px] px-2.5 text-[12px] font-medium transition-colors whitespace-nowrap',
               value.mode === mode.value && value.isCurrent
-                ? 'bg-accent text-white shadow-none'
+                ? 'bg-primary text-bg shadow-none'
                 : 'text-secondary hover:bg-bg hover:text-primary',
             )}
           >
@@ -102,7 +102,7 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
               type="button"
               className={cn(
                 'flex h-8 items-center gap-1.5 rounded-[9px] px-3 text-[12px] font-medium transition-colors whitespace-nowrap',
-                popoverOpen || !value.isCurrent ? 'bg-accent/10 text-accent' : 'text-secondary hover:bg-bg hover:text-primary',
+                popoverOpen || !value.isCurrent ? 'bg-bg text-primary' : 'text-secondary hover:bg-bg hover:text-primary',
               )}
             >
               <CalendarDays size={14} />
