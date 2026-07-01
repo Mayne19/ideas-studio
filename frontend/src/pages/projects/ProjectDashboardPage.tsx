@@ -592,7 +592,6 @@ export default function ProjectDashboardPage() {
           title="GEO moyen"
           score={geoScore || 0}
           changePts={data?.geoChangePts ?? 0}
-          color={NEUTRAL_CHART_COLORS.tertiary}
           data={data?.geoMonthly ?? Array.from({ length: MONTHLY_METRIC_POINTS }, () => ({ v: 0 }))}
         />
         <AreaMetricCard
