@@ -338,7 +338,7 @@ export default function CalendarPage() {
                           return (
                             <div
                               key={a.id}
-                              className="flex items-center gap-3 rounded-[16px] bg-surface px-4 py-3 transition-colors hover:bg-white group"
+                              className="group flex items-center gap-3 rounded-[16px] border-2 border-border bg-transparent px-4 py-3 transition-colors hover:bg-surface-soft"
                             >
                               <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-[10px] bg-surface-soft">
                                 <span className="text-[16px] font-bold text-primary leading-none">{displayDay}</span>
