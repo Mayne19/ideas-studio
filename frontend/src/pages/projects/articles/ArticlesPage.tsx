@@ -17,7 +17,6 @@ import ErrorState from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import Toolbar from '@/components/ui/Toolbar'
 import ToggleSwitch from '@/components/ui/ToggleSwitch'
-import ArticleScoreBadges from '@/components/ui/ArticleScoreBadges'
 import { TableRoot, Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/Table'
 import { finiteScore, getGeoScore, getOriginalityScore } from '@/lib/scoreBadge'
 import { useProject } from '@/context/ProjectContext'
@@ -25,13 +24,6 @@ import { useProject } from '@/context/ProjectContext'
 const PAGE_SIZE = 20
 
 type ScoreFilter = '' | 'global_gte_90' | 'global_lt_90' | 'seo_lt_85' | 'quality_lt_85' | 'readability_lt_80' | 'geo_lt_80' | 'originality_lt_85' | 'critical'
-
-function getCost(article: Article): number | null {
-  const costJson = article.estimated_cost_json
-  if (!costJson || typeof costJson !== 'object') return null
-  const cost = (costJson as Record<string, unknown>).estimated_cost_eur
-  return typeof cost === 'number' && Number.isFinite(cost) ? cost : null
-}
 
 function getPublicUrl(domain: string | undefined | null, slug: string): string {
   if (!domain) return ''
@@ -66,7 +58,6 @@ function ArticleRow({
   const category = categories.find((c) => c.id === article.category_id)
   const isPublished = PUBLISHED_STATUSES.has(article.status)
   const isEditable = EDITABLE_STATUSES.has(article.status)
-  const cost = getCost(article)
 
   return (
     <TableRow>
@@ -94,21 +85,19 @@ function ArticleRow({
           <span>{article.word_count > 0 ? `${article.word_count} mots` : '— mots'}</span>
         </div>
       </TableCell>
-      <TableCell>
-        <ArticleScoreBadges article={article} />
+      <TableCell className="w-[48px] text-center">
+        <span className="text-[13px] font-semibold tabular-nums leading-none text-primary">{finiteScore(article.global_score) ?? <span className="text-tertiary">—</span>}</span>
       </TableCell>
-      <TableCell className="w-[80px]">
-        {cost !== null ? (
-          <span className="inline-flex items-center rounded-full bg-[#eef2ff] px-1.5 py-0.5 text-[10px] font-medium text-[#4f46e5]">
-            {cost.toFixed(4)} €
-          </span>
-        ) : (
-          <span className="inline-flex items-center rounded-full bg-surface-soft px-1.5 py-0.5 text-[10px] font-medium text-tertiary">
-            — €
-          </span>
-        )}
+      <TableCell className="w-[48px] text-center">
+        <span className="text-[13px] font-semibold tabular-nums leading-none text-primary">{finiteScore(article.quality_score) ?? <span className="text-tertiary">—</span>}</span>
       </TableCell>
-      <TableCell className="w-[100px]">
+      <TableCell className="w-[48px] text-center">
+        <span className="text-[13px] font-semibold tabular-nums leading-none text-primary">{finiteScore(article.readability_score) ?? <span className="text-tertiary">—</span>}</span>
+      </TableCell>
+      <TableCell className="w-[48px] text-center">
+        <span className="text-[13px] font-semibold tabular-nums leading-none text-primary">{getOriginalityScore(article) ?? <span className="text-tertiary">—</span>}</span>
+      </TableCell>
+      <TableCell className="w-[90px]">
         <StatusBadge status={article.status} />
       </TableCell>
       <TableCell className="w-[130px]">
@@ -512,11 +501,13 @@ export default function ArticlesPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead>Titre</TableHead>
-                    <TableHead>Scores</TableHead>
-                    <TableHead className="w-[80px]">Coût</TableHead>
-                    <TableHead className="w-[100px]">Statut</TableHead>
-                    <TableHead className="w-[130px] text-right">Actions</TableHead>
+                  <TableHead className="max-w-[280px]">Titre</TableHead>
+                  <TableHead className="w-[48px] text-center text-[11px] font-medium">Glob.</TableHead>
+                  <TableHead className="w-[48px] text-center text-[11px] font-medium">Qual.</TableHead>
+                  <TableHead className="w-[48px] text-center text-[11px] font-medium">Lisi.</TableHead>
+                  <TableHead className="w-[48px] text-center text-[11px] font-medium">Orig.</TableHead>
+                  <TableHead className="w-[90px]">Statut</TableHead>
+                  <TableHead className="w-[130px] text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody bordered>
