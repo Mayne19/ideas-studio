@@ -61,7 +61,7 @@ function ArticleRow({
   const isEditable = EDITABLE_STATUSES.has(article.status)
   const originalityScore = getOriginalityScore(article)
   const rowCellClass = 'border-y-2 border-border bg-transparent py-2.5 transition-colors first:rounded-l-[12px] first:border-l-2 last:rounded-r-[12px] last:border-r-2 group-hover:bg-surface-soft'
-  const scoreCellClass = `w-[36px] px-1 text-center ${rowCellClass}`
+  const scoreCellClass = `w-[40px] px-1 text-center ${rowCellClass}`
 
   return (
     <TableRow className="group hover:bg-transparent">
@@ -516,13 +516,13 @@ export default function ArticlesPage() {
                 <TableHeader className="border-0">
                   <TableRow className="hover:bg-transparent">
                   <TableHead className="pr-8">Titre</TableHead>
-                  <TableHead className="w-[36px] px-1 pl-4 text-center">Glob.</TableHead>
-                  <TableHead className="w-[36px] px-1 text-center">SEO</TableHead>
-                  <TableHead className="w-[36px] px-1 text-center">GEO</TableHead>
-                  <TableHead className="w-[36px] px-1 text-center">Qual.</TableHead>
-                  <TableHead className="w-[36px] px-1 text-center">Lisi.</TableHead>
-                  <TableHead className="w-[36px] px-1 text-center">Orig.</TableHead>
-                  <TableHead className="w-[36px] px-1 pr-4 text-center">EEAT</TableHead>
+                  <TableHead className="w-[40px] px-1 pl-4 text-center">Glob.</TableHead>
+                  <TableHead className="w-[40px] px-1 text-center">SEO</TableHead>
+                  <TableHead className="w-[40px] px-1 text-center">GEO</TableHead>
+                  <TableHead className="w-[40px] px-1 text-center">Qual.</TableHead>
+                  <TableHead className="w-[40px] px-1 text-center">Lisi.</TableHead>
+                  <TableHead className="w-[40px] px-1 text-center">Orig.</TableHead>
+                  <TableHead className="w-[40px] px-1 pr-4 text-center">EEAT</TableHead>
                   <TableHead className="w-[124px] px-5 text-center">Statut</TableHead>
                   <TableHead className="w-[206px] pl-5 text-right">Actions</TableHead>
                   </TableRow>
