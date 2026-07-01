@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useBlocker } from 'react-router-dom'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { Mark, mergeAttributes } from '@tiptap/core'
@@ -97,6 +97,14 @@ type AutosaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 const EMPTY_META: MetaFields = {
   title: '', slug: '', excerpt: '', meta_title: '', meta_description: '', keyword: '', category_id: '', sub_niche: '',
   content_format: '', target_word_count: '',
+}
+const NO_NICHE_VALUE = '__no_niche__'
+
+function getCategoryNicheKey(categories: Category[], categoryId?: string | null, subNiche?: string | null) {
+  const trimmedNiche = subNiche?.trim()
+  if (trimmedNiche) return trimmedNiche
+  const category = categories.find((cat) => cat.id === categoryId)
+  return category ? category.niche?.trim() || NO_NICHE_VALUE : ''
 }
 
 const CommentMark = Mark.create({
@@ -298,6 +306,7 @@ export default function ArticleEditorPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [calloutTemplates, setCalloutTemplates] = useState<CalloutTemplate[]>([])
   const [members, setMembers] = useState<ProjectMember[]>([])
+  const [pathNicheKey, setPathNicheKey] = useState('')
   const [manualAuthorName, setManualAuthorName] = useState('')
   const [manualReadingTime, setManualReadingTime] = useState<number | null>(null)
   const [featured, setFeatured] = useState(false)
@@ -593,6 +602,7 @@ export default function ArticleEditorPage() {
         }
         setMetaFields(meta)
         metaRef.current = meta
+        setPathNicheKey(getCategoryNicheKey(cats, art.category_id, art.sub_niche))
         slugManuallyEditedRef.current = false
         const cover = art.cover_image_url ?? ''
         setCoverImageUrl(cover)
@@ -713,6 +723,7 @@ export default function ArticleEditorPage() {
           }
           setMetaFields(m)
           metaRef.current = m
+          setPathNicheKey(getCategoryNicheKey(categories, art.category_id, art.sub_niche))
           const cov = art.cover_image_url ?? ''
           setCoverImageUrl(cov)
           coverRef.current = cov
@@ -739,7 +750,7 @@ export default function ArticleEditorPage() {
       } catch { /* ignore poll errors */ }
     }, 3000)
     return () => clearInterval(id)
-  }, [isGenerating, projectId, articleId, editor])
+  }, [isGenerating, projectId, articleId, editor, categories])
 
   async function handleRefreshGeneration() {
     if (!projectId || !articleId) return
@@ -760,6 +771,7 @@ export default function ArticleEditorPage() {
         }
         setMetaFields(m)
         metaRef.current = m
+        setPathNicheKey(getCategoryNicheKey(categories, art.category_id, art.sub_niche))
         const cov = art.cover_image_url ?? ''
         setCoverImageUrl(cov)
         coverRef.current = cov
@@ -852,6 +864,48 @@ export default function ArticleEditorPage() {
     metaRef.current = next
     setMetaFields(next)
     if (name === 'title') setArticle((prev) => prev ? { ...prev, title: value, slug: next.slug } : prev)
+    scheduleAutosave(editor?.getHTML() ?? '')
+  }
+
+  function handlePathNicheChange(value: string) {
+    const currentCategory = categories.find((cat) => cat.id === metaRef.current.category_id)
+    const currentCategoryNiche = currentCategory?.niche?.trim() || NO_NICHE_VALUE
+    const nextCategoryId = currentCategory && currentCategoryNiche === value ? currentCategory.id : ''
+    setPathNicheKey(value)
+    const next = {
+      ...metaRef.current,
+      sub_niche: value === NO_NICHE_VALUE ? '' : value,
+      category_id: nextCategoryId,
+    }
+    metaRef.current = next
+    setMetaFields(next)
+    setArticle((prev) => prev ? {
+      ...prev,
+      sub_niche: normalizeOptionalText(next.sub_niche),
+      category_id: normalizeOptionalText(next.category_id),
+    } : prev)
+    scheduleAutosave(editor?.getHTML() ?? '')
+  }
+
+  function handlePathCategoryChange(categoryId: string) {
+    const category = categories.find((cat) => cat.id === categoryId)
+    const selectedNiche = metaRef.current.sub_niche
+    const nextNiche = category
+      ? category.niche?.trim() ?? ''
+      : selectedNiche
+    setPathNicheKey(category ? category.niche?.trim() || NO_NICHE_VALUE : pathNicheKey || getCategoryNicheKey(categories, null, selectedNiche))
+    const next = {
+      ...metaRef.current,
+      category_id: categoryId,
+      sub_niche: nextNiche,
+    }
+    metaRef.current = next
+    setMetaFields(next)
+    setArticle((prev) => prev ? {
+      ...prev,
+      sub_niche: normalizeOptionalText(next.sub_niche),
+      category_id: normalizeOptionalText(next.category_id),
+    } : prev)
     scheduleAutosave(editor?.getHTML() ?? '')
   }
 
@@ -1100,6 +1154,40 @@ export default function ArticleEditorPage() {
   const wordCount = editor
     ? editor.getText().split(/\s+/).filter(Boolean).length
     : (article?.word_count ?? 0)
+
+  const selectedCategory = useMemo(
+    () => categories.find((cat) => cat.id === metaFields.category_id) ?? null,
+    [categories, metaFields.category_id],
+  )
+  const selectedPathNiche = metaFields.sub_niche.trim()
+    || (selectedCategory ? selectedCategory.niche?.trim() || NO_NICHE_VALUE : '')
+    || pathNicheKey
+    || ''
+  const nicheOptions = useMemo(() => {
+    const byKey = new Map<string, { value: string; label: string; count: number }>()
+    for (const category of categories) {
+      const niche = category.niche?.trim()
+      const value = niche || NO_NICHE_VALUE
+      const existing = byKey.get(value)
+      if (existing) {
+        existing.count += 1
+      } else {
+        byKey.set(value, {
+          value,
+          label: niche || 'Sans niche',
+          count: 1,
+        })
+      }
+    }
+    return Array.from(byKey.values()).sort((a, b) => a.label.localeCompare(b.label, 'fr'))
+  }, [categories])
+  const effectivePathNiche = selectedPathNiche || (nicheOptions.length === 1 ? nicheOptions[0].value : '')
+  const categoriesForPath = useMemo(() => {
+    if (!effectivePathNiche) return []
+    return categories
+      .filter((category) => (category.niche?.trim() || NO_NICHE_VALUE) === effectivePathNiche)
+      .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+  }, [categories, effectivePathNiche])
 
   const calculatedReadingTime = Math.max(1, Math.ceil(wordCount / 200))
   const readingTime = normalizeReadingTime(manualReadingTime) ?? calculatedReadingTime
@@ -1454,19 +1542,39 @@ export default function ArticleEditorPage() {
                       <MediaPanel coverImageUrl={coverImageUrl} onChange={handleCoverChange} projectId={projectId!} />
                     </div>
 
-                    <Field label="Catégorie">
-                      <select
-                        value={metaFields.category_id}
-                        onChange={(e) => handleMetaChange('category_id', e.target.value)}
-                        className={INPUT}
-                        disabled={categories.length === 0}
-                      >
-                        <option value="">Aucune catégorie</option>
-                        {categories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>{cat.name}</option>
-                        ))}
-                      </select>
-                    </Field>
+                    <div className="flex flex-col gap-2">
+                      <span className="text-[12px] font-medium text-secondary">Chemin éditorial</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Field label="Niche">
+                          <select
+                            value={effectivePathNiche}
+                            onChange={(e) => handlePathNicheChange(e.target.value)}
+                            className={INPUT}
+                            disabled={nicheOptions.length === 0}
+                          >
+                            <option value="">Choisir une niche</option>
+                            {nicheOptions.map((niche) => (
+                              <option key={niche.value} value={niche.value}>
+                                {niche.label}
+                              </option>
+                            ))}
+                          </select>
+                        </Field>
+                        <Field label="Catégorie">
+                          <select
+                            value={metaFields.category_id}
+                            onChange={(e) => handlePathCategoryChange(e.target.value)}
+                            className={INPUT}
+                            disabled={!effectivePathNiche || categoriesForPath.length === 0}
+                          >
+                            <option value="">Choisir une catégorie</option>
+                            {categoriesForPath.map((cat) => (
+                              <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            ))}
+                          </select>
+                        </Field>
+                      </div>
+                    </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <Field label="Durée de lecture">
@@ -1667,6 +1775,7 @@ export default function ArticleEditorPage() {
                       }
                       setMetaFields(meta)
                       metaRef.current = meta
+                      setPathNicheKey(getCategoryNicheKey(categories, restored.category_id, restored.sub_niche))
                       const cover = restored.cover_image_url ?? ''
                       setCoverImageUrl(cover)
                       coverRef.current = cover

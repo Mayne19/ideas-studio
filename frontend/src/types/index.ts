@@ -285,6 +285,8 @@ export type Category = {
   editorial_goal: string | null
   target_audience: string | null
   internal_notes: string | null
+  vertical?: string | null
+  niche?: string | null
   created_at: string
   updated_at: string
 }
