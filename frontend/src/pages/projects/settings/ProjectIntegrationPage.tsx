@@ -42,6 +42,7 @@ function cleanRevalidateForm(data: ConnectInfo) {
 }
 
 function InfoRow({
+  icon,
   label,
   value,
   copyValue,
@@ -49,6 +50,7 @@ function InfoRow({
   action,
   mono = true,
 }: {
+  icon?: ReactNode
   label: string
   value: string
   copyValue?: string
@@ -57,17 +59,20 @@ function InfoRow({
   mono?: boolean
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 px-4 py-2.5">
+    <div className="flex items-start justify-between gap-3 rounded-[12px] bg-surface-soft px-4 py-3">
       <div className="min-w-0 flex-1">
-        <p className="text-[12px] font-medium uppercase tracking-wider text-tertiary">{label}</p>
-        <div className="mt-1 inline-flex items-center gap-2 rounded-[8px] bg-surface-soft px-3 py-1.5">
-          <p className={`truncate text-[14px] text-primary ${mono ? 'font-mono' : ''}`}>{value}</p>
+        <div className="flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wider text-tertiary">
+          {icon}
+          {label}
         </div>
+        <p className={`mt-0.5 truncate text-[12px] text-secondary ${mono ? 'font-mono' : ''}`}>{value}</p>
       </div>
-      <div className="flex shrink-0 items-center gap-2 pt-6">
-        {action}
-        {canCopy && <CopyButton value={copyValue ?? value} disabled={!(copyValue ?? value)} className="shrink-0" />}
-      </div>
+      {(action || canCopy) && (
+        <div className="flex shrink-0 items-center gap-2">
+          {action}
+          {canCopy && <CopyButton value={copyValue ?? value} disabled={!(copyValue ?? value)} className="shrink-0" />}
+        </div>
+      )}
     </div>
   )
 }
@@ -243,9 +248,9 @@ export default function ProjectIntegrationPage() {
           </div>
           {isConnected && (
             <div className="grid gap-2 sm:grid-cols-3">
-              <InfoRow label="Domaine" value={info?.domain ?? 'Domaine non renseigné'} mono={false} />
-              <InfoRow label="Connecté depuis" value={info?.connected_at ? formatDateTime(info.connected_at) : 'Date non disponible'} mono={false} />
-              <InfoRow label="Dernière activité" value={info?.last_seen_at ? formatDateTime(info.last_seen_at) : 'Aucune activité récente'} mono={false} />
+              <InfoRow icon={<Globe size={11} />} label="Domaine" value={info?.domain ?? 'Domaine non renseigné'} mono={false} />
+              <InfoRow icon={<Wifi size={11} />} label="Connecté depuis" value={info?.connected_at ? formatDateTime(info.connected_at) : 'Date non disponible'} mono={false} />
+              <InfoRow icon={<RefreshCw size={11} />} label="Dernière activité" value={info?.last_seen_at ? formatDateTime(info.last_seen_at) : 'Aucune activité récente'} mono={false} />
             </div>
           )}
         </div>
@@ -258,18 +263,21 @@ export default function ProjectIntegrationPage() {
       >
         <div className="flex flex-col gap-2">
           <InfoRow
+            icon={<Key size={11} />}
             label="Project ID"
             value={info?.project_id ?? '—'}
             copyValue={info?.project_id}
             canCopy={Boolean(info?.project_id)}
           />
           <InfoRow
+            icon={<Key size={11} />}
             label="Clé de tracking publique"
             value={info?.public_tracking_key ?? '—'}
             copyValue={info?.public_tracking_key}
             canCopy={Boolean(info?.public_tracking_key)}
           />
           <InfoRow
+            icon={<Key size={11} />}
             label="Clé API (masquée)"
             value={info?.secret_api_key_masked ?? API_KEY_MASK}
           />
@@ -418,9 +426,9 @@ export default function ProjectIntegrationPage() {
             />
           </label>
           <div className="grid gap-2 lg:grid-cols-3">
-            <InfoRow label="Dernière revalidation" value={info?.last_revalidated_at ? formatDateTime(info.last_revalidated_at) : 'Jamais'} mono={false} />
-            <InfoRow label="Statut" value={info?.last_revalidate_status ?? 'Non configuré'} mono={false} />
-            <InfoRow label="Dernière erreur" value={info?.last_revalidate_error ?? 'Aucune'} mono={false} />
+            <InfoRow icon={<RefreshCw size={11} />} label="Dernière revalidation" value={info?.last_revalidated_at ? formatDateTime(info.last_revalidated_at) : 'Jamais'} mono={false} />
+            <InfoRow icon={<Wifi size={11} />} label="Statut" value={info?.last_revalidate_status ?? 'Non configuré'} mono={false} />
+            <InfoRow icon={<WifiOff size={11} />} label="Dernière erreur" value={info?.last_revalidate_error ?? 'Aucune'} mono={false} />
           </div>
           {revalidateMessage && (
             <p className={`text-[12px] ${revalidateMessage.includes('impossible') || revalidateMessage.includes('non configur') ? 'text-danger' : 'text-success'}`}>
