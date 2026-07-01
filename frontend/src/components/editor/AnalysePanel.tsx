@@ -53,6 +53,12 @@ function resolveScore(article: EditorArticle, brief: AnalysisBrief | SeoAnalysis
   }
 }
 
+function gaugeColor(score: number): string {
+  if (score >= 80) return 'var(--color-success)'
+  if (score >= 60) return 'var(--color-warning)'
+  return 'var(--color-danger)'
+}
+
 /* ─── Issues helpers ────────────────────────────────────────── */
 
 const SEO_KEYWORDS = [
@@ -138,7 +144,7 @@ function ScoreSynthesisCard({
           {globalScore === null ? (
             <span className="text-[20px] font-semibold text-tertiary">—</span>
           ) : (
-            <Gauge showValue size="medium" value={globalScore} />
+            <Gauge showValue size="medium" value={globalScore} color={gaugeColor(globalScore)} />
           )}
         </div>
         <div className="text-[12px] leading-snug text-secondary">
@@ -163,7 +169,7 @@ function ScoreSynthesisCard({
               {score === null ? (
                 <span className="flex h-12 w-12 items-center justify-center text-[16px] font-semibold text-tertiary">—</span>
               ) : (
-                <Gauge showValue size="small" value={score} />
+                <Gauge showValue size="small" value={score} color={gaugeColor(score)} />
               )}
             </button>
           )
