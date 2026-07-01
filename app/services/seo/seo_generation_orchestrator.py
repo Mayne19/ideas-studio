@@ -202,6 +202,25 @@ class SEOGenerationOrchestrator:
         else:
             self.limitations.append("No real SERP research available")
 
+        # 6c. HumanInsights — matière humaine réelle (Reddit, StackOverflow, Nitter, forums)
+        try:
+            from app.services.seo.human_insights_service import extract_human_insights
+            serp_sources = research_brief.get("sources_consulted", [])
+            human_insights = extract_human_insights(
+                keyword=final_keyword,
+                project_id=self.project_id,
+                serp_results=serp_sources,
+                language=getattr(self.project, "language", "fr") or "fr",
+            )
+            self.context["human_insights"] = human_insights
+            self._step(
+                f"HumanInsights — {human_insights.get('total_insights', 0)} insights "
+                f"depuis {len(human_insights.get('sources_scraped', []))} sources"
+            )
+        except Exception as exc:
+            self._error("HumanInsights", str(exc))
+            self.context["human_insights"] = {}
+
         # 7. KeywordBrief
         keyword_brief = build_keyword_brief_dict(
             final_keyword,
@@ -331,6 +350,7 @@ class SEOGenerationOrchestrator:
         article.callout_plan_json = safe_json_dump(callout_plan)
         article.internal_links_json = safe_json_dump(internal_links)
         article.external_links_json = safe_json_dump(external_links)
+        article.human_insights_json = self.context.get("human_insights") or {}
 
         # Infer content_format from target_word_count if not already set
         if not getattr(article, "content_format", None):
@@ -650,6 +670,51 @@ class SEOGenerationOrchestrator:
         prompt_parts.append("La FAQ sera générée séparément — ne l'inclus pas dans le contenu principal.")
         prompt_parts.append("Sois précis, original et utile.")
 
+        # Injecter la matière humaine si disponible
+        insights = getattr(article, "human_insights_json", None) or {}
+        if insights and insights.get("total_insights", 0) > 0:
+            prompt_parts.append("\n=== MATIÈRE HUMAINE RÉELLE (à intégrer naturellement) ===")
+            if insights.get("questions"):
+                prompt_parts.append(
+                    "VRAIES QUESTIONS posées par des utilisateurs :\n"
+                    + "\n".join(f"- {q}" for q in insights["questions"][:10])
+                )
+            if insights.get("pain_points"):
+                prompt_parts.append(
+                    "VRAIES DOULEURS et frustrations :\n"
+                    + "\n".join(f"- {p}" for p in insights["pain_points"][:8])
+                )
+            if insights.get("real_examples"):
+                prompt_parts.append(
+                    "EXEMPLES RÉELS partagés par des utilisateurs :\n"
+                    + "\n".join(f"- {e}" for e in insights["real_examples"][:6])
+                )
+            if insights.get("objections"):
+                prompt_parts.append(
+                    "OBJECTIONS et scepticismes :\n"
+                    + "\n".join(f"- {o}" for o in insights["objections"][:6])
+                )
+            if insights.get("positive_experiences"):
+                prompt_parts.append(
+                    "EXPÉRIENCES POSITIVES réelles :\n"
+                    + "\n".join(f"- {p}" for p in insights["positive_experiences"][:6])
+                )
+            if insights.get("debates"):
+                prompt_parts.append(
+                    "DÉBATS et controverses :\n"
+                    + "\n".join(f"- {d}" for d in insights["debates"][:5])
+                )
+            if insights.get("vocabulary"):
+                prompt_parts.append(
+                    "VOCABULAIRE utilisé par les vrais utilisateurs :\n"
+                    + "\n".join(f"- {v}" for v in insights["vocabulary"][:8])
+                )
+            prompt_parts.append(
+                "INSTRUCTIONS : réponds aux vraies questions ci-dessus. Adresse les vraies douleurs. "
+                "Utilise le vocabulaire naturel de ces utilisateurs. L'article doit sembler écrit par "
+                "quelqu'un qui connaît vraiment le sujet et les vraies préoccupations des lecteurs."
+            )
+
         content_prompt = "\n".join(prompt_parts)
         if self.agent_router is not None:
             from app.services.agents.agent_router import call_agent
@@ -824,9 +889,32 @@ class SEOGenerationOrchestrator:
         faq_llm = self._get_agent_provider("faq_generator", self.llm)
         if faq_llm.is_mock:
             return
+
+        # Enrichir avec les vraies questions humaines si disponibles
+        insights = getattr(article, "human_insights_json", None) or {}
+        real_questions = insights.get("questions", [])
+        real_pains = insights.get("pain_points", [])
+        human_context = ""
+        if real_questions:
+            human_context += (
+                "\nVraies questions posées par des utilisateurs réels "
+                "(inspire-toi sans les copier mot pour mot) :\n"
+                + "\n".join(f"- {q}" for q in real_questions[:8])
+            )
+        if real_pains:
+            human_context += (
+                "\nVraies douleurs/frustrations des utilisateurs :\n"
+                + "\n".join(f"- {p}" for p in real_pains[:5])
+            )
+
+        faq_intro = (
+            f"Génère 3 à 5 questions fréquentes (FAQ) à partir de cet article"
+            + (f" en t'inspirant de ces vraies questions d'utilisateurs :{human_context}\n\n" if human_context else ".\n")
+        )
+
         faq_prompt = (
-            f"Génère 3 à 5 questions fréquentes (FAQ) à partir de cet article.\n"
-            f"Titre : {article.title}\n"
+            faq_intro
+            + f"Titre : {article.title}\n"
             f"Mot-clé principal : {article.keyword}\n"
             f"Extrait du contenu :\n{article.content[:1500]}\n\n"
             "Règles strictes :\n"
