@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Plus, FileText, Pencil, Trash2, Sparkles, Zap, Loader2, CheckCircle, Archive, EyeOff } from '@/components/ui/hugeIcons'
+import { Plus, FileText, Edit3, Trash2, Sparkles, Zap, Loader2, CheckCircle, Archive, EyeOff } from '@/components/ui/hugeIcons'
 import { listArticles, createArticle, unpublishArticle, archiveArticle, analyzeSeoArticle, deleteArticle, generateArticle } from '@/api/articles'
 import type { CreateArticlePayload, GenerateArticleRequest } from '@/api/articles'
 import { listCategories } from '@/api/categories'
@@ -116,7 +116,7 @@ function ArticleRow({
         <div className="flex items-center justify-end gap-1.5">
           <Button
             size="sm"
-            icon={<Pencil size={12} />}
+            icon={<Edit3 size={12} />}
             onClick={() => onEdit(article)}
             title="Éditer"
             className="h-8 px-2.5 text-[12px]"
