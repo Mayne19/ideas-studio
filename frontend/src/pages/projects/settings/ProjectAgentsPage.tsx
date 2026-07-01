@@ -210,6 +210,7 @@ export default function ProjectAgentsPage() {
                     <Select
                       value={ass?.provider_id || ''}
                       onChange={(e) => handleAssign(agent.agent_id, e.target.value)}
+                      className="!h-8 !px-3 !pr-8 !text-[12px] !font-medium !text-secondary"
                       options={[
                         { value: '', label: 'Provider par défaut' },
                         ...enabledProviders.map((p) => ({
