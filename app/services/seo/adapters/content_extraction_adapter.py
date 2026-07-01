@@ -1,67 +1,80 @@
 from __future__ import annotations
 
-import re
+from app.services.seo.adapters.scrapling_adapter import scrapling_adapter
 
 
 class ContentExtractionAdapter:
-    provider_name = "content_extraction"
-    enabled = False
-    configured = False
-    requires_api_key = False
-    last_error: str | None = None
-    real_data_available = False
-    fallback_mode = "not_configured"
-    trust_level = "none"
+    """Thin facade — delegates to ScraplingAdapter with trafilatura/readability fallback."""
 
-    def __init__(self):
-        self._check_trafilatura()
-        if not self.configured:
-            self._check_readability()
+    @property
+    def provider_name(self) -> str:
+        return scrapling_adapter.provider_name
 
-    def _check_trafilatura(self):
-        try:
-            import trafilatura  # noqa: F401
-            self.configured = True
-            self.enabled = True
-            self.real_data_available = True
-            self.fallback_mode = "trafilatura"
-            self.trust_level = "medium"
-        except ImportError:
-            pass
+    @property
+    def enabled(self) -> bool:
+        return scrapling_adapter.enabled
 
-    def _check_readability(self):
-        try:
-            import readability  # noqa: F401
-            self.configured = True
-            self.enabled = True
-            self.real_data_available = True
-            self.fallback_mode = "readability"
-            self.trust_level = "medium"
-        except ImportError:
-            pass
+    @property
+    def configured(self) -> bool:
+        return scrapling_adapter.configured
+
+    @property
+    def requires_api_key(self) -> bool:
+        return scrapling_adapter.requires_api_key
+
+    @property
+    def last_error(self) -> str | None:
+        return scrapling_adapter.last_error
+
+    @property
+    def real_data_available(self) -> bool:
+        return scrapling_adapter.real_data_available
+
+    @property
+    def fallback_mode(self) -> str:
+        return scrapling_adapter.fallback_mode
+
+    @property
+    def trust_level(self) -> str:
+        return scrapling_adapter.trust_level
 
     def extract(self, url: str) -> dict | None:
-        if not self.configured:
-            return None
+        result = scrapling_adapter.extract(url)
+        if result is not None:
+            return result
+        return self._legacy_extract(url)
+
+    def _legacy_extract(self, url: str) -> dict | None:
         try:
             import httpx
             resp = httpx.get(url, timeout=15, headers={"User-Agent": "IdeasStudio/1.0"})
             resp.raise_for_status()
             html = resp.text
-            if self.fallback_mode == "trafilatura":
+            try:
                 import trafilatura
                 extracted = trafilatura.extract(html)
                 if extracted:
                     return {"text": extracted, "url": url, "method": "trafilatura"}
-            if self.fallback_mode == "readability":
+            except ImportError:
+                pass
+            try:
                 from readability import Document
                 doc = Document(html)
                 return {"text": doc.summary(), "title": doc.title(), "url": url, "method": "readability"}
-        except Exception as exc:
-            self.last_error = str(exc)
+            except ImportError:
+                pass
+        except Exception:
+            pass
         return None
 
     def extract_headings(self, url: str) -> list[dict]:
+        result = scrapling_adapter.extract_headings(url)
+        if result:
+            return result
+        return self._legacy_extract_headings(url)
+
+    def _legacy_extract_headings(self, url: str) -> list[dict]:
+        import re
         headings = []
         try:
             import httpx
@@ -78,16 +91,7 @@ class ContentExtractionAdapter:
         return headings
 
     def get_status(self) -> dict:
-        return {
-            "provider_name": self.provider_name,
-            "enabled": self.enabled,
-            "configured": self.configured,
-            "requires_api_key": self.requires_api_key,
-            "last_error": self.last_error,
-            "real_data_available": self.real_data_available,
-            "fallback_mode": self.fallback_mode,
-            "trust_level": self.trust_level,
-        }
+        return scrapling_adapter.get_status()
 
 
 content_extraction_adapter = ContentExtractionAdapter()

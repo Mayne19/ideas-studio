@@ -139,11 +139,12 @@ AGENTS: list[AgentDef] = [
     AgentDef(
         agent_id="source_quality_checker",
         name="Qualité des sources",
-        description="Évalue la fiabilité et la pertinence des sources",
+        description="Vérifie la fiabilité et l'accessibilité des sources via Scrapling",
         category=AgentCategory.research,
         phase="research",
         icon="shield",
-        status=AgentStatus.not_implemented,
+        implementation_ref="source_quality_service",
+        status=AgentStatus.active,
         output_json_field=None,
     ),
     AgentDef(

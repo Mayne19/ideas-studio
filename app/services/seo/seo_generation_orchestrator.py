@@ -26,6 +26,7 @@ from app.services.seo.category_strategy_service import compute_category_strategy
 from app.services.seo.cannibalization_service import check_cannibalization_dict
 from app.services.seo.intent_analysis_service import analyze_intent_dict
 from app.services.seo.research_brief_service import build_research_brief_dict
+from app.services.seo.source_quality_service import validate_sources
 from app.services.seo.keyword_brief_service import build_keyword_brief_dict
 from app.services.seo.editorial_angle_service import define_editorial_angle_dict
 from app.services.seo.article_outline_planner import build_outline_dict
@@ -47,6 +48,7 @@ from app.services.seo.adapters.trends_adapter import trends_adapter
 from app.services.seo.adapters.image_sourcing_adapter import image_sourcing_adapter
 from app.services.seo.adapters.language_adapter import language_adapter
 from app.services.seo.adapters.content_extraction_adapter import content_extraction_adapter
+from app.services.seo.adapters.scrapling_adapter import scrapling_adapter
 from app.services.seo.adapters.originality_adapter import originality_adapter as orig_adapter
 from app.services.seo.adapters.readability_adapter import readability_adapter
 from app.services.seo.adapters.google_watch_adapter import google_watch_adapter
@@ -183,12 +185,20 @@ class SEOGenerationOrchestrator:
         article_type = intent_analysis.get("article_type", "evergreen_information")
 
         # 6. ResearchBrief
-        research_brief = build_research_brief_dict(final_keyword, final_title, category_name)
+        research_brief = build_research_brief_dict(final_keyword, final_title, category_name, project_id=self.project_id)
         self.context["research_brief"] = research_brief
         self._step("ResearchBrief")
 
         if research_brief.get("research_status") == "available":
             self.tools_used.append("serp_research")
+            # 6b. SourceQuality — validate competitor URLs via Scrapling
+            try:
+                validated_sources = validate_sources(research_brief.get("sources_consulted", []))
+                research_brief["sources_consulted"] = validated_sources
+                self.context["research_brief"] = research_brief
+                self._step("SourceQuality")
+            except Exception as exc:
+                self._error("SourceQuality", str(exc))
         else:
             self.limitations.append("No real SERP research available")
 
@@ -268,7 +278,7 @@ class SEOGenerationOrchestrator:
         self._step("InternalLinkPlan")
 
         # 14. ExternalLinkPlan
-        external_links = build_external_link_plan_dict(final_keyword, research_brief)
+        external_links = build_external_link_plan_dict(final_keyword, research_brief, project_id=self.project_id)
         self.context["external_links"] = external_links
         self._step("ExternalLinkPlan")
 
@@ -960,7 +970,7 @@ class SEOGenerationOrchestrator:
         adapters_status = {}
         for adapter in (
             serp_adapter, trends_adapter, image_sourcing_adapter, language_adapter,
-            content_extraction_adapter, orig_adapter, readability_adapter, google_watch_adapter,
+            scrapling_adapter, content_extraction_adapter, orig_adapter, readability_adapter, google_watch_adapter,
         ):
             try:
                 adapters_status[adapter.provider_name] = adapter.get_status()
