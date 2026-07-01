@@ -45,6 +45,7 @@ type ActivityEvent = {
   articleTitle: string
   time: string
   href: string
+  dotClassName: string
 }
 
 const MONTHLY_METRIC_POINTS = 12
@@ -285,6 +286,7 @@ function deriveActivityEvents(articles: Article[], projectId: string): ActivityE
         articleTitle: a.title,
         time: timeAgo(a.published_at ?? a.updated_at),
         href: `/projects/${projectId}/articles/${a.id}/edit`,
+        dotClassName: 'bg-success',
       })
     } else if (a.status === 'scheduled') {
       events.push({
@@ -294,6 +296,7 @@ function deriveActivityEvents(articles: Article[], projectId: string): ActivityE
         articleTitle: a.title,
         time: timeAgo(a.scheduled_at ?? a.updated_at),
         href: `/projects/${projectId}/articles/${a.id}/edit`,
+        dotClassName: 'bg-success',
       })
     } else if (a.status === 'idea_proposed' || a.status === 'idea_priority') {
       events.push({
@@ -303,6 +306,17 @@ function deriveActivityEvents(articles: Article[], projectId: string): ActivityE
         articleTitle: a.title,
         time: timeAgo(a.created_at),
         href: `/projects/${projectId}/ideas`,
+        dotClassName: 'bg-warning',
+      })
+    } else if (a.status === 'correction_needed' || a.status === 'failed') {
+      events.push({
+        id: `risk-${a.id}`,
+        icon: <AlertCircle size={11} />,
+        label: a.status === 'failed' ? 'Article en échec' : 'Correction requise',
+        articleTitle: a.title,
+        time: timeAgo(a.updated_at),
+        href: `/projects/${projectId}/articles/${a.id}/edit`,
+        dotClassName: 'bg-danger',
       })
     } else if (a.status === 'draft_ready' || a.status === 'review_needed') {
       events.push({
@@ -312,6 +326,7 @@ function deriveActivityEvents(articles: Article[], projectId: string): ActivityE
         articleTitle: a.title,
         time: timeAgo(a.updated_at),
         href: `/projects/${projectId}/articles/${a.id}/edit`,
+        dotClassName: 'bg-warning',
       })
     } else if (a.seo_score !== null) {
       events.push({
@@ -321,6 +336,7 @@ function deriveActivityEvents(articles: Article[], projectId: string): ActivityE
         articleTitle: a.title,
         time: timeAgo(a.updated_at),
         href: `/projects/${projectId}/articles/${a.id}/edit`,
+        dotClassName: 'bg-accent',
       })
     } else {
       events.push({
@@ -330,6 +346,7 @@ function deriveActivityEvents(articles: Article[], projectId: string): ActivityE
         articleTitle: a.title,
         time: timeAgo(a.updated_at),
         href: `/projects/${projectId}/articles/${a.id}/edit`,
+        dotClassName: 'bg-tertiary',
       })
     }
   }
@@ -739,14 +756,14 @@ export default function ProjectDashboardPage() {
                   ))
                 : (
                   <>
-                    {visibleActivityEvents.map((event, index) => (
+                    {visibleActivityEvents.map((event) => (
                       <button
                         key={event.id}
                         type="button"
                         onClick={() => navigate(event.href)}
                         className="grid h-10 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 text-left transition-colors hover:bg-surface-soft"
                       >
-                        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: [NEUTRAL_CHART_COLORS.primary, NEUTRAL_CHART_COLORS.secondary, NEUTRAL_CHART_COLORS.tertiary, NEUTRAL_CHART_COLORS.muted][index % 4] }} />
+                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${event.dotClassName}`} />
                         <span className="truncate text-[11px] font-medium text-tertiary">
                           {event.label} : {event.articleTitle}
                         </span>
