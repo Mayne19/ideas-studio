@@ -19,6 +19,7 @@ import Toolbar from '@/components/ui/Toolbar'
 import ToggleSwitch from '@/components/ui/ToggleSwitch'
 import { TableRoot, Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/Table'
 import { finiteScore, getGeoScore, getOriginalityScore } from '@/lib/scoreBadge'
+import ScoreBadge from '@/components/ui/ScoreBadge'
 import { useProject } from '@/context/ProjectContext'
 
 const PAGE_SIZE = 20
@@ -58,6 +59,7 @@ function ArticleRow({
   const category = categories.find((c) => c.id === article.category_id)
   const isPublished = PUBLISHED_STATUSES.has(article.status)
   const isEditable = EDITABLE_STATUSES.has(article.status)
+  const originalityScore = getOriginalityScore(article)
 
   return (
     <TableRow>
@@ -86,16 +88,16 @@ function ArticleRow({
         </div>
       </TableCell>
       <TableCell className="w-[48px] text-center">
-        <span className="text-[13px] font-semibold tabular-nums leading-none text-primary">{finiteScore(article.global_score) ?? <span className="text-tertiary">—</span>}</span>
+        <ScoreBadge label="G" value={finiteScore(article.global_score)} compact showLabel={false} />
       </TableCell>
       <TableCell className="w-[48px] text-center">
-        <span className="text-[13px] font-semibold tabular-nums leading-none text-primary">{finiteScore(article.quality_score) ?? <span className="text-tertiary">—</span>}</span>
+        <ScoreBadge label="Q" value={finiteScore(article.quality_score)} compact showLabel={false} />
       </TableCell>
       <TableCell className="w-[48px] text-center">
-        <span className="text-[13px] font-semibold tabular-nums leading-none text-primary">{finiteScore(article.readability_score) ?? <span className="text-tertiary">—</span>}</span>
+        <ScoreBadge label="L" value={finiteScore(article.readability_score)} compact showLabel={false} />
       </TableCell>
       <TableCell className="w-[48px] text-center">
-        <span className="text-[13px] font-semibold tabular-nums leading-none text-primary">{getOriginalityScore(article) ?? <span className="text-tertiary">—</span>}</span>
+        <ScoreBadge label="O" value={originalityScore} compact showLabel={false} />
       </TableCell>
       <TableCell className="w-[90px]">
         <StatusBadge status={article.status} />
