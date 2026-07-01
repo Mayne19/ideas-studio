@@ -59,19 +59,19 @@ function InfoRow({
   mono?: boolean
 }) {
   return (
-    <div className="flex flex-col gap-2 px-4 py-3">
+    <div className="flex flex-col gap-1.5 px-4 py-2">
       <div className="min-w-0">
         <div className="flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wider text-tertiary">
           {icon}
           {label}
         </div>
       </div>
-      <div className="flex min-w-0 items-center justify-between gap-3 rounded-[10px] border border-accent/10 bg-accent/6 px-3 py-2">
+      <div className="flex min-h-9 min-w-0 items-center justify-between gap-3 rounded-[10px] border border-accent/10 bg-accent/6 px-3 py-1.5">
         <p className={`min-w-0 truncate text-[12px] text-tertiary ${mono ? 'font-mono' : ''}`}>{value}</p>
         {(action || canCopy) && (
           <div className="flex shrink-0 items-center gap-2">
             {action}
-            {canCopy && <CopyButton value={copyValue ?? value} disabled={!(copyValue ?? value)} className="shrink-0" />}
+            {canCopy && <CopyButton value={copyValue ?? value} disabled={!(copyValue ?? value)} className="h-7 shrink-0 px-2" />}
           </div>
         )}
       </div>
@@ -263,7 +263,7 @@ export default function ProjectIntegrationPage() {
         title="Identifiants"
         description="Utilisez ces clés pour connecter votre blog à l'API publique."
       >
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           <InfoRow
             icon={<Key size={11} />}
             label="Project ID"
@@ -349,21 +349,16 @@ export default function ProjectIntegrationPage() {
           title="Endpoints API publics"
           description="Ces routes sont accessibles sans authentification pour alimenter votre blog."
         >
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             {Object.entries(info.public_api_endpoints).map(([key, url]) => (
-              <div
+              <InfoRow
                 key={key}
-                className="flex items-start justify-between gap-3 rounded-[12px] bg-surface-soft px-4 py-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wider text-tertiary">
-                    <Globe size={11} />
-                    {key}
-                  </div>
-                  <p className="mt-0.5 truncate font-mono text-[12px] text-secondary">{url}</p>
-                </div>
-                <CopyButton value={url} className="shrink-0" />
-              </div>
+                icon={<Globe size={11} />}
+                label={key}
+                value={url}
+                copyValue={url}
+                canCopy
+              />
             ))}
           </div>
         </FormCard>
