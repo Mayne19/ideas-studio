@@ -1594,7 +1594,7 @@ export default function ArticleEditorPage() {
                   )}
 
                   {/* Zone 3 — Paramètres SEO (collapsible) */}
-                  <details className="group">
+                  <details className="group order-first">
                     <summary className="flex cursor-pointer list-none select-none items-center justify-between p-3 text-[12px] font-medium text-secondary hover:text-primary">
                       <span>Paramètres SEO</span>
                       <ChevronDown size={12} className="transition-transform group-open:rotate-180" />
