@@ -312,15 +312,15 @@ export default function ProjectIntegrationPage() {
             description="Collez ce code dans le <head> de votre site pour activer le tracking et la connexion API."
           >
             <div className="flex flex-col gap-3">
-              <div className="relative">
-                <div className="flex items-center justify-between rounded-t-[12px] bg-surface-soft px-3.5 py-2">
+              <div className="overflow-hidden rounded-[12px] border-2 border-border">
+                <div className="flex items-center justify-between bg-surface-soft px-3.5 py-2">
                   <div className="flex items-center gap-2 text-[12px] text-secondary">
                     <Code2 size={13} />
                     HTML
                   </div>
                   <CopyButton value={info?.snippet ?? ''} disabled={!info?.snippet} />
                 </div>
-                <pre className="overflow-x-auto rounded-b-[12px] bg-[#1d1d1f] p-4 text-[12px] leading-relaxed text-[#e5e5e7]">
+                <pre className="overflow-x-auto bg-primary p-4 text-[12px] leading-relaxed text-bg">
                   <code>{info?.snippet}</code>
                 </pre>
               </div>
