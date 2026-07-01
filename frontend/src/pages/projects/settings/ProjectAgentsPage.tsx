@@ -168,42 +168,28 @@ export default function ProjectAgentsPage() {
         </div>
       )}
 
-      <div className="rounded-[14px] border border-border bg-[#f8f9fc] px-4 py-3 text-[14px] text-secondary leading-relaxed">
-        <strong className="text-primary">Ordre de résolution :</strong>{' '}
-        Assignment du projet &gt; provider par défaut du projet &gt; variable d&apos;environnement.
-        Les agents désactivés sont ignorés par le routage IA.
-      </div>
-
       <div className="overflow-x-auto rounded-[16px] bg-surface">
-        <div className="min-w-[980px]">
-          <div className="grid grid-cols-[1.1fr_0.65fr_1.6fr_0.7fr_1.1fr_0.75fr_0.9fr] gap-3 border-b border-border px-4 py-3 text-[12px] font-semibold uppercase tracking-wide text-tertiary">
+        <div className="min-w-[860px]">
+          <div className="grid grid-cols-[1.1fr_1.8fr_1.15fr_1fr] gap-4 border-b border-border px-4 py-3 text-[12px] font-semibold uppercase tracking-wide text-tertiary">
             <span>Agent</span>
-            <span>Phase</span>
-            <span>Rôle</span>
-            <span>Actif</span>
-            <span>Provider</span>
-            <span>Fallback</span>
-            <span>Statut</span>
+            <span>Mission</span>
+            <span>Provider IA</span>
+            <span>État</span>
           </div>
           {agents.map((agent) => {
             const ass = getAssignment(agent.agent_id)
             const isSaving = savingId === agent.agent_id
             return (
-              <div key={agent.agent_id} className="grid grid-cols-[1.1fr_0.65fr_1.6fr_0.7fr_1.1fr_0.75fr_0.9fr] gap-3 border-b border-border px-4 py-3 text-[12px] last:border-0">
+              <div key={agent.agent_id} className="grid grid-cols-[1.1fr_1.8fr_1.15fr_1fr] items-center gap-4 border-b border-border px-4 py-3 text-[12px] last:border-0">
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-primary">{agent.name}</p>
-                  <p className="truncate text-[12px] text-tertiary">{agent.agent_id}</p>
+                  <p className="mt-0.5 truncate text-[12px] text-tertiary">{CATEGORY_LABELS[agent.category] ?? agent.category}</p>
                 </div>
-                <span className="text-secondary">{CATEGORY_LABELS[agent.category] ?? agent.category}</span>
-                <span className="min-w-0 truncate text-secondary" title={agent.description}>{agent.description}</span>
-                <span>
-                  {ass ? (
-                    <ToggleSwitch checked={ass.enabled} onChange={() => handleToggle(agent.agent_id, ass.enabled)} disabled={isSaving} />
-                  ) : (
-                    <span className="text-tertiary">Défaut</span>
-                  )}
-                </span>
-                <span>
+                <div className="min-w-0">
+                  <p className="truncate text-secondary" title={agent.description}>{agent.description}</p>
+                  <p className="mt-0.5 truncate text-[12px] text-tertiary">{agent.agent_id}</p>
+                </div>
+                <div>
                   {isSaving ? (
                     <Loader2 size={16} className="animate-spin text-secondary" />
                   ) : (
@@ -220,15 +206,22 @@ export default function ProjectAgentsPage() {
                       ]}
                     />
                   )}
-                </span>
-                <span className="text-secondary">Projet puis défaut</span>
-                <span>
-                  {agent.has_implementation ? (
-                    <span className="rounded-full bg-success/8 px-2 py-0.5 text-[12px] font-medium text-success">Implémenté</span>
-                  ) : (
-                    <span className="rounded-full bg-warning/12 px-2 py-0.5 text-[12px] font-medium text-warning">Heuristique</span>
+                </div>
+                <div className="flex min-w-0 items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    {agent.has_implementation ? (
+                      <span className="rounded-full bg-success/8 px-2 py-0.5 text-[12px] font-medium text-success">Implémenté</span>
+                    ) : (
+                      <span className="rounded-full bg-warning/12 px-2 py-0.5 text-[12px] font-medium text-warning">Heuristique</span>
+                    )}
+                    <p className="mt-1 truncate text-[12px] text-tertiary">
+                      {ass ? (ass.enabled ? 'Assigné et actif' : 'Assigné, désactivé') : 'Provider par défaut'}
+                    </p>
+                  </div>
+                  {ass && (
+                    <ToggleSwitch checked={ass.enabled} onChange={() => handleToggle(agent.agent_id, ass.enabled)} disabled={isSaving} />
                   )}
-                </span>
+                </div>
               </div>
             )
           })}
