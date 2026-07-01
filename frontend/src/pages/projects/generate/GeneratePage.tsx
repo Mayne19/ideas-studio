@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { AlertTriangle, Bot, CheckCircle, Euro, History, Loader2, Play, RefreshCw, RotateCw, Settings, TestTube2, XCircle } from '@/components/ui/hugeIcons'
+import { useNavigate, useParams } from 'react-router-dom'
+import { AlertTriangle, Bot, CheckCircle, History, Loader2, Play, RotateCw, Settings, TestTube2 } from '@/components/ui/hugeIcons'
 import { listAIProviders } from '@/api/aiProviders'
 import { getPipelineLogs, getPipelineSettings, triggerPipelineRun } from '@/api/pipeline'
 import { listArticles } from '@/api/articles'
@@ -25,22 +25,6 @@ function StatusPill({ ok, label }: { ok: boolean; label: string }) {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <p className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-secondary">{children}</p>
-}
-
-function MetricCard({ icon, label, value, tone = 'accent' }: { icon: React.ReactNode; label: string; value: React.ReactNode; tone?: 'accent' | 'success' | 'warning' | 'danger' }) {
-  const toneClass = {
-    accent: 'bg-accent/10 text-accent',
-    success: 'bg-success/8 text-success',
-    warning: 'bg-warning/12 text-warning',
-    danger: 'bg-danger/10 text-danger',
-  }[tone]
-  return (
-    <div className="rounded-[14px] border border-border bg-surface p-4">
-      <span className={`mb-3 flex h-8 w-8 items-center justify-center rounded-[10px] ${toneClass}`}>{icon}</span>
-      <p className="text-[20px] font-semibold tracking-tight text-primary">{value}</p>
-      <p className="mt-0.5 text-[12px] text-tertiary">{label}</p>
-    </div>
-  )
 }
 
 function articleCost(article: Article) {
@@ -109,7 +93,9 @@ export default function GeneratePage() {
     () => [...workflowArticles].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()).slice(0, 8),
     [workflowArticles],
   )
-  const recentCost = articles.reduce((sum, article) => sum + (articleCost(article) ?? 0), 0)
+  const activeProviderLabel = activeProviders[0]?.label ?? 'Aucun'
+  const pipelineLabel = pipeline?.enabled ? 'Actif' : 'Inactif'
+  const hasSystemIssue = activeProviders.length === 0 || assignedAgentIds.size === 0 || !pipeline?.enabled || failedWorkflows.length > 0
 
   async function handleRunPipeline() {
     if (!projectId) return
@@ -153,85 +139,87 @@ export default function GeneratePage() {
         <div className="mb-4 rounded-[12px] border border-success/20 bg-success/8 px-4 py-3 text-[14px] text-success">Pipeline lancé. L’historique a été rafraîchi.</div>
       )}
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <MetricCard icon={<Settings size={18} />} label="Provider actif" value={activeProviders[0]?.label ?? '—'} tone={activeProviders.length ? 'success' : 'warning'} />
-        <MetricCard icon={<Bot size={18} />} label="Agents assignés" value={`${assignedAgentIds.size}/${agents.length || '—'}`} tone={assignedAgentIds.size ? 'success' : 'warning'} />
-        <MetricCard icon={<RefreshCw size={18} />} label="Pipeline" value={pipeline?.enabled ? 'Actif' : 'Inactif'} tone={pipeline?.enabled ? 'success' : 'warning'} />
-        <MetricCard icon={<Euro size={18} />} label="Coût IA suivi" value={recentCost ? `${recentCost.toFixed(4)} €` : '—'} />
-        <MetricCard icon={<XCircle size={18} />} label="Workflows échoués" value={failedWorkflows.length} tone={failedWorkflows.length ? 'danger' : 'success'} />
-      </div>
-
-      <div className="mb-6 grid gap-4 lg:grid-cols-3">
-        <div className="rounded-[14px] border border-border bg-surface p-4">
-          <SectionTitle>État du système IA</SectionTitle>
-          <div className="flex flex-col gap-2">
-            <StatusPill ok={activeProviders.length > 0} label={activeProviders.length ? `${activeProviders.length} provider(s) configuré(s)` : 'Aucun provider actif'} />
-            <StatusPill ok={assignedAgentIds.size > 0} label={assignedAgentIds.size ? `${assignedAgentIds.size} agent(s) assigné(s)` : 'Aucun agent assigné'} />
-            <StatusPill ok={Boolean(pipeline?.enabled)} label={pipeline?.enabled ? 'Pipeline automatique actif' : 'Pipeline automatique inactif'} />
+      <div className="mb-6 rounded-[14px] border border-border bg-surface p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <SectionTitle>Vue d’ensemble IA</SectionTitle>
+            <p className="text-[14px] text-secondary">
+              {hasSystemIssue ? 'Configuration incomplète ou pipeline à surveiller.' : 'Pipeline prêt, providers et agents configurés.'}
+            </p>
           </div>
-          {activeProviders.length === 0 && (
-            <Link to={`/projects/${projectId}/settings/providers`} className="mt-4 inline-flex text-[12px] font-medium text-accent hover:underline">Configurer Gemini ou OpenAI</Link>
-          )}
-          {assignedAgentIds.size === 0 && (
-            <Link to={`/projects/${projectId}/settings/agents`} className="ml-0 mt-2 block text-[12px] font-medium text-accent hover:underline">Assigner les agents IA</Link>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {activeProviders.length === 0 && (
+              <Button size="sm" variant="secondary" icon={<Settings size={13} />} onClick={() => navigate(`/projects/${projectId}/settings/providers`)}>
+                Configurer
+              </Button>
+            )}
+            {assignedAgentIds.size === 0 && (
+              <Button size="sm" variant="secondary" icon={<Bot size={13} />} onClick={() => navigate(`/projects/${projectId}/settings/agents`)}>
+                Assigner
+              </Button>
+            )}
+          </div>
         </div>
 
-        <div className="rounded-[14px] border border-border bg-surface p-4 lg:col-span-2">
+        <div className="mt-4 grid overflow-hidden rounded-[12px] border border-border sm:grid-cols-2 xl:grid-cols-4">
+          <div className="border-b border-border p-4 sm:border-r xl:border-b-0">
+            <p className="text-[12px] font-medium text-tertiary">Provider</p>
+            <p className="mt-1 truncate text-[20px] font-semibold tracking-tight text-primary">{activeProviderLabel}</p>
+          </div>
+          <div className="border-b border-border p-4 xl:border-b-0 xl:border-r">
+            <p className="text-[12px] font-medium text-tertiary">Agents assignés</p>
+            <p className="mt-1 text-[20px] font-semibold tracking-tight text-primary">{assignedAgentIds.size}/{agents.length || '—'}</p>
+          </div>
+          <div className="border-b border-border p-4 sm:border-r sm:border-b-0">
+            <p className="text-[12px] font-medium text-tertiary">Pipeline</p>
+            <p className="mt-1 text-[20px] font-semibold tracking-tight text-primary">{pipelineLabel}</p>
+          </div>
+          <div className="p-4">
+            <p className="text-[12px] font-medium text-tertiary">Échecs</p>
+            <p className={`mt-1 text-[20px] font-semibold tracking-tight ${failedWorkflows.length ? 'text-danger' : 'text-primary'}`}>{failedWorkflows.length}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <StatusPill ok={activeProviders.length > 0} label={activeProviders.length ? `${activeProviders.length} provider configuré` : 'Aucun provider actif'} />
+          <StatusPill ok={assignedAgentIds.size > 0} label={assignedAgentIds.size ? `${assignedAgentIds.size} agent assigné` : 'Aucun agent assigné'} />
+          <StatusPill ok={Boolean(pipeline?.enabled)} label={pipeline?.enabled ? 'Automatisation active' : 'Automatisation inactive'} />
+          <StatusPill ok={failedWorkflows.length === 0} label={failedWorkflows.length ? `${failedWorkflows.length} échec` : 'Aucun échec'} />
+        </div>
+      </div>
+
+      <div className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <div className="rounded-[14px] border border-border bg-surface p-4">
           <SectionTitle>Workflows IA</SectionTitle>
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-[12px] bg-surface-soft px-3 py-3">
+            <div className="rounded-[12px] border border-border px-3 py-3">
               <p className="text-[18px] font-semibold text-primary">{runningWorkflows.length}</p>
               <p className="text-[12px] text-tertiary">En cours / bloqués</p>
             </div>
-            <div className="rounded-[12px] bg-surface-soft px-3 py-3">
+            <div className="rounded-[12px] border border-border px-3 py-3">
               <p className="text-[18px] font-semibold text-primary">{completedWorkflows.length}</p>
               <p className="text-[12px] text-tertiary">Terminés</p>
             </div>
-            <div className="rounded-[12px] bg-surface-soft px-3 py-3">
+            <div className="rounded-[12px] border border-border px-3 py-3">
               <p className="text-[18px] font-semibold text-primary">{failedWorkflows.length}</p>
               <p className="text-[12px] text-tertiary">Échoués</p>
             </div>
           </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button size="sm" variant="secondary" icon={<TestTube2 size={13} />} onClick={handleRunPipeline}>Tester pipeline</Button>
+            <Button size="sm" variant="secondary" icon={<RotateCw size={13} />} onClick={() => setTick((value) => value + 1)}>Rafraîchir</Button>
+          </div>
           <p className="mt-3 text-[12px] text-tertiary">Reprise depuis l’étape échouée : non disponible en V1 côté API.</p>
-        </div>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.75fr)]">
-        <div className="rounded-[14px] border border-border bg-surface p-4">
-          <SectionTitle>Dernières générations</SectionTitle>
-          {recentGenerations.length === 0 ? (
-            <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[14px] text-secondary">Aucune génération IA tracée pour le moment.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <div className="min-w-[860px]">
-                <div className="grid grid-cols-[1.5fr_0.7fr_0.7fr_0.9fr_0.6fr_0.7fr_0.7fr] gap-3 border-b border-border px-2 pb-2 text-[12px] font-semibold uppercase tracking-wide text-tertiary">
-                  <span>Contenu</span><span>Type</span><span>Statut</span><span>Dernier agent</span><span>Coût</span><span>Modèle</span><span>MAJ</span>
-                </div>
-                {recentGenerations.map((article) => (
-                  <div key={article.id} className="grid grid-cols-[1.5fr_0.7fr_0.7fr_0.9fr_0.6fr_0.7fr_0.7fr] gap-3 border-b border-border px-2 py-3 text-[12px] last:border-0">
-                    <button className="truncate text-left font-medium text-primary hover:text-accent" onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}>{article.title}</button>
-                    <span className="text-secondary">{article.status.includes('idea') ? 'Idée' : 'Article'}</span>
-                    <span className="text-secondary">{workflowStatus(article)}</span>
-                    <span className="truncate text-secondary">{article.next_agent_key || article.completed_agent_keys?.split(',').at(-1) || '—'}</span>
-                    <span className="text-secondary">{articleCost(article) ? `${articleCost(article)?.toFixed(4)} €` : '—'}</span>
-                    <span className="text-tertiary">V1 —</span>
-                    <span className="text-tertiary">{new Date(article.updated_at).toLocaleDateString('fr-FR')}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="rounded-[14px] border border-border bg-surface p-4">
           <SectionTitle>Logs agents</SectionTitle>
           {logs.length === 0 ? (
-            <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[14px] text-secondary">Aucun log pipeline disponible.</p>
+            <p className="rounded-[12px] border border-border px-3 py-3 text-[14px] text-secondary">Aucun log pipeline disponible.</p>
           ) : (
             <div className="flex flex-col gap-2">
-              {logs.map((log) => (
-                <div key={log.id} className="rounded-[12px] bg-surface-soft px-3 py-2">
+              {logs.slice(0, 5).map((log) => (
+                <div key={log.id} className="rounded-[12px] border border-border px-3 py-2">
                   <div className="flex items-center justify-between gap-3">
                     <span className="flex items-center gap-1.5 text-[12px] font-medium text-primary">
                       <History size={13} />
@@ -245,35 +233,29 @@ export default function GeneratePage() {
               ))}
             </div>
           )}
-          <div className="mt-4 rounded-[12px] border border-border bg-surface px-3 py-3 text-[12px] text-secondary">
-            <p className="font-medium text-primary">Actions techniques</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <Button size="sm" variant="secondary" icon={<TestTube2 size={13} />} onClick={handleRunPipeline}>Tester pipeline</Button>
-              <Button size="sm" variant="secondary" icon={<RotateCw size={13} />} onClick={() => setTick((value) => value + 1)}>Rafraîchir</Button>
-            </div>
-            <p className="mt-2 text-[12px] text-tertiary">Relance agent bloqué et reprise d’étape : non disponible en V1.</p>
-          </div>
         </div>
       </div>
 
-      <div className="mt-6 rounded-[14px] border border-border bg-surface p-4">
-        <SectionTitle>Registre agents</SectionTitle>
-        {agents.length === 0 ? (
-          <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[14px] text-secondary">Registry agents indisponible ou non exposé par l’API.</p>
+      <div className="rounded-[14px] border border-border bg-surface p-4">
+        <SectionTitle>Dernières générations</SectionTitle>
+        {recentGenerations.length === 0 ? (
+          <p className="rounded-[12px] border border-border px-3 py-3 text-[14px] text-secondary">Aucune génération IA tracée pour le moment.</p>
         ) : (
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-            {agents.slice(0, 12).map((agent) => (
-              <div key={agent.agent_id} className="rounded-[12px] bg-surface-soft px-3 py-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-[14px] font-semibold text-primary">{agent.name}</p>
-                    <p className="mt-0.5 truncate text-[12px] text-tertiary">{agent.agent_id}</p>
-                  </div>
-                  <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-[12px] text-secondary">{agent.phase || agent.category}</span>
-                </div>
-                <p className="mt-2 line-clamp-2 text-[12px] leading-snug text-secondary">{agent.description}</p>
+          <div className="overflow-x-auto">
+            <div className="min-w-[760px]">
+              <div className="grid grid-cols-[1.6fr_0.7fr_0.9fr_0.6fr_0.7fr] gap-3 border-b border-border px-2 pb-2 text-[12px] font-semibold uppercase tracking-wide text-tertiary">
+                <span>Contenu</span><span>Statut</span><span>Dernier agent</span><span>Coût</span><span>MAJ</span>
               </div>
-            ))}
+              {recentGenerations.map((article) => (
+                <div key={article.id} className="grid grid-cols-[1.6fr_0.7fr_0.9fr_0.6fr_0.7fr] gap-3 border-b border-border px-2 py-3 text-[12px] last:border-0">
+                  <button className="truncate text-left font-medium text-primary hover:text-accent" onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}>{article.title}</button>
+                  <span className="text-secondary">{workflowStatus(article)}</span>
+                  <span className="truncate text-secondary">{article.next_agent_key || article.completed_agent_keys?.split(',').at(-1) || '—'}</span>
+                  <span className="text-secondary">{articleCost(article) ? `${articleCost(article)?.toFixed(4)} €` : '—'}</span>
+                  <span className="text-tertiary">{new Date(article.updated_at).toLocaleDateString('fr-FR')}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
