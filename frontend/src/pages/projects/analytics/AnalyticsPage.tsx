@@ -58,7 +58,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 function InlineEmpty({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-[12px] bg-surface-soft px-3 py-3 text-[14px] text-secondary">{children}</p>
+  return <p className="rounded-[12px] border-2 border-border bg-transparent px-3 py-3 text-[14px] text-secondary">{children}</p>
 }
 
 function ChartEmpty({ message }: { message: string }) {

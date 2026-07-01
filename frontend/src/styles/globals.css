@@ -6,9 +6,9 @@
   /* Colors — soft neutral */
   --color-bg: #FAFAFA;
   --color-app: #FAFAFA;
-  --color-surface: #FFFFFF;
-  --color-surface-soft: #F5F5F5;
-  --color-surface-muted: #EDEDED;
+  --color-surface: #FAFAFA;
+  --color-surface-soft: #FAFAFA;
+  --color-surface-muted: #FAFAFA;
   --color-primary: #2E2E2E;
   --color-secondary: #5E5E5E;
   --color-tertiary: #8A8A8A;
@@ -323,4 +323,3 @@ body {
   height: 0;
   pointer-events: none;
 }
-

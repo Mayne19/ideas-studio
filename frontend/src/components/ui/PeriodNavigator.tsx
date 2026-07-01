@@ -52,7 +52,7 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
   return (
     <div className={cn('flex flex-wrap items-center gap-2', className)}>
       {/* Presets - Left */}
-      <div className="flex flex-wrap items-center rounded-[12px] bg-surface-soft p-1">
+      <div className="flex flex-wrap items-center rounded-[12px] border-2 border-border bg-transparent p-1">
         {MODES.map((mode) => (
           <button
             key={mode.value}
@@ -71,7 +71,7 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
       </div>
 
       {/* Navigation - Center */}
-      <div className="flex items-center rounded-[12px] bg-surface-soft p-1">
+      <div className="flex items-center rounded-[12px] border-2 border-border bg-transparent p-1">
         <button
           type="button"
           onClick={() => onChange(shiftPeriod(value, -1))}
@@ -97,7 +97,7 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
       {/* Custom - Right */}
       <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
         <PopoverTrigger asChild>
-          <div className="flex items-center rounded-[12px] bg-surface-soft p-1">
+          <div className="flex items-center rounded-[12px] border-2 border-border bg-transparent p-1">
             <button
               type="button"
               className={cn(
