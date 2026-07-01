@@ -1658,7 +1658,7 @@ export default function ArticleEditorPage() {
                             <PopoverTrigger asChild>
                               <Button
                                 size="sm"
-                                variant="ghost"
+                                variant="primary"
                                 className="w-full justify-center"
                                 disabled={busy}
                               >
@@ -1672,7 +1672,7 @@ export default function ArticleEditorPage() {
                               <div className="flex flex-col gap-2">
                                 <Button
                                   size="sm"
-                                  variant="secondary"
+                                  variant="ghost"
                                   className="w-full justify-center"
                                   onClick={() => doAction('publish')}
                                   disabled={busy}
@@ -1701,7 +1701,7 @@ export default function ArticleEditorPage() {
                                   />
                                   <Button
                                     size="sm"
-                                    variant="secondary"
+                                    variant="ghost"
                                     className="w-full justify-center"
                                     onClick={handleSchedule}
                                     disabled={!scheduleDate || !scheduleTime || busy}
@@ -1719,7 +1719,7 @@ export default function ArticleEditorPage() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="w-full justify-center text-danger/70 hover:text-danger hover:bg-danger/5"
+                            className="w-full justify-center"
                             onClick={() => doAction('archive')}
                             disabled={busy}
                           >
@@ -1734,7 +1734,7 @@ export default function ArticleEditorPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="w-full justify-center text-primary"
+                          className="w-full justify-center"
                           onClick={() => doAction('unarchive')}
                           disabled={busy}
                         >
