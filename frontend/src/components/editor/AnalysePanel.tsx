@@ -11,6 +11,7 @@ import Button from '@/components/ui/Button'
 import CostPanel from './CostPanel'
 import StructuredDataPanel from './StructuredDataPanel'
 import GeoPanel from './GeoPanel'
+import { Gauge } from '@/lib/vercel-geistcn/components'
 
 /* ─── Error translation ─────────────────────────────────────── */
 
@@ -41,6 +42,7 @@ const SCORE_TILES = [
 ] as const
 
 type ScoreKey = typeof SCORE_TILES[number]['key']
+const SCORE_GAUGES = SCORE_TILES.filter((tile) => tile.key !== 'Synthèse')
 
 function resolveScore(article: EditorArticle, brief: AnalysisBrief | SeoAnalysis | null, expertReview: SeoExpertReview | null, key: ScoreKey): number | null {
   switch (key) {
@@ -142,37 +144,49 @@ function ScoreSynthesisCard({
   onSelect: (key: ScoreKey) => void
 }) {
   const globalScore = resolveScore(article, brief, expertReview, 'Synthèse')
-  const globalTone = scoreTone(globalScore)
 
   return (
-    <div className="rounded-[14px] border border-border bg-surface p-4">
+    <div className="rounded-[14px] border border-border bg-bg p-4">
       <p className="text-[12px] font-semibold text-primary mb-3">Synthèse des scores</p>
 
-      <div className="flex items-center gap-4 mb-4">
-        <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-[18px] font-bold ${globalTone}`}>
-          {globalScore === null ? '—' : Math.round(globalScore)}
+      <button
+        type="button"
+        onClick={() => onSelect('Synthèse')}
+        className={`mb-4 flex w-full items-center gap-4 rounded-[12px] border p-3 text-left transition-colors ${
+          selected === 'Synthèse' ? 'border-border-strong bg-surface-soft' : 'border-border bg-transparent hover:bg-surface-soft'
+        }`}
+      >
+        <div className="flex h-20 w-20 shrink-0 items-center justify-center">
+          {globalScore === null ? (
+            <span className="text-[20px] font-semibold text-tertiary">—</span>
+          ) : (
+            <Gauge showValue size="medium" value={globalScore} />
+          )}
         </div>
         <div className="text-[12px] leading-snug text-secondary">
+          <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-tertiary">Global</span>
           Score global calculé à partir de l'ensemble des critères de qualité, SEO, lisibilité et fiabilité.
         </div>
-      </div>
+      </button>
 
       <div className="grid grid-cols-2 gap-2">
-        {SCORE_TILES.map((tile) => {
+        {SCORE_GAUGES.map((tile) => {
           const score = resolveScore(article, brief, expertReview, tile.key)
           return (
             <button
               key={tile.key}
               type="button"
               onClick={() => onSelect(tile.key)}
-              className={`rounded-[10px] px-2.5 py-2 text-left transition-colors ${
-                selected === tile.key ? 'bg-surface-soft ring-1 ring-accent/25' : 'hover:bg-surface-soft'
+              className={`flex min-h-[106px] flex-col items-center justify-center gap-2 rounded-[12px] border px-2.5 py-3 text-center transition-colors ${
+                selected === tile.key ? 'border-border-strong bg-surface-soft' : 'border-border bg-transparent hover:bg-surface-soft'
               }`}
             >
               <span className="block text-[10px] font-medium uppercase tracking-wide text-tertiary">{tile.label}</span>
-              <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[12px] font-semibold ${scoreTone(score)}`}>
-                {score === null ? '—' : Math.round(score)}
-              </span>
+              {score === null ? (
+                <span className="flex h-12 w-12 items-center justify-center text-[16px] font-semibold text-tertiary">—</span>
+              ) : (
+                <Gauge showValue size="small" value={score} />
+              )}
             </button>
           )
         })}
