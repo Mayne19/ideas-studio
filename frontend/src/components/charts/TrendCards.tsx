@@ -72,7 +72,7 @@ export function SimpleMetricCard({
         <span className="truncate whitespace-nowrap">{title}</span>
       </div>
       <div className="mt-3 flex h-8 items-center justify-between gap-3">
-        <div className="text-[22px] font-semibold leading-none text-primary">{value}</div>
+        <div className="text-[22px] font-semibold leading-snug text-primary">{value}</div>
         <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor ?? NEUTRAL_CHART_COLORS.tertiary }}>{change}</span>
       </div>
       {description && (
@@ -104,7 +104,7 @@ export function AreaMetricCard({
         <HelpCircle size={12} className="shrink-0 text-tertiary" />
       </div>
       <div className="mt-3 flex h-8 items-center justify-between gap-3">
-        <div className="text-[22px] font-semibold leading-none text-primary">{value}</div>
+        <div className="text-[22px] font-semibold leading-snug text-primary">{value}</div>
         <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor }}>{change}</span>
       </div>
       <div className="mt-2 h-[60px] -mx-1">
