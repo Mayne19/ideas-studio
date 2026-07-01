@@ -66,7 +66,7 @@ function InfoRow({
           {label}
         </div>
       </div>
-      <div className="flex min-w-0 items-center justify-between gap-3 rounded-[10px] border border-border bg-surface-soft px-3 py-2">
+      <div className="flex min-w-0 items-center justify-between gap-3 rounded-[10px] border border-accent/10 bg-accent/6 px-3 py-2">
         <p className={`min-w-0 truncate text-[12px] text-tertiary ${mono ? 'font-mono' : ''}`}>{value}</p>
         {(action || canCopy) && (
           <div className="flex shrink-0 items-center gap-2">
