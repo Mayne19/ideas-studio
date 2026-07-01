@@ -526,6 +526,7 @@ export default function ProjectDashboardPage() {
         },
       ]
     : []
+  const actionableTodoRows = todoRows.filter((row) => row.count > 0)
 
   return (
     <div className="mx-auto flex w-full max-w-none flex-col gap-5">
@@ -666,21 +667,25 @@ export default function ProjectDashboardPage() {
         <Card padding="none" className="flex h-full flex-col overflow-hidden rounded-[10px]">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
             <h2 className="text-[15px] font-semibold text-primary">Articles récents</h2>
-            <button
-              type="button"
-              onClick={() => navigate(`/projects/${projectId}/articles`)}
-              className="flex items-center gap-1.5 rounded-[6px] px-2.5 py-1 text-[11px] font-medium text-tertiary transition-colors hover:bg-surface-soft hover:text-primary"
-            >
-              Voir tout <ArrowRight size={13} />
-            </button>
+            {(data?.recentArticles.length ?? 0) > 0 && (
+              <button
+                type="button"
+                onClick={() => navigate(`/projects/${projectId}/articles`)}
+                className="flex items-center gap-1.5 rounded-[6px] px-2.5 py-1 text-[11px] font-medium text-tertiary transition-colors hover:bg-surface-soft hover:text-primary"
+              >
+                Voir tout <ArrowRight size={13} />
+              </button>
+            )}
           </div>
-          <div className="grid h-10 grid-cols-[minmax(0,1fr)_120px_56px_110px_96px] items-center gap-6 border-b border-border px-5 text-[11px] font-medium text-tertiary">
-            <span>Article</span>
-            <span>Score Global</span>
-            <span>Vues</span>
-            <span>Statut</span>
-            <span>Catégorie</span>
-          </div>
+          {(data?.recentArticles.length ?? 0) > 0 && (
+            <div className="grid h-10 grid-cols-[minmax(0,1fr)_120px_56px_110px_96px] items-center gap-6 border-b border-border px-5 text-[11px] font-medium text-tertiary">
+              <span>Article</span>
+              <span>Score Global</span>
+              <span>Vues</span>
+              <span>Statut</span>
+              <span>Catégorie</span>
+            </div>
+          )}
           <div className="flex flex-col divide-y divide-border">
             {(data?.recentArticles ?? []).map((article) => {
               const category = data?.categories.find((item) => item.id === article.category_id)
@@ -733,7 +738,10 @@ export default function ProjectDashboardPage() {
               )
             })}
             {data && data.recentArticles.length === 0 && (
-              <div className="px-4 py-10 text-[14px] text-secondary">Aucun article récent.</div>
+              <div className="flex min-h-[280px] flex-col items-center justify-center px-6 py-12 text-center">
+                <p className="text-[15px] font-medium text-primary">Aucun article pour le moment</p>
+                <p className="mt-1 text-[13px] text-secondary">Les articles créés ou générés apparaîtront ici.</p>
+              </div>
             )}
           </div>
         </Card>
@@ -742,17 +750,23 @@ export default function ProjectDashboardPage() {
           <Card padding="none" className="overflow-hidden rounded-[10px]">
             <h2 className="border-b border-border px-6 py-4 text-[15px] font-semibold text-primary">À faire maintenant</h2>
             <div className="flex flex-col divide-y divide-border-soft">
-              {todoRows.map((row) => (
-                <button
-                  key={row.label}
-                  type="button"
-                  onClick={() => navigate(row.href)}
-                  className="grid h-10 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 text-left transition-colors hover:bg-surface-soft"
-                >
-                  <span className="text-[11px] font-medium text-tertiary">{row.label}</span>
-                  <span className="shrink-0 pl-6 text-[11px] font-medium text-tertiary">{row.detail}</span>
-                </button>
-              ))}
+              {actionableTodoRows.length > 0 ? (
+                actionableTodoRows.map((row) => (
+                  <button
+                    key={row.label}
+                    type="button"
+                    onClick={() => navigate(row.href)}
+                    className="grid h-10 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 text-left transition-colors hover:bg-surface-soft"
+                  >
+                    <span className="text-[11px] font-medium text-tertiary">{row.label}</span>
+                    <span className="shrink-0 pl-6 text-[11px] font-medium text-tertiary">{row.detail}</span>
+                  </button>
+                ))
+              ) : (
+                <div className="px-6 py-5">
+                  <p className="text-[13px] font-medium text-secondary">Rien à traiter pour le moment.</p>
+                </div>
+              )}
             </div>
           </Card>
 
@@ -760,13 +774,11 @@ export default function ProjectDashboardPage() {
             <h2 className="border-b border-border px-6 py-4 text-[15px] font-semibold text-primary">Activité récente</h2>
             <div className="flex flex-col divide-y divide-border-soft">
               {visibleActivityEvents.length === 0
-                ? Array.from({ length: 5 }).map((_, i) => (
-                    <div key={`empty-${i}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-6 py-2.5">
-                      <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-transparent" />
-                  <span className="text-[11px] font-medium text-tertiary">—</span>
-                  <span />
+                ? (
+                    <div className="px-6 py-5">
+                      <p className="text-[13px] font-medium text-secondary">Aucune activité récente.</p>
                     </div>
-                  ))
+                  )
                 : (
                   <>
                     {visibleActivityEvents.map((event) => (
