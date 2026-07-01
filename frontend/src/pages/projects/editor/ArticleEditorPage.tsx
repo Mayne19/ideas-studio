@@ -1667,11 +1667,7 @@ export default function ArticleEditorPage() {
                           </div>
                         )}
                       </div>
-                    ) : (
-                      <div className="w-full rounded-[8px] border border-border bg-surface py-2 text-center text-[12px] font-medium text-secondary">
-                        Article archivé
-                      </div>
-                    )}
+                    ) : null}
 
                     {article.status !== 'archived' && (
                       <button
