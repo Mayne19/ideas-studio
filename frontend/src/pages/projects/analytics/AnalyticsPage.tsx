@@ -73,6 +73,16 @@ function deviceColor(device: string) {
   return (DEVICE_COLORS as Record<string, string>)[device.toLowerCase()] ?? NEUTRAL_CHART_COLORS.tertiary
 }
 
+function emptyTrend(period: PeriodRange, maxPoints = 30): number {
+  if (period.mode === 'day') return Math.min(24, maxPoints)
+  if (period.mode === 'week') return Math.min(7, maxPoints)
+  if (period.mode === 'month') {
+    const days = Math.ceil((new Date(period.endDate).getTime() - new Date(period.startDate).getTime()) / 86400000) + 1
+    return Math.min(Math.max(1, days), maxPoints)
+  }
+  return Math.min(12, maxPoints)
+}
+
 function articleSignal(a: ArticlePerformanceBrief) {
   if (a.views === 0 && a.seo_score === null) return { label: 'Nouveau', color: 'text-tertiary' }
   if (a.seo_score !== null && a.seo_score < 60) return { label: 'À optimiser', color: 'text-danger' }
@@ -207,8 +217,13 @@ export default function AnalyticsPage() {
   )
 
   const viewsTrend = useMemo(
-    () => (summary?.trend_by_day ?? []).map((d) => ({ v: d.views })),
-    [summary],
+    () => {
+      const raw = summary?.trend_by_day
+      if (raw && raw.length > 0) return raw.map((d) => ({ v: d.views }))
+      const count = emptyTrend(period)
+      return Array.from({ length: count }, () => ({ v: 0 }))
+    },
+    [summary, period],
   )
 
   const viewsChange = useMemo(() => {
@@ -225,11 +240,17 @@ export default function AnalyticsPage() {
   }, [articleMetrics])
 
   const seoTrend = useMemo(
-    () => articleMetrics
-      .filter((a) => a.seo_score !== null)
-      .sort((a, b) => (a.published_at ?? '').localeCompare(b.published_at ?? ''))
-      .map((a) => ({ v: a.seo_score ?? 0 })),
-    [articleMetrics],
+    () => {
+      const withScore = articleMetrics.filter((a) => a.seo_score !== null)
+      if (withScore.length === 0) {
+        const count = emptyTrend(period)
+        return Array.from({ length: count }, () => ({ v: 0 }))
+      }
+      return withScore
+        .sort((a, b) => (a.published_at ?? '').localeCompare(b.published_at ?? ''))
+        .map((a) => ({ v: a.seo_score ?? 0 }))
+    },
+    [articleMetrics, period],
   )
 
   const seoChangePts = useMemo(() => {
