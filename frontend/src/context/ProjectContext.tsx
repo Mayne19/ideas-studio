@@ -6,7 +6,7 @@ import { getProject } from '@/api/projects'
 import { getMyMembership } from '@/api/members'
 import type { Project } from '@/types'
 
-export type ProjectRole = 'owner' | 'admin' | 'editor' | 'writer' | 'viewer'
+export type ProjectRole = 'owner' | 'admin' | 'editor' | 'designer' | 'viewer'
 
 type ProjectContextValue = {
   project: Project | null

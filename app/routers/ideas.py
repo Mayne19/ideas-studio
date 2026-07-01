@@ -97,7 +97,7 @@ def generate_idea_route(
     body: IdeaGenerateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _member=Depends(require_project_role("owner", "admin", "editor", "writer")),
+    _member=Depends(require_project_role("owner", "admin", "editor")),
 ):
     project = _get_project_or_404(project_id, db)
     try:
@@ -138,7 +138,7 @@ def start_writing_route(
     current_user: User = Depends(get_current_user),
 ):
     article = _get_article_or_404(article_id, db)
-    _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor", "writer"))
+    _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor"))
     if article.status not in _WRITABLE_STATUSES:
         raise HTTPException(status_code=400, detail=f"Cannot start writing from status '{article.status}'")
     try:
@@ -239,7 +239,7 @@ def manual_draft_route(
     current_user: User = Depends(get_current_user),
 ):
     article = _get_article_or_404(article_id, db)
-    _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor", "writer"))
+    _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor"))
     if article.status not in _IDEA_STATUSES:
         raise HTTPException(status_code=400, detail="Only ideas can be converted to a manual draft")
 
@@ -272,7 +272,7 @@ def rerun_writing_route(
     current_user: User = Depends(get_current_user),
 ):
     article = _get_article_or_404(article_id, db)
-    _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor", "writer"))
+    _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor"))
     if article.status not in _RERUN_STATUSES:
         raise HTTPException(status_code=400, detail=f"Cannot rerun from status '{article.status}'")
     try:
@@ -398,7 +398,7 @@ def get_production_queue_route(
     project_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _member=Depends(require_project_role("owner", "admin", "editor", "writer")),
+    _member=Depends(require_project_role("owner", "admin", "editor")),
 ):
     return get_queue_summary(db, project_id)
 

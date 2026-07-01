@@ -7,10 +7,9 @@ import {
   Edit2,
   Eye,
   FilePenLine,
+  Image,
   Link,
   Mail,
-
-  PenLine,
   Shield,
   Trash2,
   UserPlus,
@@ -37,7 +36,7 @@ import { formatDate } from '@/utils/format'
 const ASSIGNABLE_ROLES = [
   { value: 'admin', label: 'Administrateur' },
   { value: 'editor', label: 'Éditeur' },
-  { value: 'writer', label: 'Rédacteur' },
+  { value: 'designer', label: 'Designer' },
   { value: 'viewer', label: 'Lecteur' },
 ]
 
@@ -93,25 +92,27 @@ const ROLE_GUIDE: Array<{
       dot: 'bg-success',
     },
     permissions: [
-      'Corrige les contenus',
+      'Crée des brouillons',
+      'Écrit et corrige les contenus',
       'Modifie tous les articles',
       'Valide et marque prêt',
+      'Envoie en relecture',
     ],
   },
   {
-    role: 'writer',
-    title: 'Writer',
-    icon: PenLine,
+    role: 'designer',
+    title: 'Designer',
+    icon: Image,
     theme: {
-      card: 'border-warning/20 bg-warning/5',
-      icon: 'bg-warning/10 text-warning',
-      dot: 'bg-warning',
+      card: 'border-danger/20 bg-danger/5',
+      icon: 'bg-danger/10 text-danger',
+      dot: 'bg-danger',
     },
     permissions: [
-      'Crée des brouillons',
-      'Écrit du contenu',
-      'Modifie ses brouillons',
-      'Envoie en relecture',
+      'Gère la médiathèque',
+      'Importe et supprime des images',
+      'Ajoute des images aux articles',
+      'Sauvegarde les brouillons',
     ],
   },
   {
@@ -201,13 +202,13 @@ export default function ProjectMembersPage() {
   const [addType, setAddType] = useState<'username' | 'email'>('username')
   const [addUsername, setAddUsername] = useState('')
   const [addEmail, setAddEmail] = useState('')
-  const [addRole, setAddRole] = useState('writer')
+  const [addRole, setAddRole] = useState('designer')
   const [addError, setAddError] = useState('')
   const [adding, setAdding] = useState(false)
 
   // Edit role modal
   const [editMember, setEditMember] = useState<ProjectMember | null>(null)
-  const [editRole, setEditRole] = useState('writer')
+  const [editRole, setEditRole] = useState('designer')
   const [editError, setEditError] = useState('')
   const [editing, setEditing] = useState(false)
 
@@ -265,7 +266,7 @@ export default function ProjectMembersPage() {
       setAddOpen(false)
       setAddUsername('')
       setAddEmail('')
-      setAddRole('writer')
+      setAddRole('designer')
       loadMembers()
       loadInvitations()
     } catch (err) {
@@ -608,7 +609,7 @@ export default function ProjectMembersPage() {
             options={ASSIGNABLE_ROLES}
             value={addRole}
             onChange={(e) => setAddRole(e.target.value)}
-            hint="Le rôle Designer n'est pas encore assignable."
+            hint="Le rôle Designer gère les images et la médiathèque."
           />
 
           <div className="flex gap-2 pt-1">
@@ -660,7 +661,7 @@ export default function ProjectMembersPage() {
             options={ASSIGNABLE_ROLES}
             value={editRole}
             onChange={(e) => setEditRole(e.target.value)}
-            hint="Designer n'est pas proposé ici pour éviter d'envoyer un rôle non supporté par l'API."
+            hint="Le rôle Designer gère les images et la médiathèque."
           />
           <div className="flex gap-2 pt-1">
             <Button

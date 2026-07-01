@@ -20,4 +20,4 @@ class ProjectMember(Base):
 
 
 # Valid roles for reference
-PROJECT_ROLES = ("owner", "admin", "editor", "writer", "viewer")
+PROJECT_ROLES = ("owner", "admin", "editor", "designer", "viewer")

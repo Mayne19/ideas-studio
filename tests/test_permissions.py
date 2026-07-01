@@ -67,17 +67,17 @@ def test_providers_blocked_for_project_writer(client: TestClient):
     owner_headers = register_and_login(client, email="owner4@test.com")
     project = _create_project(client, owner_headers)
 
-    writer_headers = register_and_login(client, email="writer@test.com")
-    writer_id = _get_user_id(client, writer_headers)
+    designer_headers = register_and_login(client, email="designer@test.com")
+    designer_id = _get_user_id(client, designer_headers)
 
     resp = client.post(
         f"/projects/{project['id']}/members",
-        json={"user_id": writer_id, "role": "writer"},
+        json={"user_id": designer_id, "role": "designer"},
         headers=owner_headers,
     )
-    assert resp.status_code == 201, f"Failed to add writer: {resp.text}"
+    assert resp.status_code == 201, f"Failed to add designer: {resp.text}"
 
-    resp = client.get(f"/settings/ai-providers?project_id={project['id']}", headers=writer_headers)
+    resp = client.get(f"/settings/ai-providers?project_id={project['id']}", headers=designer_headers)
     assert resp.status_code == 403
 
 

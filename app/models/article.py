@@ -29,8 +29,8 @@ ARTICLE_STATUSES = frozenset({
     "improvement_ready",
 })
 
-# Statuses a writer role is allowed to edit
-WRITER_EDITABLE_STATUSES = frozenset({
+# Statuses a designer role is allowed to edit
+DESIGNER_EDITABLE_STATUSES = frozenset({
     "draft", "draft_ready", "review_needed", "correction_needed", "ready_to_publish"
 })
 

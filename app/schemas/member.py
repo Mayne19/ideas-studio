@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, field_validator
 
-ASSIGNABLE_ROLES = frozenset({"admin", "editor", "writer", "viewer"})
+ASSIGNABLE_ROLES = frozenset({"admin", "editor", "designer", "viewer"})
 
 
 class MemberAdd(BaseModel):

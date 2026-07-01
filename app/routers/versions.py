@@ -15,9 +15,6 @@ from app.services.version_service import create_version
 router = APIRouter(tags=["versions"])
 
 _MANAGE_ROLES = frozenset({"owner", "admin", "editor"})
-_WRITER_RESTORE_STATUSES = frozenset({
-    "draft", "draft_ready", "review_needed", "correction_needed", "ready_to_publish"
-})
 
 
 def _get_article_or_404(db: Session, article_id: str) -> Article:
@@ -77,8 +74,8 @@ def restore_version(
 
     if member.role == "viewer":
         raise HTTPException(status_code=403, detail="Viewers cannot restore versions")
-    if member.role == "writer" and article.status not in _WRITER_RESTORE_STATUSES:
-        raise HTTPException(status_code=403, detail="Writers cannot restore published articles")
+    if member.role == "designer":
+        raise HTTPException(status_code=403, detail="Designers cannot restore versions")
 
     version = (
         db.query(ArticleVersion)

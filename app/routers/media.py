@@ -29,8 +29,8 @@ def _set_public_url(item: MediaAsset, base: str):
     else:
         item.public_url = url
 
-_WRITE_ROLES = frozenset({"owner", "admin", "editor", "writer"})
-_MANAGE_ROLES = frozenset({"owner", "admin", "editor"})
+_WRITE_ROLES = frozenset({"owner", "admin", "editor", "designer"})
+_MANAGE_ROLES = frozenset({"owner", "admin", "editor", "designer"})
 
 
 @router.get("/projects/{project_id}/media", response_model=list[MediaPublic])
@@ -56,7 +56,7 @@ async def upload_media(
     project_id: str,
     file: UploadFile = File(...),
     article_id: Optional[str] = Form(None),
-    _actor: ProjectMember = Depends(require_project_role("owner", "admin", "editor", "writer")),
+    _actor: ProjectMember = Depends(require_project_role("owner", "admin", "editor", "designer")),
     request: Request = None,
     db: Session = Depends(get_db),
 ):
@@ -102,7 +102,7 @@ async def upload_media(
 def upload_media_json(
     project_id: str,
     data: MediaCreate,
-    _actor: ProjectMember = Depends(require_project_role("owner", "admin", "editor", "writer")),
+    _actor: ProjectMember = Depends(require_project_role("owner", "admin", "editor", "designer")),
     request: Request = None,
     db: Session = Depends(get_db),
 ):
@@ -187,12 +187,6 @@ def delete_media(
         raise HTTPException(status_code=403, detail="Access denied")
     if member.role == "viewer":
         raise HTTPException(status_code=403, detail="Viewers cannot delete media")
-
-    if member.role == "writer":
-        if media.article_id:
-            article = db.query(Article).filter(Article.id == media.article_id).first()
-            if article and article.status == "published":
-                raise HTTPException(status_code=403, detail="Writers cannot delete media from published articles")
 
     filepath = os.path.join(settings.UPLOAD_DIR, media.project_id, os.path.basename(media.url))
     if os.path.exists(filepath):

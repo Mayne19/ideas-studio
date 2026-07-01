@@ -3,19 +3,19 @@ import type { ProjectRole } from '@/types'
 type RoleBadgeVariant = 'gray' | 'blue' | 'orange' | 'green' | 'purple' | 'pink'
 
 const ROLE_LABELS: Record<ProjectRole, string> = {
-  owner:  'Propriétaire',
-  admin:  'Administrateur',
-  editor: 'Éditeur',
-  writer: 'Rédacteur',
-  viewer: 'Lecteur',
+  owner:   'Propriétaire',
+  admin:   'Administrateur',
+  editor:  'Éditeur',
+  designer: 'Designer',
+  viewer:  'Lecteur',
 }
 
 const ROLE_COLORS: Record<ProjectRole, RoleBadgeVariant> = {
-  owner:  'purple',
-  admin:  'blue',
-  editor: 'green',
-  writer: 'orange',
-  viewer: 'gray',
+  owner:   'purple',
+  admin:   'blue',
+  editor:  'green',
+  designer: 'pink',
+  viewer:  'gray',
 }
 
 const variantClasses: Record<RoleBadgeVariant, string> = {

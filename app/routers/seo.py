@@ -64,7 +64,7 @@ def run_analysis(
     current_user: User = Depends(get_current_user),
 ):
     article = _get_article_or_404(db, article_id)
-    _check_role(db, current_user.id, article.project_id, {"owner", "admin", "editor", "writer"})
+    _check_role(db, current_user.id, article.project_id, {"owner", "admin", "editor"})
 
     analysis = analyze_article(db, article_id)
     db.commit()
@@ -79,7 +79,7 @@ def get_latest_analysis(
     current_user: User = Depends(get_current_user),
 ):
     article = _get_article_or_404(db, article_id)
-    _check_role(db, current_user.id, article.project_id, {"owner", "admin", "editor", "writer", "viewer"})
+    _check_role(db, current_user.id, article.project_id, {"owner", "admin", "editor", "viewer"})
 
     analysis = (
         db.query(SeoAnalysis)
@@ -99,7 +99,7 @@ def list_analyses(
     current_user: User = Depends(get_current_user),
 ):
     article = _get_article_or_404(db, article_id)
-    _check_role(db, current_user.id, article.project_id, {"owner", "admin", "editor", "writer", "viewer"})
+    _check_role(db, current_user.id, article.project_id, {"owner", "admin", "editor", "viewer"})
 
     analyses = (
         db.query(SeoAnalysis)
@@ -122,7 +122,7 @@ def editor_update(
     from app.services.version_service import create_version, should_create_manual_version
 
     article = _get_article_or_404(db, article_id)
-    _check_role(db, current_user.id, article.project_id, {"owner", "admin", "editor", "writer"})
+    _check_role(db, current_user.id, article.project_id, {"owner", "admin", "editor"})
 
     data = payload.model_dump(exclude_unset=True)
 
@@ -148,7 +148,7 @@ def ready_check(
     current_user: User = Depends(get_current_user),
 ):
     article = _get_article_or_404(db, article_id)
-    _check_role(db, current_user.id, article.project_id, {"owner", "admin", "editor", "writer", "viewer"})
+    _check_role(db, current_user.id, article.project_id, {"owner", "admin", "editor", "viewer"})
 
     analysis = analyze_article(db, article_id)
     db.commit()

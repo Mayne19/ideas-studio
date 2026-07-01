@@ -68,7 +68,7 @@ def test_add_member_duplicate_blocked(client: TestClient):
     )
     resp = client.post(
         f"/projects/{project['id']}/members",
-        json={"user_id": new_user["id"], "role": "writer"},
+        json={"user_id": new_user["id"], "role": "designer"},
         headers=headers,
     )
     assert resp.status_code == 409
@@ -101,11 +101,11 @@ def test_patch_member_role(client: TestClient):
     )
     resp = client.patch(
         f"/projects/{project['id']}/members/{new_user['id']}",
-        json={"role": "writer"},
+        json={"role": "designer"},
         headers=headers,
     )
     assert resp.status_code == 200
-    assert resp.json()["role"] == "writer"
+    assert resp.json()["role"] == "designer"
 
 
 # ── 6. DELETE member ──────────────────────────────────────────────────────────

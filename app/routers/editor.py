@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.utils import calculate_word_count
 from app.dependencies.auth import get_current_user, get_member_for_project
-from app.models.article import Article, WRITER_EDITABLE_STATUSES
+from app.models.article import Article
 from app.models.seo_analysis import SeoAnalysis
 from app.models.user import User
 from app.schemas.editor import AutosaveRequest, AutosaveResponse, EditorData, AnalysisBrief, PreviewResponse
@@ -15,7 +15,7 @@ from app.services.version_service import create_version, is_duplicate_autosave
 
 router = APIRouter(tags=["editor"])
 
-_ALL_WRITE_ROLES = frozenset({"owner", "admin", "editor", "writer"})
+_ALL_WRITE_ROLES = frozenset({"owner", "admin", "editor", "designer"})
 _EMPTY_CONTENT_MESSAGE = "Protection : contenu vide non sauvegardé pour éviter d'écraser un article existant."
 
 
@@ -167,8 +167,6 @@ def autosave_article(
 
     if member.role == "viewer":
         raise HTTPException(status_code=403, detail="Viewers cannot autosave")
-    if member.role == "writer" and article.status not in WRITER_EDITABLE_STATUSES:
-        raise HTTPException(status_code=403, detail="Writers can only edit draft articles")
 
     data = payload.model_dump(exclude_unset=True)
 

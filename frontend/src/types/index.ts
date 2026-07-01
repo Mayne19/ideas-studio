@@ -52,7 +52,7 @@ export type Project = {
   updated_at: string
 }
 
-export type ProjectRole = 'owner' | 'admin' | 'editor' | 'writer' | 'viewer'
+export type ProjectRole = 'owner' | 'admin' | 'editor' | 'designer' | 'viewer'
 
 export type ActivityLog = {
   id: string

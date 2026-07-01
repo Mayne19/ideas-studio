@@ -94,7 +94,7 @@ def generate_article_route(
     body: GenerateArticleRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _member=Depends(require_project_role("owner", "admin", "editor", "writer")),
+    _member=Depends(require_project_role("owner", "admin", "editor")),
 ):
     project = _get_project_or_404(project_id, db)
 

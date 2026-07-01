@@ -7,7 +7,7 @@ from app.core.database import get_db
 from app.dependencies.auth import get_current_user, get_project_member, require_project_role, get_member_for_project
 from app.models.user import User
 from app.models.project_member import ProjectMember
-from app.models.article import Article, WRITER_EDITABLE_STATUSES
+from app.models.article import Article
 from app.models.project import Project
 from app.schemas.article import ArticleCreate, ArticleUpdate, ArticlePublic, ArticleScheduleRequest, PromoteResponse, BulkValidateRequest, BulkValidateResponse, BulkValidateByScoreRequest, BulkValidateByScoreResponse
 
@@ -33,7 +33,7 @@ from app.services.publication_revalidation_service import trigger_project_revali
 router = APIRouter(tags=["articles"])
 
 _MANAGE_ROLES = ("owner", "admin", "editor")
-_ALL_WRITE_ROLES = ("owner", "admin", "editor", "writer")
+_ALL_WRITE_ROLES = ("owner", "admin", "editor", "designer")
 
 
 @router.get("/projects/{project_id}/articles", response_model=list[ArticlePublic])
@@ -98,8 +98,8 @@ def patch_article_route(
         raise HTTPException(status_code=403, detail="Access denied")
     if member.role == "viewer":
         raise HTTPException(status_code=403, detail="Viewers cannot edit articles")
-    if member.role == "writer" and article.status not in WRITER_EDITABLE_STATUSES:
-        raise HTTPException(status_code=403, detail="Writers can only edit draft articles")
+    if member.role == "viewer":
+        raise HTTPException(status_code=403, detail="Viewers cannot edit articles")
     return update_article(db, article, data)
 
 
@@ -288,8 +288,8 @@ def mark_ready_route(
         raise HTTPException(status_code=403, detail="Access denied")
     if member.role == "viewer":
         raise HTTPException(status_code=403, detail="Viewers cannot change article status")
-    if member.role == "writer" and article.status == "published":
-        raise HTTPException(status_code=403, detail="Writers cannot change published articles")
+    if member.role == "designer":
+        raise HTTPException(status_code=403, detail="Designers cannot change article status")
 
     # Compute and store global score
     from app.services.scoring_service import compute_global_score
