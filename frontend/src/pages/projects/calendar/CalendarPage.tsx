@@ -66,7 +66,7 @@ function getPublicationDateKey(article: Article): string | null {
 }
 
 function heatmapTone(count: number): string {
-  if (count <= 0) return 'bg-surface-soft'
+  if (count <= 0) return 'bg-[rgba(0,0,0,0.045)]'
   if (count === 1) return 'bg-success/20'
   if (count === 2) return 'bg-success/35'
   if (count <= 4) return 'bg-success/85'
