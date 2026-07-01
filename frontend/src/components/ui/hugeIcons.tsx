@@ -82,8 +82,6 @@ import {
   Palette as HugePalette,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
-  PencilEdit01Icon,
-  PencilEdit02Icon,
   Pilcrow as HugePilcrow,
   PlayIcon,
   PowerIcon,
@@ -181,8 +179,8 @@ export const Cpu = createHugeIcon(CpuIcon)
 export const Crown = createHugeIcon(CrownIcon)
 export const DollarSign = createHugeIcon(DollarIcon)
 export const Download = createHugeIcon(Download01Icon)
-export const Edit2 = createHugeIcon(PencilEdit01Icon)
-export const Edit3 = createHugeIcon(PencilEdit02Icon)
+export const Edit2 = createHugeIcon(FileEditIcon)
+export const Edit3 = createHugeIcon(FileEditIcon)
 export const Euro = createHugeIcon(EuroIcon)
 export const ExternalLink = createHugeIcon(ExternalLinkIcon)
 export const Eye = createHugeIcon(EyeIcon)
@@ -224,9 +222,9 @@ export const MousePointer2 = createHugeIcon(CursorPointer01Icon)
 export const Palette = createHugeIcon(HugePalette)
 export const PanelLeftClose = createHugeIcon(PanelLeftCloseIcon)
 export const PanelLeftOpen = createHugeIcon(PanelLeftOpenIcon)
-export const PenLine = createHugeIcon(PencilEdit01Icon)
-export const Pencil = createHugeIcon(PencilEdit02Icon)
-export const PencilLine = createHugeIcon(PencilEdit02Icon)
+export const PenLine = createHugeIcon(FileEditIcon)
+export const Pencil = createHugeIcon(FileEditIcon)
+export const PencilLine = createHugeIcon(FileEditIcon)
 export const Pilcrow = createHugeIcon(HugePilcrow)
 export const Play = createHugeIcon(PlayIcon)
 export const Plus = createHugeIcon(Add01Icon)
