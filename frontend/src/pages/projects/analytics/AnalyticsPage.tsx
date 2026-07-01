@@ -667,15 +667,16 @@ export default function AnalyticsPage() {
                   accessibilityLayer
                   data={sourceChannels}
                   layout="vertical"
-                  margin={{ left: -20 }}
+                    margin={{ left: 0 }}
                 >
                   <XAxis type="number" dataKey="views" hide />
                   <YAxis
                     dataKey="label"
                     type="category"
                     tickLine={false}
-                    tickMargin={10}
+                    tickMargin={8}
                     axisLine={false}
+                    width={80}
                     tick={{ fontSize: 12, fill: '#5E5E5E', fontWeight: 500 }}
                   />
                   <ChartTooltip
