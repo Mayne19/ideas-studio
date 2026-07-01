@@ -174,18 +174,26 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                 <SidebarLink to={`/projects/${projectId}/recommendations`} icon={<HugeIcon icon={MagicWand01Icon} size={15} />} label="Optimisations" collapsed={collapsed} />
               </SidebarSection>
 
-              {!collapsed && (
-                <SidebarSection title="Projet" collapsed={collapsed}>
+              <SidebarSection title="Projet" collapsed={collapsed}>
+                {collapsed ? (
+                  <SidebarLink
+                    to={`/projects/${projectId}/settings`}
+                    icon={<HugeIcon icon={Setting06Icon} size={15} />}
+                    label="Paramètres"
+                    collapsed={collapsed}
+                  />
+                ) : (
+                  <>
                   <div
                     className={cn(
-                      'flex items-center rounded-[6px] transition-colors duration-150',
+                      'flex h-8 items-center rounded-[6px] transition-colors duration-150',
                       inSettings ? 'bg-surface-muted text-primary' : 'text-secondary hover:bg-surface-soft hover:text-primary',
                     )}
                   >
                     <NavLink
                       to={`/projects/${projectId}/settings`}
                       onClick={() => setSettingsOpen(true)}
-                      className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-1.5 text-[11px] font-medium"
+                      className="flex h-full min-w-0 flex-1 items-center gap-2 px-2.5 text-[14px] font-medium"
                     >
                       <HugeIcon icon={Setting06Icon} size={15} className="shrink-0" />
                       <span className="truncate">Paramètres</span>
@@ -217,8 +225,9 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                       ))}
                     </div>
                   )}
-                </SidebarSection>
-              )}
+                  </>
+                )}
+              </SidebarSection>
             </>
           ) : (
             <SidebarSection collapsed={collapsed}>
@@ -290,34 +299,18 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
             </div>
           )}
 
-          {/* Settings + Logout — deux lignes cohérentes */}
+          {/* Logout */}
           <div className="flex flex-col gap-0.5">
-            {projectId && (
-              <NavLink
-                to={`/projects/${projectId}/settings`}
-                title={collapsed ? 'Paramètres' : undefined}
-                className={({ isActive }) =>
-                  cn(
-                    'flex h-7 w-full items-center gap-2 rounded-[6px] px-2 text-[11px] font-medium transition-colors',
-                    collapsed && 'justify-center',
-                    isActive ? 'bg-surface-muted text-primary' : 'text-secondary hover:bg-surface-soft hover:text-primary',
-                  )
-                }
-              >
-                <HugeIcon icon={Setting06Icon} size={13} className="shrink-0" />
-                {!collapsed && <span>Paramètres</span>}
-              </NavLink>
-            )}
             <button
               type="button"
               onClick={() => setLogoutConfirmOpen(true)}
               title={collapsed ? 'Se déconnecter' : undefined}
               className={cn(
-                'flex h-7 w-full items-center gap-2 rounded-[6px] px-2 text-[11px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary',
+                'flex h-8 w-full items-center gap-2 rounded-[6px] px-2.5 text-[14px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary',
                 collapsed && 'justify-center',
               )}
             >
-              <HugeIcon icon={Logout01Icon} size={13} className="shrink-0" />
+              <HugeIcon icon={Logout01Icon} size={15} className="shrink-0" />
               {!collapsed && <span>Déconnexion</span>}
             </button>
           </div>
