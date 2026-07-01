@@ -129,7 +129,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
         className={`flex h-full ${sidebarWidth} shrink-0 flex-col border-r-2 border-border bg-transparent transition-all duration-200 overflow-hidden`}
       >
         {/* Brand + collapse toggle */}
-        <div className="flex h-14 items-center border-b border-border px-3 justify-between shrink-0">
+        <div className="flex h-16 shrink-0 items-center justify-between border-b-2 border-border px-3">
           {!collapsed && (
             <Link to="/projects" className="flex min-w-0 items-center gap-2 text-[15px] font-semibold text-primary hover:opacity-80 transition-opacity">
               <img src="/icon.svg" alt="" className="h-6 w-6 shrink-0 rounded-[6px]" />
