@@ -67,7 +67,7 @@ export default function LoginPage() {
           Ideas Studio
         </Link>
 
-        <div className="rounded-[10px] border border-border bg-surface shadow-none">
+        <div className="rounded-[10px] border-2 border-border bg-surface shadow-none">
           <div className="border-b border-border px-6 py-5 text-center">
             <h1 className="text-[20px] font-semibold leading-tight text-primary">Bon retour</h1>
             <p className="mt-1.5 text-[14px] leading-snug text-secondary">
