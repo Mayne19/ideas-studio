@@ -145,8 +145,7 @@ function ScoreSynthesisCard({
   const globalScore = resolveScore(article, brief, expertReview, 'Synthèse')
 
   return (
-    <div className="rounded-[14px] border border-border bg-bg p-4">
-
+    <>
       {/* Global — full width, gauge left + label right */}
       <div className="mb-3">
         <button
@@ -191,7 +190,7 @@ function ScoreSynthesisCard({
           </div>
         ))}
       </div>
-    </div>
+    </>
   )
 }
 
@@ -366,8 +365,8 @@ function ScoreDetailPanel({
   }
 
   return (
-    <div className="rounded-[14px] border border-border bg-surface p-4">
-      <div className="flex items-start gap-4 mb-4">
+    <div className="flex flex-col gap-3">
+      <div className="flex items-start gap-4">
         <Gauge showValue size="medium" value={score ?? 0} color={gaugeColor(score ?? 0)} />
         <div className="flex-1 min-w-0 pt-1">
           <p className="text-[15px] font-semibold text-primary">{SCORE_LABEL[selected]}</p>
