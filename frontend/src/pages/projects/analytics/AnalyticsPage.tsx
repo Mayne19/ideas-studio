@@ -473,7 +473,7 @@ export default function AnalyticsPage() {
             title="Pages uniques"
             value={formatMetric(summary.unique_pages)}
             change="—"
-            progress={Math.round(summary.unique_pages / Math.max(1, summary.total_views) * 100)}
+            description={`${Math.round(summary.unique_pages / Math.max(1, summary.total_views) * 100)} % des vues`}
           />
           <SimpleMetricCard
             title="Articles suivis"
@@ -484,7 +484,7 @@ export default function AnalyticsPage() {
             title="Articles à optimiser"
             value={String(optimizeCount)}
             change="—"
-            progress={Math.round(optimizeCount / Math.max(1, articleMetrics.length) * 100)}
+            description={articleMetrics.length > 0 ? `${Math.round(optimizeCount / articleMetrics.length * 100)} % des articles` : undefined}
           />
         </div>
 

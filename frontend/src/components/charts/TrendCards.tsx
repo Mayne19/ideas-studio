@@ -58,13 +58,13 @@ export function SimpleMetricCard({
   value,
   change,
   changeColor,
-  progress,
+  description,
 }: {
   title: string
   value: string | number
   change: string
   changeColor?: string
-  progress?: number
+  description?: string
 }) {
   return (
     <article className="flex h-[148px] flex-col rounded-[10px] border-2 border-border bg-transparent px-5 py-4 shadow-none">
@@ -75,17 +75,9 @@ export function SimpleMetricCard({
         <div className="text-[22px] font-semibold leading-none text-primary">{value}</div>
         <span className="text-[12px] font-semibold leading-none tabular-nums" style={{ color: changeColor ?? NEUTRAL_CHART_COLORS.tertiary }}>{change}</span>
       </div>
-      <div className="mt-auto flex flex-col gap-1">
-        {progress !== undefined && (
-          <div className="h-[4px] overflow-hidden rounded-full bg-surface-muted">
-            <div
-              className="h-full rounded-full transition-all"
-              style={{ width: `${Math.min(Math.max(progress, 0), 100)}%`, backgroundColor: NEUTRAL_CHART_COLORS.primary }}
-            />
-          </div>
-        )}
-        <div className="min-h-[2px]" />
-      </div>
+      {description && (
+        <p className="mt-auto text-[11px] font-medium leading-none text-tertiary">{description}</p>
+      )}
     </article>
   )
 }
