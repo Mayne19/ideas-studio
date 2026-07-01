@@ -60,10 +60,11 @@ function ArticleRow({
   const isPublished = PUBLISHED_STATUSES.has(article.status)
   const isEditable = EDITABLE_STATUSES.has(article.status)
   const originalityScore = getOriginalityScore(article)
+  const rowCellClass = 'border-y-2 border-border bg-transparent py-4 transition-colors first:rounded-l-[12px] first:border-l-2 last:rounded-r-[12px] last:border-r-2 group-hover:bg-surface-soft'
 
   return (
-    <TableRow>
-      <TableCell className="min-w-0 max-w-[280px]">
+    <TableRow className="group hover:bg-transparent">
+      <TableCell className={`min-w-0 max-w-[280px] ${rowCellClass}`}>
         <button
           type="button"
           className="block w-full truncate text-left text-[14px] font-medium leading-snug text-primary transition-colors hover:text-accent"
@@ -87,22 +88,22 @@ function ArticleRow({
           <span>{article.word_count > 0 ? `${article.word_count} mots` : '— mots'}</span>
         </div>
       </TableCell>
-      <TableCell className="w-[48px] text-center">
+      <TableCell className={`w-[48px] text-center ${rowCellClass}`}>
         <ScoreBadge label="G" value={finiteScore(article.global_score)} compact showLabel={false} />
       </TableCell>
-      <TableCell className="w-[48px] text-center">
+      <TableCell className={`w-[48px] text-center ${rowCellClass}`}>
         <ScoreBadge label="Q" value={finiteScore(article.quality_score)} compact showLabel={false} />
       </TableCell>
-      <TableCell className="w-[48px] text-center">
+      <TableCell className={`w-[48px] text-center ${rowCellClass}`}>
         <ScoreBadge label="L" value={finiteScore(article.readability_score)} compact showLabel={false} />
       </TableCell>
-      <TableCell className="w-[48px] text-center">
+      <TableCell className={`w-[48px] text-center ${rowCellClass}`}>
         <ScoreBadge label="O" value={originalityScore} compact showLabel={false} />
       </TableCell>
-      <TableCell className="w-[90px]">
+      <TableCell className={`w-[90px] ${rowCellClass}`}>
         <StatusBadge status={article.status} />
       </TableCell>
-      <TableCell className="w-[130px]">
+      <TableCell className={`w-[130px] ${rowCellClass}`}>
         <div className="flex items-center gap-2 justify-end">
           <Button
             size="sm"
@@ -499,9 +500,9 @@ export default function ArticlesPage() {
         )}
         {status === 'success' && visibleArticles.length > 0 && (
           <>
-            <TableRoot>
-              <Table>
-                <TableHeader>
+            <TableRoot className="overflow-visible rounded-none border-0">
+              <Table className="border-separate border-spacing-y-2">
+                <TableHeader className="border-0">
                   <TableRow className="hover:bg-transparent">
                   <TableHead className="max-w-[280px]">Titre</TableHead>
                   <TableHead className="w-[48px] text-center text-[11px] font-medium">Glob.</TableHead>
@@ -512,7 +513,7 @@ export default function ArticlesPage() {
                   <TableHead className="w-[130px] text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody bordered>
+                <TableBody>
                   {visibleArticles.map((article) => (
                     <ArticleRow
                       key={article.id}
