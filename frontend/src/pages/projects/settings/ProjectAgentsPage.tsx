@@ -214,9 +214,6 @@ export default function ProjectAgentsPage() {
                     ) : (
                       <span className="rounded-full bg-warning/12 px-2 py-0.5 text-[12px] font-medium text-warning">Heuristique</span>
                     )}
-                    <p className="mt-1 truncate text-[12px] text-tertiary">
-                      {ass ? (ass.enabled ? 'Assigné et actif' : 'Assigné, désactivé') : 'Provider par défaut'}
-                    </p>
                   </div>
                   {ass && (
                     <ToggleSwitch checked={ass.enabled} onChange={() => handleToggle(agent.agent_id, ass.enabled)} disabled={isSaving} />
