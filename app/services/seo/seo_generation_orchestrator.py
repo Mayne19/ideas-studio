@@ -124,6 +124,7 @@ class SEOGenerationOrchestrator:
         context_hint: str | None = None,
         include_faq: bool | None = None,
         include_callouts: bool | None = None,
+        existing_article_id: str | None = None,
     ) -> Article:
         self._check_tools()
 
@@ -271,24 +272,38 @@ class SEOGenerationOrchestrator:
         self.context["external_links"] = external_links
         self._step("ExternalLinkPlan")
 
-        # Create article
-        article = Article(
-            id=str(uuid.uuid4()),
-            project_id=self.project_id,
-            category_id=chosen_category,
-            title=final_title,
-            slug=f"idea-{uuid.uuid4().hex[:8]}",
-            keyword=final_keyword,
-            audience=audience or project_context.get("target_audience"),
-            angle=angle or editorial_angle.get("main_angle"),
-            search_intent=search_intent or intent_analysis.get("explicit_intent"),
-            status="writing_in_progress",
-            priority=0,
-            word_count=0,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
-            opportunity_score=idea_discovery.get("opportunity_score", 0.5),
-        )
+        # Create or reuse article
+        if existing_article_id:
+            article = self.db.query(Article).filter(Article.id == existing_article_id).first()
+            if article is None:
+                raise GenerationFailedError(f"Article {existing_article_id} non trouvé")
+            if preferred_title and not article.title:
+                article.title = preferred_title
+            if final_keyword and not article.keyword:
+                article.keyword = final_keyword
+            article.status = "writing_in_progress"
+            article.updated_at = datetime.now(timezone.utc)
+            self.db.flush()
+        else:
+            article = Article(
+                id=str(uuid.uuid4()),
+                project_id=self.project_id,
+                category_id=chosen_category,
+                title=final_title,
+                slug=f"idea-{uuid.uuid4().hex[:8]}",
+                keyword=final_keyword,
+                audience=audience or project_context.get("target_audience"),
+                angle=angle or editorial_angle.get("main_angle"),
+                search_intent=search_intent or intent_analysis.get("explicit_intent"),
+                status="writing_in_progress",
+                priority=0,
+                word_count=0,
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+                opportunity_score=idea_discovery.get("opportunity_score", 0.5),
+            )
+            self.db.add(article)
+            self.db.flush()
 
         # Store all context
         article.project_context_json = project_context
@@ -316,9 +331,6 @@ class SEOGenerationOrchestrator:
                 f"content_format inféré : {article.content_format} (target_word_count={target_wc})",
                 step="content_format_init",
             )
-
-        self.db.add(article)
-        self.db.flush()
 
         self._log(f"Draft article created: {article.id}", level="info", step="create_article", article_id=article.id)
         self._step("DraftWriting")
@@ -712,6 +724,92 @@ class SEOGenerationOrchestrator:
         except Exception as exc:
             self._error("AutoScoring", str(exc))
 
+        # Cycle d'auto-amélioration si score insuffisant
+        try:
+            if article.global_score is not None and article.global_score < 80:
+                self._auto_improve_score(article, max_iterations=2)
+        except Exception as exc:
+            self._error("AutoImprove", str(exc))
+
+    def _auto_improve_score(self, article: Article, max_iterations: int = 2):
+        """Si global_score < 80, identifie le signal le plus faible et demande au LLM de l'améliorer."""
+        from app.services.seo.seo_review_service import run_and_store_seo_review
+        from app.services.scoring_service import compute_global_score
+
+        IMPROVEMENT_INSTRUCTIONS = {
+            'EEAT': (
+                "Enrichis cet article avec des données chiffrées sourcées et des exemples concrets. "
+                "Ajoute au moins une statistique avec sa source et un exemple spécifique non mentionné."
+            ),
+            'SEO': (
+                "Optimise la densité du mot-clé cible dans les titres H2 et dans le corps du texte. "
+                "Assure-toi que le H1 et au moins un H2 contiennent le mot-clé principal."
+            ),
+            'Lisibilité': (
+                "Raccourcis les phrases de plus de 25 mots. Simplifie le vocabulaire complexe. "
+                "Vise des phrases directes, courtes et claires."
+            ),
+            'Originalité': (
+                "Remplace les formulations génériques par des angles uniques. "
+                "Supprime les introductions clichées. Ajoute une perspective distincte absente de l'article."
+            ),
+            'GEO': (
+                "Restructure les débuts de paragraphes pour qu'ils répondent directement à une question implicite. "
+                "Chaque section H2 doit s'ouvrir sur une réponse directe et autonome."
+            ),
+        }
+
+        for iteration in range(max_iterations):
+            current_score = getattr(article, 'global_score', None)
+            if current_score is None or current_score >= 80:
+                break
+
+            signals = {
+                'EEAT': getattr(article, 'eeat_score', None),
+                'SEO': getattr(article, 'seo_score', None),
+                'Lisibilité': getattr(article, 'readability_score', None),
+                'Originalité': getattr(article, 'originality_score', None),
+                'GEO': getattr(article, 'geo_score', None),
+            }
+            valid_signals = {k: v for k, v in signals.items() if v is not None}
+            if not valid_signals:
+                break
+
+            weakest_signal = min(valid_signals, key=valid_signals.get)
+            instruction = IMPROVEMENT_INSTRUCTIONS.get(weakest_signal, "Améliore la qualité globale du texte.")
+
+            improve_prompt = (
+                f"Améliore ce contenu HTML en appliquant UNE SEULE modification ciblée.\n\n"
+                f"Instruction : {instruction}\n\n"
+                "Règles impératives :\n"
+                "- Conserve exactement la structure HTML (balises H1, H2, H3, p, ul, li)\n"
+                "- Ne change pas le titre principal (H1)\n"
+                "- Ne modifie pas la longueur totale de plus de 20%\n"
+                "- Retourne uniquement le HTML amélioré, sans explication, sans backticks\n\n"
+                f"Contenu :\n{(article.content or '')[:4000]}"
+            )
+
+            try:
+                improved = self.llm.generate_text(improve_prompt)
+                if improved and len(improved) > 200:
+                    article.content = improved
+                    article.updated_at = datetime.now(timezone.utc)
+                    self.db.flush()
+
+                    try:
+                        run_and_store_seo_review(article)
+                        scoring = compute_global_score(article)
+                        article.global_score = scoring.get("global_score")
+                        article.global_score_valid = bool(scoring.get("global_score_valid", False))
+                        self.db.flush()
+                    except Exception as score_exc:
+                        self._error(f"AutoImprove_rescore_{iteration}", str(score_exc))
+
+                    self._step(f"AutoImprove_{weakest_signal}_iter{iteration + 1}")
+            except Exception as exc:
+                self._error(f"AutoImprove_{weakest_signal}_iter{iteration + 1}", str(exc))
+                break
+
     def _generate_faq(self, article: Article):
         faq_llm = self._get_agent_provider("faq_generator", self.llm)
         if faq_llm.is_mock:
@@ -926,6 +1024,7 @@ def generate_full_article(
     include_faq: bool | None = None,
     include_callouts: bool | None = None,
     agent_router: Any | None = None,
+    existing_article_id: str | None = None,
 ) -> Article:
     orchestrator = SEOGenerationOrchestrator(db, project_id, llm, search, agent_router=agent_router)
     return orchestrator.generate_full_article(
@@ -938,4 +1037,5 @@ def generate_full_article(
         context_hint=context_hint,
         include_faq=include_faq,
         include_callouts=include_callouts,
+        existing_article_id=existing_article_id,
     )

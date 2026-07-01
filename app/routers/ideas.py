@@ -138,18 +138,45 @@ def start_writing_route(
     current_user: User = Depends(get_current_user),
 ):
     article = _get_article_or_404(article_id, db)
-    _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor"))
+    _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor", "writer"))
     if article.status not in _WRITABLE_STATUSES:
-        raise HTTPException(status_code=400, detail=f"Cannot start writing from status '{article.status}'")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Impossible de lancer la rédaction depuis le statut '{article.status}'"
+        )
     try:
         llm = get_llm_provider()
-        logger.info(
-            "start_writing provider=%s model=%s is_mock=%s article=%s",
-            llm.provider_name, llm.model_name, llm.is_mock, article_id,
+        search = get_search_provider()
+    except ProviderUnavailableError as exc:
+        raise _generation_http_error(exc) from exc
+
+    logger.info(
+        "start_writing_orchestrator provider=%s model=%s article=%s",
+        llm.provider_name, llm.model_name, article_id,
+    )
+
+    try:
+        from app.services.seo.seo_generation_orchestrator import generate_full_article
+        from app.services.agents.agent_router import get_agent_router
+        from app.models.project import Project
+
+        project = db.query(Project).filter(Project.id == article.project_id).first()
+
+        article = generate_full_article(
+            db=db,
+            project_id=article.project_id,
+            llm=llm,
+            search=search,
+            agent_router=get_agent_router(db=db),
+            preferred_title=article.title,
+            keyword=article.keyword,
+            category_id=article.category_id,
+            audience=getattr(project, 'audience', None),
+            existing_article_id=article_id,
         )
-        article = start_writing_from_idea(db=db, article=article, llm=llm)
     except (ProviderUnavailableError, GenerationFailedError) as exc:
         raise _generation_http_error(exc) from exc
+
     db.commit()
     db.refresh(article)
     return _idea_response(article, llm)

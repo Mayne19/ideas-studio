@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -10,16 +9,14 @@ from app.models.project import Project
 from app.models.article import Article
 from app.models.user import User
 from app.services.idea_engine import generate_idea
-from app.services.writing_engine import start_writing_from_idea
 from app.services.seo.seo_generation_orchestrator import generate_full_article
-from app.services.seo.helpers import safe_json_dump, safe_json_load
+from app.services.seo.helpers import safe_json_load
 from app.services.providers.llm_provider import (
     GenerationFailedError,
     ProviderUnavailableError,
     get_llm_provider,
 )
 from app.services.providers.search_provider import get_search_provider
-from app.services.seo.project_context_service import build_project_context_dict
 from app.services.seo.category_strategy_service import compute_category_strategy_dict
 from app.services.seo.idea_discovery_service import discover_ideas
 
@@ -105,70 +102,30 @@ def generate_article_route(
         raise _generation_http_error(exc) from exc
 
     logger.info(
-        "generation_start provider=%s model=%s is_mock=%s project=%s orchestrator=%s",
-        llm.provider_name, llm.model_name, llm.is_mock, project_id, body.use_orchestrator,
+        "generation_start provider=%s model=%s is_mock=%s project=%s",
+        llm.provider_name, llm.model_name, llm.is_mock, project_id,
     )
 
-    if body.use_orchestrator:
-        try:
-            from app.services.agents.agent_router import get_agent_router
-            article = generate_full_article(
-                db=db,
-                project_id=project_id,
-                llm=llm,
-                search=search,
-                agent_router=get_agent_router(db=db),
-                preferred_title=body.preferred_title,
-                keyword=body.keyword,
-                category_id=body.category_id,
-                audience=body.audience or project.audience,
-                angle=body.angle,
-                search_intent=body.search_intent,
-                context_hint=body.context_hint,
-                include_faq=body.include_faq,
-                include_callouts=body.include_callouts,
-            )
-        except (ProviderUnavailableError, GenerationFailedError) as exc:
-            raise _generation_http_error(exc) from exc
-    else:
-        # Legacy mode: idea + writing
-        try:
-            article = generate_idea(
-                db=db,
-                project_id=project_id,
-                project_audience=project.audience,
-                project_language=project.language,
-                llm=llm,
-                search=search,
-                context_hint=body.context_hint,
-                preferred_title=body.preferred_title,
-                keyword=body.keyword,
-                category_id=body.category_id,
-                audience=body.audience,
-                angle=body.angle,
-                search_intent=body.search_intent,
-            )
-        except (ProviderUnavailableError, GenerationFailedError) as exc:
-            raise _generation_http_error(exc) from exc
-
-        if article is None:
-            raise HTTPException(status_code=409, detail="L'idée n'a pas pu être générée (keyword déjà actif ou échec LLM).")
-
-        try:
-            article = start_writing_from_idea(
-                db=db,
-                article=article,
-                llm=llm,
-                preferred_title=body.preferred_title,
-                keyword=body.keyword,
-                audience=body.audience,
-                angle=body.angle,
-                search_intent=body.search_intent,
-                include_faq=body.include_faq,
-                include_callouts=body.include_callouts,
-            )
-        except (ProviderUnavailableError, GenerationFailedError) as exc:
-            raise _generation_http_error(exc) from exc
+    try:
+        from app.services.agents.agent_router import get_agent_router
+        article = generate_full_article(
+            db=db,
+            project_id=project_id,
+            llm=llm,
+            search=search,
+            agent_router=get_agent_router(db=db),
+            preferred_title=body.preferred_title,
+            keyword=body.keyword,
+            category_id=body.category_id,
+            audience=body.audience or project.audience,
+            angle=body.angle,
+            search_intent=body.search_intent,
+            context_hint=body.context_hint,
+            include_faq=body.include_faq,
+            include_callouts=body.include_callouts,
+        )
+    except (ProviderUnavailableError, GenerationFailedError) as exc:
+        raise _generation_http_error(exc) from exc
 
     db.commit()
     db.refresh(article)
