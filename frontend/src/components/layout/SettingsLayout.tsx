@@ -10,7 +10,7 @@ export default function SettingsLayout() {
 
   return (
     <div className="project-page project-page--wide">
-      <div className="grid items-start gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <div className="grid items-start gap-7 lg:grid-cols-[230px_minmax(0,1fr)]">
         <aside className="sticky top-0 z-10 bg-app pb-4 pt-1">
           <div className="mb-5 px-1">
             <h1 className="text-[20px] font-semibold text-primary tracking-tight">Paramètres</h1>
@@ -19,7 +19,7 @@ export default function SettingsLayout() {
             </p>
           </div>
 
-          <nav className="flex flex-col gap-0.5 rounded-[18px] border-2 border-border bg-transparent p-1.5">
+          <nav className="flex flex-col gap-0.5 rounded-[16px] border-2 border-border bg-transparent p-1.5">
             {tabs.map((tab) => (
               <NavLink
                 key={tab.key}
@@ -27,14 +27,14 @@ export default function SettingsLayout() {
                 end={tab.end}
                 className={({ isActive }) =>
                   cn(
-                    'rounded-[12px] px-3 py-2 transition-colors',
+                    'rounded-[10px] px-2.5 py-1.5 transition-colors',
                     isActive
                       ? 'bg-accent/6 text-primary'
                       : 'text-secondary hover:bg-surface-soft hover:text-primary',
                   )
                 }
               >
-                <span className="block text-[14px] font-semibold">{tab.label}</span>
+                <span className="block text-[13px] font-semibold">{tab.label}</span>
                 <span className="mt-0.5 block max-w-full whitespace-normal break-words text-[12px] leading-snug text-tertiary">
                   {tab.description}
                 </span>
