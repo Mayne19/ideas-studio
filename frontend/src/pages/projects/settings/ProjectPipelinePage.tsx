@@ -278,6 +278,7 @@ export default function ProjectPipelinePage() {
           disabled={saving || !dirty}
           loading={saving}
           icon={!saving ? <RotateCw size={13} /> : undefined}
+          className="border-primary bg-primary text-bg hover:opacity-90 disabled:border-border disabled:bg-surface-muted disabled:text-tertiary"
         >
           {saveStatus === 'saved' ? 'Enregistré ✓' : 'Enregistrer'}
         </Button>
@@ -288,6 +289,7 @@ export default function ProjectPipelinePage() {
           disabled={running}
           loading={running}
           icon={!running ? <Play size={13} /> : undefined}
+          className="border-border bg-transparent text-primary hover:bg-surface-soft"
         >
           Lancer maintenant
         </Button>
