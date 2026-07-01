@@ -84,7 +84,6 @@ import {
   PanelLeftOpenIcon,
   PencilEdit01Icon,
   PencilEdit02Icon,
-  PencilIcon,
   Pilcrow as HugePilcrow,
   PlayIcon,
   PowerIcon,
@@ -226,7 +225,7 @@ export const Palette = createHugeIcon(HugePalette)
 export const PanelLeftClose = createHugeIcon(PanelLeftCloseIcon)
 export const PanelLeftOpen = createHugeIcon(PanelLeftOpenIcon)
 export const PenLine = createHugeIcon(PencilEdit01Icon)
-export const Pencil = createHugeIcon(PencilIcon)
+export const Pencil = createHugeIcon(PencilEdit02Icon)
 export const PencilLine = createHugeIcon(PencilEdit02Icon)
 export const Pilcrow = createHugeIcon(HugePilcrow)
 export const Play = createHugeIcon(PlayIcon)
