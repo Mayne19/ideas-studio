@@ -61,7 +61,7 @@ function ArticleRow({
   const isEditable = EDITABLE_STATUSES.has(article.status)
   const originalityScore = getOriginalityScore(article)
   const rowCellClass = 'border-y-2 border-border bg-transparent py-2.5 transition-colors first:rounded-l-[12px] first:border-l-2 last:rounded-r-[12px] last:border-r-2 group-hover:bg-surface-soft'
-  const scoreCellClass = `w-[58px] text-center ${rowCellClass}`
+  const scoreCellClass = `w-[50px] text-center ${rowCellClass}`
 
   return (
     <TableRow className="group hover:bg-transparent">
@@ -89,7 +89,7 @@ function ArticleRow({
           <span>{article.word_count > 0 ? `${article.word_count} mots` : '— mots'}</span>
         </div>
       </TableCell>
-      <TableCell className={`${scoreCellClass} border-l-2 border-l-border pl-5`}>
+      <TableCell className={`${scoreCellClass} pl-5`}>
         <ScoreBadge label="G" value={finiteScore(article.global_score)} compact showLabel={false} />
       </TableCell>
       <TableCell className={scoreCellClass}>
@@ -110,10 +110,10 @@ function ArticleRow({
       <TableCell className={`${scoreCellClass} pr-5`}>
         <ScoreBadge label="E" value={finiteScore(article.eeat_score)} compact showLabel={false} />
       </TableCell>
-      <TableCell className={`w-[124px] border-l-2 border-l-border text-center ${rowCellClass} px-5`}>
+      <TableCell className={`w-[124px] text-center ${rowCellClass} px-5`}>
         <StatusBadge status={article.status} />
       </TableCell>
-      <TableCell className={`w-[206px] border-l-2 border-l-border ${rowCellClass} pl-5`}>
+      <TableCell className={`w-[206px] ${rowCellClass} pl-5`}>
         <div className="flex items-center justify-end gap-2">
           <Button
             size="sm"
@@ -516,15 +516,15 @@ export default function ArticlesPage() {
                 <TableHeader className="border-0">
                   <TableRow className="hover:bg-transparent">
                   <TableHead className="pr-8">Titre</TableHead>
-                  <TableHead className="w-[58px] border-l-2 border-l-border pl-5 text-center text-[11px] font-medium">Glob.</TableHead>
-                  <TableHead className="w-[58px] text-center text-[11px] font-medium">SEO</TableHead>
-                  <TableHead className="w-[58px] text-center text-[11px] font-medium">GEO</TableHead>
-                  <TableHead className="w-[58px] text-center text-[11px] font-medium">Qual.</TableHead>
-                  <TableHead className="w-[58px] text-center text-[11px] font-medium">Lisi.</TableHead>
-                  <TableHead className="w-[58px] text-center text-[11px] font-medium">Orig.</TableHead>
-                  <TableHead className="w-[58px] pr-5 text-center text-[11px] font-medium">EEAT</TableHead>
-                  <TableHead className="w-[124px] border-l-2 border-l-border px-5 text-center">Statut</TableHead>
-                  <TableHead className="w-[206px] border-l-2 border-l-border pl-5 text-right">Actions</TableHead>
+                  <TableHead className="w-[50px] pl-5 text-center text-[11px] font-medium">Glob.</TableHead>
+                  <TableHead className="w-[50px] text-center text-[11px] font-medium">SEO</TableHead>
+                  <TableHead className="w-[50px] text-center text-[11px] font-medium">GEO</TableHead>
+                  <TableHead className="w-[50px] text-center text-[11px] font-medium">Qual.</TableHead>
+                  <TableHead className="w-[50px] text-center text-[11px] font-medium">Lisi.</TableHead>
+                  <TableHead className="w-[50px] text-center text-[11px] font-medium">Orig.</TableHead>
+                  <TableHead className="w-[50px] pr-5 text-center text-[11px] font-medium">EEAT</TableHead>
+                  <TableHead className="w-[124px] px-5 text-center">Statut</TableHead>
+                  <TableHead className="w-[206px] pl-5 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
