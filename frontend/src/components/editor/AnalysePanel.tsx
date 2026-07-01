@@ -58,13 +58,6 @@ function gaugeColor(score: number): string {
   return 'var(--color-danger)'
 }
 
-function scoreBadgeClass(score: number | null): string {
-  if (score === null) return 'border-border bg-surface-soft text-tertiary'
-  if (score >= 80) return 'border-success/20 bg-success/8 text-success'
-  if (score >= 60) return 'border-warning/20 bg-warning/8 text-warning'
-  return 'border-danger/20 bg-danger/8 text-danger'
-}
-
 /* ─── Issues helpers ────────────────────────────────────────── */
 
 const SEO_KEYWORDS = [
@@ -374,23 +367,15 @@ function ScoreDetailPanel({
 
   return (
     <div className="rounded-[14px] border border-border bg-surface p-4">
-      <div className="flex items-center gap-3 mb-4">
-        <span className={`inline-flex min-w-[86px] items-center justify-center rounded-full border px-3 py-2 text-[14px] font-semibold leading-tight ${scoreBadgeClass(score)}`}>
-          <span>
-            <span className="block text-[12px]">{selected}</span>
-            <span className="block">{score === null ? '—' : Math.round(score)}</span>
-          </span>
-        </span>
-        <span className="text-[12px] text-tertiary leading-snug">
-          {selected === 'Synthèse' ? 'Vue d\'ensemble de l\'article' : 'Détail du score sélectionné'}
-        </span>
+      <div className="flex items-start gap-4 mb-4">
+        <Gauge showValue size="medium" value={score ?? 0} color={gaugeColor(score ?? 0)} />
+        <div className="flex-1 min-w-0 pt-1">
+          <p className="text-[15px] font-semibold text-primary">{SCORE_LABEL[selected]}</p>
+          <p className="mt-1 text-[12px] leading-snug text-secondary">{CALCULATION_TEXT[selected]}</p>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3">
-        <div className="rounded-[10px] bg-surface-soft px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-secondary mb-1">Comment ce score est calculé</p>
-          <p className="text-[12px] leading-snug text-secondary">{CALCULATION_TEXT[selected]}</p>
-        </div>
 
         {whatWorks.length > 0 && (
           <div>
