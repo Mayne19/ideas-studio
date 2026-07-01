@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom'
 import { Code2, Globe, Key, Power, RefreshCw, Wifi, WifiOff } from '@/components/ui/hugeIcons'
 import { getConnectInfo, disconnectProject, revalidateProject, updateProject } from '@/api/projects'
 import type { ConnectInfo } from '@/types'
+import Button from '@/components/ui/Button'
 import FormCard from '@/components/ui/FormCard'
 import CopyButton from '@/components/ui/CopyButton'
 import LoadingState from '@/components/ui/LoadingState'
@@ -217,22 +218,24 @@ export default function ProjectIntegrationPage() {
                   {refreshState === 'success' ? 'Statut actualisé' : 'Actualisation impossible'}
                 </span>
               )}
-              <button
+              <Button
+                size="sm"
+                variant="ghost"
                 onClick={() => loadInfo({ quiet: true })}
                 disabled={isRefreshing}
-                className="inline-flex h-10 items-center gap-1.5 rounded-[8px] border border-border bg-transparent px-3 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-muted hover:text-primary disabled:cursor-wait disabled:opacity-60"
               >
                 <RefreshCw size={12} className={isRefreshing ? 'animate-spin' : ''} />
                 Rafraîchir le statut
-              </button>
+              </Button>
               {isConnected && (
-                <button
+                <Button
+                  size="sm"
+                  variant="danger"
                   onClick={() => setDisconnectOpen(true)}
-                  className="inline-flex h-10 items-center gap-1.5 rounded-[8px] border border-danger/20 bg-transparent px-3 text-[12px] font-medium text-danger transition-colors hover:bg-danger/8"
                 >
                   <Power size={12} />
                   Déconnecter
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -272,13 +275,13 @@ export default function ProjectIntegrationPage() {
       </FormCard>
 
       {isConnected && (
-        <button
+        <Button
+          size="sm"
           onClick={() => setShowInstructions((visible) => !visible)}
-          className="inline-flex w-fit items-center gap-2 rounded-[12px] bg-accent px-4 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-accent/90"
         >
           <Code2 size={14} />
           {showInstructions ? 'Masquer les instructions d’installation' : 'Voir les instructions d’installation'}
-        </button>
+        </Button>
       )}
 
       {hasInstructionsVisible && (
@@ -423,22 +426,23 @@ export default function ProjectIntegrationPage() {
             </p>
           )}
           <div className="flex flex-wrap gap-2">
-            <button
+            <Button
+              size="sm"
               type="submit"
-              disabled={savingRevalidate}
-              className="inline-flex items-center gap-2 rounded-[10px] bg-accent px-4 py-2 text-[12px] font-semibold text-white hover:bg-accent/90 disabled:opacity-50"
+              loading={savingRevalidate}
             >
-              {savingRevalidate ? 'Sauvegarde...' : 'Sauvegarder la revalidation'}
-            </button>
-            <button
+              Sauvegarder la revalidation
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
               type="button"
               disabled={manualRevalidating}
               onClick={handleManualRevalidate}
-              className="inline-flex items-center gap-2 rounded-[10px] bg-surface-soft px-4 py-2 text-[12px] font-semibold text-secondary hover:text-primary disabled:opacity-50"
             >
               <RefreshCw size={13} className={manualRevalidating ? 'animate-spin' : ''} />
               Relancer la revalidation
-            </button>
+            </Button>
           </div>
         </form>
       </FormCard>
