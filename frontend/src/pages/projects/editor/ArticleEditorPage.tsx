@@ -31,7 +31,7 @@ import {
   type ArticleComment,
 } from '@/api/comments'
 import {
-  publishArticle, promoteArticle, unpublishArticle, markReadyArticle, archiveArticle, unarchiveArticle, scheduleArticle,
+  publishArticle, promoteArticle, unpublishArticle, markReadyArticle, archiveArticle, unarchiveArticle, scheduleArticle, unscheduleArticle,
   type PromoteResponse,
 } from '@/api/articles'
 import { ApiError } from '@/api/client'
@@ -1005,6 +1005,8 @@ export default function ArticleEditorPage() {
         updated = await archiveArticle(projectId, article.id) as unknown as EditorArticle
       } else if (key === 'unarchive') {
         updated = await unarchiveArticle(projectId, article.id) as unknown as EditorArticle
+      } else if (key === 'unschedule') {
+        updated = await unscheduleArticle(projectId, article.id) as unknown as EditorArticle
       }
       if (updated) setArticle((prev) => ({ ...prev!, ...updated }))
     } catch (err) {
@@ -1608,101 +1610,127 @@ export default function ArticleEditorPage() {
                       <StatusBadge status={article.status} />
                     </div>
 
-                    {article.status === 'published' ? (
-                      <div className="flex flex-col gap-2">
-                        {showUpdateButton ? (
-                          <button
-                            onClick={() => void handlePromote()}
-                            disabled={busy || actionLoading === 'promote'}
-                            className="w-full rounded-[8px] bg-accent py-2 text-[12px] font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-40"
-                          >
-                            {actionLoading === 'promote' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
-                            Mettre à jour la publication
-                          </button>
-                        ) : (
-                          <div className="w-full rounded-[8px] border border-success/20 bg-success/8 py-2 text-center text-[12px] font-medium text-success">
-                            Publié
-                          </div>
-                        )}
-                      </div>
-                    ) : article.status !== 'archived' ? (
-                      <div className="flex flex-col gap-2">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              size="sm"
-                              className="w-full justify-center"
-                              disabled={busy}
+                    <div className="flex flex-col gap-2">
+                      {/* Scheduled → Déprogrammer */}
+                      {article.status === 'scheduled' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="w-full justify-center"
+                          onClick={() => doAction('unschedule')}
+                          disabled={busy}
+                        >
+                          {actionLoading === 'unschedule' ? <Loader2 size={13} className="animate-spin" /> : null}
+                          Déprogrammer
+                        </Button>
+                      )}
+
+                      {/* Published → Dépublier + promote si changements */}
+                      {article.status === 'published' && (
+                        <>
+                          {showUpdateButton && (
+                            <button
+                              onClick={() => void handlePromote()}
+                              disabled={busy || actionLoading === 'promote'}
+                              className="w-full rounded-[8px] bg-accent py-2 text-[12px] font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-40"
                             >
-                              {actionLoading === 'publish' ? (
-                                <Loader2 size={13} className="animate-spin" />
-                              ) : null}
-                              Publier
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent align="end" sideOffset={6} className="w-64 p-3">
-                            <div className="flex flex-col gap-2">
+                              {actionLoading === 'promote' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
+                              Mettre à jour la publication
+                            </button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="w-full justify-center"
+                            onClick={() => doAction('unpublish')}
+                            disabled={busy}
+                          >
+                            {actionLoading === 'unpublish' ? <Loader2 size={13} className="animate-spin" /> : null}
+                            Dépublier
+                          </Button>
+                        </>
+                      )}
+
+                      {/* Default (draft, ready_to_publish, etc.) → Publier + Archiver */}
+                      {article.status !== 'published' && article.status !== 'archived' && article.status !== 'scheduled' && (
+                        <>
+                          <Popover>
+                            <PopoverTrigger asChild>
                               <Button
                                 size="sm"
-                                variant="secondary"
+                                variant="ghost"
                                 className="w-full justify-center"
-                                onClick={() => doAction('publish')}
                                 disabled={busy}
                               >
                                 {actionLoading === 'publish' ? (
                                   <Loader2 size={13} className="animate-spin" />
                                 ) : null}
-                                Publier maintenant
+                                Publier
                               </Button>
-
-                              <div className="border-t border-border my-1" />
-
+                            </PopoverTrigger>
+                            <PopoverContent align="start" sideOffset={6} className="min-w-0 w-[var(--radix-popover-trigger-width)] p-3">
                               <div className="flex flex-col gap-2">
-                                <p className="text-[11px] font-medium text-secondary">Programmer</p>
-                                <input
-                                  type="date"
-                                  value={scheduleDate}
-                                  onChange={(e) => setScheduleDate(e.target.value)}
-                                  className="h-9 rounded-[8px] border border-border bg-transparent px-2.5 text-[13px] text-primary outline-none focus:border-accent"
-                                />
-                                <input
-                                  type="time"
-                                  value={scheduleTime}
-                                  onChange={(e) => setScheduleTime(e.target.value)}
-                                  className="h-9 rounded-[8px] border border-border bg-transparent px-2.5 text-[13px] text-primary outline-none focus:border-accent"
-                                />
                                 <Button
                                   size="sm"
                                   variant="secondary"
                                   className="w-full justify-center"
-                                  onClick={handleSchedule}
-                                  disabled={!scheduleDate || !scheduleTime || busy}
+                                  onClick={() => doAction('publish')}
+                                  disabled={busy}
                                 >
-                                  {actionLoading === 'schedule' ? (
+                                  {actionLoading === 'publish' ? (
                                     <Loader2 size={13} className="animate-spin" />
                                   ) : null}
-                                  Programmer
+                                  Publier maintenant
                                 </Button>
-                              </div>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    ) : null}
 
-                    <div className="flex flex-col gap-2">
-                      {article.status !== 'archived' ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="w-full justify-center text-danger/70 hover:text-danger hover:bg-danger/5"
-                          onClick={() => doAction('archive')}
-                          disabled={busy}
-                        >
-                          {actionLoading === 'archive' ? <Loader2 size={13} className="animate-spin" /> : null}
-                          Archiver
-                        </Button>
-                      ) : (
+                                <div className="border-t border-border my-1" />
+
+                                <div className="flex flex-col gap-2">
+                                  <p className="text-[11px] font-medium text-secondary">Programmer</p>
+                                  <input
+                                    type="date"
+                                    value={scheduleDate}
+                                    onChange={(e) => setScheduleDate(e.target.value)}
+                                    className="h-9 rounded-[8px] border border-border bg-transparent px-2.5 text-[13px] text-primary outline-none focus:border-accent"
+                                  />
+                                  <input
+                                    type="time"
+                                    value={scheduleTime}
+                                    onChange={(e) => setScheduleTime(e.target.value)}
+                                    className="h-9 rounded-[8px] border border-border bg-transparent px-2.5 text-[13px] text-primary outline-none focus:border-accent"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    className="w-full justify-center"
+                                    onClick={handleSchedule}
+                                    disabled={!scheduleDate || !scheduleTime || busy}
+                                  >
+                                    {actionLoading === 'schedule' ? (
+                                      <Loader2 size={13} className="animate-spin" />
+                                    ) : null}
+                                    Programmer
+                                  </Button>
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="w-full justify-center text-danger/70 hover:text-danger hover:bg-danger/5"
+                            onClick={() => doAction('archive')}
+                            disabled={busy}
+                          >
+                            {actionLoading === 'archive' ? <Loader2 size={13} className="animate-spin" /> : null}
+                            Archiver
+                          </Button>
+                        </>
+                      )}
+
+                      {/* Archived → Désarchiver uniquement */}
+                      {article.status === 'archived' && (
                         <Button
                           size="sm"
                           variant="ghost"

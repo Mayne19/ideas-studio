@@ -91,6 +91,10 @@ export function scheduleArticle(_projectId: string, articleId: string, scheduled
   return api.post<Article>(`/articles/${articleId}/schedule`, { scheduled_at: scheduledAt })
 }
 
+export function unscheduleArticle(_projectId: string, articleId: string): Promise<Article> {
+  return api.post<Article>(`/articles/${articleId}/unschedule`)
+}
+
 export function analyzeSeoArticle(_projectId: string, articleId: string): Promise<unknown> {
   return api.post(`/articles/${articleId}/analyze`)
 }

@@ -269,6 +269,15 @@ def unpublish_article(db: Session, article: Article) -> Article:
     return article
 
 
+def unschedule_article(db: Session, article: Article) -> Article:
+    article.status = "draft"
+    article.scheduled_at = None
+    article.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(article)
+    return article
+
+
 def delete_article(db: Session, article: Article) -> None:
     db.query(SeoAnalysis).filter(SeoAnalysis.article_id == article.id).delete(synchronize_session=False)
     db.query(ArticleVersion).filter(ArticleVersion.article_id == article.id).delete(synchronize_session=False)
