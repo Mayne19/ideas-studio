@@ -140,7 +140,7 @@ function RecommendationCard({
         {rec.article_id && (
           <button
             onClick={() => onNavigate(rec.article_id!)}
-            className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-soft px-2.5 py-1 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-muted hover:text-primary"
+            className="inline-flex items-center gap-1 rounded-full border border-primary bg-primary px-2.5 py-1 text-[12px] font-medium text-white transition-colors hover:opacity-90"
           >
             <Pencil size={11} />
             Voir l'article
