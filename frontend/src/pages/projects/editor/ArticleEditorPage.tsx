@@ -31,7 +31,7 @@ import {
   type ArticleComment,
 } from '@/api/comments'
 import {
-  publishArticle, promoteArticle, unpublishArticle, markReadyArticle, archiveArticle, scheduleArticle,
+  publishArticle, promoteArticle, unpublishArticle, markReadyArticle, archiveArticle, unarchiveArticle, scheduleArticle,
   type PromoteResponse,
 } from '@/api/articles'
 import { ApiError } from '@/api/client'
@@ -45,6 +45,8 @@ import CommentsPanel from '@/components/editor/CommentsPanel'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import StatusBadge from '@/components/ui/StatusBadge'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/Popover'
+import Button from '@/components/ui/Button'
 import { useAuth } from '@/context/AuthContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -65,7 +67,6 @@ export type MetaFields = {
 type FaqItem = { question: string; answer: string }
 type ViewMode = 'read' | 'edit' | 'comment'
 type RightTab = 'publish' | 'analyse' | 'versions'
-type PublishMode = 'now' | 'schedule'
 type CommentAnchor = { text: string; top: number; left: number; from: number; to: number }
 type PersistedSnapshot = {
   title: string
@@ -318,7 +319,6 @@ export default function ArticleEditorPage() {
   // Publication actions
   const [actionError, setActionError] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
-  const [publishMode, setPublishMode] = useState<PublishMode>('now')
   const [scheduleDate, setScheduleDate] = useState('')
   const [scheduleTime, setScheduleTime] = useState('')
 
@@ -1003,6 +1003,8 @@ export default function ArticleEditorPage() {
         updated = await markReadyArticle(projectId, article.id) as unknown as EditorArticle
       } else if (key === 'archive') {
         updated = await archiveArticle(projectId, article.id) as unknown as EditorArticle
+      } else if (key === 'unarchive') {
+        updated = await unarchiveArticle(projectId, article.id) as unknown as EditorArticle
       }
       if (updated) setArticle((prev) => ({ ...prev!, ...updated }))
     } catch (err) {
@@ -1624,61 +1626,95 @@ export default function ArticleEditorPage() {
                         )}
                       </div>
                     ) : article.status !== 'archived' ? (
-                      <div className="flex flex-col gap-3">
-                        <div className="flex overflow-hidden rounded-[8px] border border-border">
-                          <button
-                            onClick={() => setPublishMode('now')}
-                            className={`flex-1 py-1.5 text-[12px] font-medium transition-colors ${publishMode === 'now' ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'}`}
-                          >
-                            Publier
-                          </button>
-                          <button
-                            onClick={() => setPublishMode('schedule')}
-                            className={`flex-1 py-1.5 text-[12px] font-medium transition-colors ${publishMode === 'schedule' ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'}`}
-                          >
-                            Programmer
-                          </button>
-                        </div>
-
-                        {publishMode === 'now' ? (
-                          <button
-                            onClick={() => doAction('publish')}
-                            disabled={busy}
-                            className="w-full rounded-[8px] bg-accent py-2 text-[12px] font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-40"
-                          >
-                            {actionLoading === 'publish' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
-                            Publier maintenant
-                          </button>
-                        ) : (
-                          <div className="flex flex-col gap-2 rounded-[10px] border border-border bg-surface p-3">
-                            <Field label="Date">
-                              <input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} className={INPUT} />
-                            </Field>
-                            <Field label="Heure">
-                              <input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} className={INPUT} />
-                            </Field>
-                            <button
-                              onClick={handleSchedule}
-                              disabled={!scheduleDate || !scheduleTime || busy}
-                              className="w-full rounded-[8px] bg-accent py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-40"
+                      <div className="flex flex-col gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              size="sm"
+                              className="w-full justify-center"
+                              disabled={busy}
                             >
-                              {actionLoading === 'schedule' ? '...' : 'Programmer la publication'}
-                            </button>
-                          </div>
-                        )}
+                              {actionLoading === 'publish' ? (
+                                <Loader2 size={13} className="animate-spin" />
+                              ) : null}
+                              Publier
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent align="end" sideOffset={6} className="w-64 p-3">
+                            <div className="flex flex-col gap-2">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="w-full justify-center"
+                                onClick={() => doAction('publish')}
+                                disabled={busy}
+                              >
+                                {actionLoading === 'publish' ? (
+                                  <Loader2 size={13} className="animate-spin" />
+                                ) : null}
+                                Publier maintenant
+                              </Button>
+
+                              <div className="border-t border-border my-1" />
+
+                              <div className="flex flex-col gap-2">
+                                <p className="text-[11px] font-medium text-secondary">Programmer</p>
+                                <input
+                                  type="date"
+                                  value={scheduleDate}
+                                  onChange={(e) => setScheduleDate(e.target.value)}
+                                  className="h-9 rounded-[8px] border border-border bg-transparent px-2.5 text-[13px] text-primary outline-none focus:border-accent"
+                                />
+                                <input
+                                  type="time"
+                                  value={scheduleTime}
+                                  onChange={(e) => setScheduleTime(e.target.value)}
+                                  className="h-9 rounded-[8px] border border-border bg-transparent px-2.5 text-[13px] text-primary outline-none focus:border-accent"
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className="w-full justify-center"
+                                  onClick={handleSchedule}
+                                  disabled={!scheduleDate || !scheduleTime || busy}
+                                >
+                                  {actionLoading === 'schedule' ? (
+                                    <Loader2 size={13} className="animate-spin" />
+                                  ) : null}
+                                  Programmer
+                                </Button>
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     ) : null}
 
-                    {article.status !== 'archived' && (
-                      <button
-                        onClick={() => doAction('archive')}
-                        disabled={busy}
-                        className="w-full rounded-[8px] border border-border py-2 text-[12px] font-medium text-danger/70 transition-colors hover:bg-danger/5 hover:text-danger disabled:opacity-40"
-                      >
-                        {actionLoading === 'archive' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
-                        Archiver
-                      </button>
-                    )}
+                    <div className="flex flex-col gap-2">
+                      {article.status !== 'archived' ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="w-full justify-center text-danger/70 hover:text-danger hover:bg-danger/5"
+                          onClick={() => doAction('archive')}
+                          disabled={busy}
+                        >
+                          {actionLoading === 'archive' ? <Loader2 size={13} className="animate-spin" /> : null}
+                          Archiver
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="w-full justify-center text-primary"
+                          onClick={() => doAction('unarchive')}
+                          disabled={busy}
+                        >
+                          {actionLoading === 'unarchive' ? <Loader2 size={13} className="animate-spin" /> : null}
+                          Désarchiver
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Commentaires éditoriaux */}
