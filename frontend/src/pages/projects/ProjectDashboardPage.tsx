@@ -601,13 +601,13 @@ export default function ProjectDashboardPage() {
           title="SEO moyen"
           score={seoScore || 0}
           changePts={data?.seoChangePts ?? 0}
-          data={data?.seoMonthly ?? Array.from({ length: MONTHLY_METRIC_POINTS }, () => ({ v: 0 }))}
+          data={data?.seoMonthly ?? []}
         />
         <SeoRadialCard
           title="GEO moyen"
           score={geoScore || 0}
           changePts={data?.geoChangePts ?? 0}
-          data={data?.geoMonthly ?? Array.from({ length: MONTHLY_METRIC_POINTS }, () => ({ v: 0 }))}
+          data={data?.geoMonthly ?? []}
         />
         <AreaMetricCard
           title="Vues mensuelles"
@@ -615,7 +615,7 @@ export default function ProjectDashboardPage() {
           change={data ? (() => { const d = data.viewsMonthly; const diff = d[MONTHLY_METRIC_POINTS - 1].v - d[MONTHLY_METRIC_POINTS - 2].v; return diff >= 0 ? `+${diff}` : `${diff}` })() : '—'}
           changeColor={NEUTRAL_CHART_COLORS.primary}
           color={NEUTRAL_CHART_COLORS.primary}
-          data={data?.viewsMonthly ?? Array.from({ length: MONTHLY_METRIC_POINTS }, () => ({ v: 0 }))}
+          data={data?.viewsMonthly ?? []}
         />
         <SparkMetricCard
           title="Temps moyen"
@@ -623,7 +623,7 @@ export default function ProjectDashboardPage() {
           change={data ? (data.timeChangeMins >= 0 ? `+${data.timeChangeMins} min` : `${data.timeChangeMins} min`) : '—'}
           changeColor={NEUTRAL_CHART_COLORS.secondary}
           color={NEUTRAL_CHART_COLORS.secondary}
-          data={data?.timeMonthly ?? Array.from({ length: MONTHLY_METRIC_POINTS }, () => ({ v: 0 }))}
+          data={data?.timeMonthly ?? []}
         />
         <BarMetricCard
           title="Publié"
@@ -631,7 +631,7 @@ export default function ProjectDashboardPage() {
           change={data ? (data.publishedChangePct >= 0 ? `+${data.publishedChangePct}%` : `${data.publishedChangePct}%`) : '—'}
           changeColor={NEUTRAL_CHART_COLORS.primary}
           color={NEUTRAL_CHART_COLORS.primary}
-          data={data?.publishedMonthly ?? Array.from({ length: WEEKLY_METRIC_POINTS }, () => ({ v: 0 }))}
+          data={data?.publishedMonthly ?? []}
         />
       </section>
 
