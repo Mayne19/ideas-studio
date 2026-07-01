@@ -548,20 +548,35 @@ export default function ProjectDashboardPage() {
         </div>
         {/* Statut connecté */}
         <div className="flex h-full min-w-0 items-center justify-center border-r border-border px-6">
-          <span className="inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-success px-3 text-[14px] font-semibold text-white">
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-success">
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 16 16"
-                className="h-3 w-3"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2.4"
-              >
-                <path d="M3.5 8.5 6.5 11.5 12.5 4.5" />
-              </svg>
+          <span className={`inline-flex h-7 items-center gap-1.5 rounded-[8px] px-3 text-[14px] font-semibold text-white ${isConnected ? 'bg-success' : 'bg-danger'}`}>
+            <span className={`flex h-4 w-4 items-center justify-center rounded-full bg-white ${isConnected ? 'text-success' : 'text-danger'}`}>
+              {isConnected ? (
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 16 16"
+                  className="h-3 w-3"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2.4"
+                >
+                  <path d="M3.5 8.5 6.5 11.5 12.5 4.5" />
+                </svg>
+              ) : (
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 16 16"
+                  className="h-3 w-3"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2.4"
+                >
+                  <path d="M4 4l8 8M12 4l-8 8" />
+                </svg>
+              )}
             </span>
             <span>
               {isConnected ? 'Connecté' : 'Non connecté'}
