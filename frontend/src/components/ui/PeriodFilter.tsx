@@ -18,20 +18,20 @@ export default function PeriodFilter<T extends string>({ options, value, onChang
   return (
     <div className="flex flex-wrap items-center gap-2">
       {(onPrevious || onNext || onToday) && (
-        <div className="flex overflow-hidden rounded-[10px] border border-border bg-transparent">
-          {onPrevious && <button type="button" onClick={onPrevious} className="px-2.5 py-1.5 text-[12px] font-medium text-secondary hover:bg-surface-soft">Préc.</button>}
-          {onToday && <button type="button" onClick={onToday} className="border-x border-border px-2.5 py-1.5 text-[12px] font-medium text-secondary hover:bg-surface-soft">Aujourd’hui</button>}
-          {onNext && <button type="button" onClick={onNext} className="px-2.5 py-1.5 text-[12px] font-medium text-secondary hover:bg-surface-soft">Suiv.</button>}
+        <div className="flex h-10 overflow-hidden rounded-[10px] border border-border bg-transparent">
+          {onPrevious && <button type="button" onClick={onPrevious} className="px-3 text-[12px] font-medium text-secondary hover:bg-surface-soft">Préc.</button>}
+          {onToday && <button type="button" onClick={onToday} className="border-x border-border px-3 text-[12px] font-medium text-secondary hover:bg-surface-soft">Aujourd’hui</button>}
+          {onNext && <button type="button" onClick={onNext} className="px-3 text-[12px] font-medium text-secondary hover:bg-surface-soft">Suiv.</button>}
         </div>
       )}
-      <div className="flex overflow-hidden rounded-[10px] border border-border bg-transparent">
+      <div className="flex h-10 overflow-hidden rounded-[10px] border border-border bg-transparent">
         {options.map((option) => (
           <button
             key={option.value}
             type="button"
             onClick={() => onChange(option.value)}
             className={cn(
-              'px-3 py-1.5 text-[12px] font-medium transition-colors',
+              'px-3 text-[12px] font-medium transition-colors',
               value === option.value
                 ? 'bg-accent text-white'
                 : 'text-secondary hover:bg-surface-soft hover:text-primary',

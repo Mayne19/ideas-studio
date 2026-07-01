@@ -91,7 +91,7 @@ function ArticleRow({
         <button
           type="button"
           onClick={() => onEdit(article)}
-          className="flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-[8px] bg-accent px-3 text-[12px] font-medium text-white transition-colors hover:bg-accent/90"
+          className="flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-[8px] bg-accent px-3 text-[12px] font-medium text-white transition-colors hover:bg-accent/90"
           title="Éditer"
         >
           <Pencil size={12} />
@@ -99,7 +99,7 @@ function ArticleRow({
         </button>
         <select
           onChange={(e) => { if (e.target.value) { onAction(e.target.value, article); e.target.value = '' } }}
-          className="h-8 w-[82px] cursor-pointer rounded-[8px] border border-border bg-surface px-1.5 text-[12px] text-secondary transition-colors hover:bg-surface-muted"
+          className="h-10 w-[96px] cursor-pointer rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-secondary transition-colors hover:bg-surface-muted"
           defaultValue=""
           aria-label={`Actions pour ${article.title}`}
         >

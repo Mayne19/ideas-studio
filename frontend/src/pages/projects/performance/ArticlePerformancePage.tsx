@@ -77,7 +77,7 @@ export default function ArticlePerformancePage() {
           </button>
           <button
             onClick={() => navigate(`/projects/${projectId}/articles/${articleId}/edit`)}
-            className="flex items-center gap-1.5 rounded-[8px] bg-accent px-3 py-1.5 text-[12px] font-medium text-white hover:bg-accent/90 transition-colors"
+            className="flex h-10 items-center gap-1.5 rounded-[8px] bg-accent px-3 text-[12px] font-medium text-white transition-colors hover:bg-accent/90"
           >
             <Pencil size={12} />
             Éditer
@@ -94,12 +94,12 @@ export default function ArticlePerformancePage() {
             </p>
           )}
         </div>
-        <div className="flex rounded-[10px] border border-border bg-surface overflow-hidden">
+        <div className="flex h-10 overflow-hidden rounded-[10px] border border-border bg-transparent">
           {PERIODS.map((p) => (
             <button
               key={p.value}
               onClick={() => setPeriod(p.value)}
-              className={`px-3 py-1.5 text-[12px] font-medium transition-colors ${
+              className={`px-3 text-[12px] font-medium transition-colors ${
                 period === p.value ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'
               }`}
             >

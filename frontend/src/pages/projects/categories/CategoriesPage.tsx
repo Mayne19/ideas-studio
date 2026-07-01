@@ -429,7 +429,7 @@ export default function CategoriesPage() {
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="shrink-0 flex items-center gap-1.5 rounded-[8px] border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-secondary hover:bg-surface-soft hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-wait"
+            className="flex h-10 shrink-0 items-center gap-1.5 rounded-[8px] border border-border bg-transparent px-3 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary disabled:cursor-wait disabled:opacity-50"
           >
             <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} />
             {syncing ? 'Synchronisation…' : 'Synchroniser depuis votre site'}

@@ -25,10 +25,10 @@ const variants: Record<ButtonVariant, string> = {
 }
 
 const sizes: Record<ButtonSize, string> = {
-  sm: 'h-8 px-3 text-[14px] gap-1.5 rounded-[6px]',
-  md: 'h-9 px-4 text-[15px] gap-2 rounded-[6px]',
-  lg: 'h-10 px-5 text-[15px] gap-2 rounded-[6px]',
-  icon: 'h-7 w-7 rounded-[6px]',
+  sm: 'h-10 px-3.5 text-[14px] gap-1.5 rounded-[8px]',
+  md: 'h-10 px-4 text-[15px] gap-2 rounded-[8px]',
+  lg: 'h-10 px-5 text-[15px] gap-2 rounded-[8px]',
+  icon: 'h-10 w-10 rounded-[8px]',
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(

@@ -42,7 +42,7 @@ export default function CopyButton({ value, label = 'Copier', className, disable
       onClick={handleCopy}
       disabled={disabled || !value}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-[8px] px-3 py-1.5',
+        'inline-flex h-10 items-center gap-1.5 rounded-[8px] px-3',
         'text-[12px] font-medium transition-all duration-150',
         disabled || !value
           ? 'cursor-not-allowed bg-surface-soft text-tertiary opacity-60'

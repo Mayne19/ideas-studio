@@ -52,14 +52,14 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
   return (
     <div className={cn('flex flex-wrap items-center gap-2', className)}>
       {/* Presets - Left */}
-      <div className="flex flex-wrap items-center rounded-[12px] border-2 border-border bg-transparent p-1">
+      <div className="flex h-10 flex-wrap items-center rounded-[12px] border-2 border-border bg-transparent">
         {MODES.map((mode) => (
           <button
             key={mode.value}
             type="button"
             onClick={() => onChange(currentPeriod(mode.value))}
             className={cn(
-              'h-8 rounded-[9px] px-2.5 text-[12px] font-medium transition-colors whitespace-nowrap',
+              'h-full rounded-[9px] px-2.5 text-[12px] font-medium transition-colors whitespace-nowrap',
               value.mode === mode.value && value.isCurrent
                 ? 'bg-primary text-bg shadow-none'
                 : 'text-secondary hover:bg-bg hover:text-primary',
@@ -71,11 +71,11 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
       </div>
 
       {/* Navigation - Center */}
-      <div className="flex items-center rounded-[12px] border-2 border-border bg-transparent p-1">
+      <div className="flex h-10 items-center rounded-[12px] border-2 border-border bg-transparent">
         <button
           type="button"
           onClick={() => onChange(shiftPeriod(value, -1))}
-          className="flex h-8 w-8 items-center justify-center rounded-[9px] text-secondary transition-colors hover:bg-bg hover:text-primary"
+          className="flex h-full w-9 items-center justify-center rounded-[9px] text-secondary transition-colors hover:bg-bg hover:text-primary"
           aria-label="Période précédente"
         >
           <ArrowLeft size={14} />
@@ -87,7 +87,7 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
           type="button"
           onClick={() => onChange(nextRange)}
           disabled={disableNext}
-          className="flex h-8 w-8 items-center justify-center rounded-[9px] text-secondary transition-colors hover:bg-bg hover:text-primary disabled:cursor-not-allowed disabled:opacity-35"
+          className="flex h-full w-9 items-center justify-center rounded-[9px] text-secondary transition-colors hover:bg-bg hover:text-primary disabled:cursor-not-allowed disabled:opacity-35"
           aria-label="Période suivante"
         >
           <ArrowRight size={14} />
@@ -97,11 +97,11 @@ export default function PeriodNavigator({ value, onChange, className }: PeriodNa
       {/* Custom - Right */}
       <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
         <PopoverTrigger asChild>
-          <div className="flex items-center rounded-[12px] border-2 border-border bg-transparent p-1">
+          <div className="flex h-10 items-center rounded-[12px] border-2 border-border bg-transparent">
             <button
               type="button"
               className={cn(
-                'flex h-8 items-center gap-1.5 rounded-[9px] px-3 text-[12px] font-medium transition-colors whitespace-nowrap',
+                'flex h-full items-center gap-1.5 rounded-[9px] px-3 text-[12px] font-medium transition-colors whitespace-nowrap',
                 popoverOpen || !value.isCurrent ? 'bg-bg text-primary' : 'text-secondary hover:bg-bg hover:text-primary',
               )}
             >

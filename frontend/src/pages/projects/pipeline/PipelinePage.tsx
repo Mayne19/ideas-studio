@@ -309,7 +309,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher…"
-              className="h-8 rounded-[10px] border border-border bg-surface pl-8 pr-3 text-[14px] text-primary placeholder:text-tertiary focus:outline-none focus:ring-2 focus:ring-accent/30"
+              className="h-10 rounded-[10px] border border-border bg-transparent pl-8 pr-3 text-[14px] text-primary placeholder:text-tertiary focus:outline-none focus:ring-2 focus:ring-accent/30"
             />
           </div>
           <Select options={categoryOptions} value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-44" />
@@ -657,7 +657,7 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
           <select
             value={scoreThreshold}
             onChange={(e) => setScoreThreshold(Number(e.target.value))}
-            className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-[14px] text-primary focus:outline-none focus:ring-2 focus:ring-accent/30"
+            className="h-10 rounded-[10px] border border-border bg-transparent px-3 text-[14px] text-primary focus:outline-none focus:ring-2 focus:ring-accent/30"
           >
             {SCORE_THRESHOLD_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
@@ -674,7 +674,7 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value as ValidateFilter)}
-          className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-[14px] text-primary focus:outline-none focus:ring-2 focus:ring-accent/30"
+          className="h-10 rounded-[10px] border border-border bg-transparent px-3 text-[14px] text-primary focus:outline-none focus:ring-2 focus:ring-accent/30"
         >
           {VALIDATE_FILTER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>

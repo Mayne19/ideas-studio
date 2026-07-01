@@ -220,7 +220,7 @@ export default function ProjectIntegrationPage() {
               <button
                 onClick={() => loadInfo({ quiet: true })}
                 disabled={isRefreshing}
-                className="inline-flex items-center gap-1.5 rounded-[8px] bg-surface-soft px-3 py-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-muted hover:text-primary disabled:cursor-wait disabled:opacity-60"
+                className="inline-flex h-10 items-center gap-1.5 rounded-[8px] border border-border bg-transparent px-3 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-muted hover:text-primary disabled:cursor-wait disabled:opacity-60"
               >
                 <RefreshCw size={12} className={isRefreshing ? 'animate-spin' : ''} />
                 Rafraîchir le statut
@@ -228,7 +228,7 @@ export default function ProjectIntegrationPage() {
               {isConnected && (
                 <button
                   onClick={() => setDisconnectOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-[8px] bg-danger/8 px-3 py-1.5 text-[12px] font-medium text-danger hover:bg-danger/12 transition-colors"
+                  className="inline-flex h-10 items-center gap-1.5 rounded-[8px] border border-danger/20 bg-transparent px-3 text-[12px] font-medium text-danger transition-colors hover:bg-danger/8"
                 >
                   <Power size={12} />
                   Déconnecter

@@ -77,12 +77,12 @@ export default function PerformanceArticlesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-[10px] border border-border overflow-hidden">
+          <div className="flex h-10 overflow-hidden rounded-[10px] border border-border">
             {PERIODS.map((p) => (
               <button
                 key={p.value}
                 onClick={() => setPeriod(p.value)}
-                className={`px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                className={`px-3 text-[12px] font-medium transition-colors ${
                   period === p.value
                     ? 'bg-accent text-white'
                     : 'text-secondary hover:bg-surface-soft hover:text-primary'

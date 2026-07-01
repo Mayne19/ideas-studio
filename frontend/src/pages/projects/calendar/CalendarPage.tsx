@@ -128,7 +128,7 @@ function PublicationHeatmapPanel({
         <select
           value={heatmapYear}
           onChange={(event) => onYearChange(Number(event.target.value))}
-          className="h-9 w-[92px] rounded-[10px] bg-surface-soft px-3 text-[12px] text-secondary outline-none transition-colors hover:bg-surface-muted focus:ring-1 focus:ring-accent/20"
+          className="h-10 w-[96px] rounded-[10px] border border-border bg-transparent px-3 text-[12px] text-secondary outline-none transition-colors hover:bg-surface-muted focus:ring-1 focus:ring-accent/20"
           aria-label="Année de la heatmap"
         >
           {yearOptions.map((option) => (
@@ -275,10 +275,10 @@ export default function CalendarPage() {
             </div>
 
             <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="flex rounded-[10px] border border-border overflow-hidden">
+              <div className="flex h-10 overflow-hidden rounded-[10px] border border-border">
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 text-[12px] font-medium transition-colors ${
                     viewMode === 'list' ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'
                   }`}
                 >
@@ -287,7 +287,7 @@ export default function CalendarPage() {
                 </button>
                 <button
                   onClick={() => setViewMode('month')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 text-[12px] font-medium transition-colors ${
                     viewMode === 'month' ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-soft'
                   }`}
                 >

@@ -123,7 +123,7 @@ function ArticleRow({
           </Button>
           <select
             onChange={(e) => { if (e.target.value) { onAction(e.target.value, article); e.target.value = '' } }}
-            className="h-8 w-[82px] cursor-pointer rounded-[8px] border border-border bg-surface px-1.5 text-[12px] text-secondary transition-colors hover:bg-surface-muted"
+            className="h-10 w-[96px] cursor-pointer rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-secondary transition-colors hover:bg-surface-muted"
             defaultValue=""
             aria-label={`Actions pour ${article.title}`}
           >

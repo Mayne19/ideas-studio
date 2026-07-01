@@ -259,7 +259,7 @@ export default function ProjectPipelinePage() {
               <select
                 value={launchHour}
                 onChange={(e) => { setLaunchHour(Number(e.target.value)); setDirty(true) }}
-                className="rounded-[8px] border border-border bg-surface-soft px-2.5 py-1.5 text-[12px] text-primary"
+                className="h-10 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
               >
                 {HOURS.map((h) => (
                   <option key={h} value={h}>{hourLabel(h)}</option>
@@ -272,7 +272,7 @@ export default function ProjectPipelinePage() {
               <select
                 value={articlesPerWeek}
                 onChange={(e) => { setArticlesPerWeek(Number(e.target.value)); setDirty(true) }}
-                className="rounded-[8px] border border-border bg-surface-soft px-2.5 py-1.5 text-[12px] text-primary"
+                className="h-10 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
               >
                 {ARTICLES_OPTIONS.map((n) => (
                   <option key={n} value={n}>{n}</option>
@@ -292,7 +292,7 @@ export default function ProjectPipelinePage() {
                 value={costLimitPerArticle}
                 onChange={(e) => { setCostLimitPerArticle(e.target.value); setDirty(true) }}
                 placeholder="Ex. 1.50"
-                className="w-full rounded-[8px] border border-border bg-surface-soft px-2.5 py-1.5 text-[12px] text-primary"
+                className="h-10 w-full rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
               />
             </div>
           </Card>

@@ -357,21 +357,21 @@ export default function IdeasPipelinePage() {
 
         {/* Filters */}
         <div className="mb-3 flex flex-wrap items-center gap-2 shrink-0">
-          <div className="flex items-center gap-1.5 rounded-[10px] border border-border bg-surface px-3 py-1.5">
+          <div className="flex h-10 items-center gap-1.5 rounded-[10px] border border-border bg-transparent px-3">
             <Search size={12} className="text-tertiary" />
             <input
               type="text"
               value={filterSearch}
               onChange={(e) => setFilterSearch(e.target.value)}
               placeholder="Rechercher..."
-              className="w-28 bg-transparent text-[12px] text-primary outline-none placeholder:text-tertiary"
+              className="h-full w-28 bg-transparent text-[12px] text-primary outline-none placeholder:text-tertiary"
             />
           </div>
           {categories.length > 0 && (
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-[12px] text-secondary cursor-pointer"
+              className="h-10 rounded-[10px] border border-border bg-transparent px-3 text-[12px] text-secondary cursor-pointer"
             >
               <option value="">Toutes catégories</option>
               {categories.map((c) => (
@@ -382,7 +382,7 @@ export default function IdeasPipelinePage() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-[12px] text-secondary cursor-pointer"
+            className="h-10 rounded-[10px] border border-border bg-transparent px-3 text-[12px] text-secondary cursor-pointer"
           >
             {IDEA_STATI.map((s) => (
               <option key={s.key} value={s.key}>{s.label}</option>
@@ -391,7 +391,7 @@ export default function IdeasPipelinePage() {
           <select
             value={filterMinScore}
             onChange={(e) => setFilterMinScore(Number(e.target.value))}
-            className="rounded-[10px] border border-border bg-surface px-3 py-1.5 text-[12px] text-secondary cursor-pointer"
+            className="h-10 rounded-[10px] border border-border bg-transparent px-3 text-[12px] text-secondary cursor-pointer"
           >
             <option value={0}>Tous scores</option>
             <option value={70}>Score ≥ 70</option>
@@ -413,10 +413,10 @@ export default function IdeasPipelinePage() {
           <div className="mb-3 flex items-center gap-2 rounded-[10px] bg-accent/5 px-3 py-2 shrink-0">
             <span className="text-[12px] font-medium text-secondary">{selectedIdeas.size} sélectionnée(s)</span>
             <div className="flex gap-1.5 ml-2">
-              <Button size="sm" variant="secondary" className="text-[12px] h-7 px-2" onClick={() => handleBatchAction('prioritize')}>
+              <Button size="sm" variant="secondary" className="text-[12px]" onClick={() => handleBatchAction('prioritize')}>
                 <Star size={11} /> Prioriser
               </Button>
-              <Button size="sm" variant="secondary" className="text-[12px] h-7 px-2" onClick={() => handleBatchAction('reject')}>
+              <Button size="sm" variant="secondary" className="text-[12px]" onClick={() => handleBatchAction('reject')}>
                 <X size={11} /> Rejeter
               </Button>
             </div>
