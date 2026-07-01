@@ -92,6 +92,12 @@ function ArticleRow({
         <ScoreBadge label="G" value={finiteScore(article.global_score)} compact showLabel={false} />
       </TableCell>
       <TableCell className={`w-[48px] text-center ${rowCellClass}`}>
+        <ScoreBadge label="S" value={finiteScore(article.seo_score)} compact showLabel={false} />
+      </TableCell>
+      <TableCell className={`w-[48px] text-center ${rowCellClass}`}>
+        <ScoreBadge label="GEO" value={getGeoScore(article)} compact showLabel={false} />
+      </TableCell>
+      <TableCell className={`w-[48px] text-center ${rowCellClass}`}>
         <ScoreBadge label="Q" value={finiteScore(article.quality_score)} compact showLabel={false} />
       </TableCell>
       <TableCell className={`w-[48px] text-center ${rowCellClass}`}>
@@ -99,6 +105,9 @@ function ArticleRow({
       </TableCell>
       <TableCell className={`w-[48px] text-center ${rowCellClass}`}>
         <ScoreBadge label="O" value={originalityScore} compact showLabel={false} />
+      </TableCell>
+      <TableCell className={`w-[48px] text-center ${rowCellClass}`}>
+        <ScoreBadge label="E" value={finiteScore(article.eeat_score)} compact showLabel={false} />
       </TableCell>
       <TableCell className={`w-[90px] ${rowCellClass}`}>
         <StatusBadge status={article.status} />
@@ -506,9 +515,12 @@ export default function ArticlesPage() {
                   <TableRow className="hover:bg-transparent">
                   <TableHead className="max-w-[280px]">Titre</TableHead>
                   <TableHead className="w-[48px] text-center text-[11px] font-medium">Glob.</TableHead>
+                  <TableHead className="w-[48px] text-center text-[11px] font-medium">SEO</TableHead>
+                  <TableHead className="w-[48px] text-center text-[11px] font-medium">GEO</TableHead>
                   <TableHead className="w-[48px] text-center text-[11px] font-medium">Qual.</TableHead>
                   <TableHead className="w-[48px] text-center text-[11px] font-medium">Lisi.</TableHead>
                   <TableHead className="w-[48px] text-center text-[11px] font-medium">Orig.</TableHead>
+                  <TableHead className="w-[48px] text-center text-[11px] font-medium">EEAT</TableHead>
                   <TableHead className="w-[90px]">Statut</TableHead>
                   <TableHead className="w-[130px] text-right">Actions</TableHead>
                   </TableRow>
