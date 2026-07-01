@@ -479,6 +479,7 @@ export default function AnalyticsPage() {
             title="Articles suivis"
             value={String(articleMetrics.length)}
             change="—"
+            description={articleMetrics.length > 0 ? `${Math.round(articleMetrics.filter((a) => a.views > 0).length / articleMetrics.length * 100)} % avec du trafic` : undefined}
           />
           <SimpleMetricCard
             title="Articles à optimiser"
