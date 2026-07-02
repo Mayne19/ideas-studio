@@ -340,9 +340,12 @@ export default function CalendarPage() {
                               key={a.id}
                               className="group flex items-center gap-3 rounded-[16px] border-2 border-border bg-transparent px-4 py-3 transition-colors hover:bg-surface-soft"
                             >
-                              <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-[10px] bg-surface-soft">
-                                <span className="text-[16px] font-bold text-primary leading-none">{displayDay}</span>
-                                <span className="text-[9px] text-tertiary uppercase">{displayMonth}</span>
+                              <div className="relative h-11 w-11 shrink-0">
+                                <span className="absolute inset-x-1 bottom-0 h-8 rounded-[10px] bg-surface-soft" />
+                                <div className="relative flex h-10 w-10 flex-col items-center justify-center rounded-[10px] border border-border bg-surface">
+                                  <span className="text-[16px] font-bold text-primary leading-none">{displayDay}</span>
+                                  <span className="text-[9px] text-tertiary uppercase">{displayMonth}</span>
+                                </div>
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="truncate text-[14px] font-medium text-primary">{a.title}</p>
