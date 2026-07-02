@@ -22,3 +22,4 @@ patchright>=1.40.0
 browserforge>=1.0.0
 msgspec>=0.18.0
 supabase>=2.0.0
+google-analytics-data>=0.18.0

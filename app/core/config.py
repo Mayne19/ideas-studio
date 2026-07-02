@@ -90,6 +90,9 @@ class Settings(BaseSettings):
     GEMINI_SEO_MODEL: str = ""
     GEMINI_RESEARCH_MODEL: str = ""
     GEMINI_META_MODEL: str = ""
+    GA4_PROPERTY_ID: str = ""
+    GOOGLE_SERVICE_ACCOUNT_JSON: str = ""
+
     GEMINI_GROUNDING_ENABLED: bool = False
     GEMINI_GROUNDING_MAX_REQUESTS_PER_DAY: int = 500
 

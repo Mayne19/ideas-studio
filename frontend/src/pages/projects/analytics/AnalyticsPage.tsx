@@ -17,10 +17,17 @@ import {
   RefreshCw,
   AlertTriangle,
   Eye,
+  Users,
+  Activity,
+  Clock,
+  TrendingUp,
 } from '@/components/ui/hugeIcons'
 import { SeoRadialCard, AreaMetricCard, SimpleMetricCard } from '@/components/charts/TrendCards'
 import { getPerformanceSummary, getArticlesPerformance } from '@/api/performance'
+import { api } from '@/api/client'
 import type { ArticlePerformanceBrief, PerformanceSummary } from '@/types'
+import { Skeleton } from '@/components/ui/Skeleton'
+import MetricCard from '@/components/ui/MetricCard'
 import { Card } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import ErrorState from '@/components/ui/ErrorState'
@@ -143,6 +150,10 @@ export default function AnalyticsPage() {
   const [loadStatus, setLoadStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [tick, setTick] = useState(0)
 
+  const [ga4Data, setGa4Data] = useState<any>(null)
+  const [ga4Loading, setGa4Loading] = useState(true)
+  const [ga4Error, setGa4Error] = useState<string | null>(null)
+
   useEffect(() => {
     if (!projectId) return
     let cancelled = false
@@ -163,6 +174,20 @@ export default function AnalyticsPage() {
       .catch(() => { if (!cancelled) setLoadStatus('error') })
     return () => { cancelled = true }
   }, [projectId, period, tick])
+
+  useEffect(() => {
+    if (!projectId) return
+    setGa4Loading(true)
+    api.get(`/projects/${projectId}/analytics/ga4?start_date=${period.startDate}&end_date=${period.endDate}`)
+      .then((data) => {
+        setGa4Data(data)
+        setGa4Error(null)
+      })
+      .catch(() => {
+        setGa4Error("Données GA4 non disponibles")
+      })
+      .finally(() => setGa4Loading(false))
+  }, [projectId, period.startDate, period.endDate])
 
   // ── Derived data (useMemo) ─────────────────────────────────────────────────
 
@@ -489,6 +514,51 @@ export default function AnalyticsPage() {
           />
         </div>
 
+        {/* Section 1b — GA4 KPIs */}
+        <Card>
+          <SectionTitle>Google Analytics 4</SectionTitle>
+          {ga4Loading ? (
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-[100px] rounded-[12px]" />
+              ))}
+            </div>
+          ) : ga4Error ? (
+            <p className="text-[11px] text-danger">{ga4Error}</p>
+          ) : (
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+              <MetricCard
+                icon={<Users size={16} />}
+                label="Visiteurs uniques"
+                value={ga4Data?.overview?.active_users?.toLocaleString() ?? "—"}
+                suffix={`+${ga4Data?.overview?.new_users ?? 0} nouveaux`}
+              />
+              <MetricCard
+                icon={<Activity size={16} />}
+                label="Sessions"
+                value={ga4Data?.overview?.sessions?.toLocaleString() ?? "—"}
+              />
+              <MetricCard
+                icon={<Eye size={16} />}
+                label="Pages vues"
+                value={ga4Data?.overview?.page_views?.toLocaleString() ?? "—"}
+              />
+              <MetricCard
+                icon={<Clock size={16} />}
+                label="Durée moyenne"
+                value={ga4Data?.overview?.avg_session_duration
+                  ? `${Math.floor(ga4Data.overview.avg_session_duration / 60)}:${String(ga4Data.overview.avg_session_duration % 60).padStart(2, '0')}`
+                  : "—"}
+              />
+              <MetricCard
+                icon={<TrendingUp size={16} />}
+                label="Taux de rebond"
+                value={ga4Data?.overview?.bounce_rate ? `${ga4Data.overview.bounce_rate}%` : "—"}
+              />
+            </div>
+          )}
+        </Card>
+
         {/* Section 2 — Évolution du trafic par canal */}
         <Card>
           <SectionTitle>Évolution du trafic par canal</SectionTitle>
@@ -679,6 +749,40 @@ export default function AnalyticsPage() {
           )}
         </Card>
 
+        {/* Section 4b — GA4 Articles les plus vus */}
+        {ga4Data?.top_articles?.length > 0 && (
+          <Card>
+            <SectionTitle>Articles les plus vus (GA4)</SectionTitle>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[500px]">
+                <thead>
+                  <tr className="border-b border-border text-[12px] font-medium uppercase tracking-wide text-tertiary">
+                    <th className="px-3 pb-2 text-left font-medium">Page</th>
+                    <th className="px-3 pb-2 text-right font-medium">Visiteurs</th>
+                    <th className="px-3 pb-2 text-right font-medium">Vues</th>
+                    <th className="px-3 pb-2 text-right font-medium">Durée moy.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ga4Data.top_articles.map((art: any, i: number) => (
+                    <tr key={i} className="group border-b border-border/30 text-[14px] transition-colors hover:bg-surface-soft last:border-0">
+                      <td className="py-2.5 px-3">
+                        <div className="truncate max-w-[220px] font-medium text-primary">{art.title || art.path}</div>
+                        <div className="text-[11px] text-tertiary">{art.path}</div>
+                      </td>
+                      <td className="py-2.5 px-3 text-right tabular-nums text-secondary">{art.users.toLocaleString()}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums text-secondary">{art.views.toLocaleString()}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums text-secondary">
+                        {Math.floor(art.avg_duration / 60)}:{String(art.avg_duration % 60).padStart(2, '0')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
+
         {/* Section 5 — Origine du trafic */}
         <Card>
           <SectionTitle>Origine du trafic</SectionTitle>
@@ -793,6 +897,21 @@ export default function AnalyticsPage() {
             ) : <InlineEmpty>Aucune donnée appareil pour cette période.</InlineEmpty>}
           </Card>
         </div>
+
+        {/* Section 7 — GA4 Sources de trafic */}
+        {ga4Data?.traffic_sources?.length > 0 && (
+          <Card>
+            <SectionTitle>Sources de trafic (GA4)</SectionTitle>
+            <div className="flex flex-col">
+              {ga4Data.traffic_sources.map((src: any, i: number) => (
+                <div key={i} className="flex justify-between py-2 border-b border-border text-[12px] last:border-0">
+                  <span className="text-primary">{src.channel}</span>
+                  <span className="text-secondary">{src.sessions.toLocaleString()} sessions</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   )
