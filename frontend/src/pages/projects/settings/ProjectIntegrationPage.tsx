@@ -23,8 +23,7 @@ function deriveRevalidateUrl(publicSiteUrl: string) {
   if (!raw) return ''
   try {
     const url = new URL(raw.startsWith('http') ? raw : `https://${raw}`)
-    const basePath = url.pathname === '/' ? '' : url.pathname.replace(/\/+$/, '')
-    return `${url.origin}${basePath}/api/ideas-studio/revalidate`
+    return `${url.origin}/api/ideas-studio/revalidate`
   } catch {
     return ''
   }
@@ -106,6 +105,7 @@ export default function ProjectIntegrationPage() {
   const [savingRevalidate, setSavingRevalidate] = useState(false)
   const [manualRevalidating, setManualRevalidating] = useState(false)
   const [revalidateMessage, setRevalidateMessage] = useState('')
+  const [revalidateEndpointEdited, setRevalidateEndpointEdited] = useState(false)
 
   async function handleDisconnect() {
     if (!projectId) return
@@ -130,6 +130,7 @@ export default function ProjectIntegrationPage() {
       .then((data) => {
         setInfo(data)
         setRevalidateForm(cleanRevalidateForm(data))
+        setRevalidateEndpointEdited(false)
         setStatus('success')
         if (quiet) {
           setRefreshState('success')
@@ -153,6 +154,7 @@ export default function ProjectIntegrationPage() {
       .then((data) => {
         setInfo(data)
         setRevalidateForm(cleanRevalidateForm(data))
+        setRevalidateEndpointEdited(false)
         setStatus('success')
       })
       .catch(() => setStatus('error'))
@@ -181,6 +183,7 @@ export default function ProjectIntegrationPage() {
       const data = await getConnectInfo(projectId)
       setInfo(data)
       setRevalidateForm(cleanRevalidateForm(data))
+      setRevalidateEndpointEdited(false)
       setRevalidateMessage('Configuration sauvegardée.')
     } catch (err) {
       setRevalidateMessage(err instanceof Error ? err.message : 'Sauvegarde impossible.')
@@ -393,7 +396,7 @@ export default function ProjectIntegrationPage() {
                   setRevalidateForm((form) => ({
                     ...form,
                     public_site_url: nextSiteUrl,
-                    revalidate_url: deriveRevalidateUrl(nextSiteUrl),
+                    revalidate_url: revalidateEndpointEdited ? form.revalidate_url : deriveRevalidateUrl(nextSiteUrl),
                   }))
                 }}
                 placeholder="https://www.votresite.com"
@@ -406,6 +409,7 @@ export default function ProjectIntegrationPage() {
                 value={revalidateForm.revalidate_url}
                 onChange={(event) => {
                   const value = event.target.value
+                  setRevalidateEndpointEdited(true)
                   setRevalidateForm((form) => ({
                     ...form,
                     revalidate_url: looksLikeEmail(value) ? deriveRevalidateUrl(form.public_site_url) : value,
