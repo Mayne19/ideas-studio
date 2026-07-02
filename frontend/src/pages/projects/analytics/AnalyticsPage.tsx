@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
+  Area,
+  AreaChart,
   BarChart, Bar, Cell,
   XAxis, YAxis,
   CartesianGrid,
@@ -104,10 +106,10 @@ function articleSignal(a: ArticlePerformanceBrief) {
 
 const COUNTRY_PALETTE = SHARED_COUNTRY_PALETTE
 const TRAFFIC_CHANNELS = [
-  { key: 'direct', label: 'Direct', color: NEUTRAL_CHART_COLORS.primary },
-  { key: 'organic', label: 'Google', color: NEUTRAL_CHART_COLORS.secondary },
-  { key: 'referral', label: 'Referral', color: NEUTRAL_CHART_COLORS.tertiary },
-  { key: 'social', label: 'Social', color: NEUTRAL_CHART_COLORS.muted },
+  { key: 'direct', label: 'Direct', color: '#2f2f31' },
+  { key: 'organic', label: 'Google', color: '#5f6063' },
+  { key: 'referral', label: 'Referral', color: '#929397' },
+  { key: 'social', label: 'Social', color: '#d1d1d3' },
 ] as const
 const DEVICE_ORDER = ['desktop', 'mobile', 'tablet']
 const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, info: 2 }
@@ -234,11 +236,6 @@ export default function AnalyticsPage() {
   const hasChannelTrend = useMemo(
     () => channelTrend.some((point) => point.direct + point.organic + point.referral + point.social > 0),
     [channelTrend],
-  )
-
-  const channelBarLayout = useMemo(
-    () => getPeriodBarLayout(channelTrend.length),
-    [channelTrend.length],
   )
 
   const viewsTrend = useMemo(
@@ -563,56 +560,58 @@ export default function AnalyticsPage() {
         <Card>
           <SectionTitle>Évolution du trafic par canal</SectionTitle>
           <div className="relative h-[250px]">
-            <div className={`flex h-[250px] ${channelBarLayout.centered ? 'justify-center' : ''}`}>
-              <div className="h-full" style={{ width: channelBarLayout.chartWidth }}>
-                <ChartContainer config={trafficChartConfig} className="h-full w-full">
-                  <BarChart data={channelTrend} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis
-                      dataKey="date"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      interval={0}
+            <ChartContainer config={trafficChartConfig} className="h-full w-full">
+              <AreaChart data={channelTrend} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                <defs>
+                  {TRAFFIC_CHANNELS.map((channel) => (
+                    <linearGradient key={channel.key} id={`fill-${channel.key}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={`var(--color-${channel.key})`} stopOpacity={0.35} />
+                      <stop offset="95%" stopColor={`var(--color-${channel.key})`} stopOpacity={0.04} />
+                    </linearGradient>
+                  ))}
+                </defs>
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  minTickGap={32}
+                />
+                <YAxis tickLine={false} axisLine={false} width={36} allowDecimals={false} tickFormatter={formatAxisTick} />
+                <ChartTooltip
+                  cursor={false}
+                  content={
+                    <ChartTooltipContent
+                      indicator="dot"
+                      formatter={(value: number | string, name: string) => {
+                        const num = Number(value)
+                        return [
+                          <span key="value" className="tabular-nums text-primary">{formatMetric(num)}</span>,
+                          name as string,
+                        ]
+                      }}
                     />
-                    <YAxis tickLine={false} axisLine={false} width={36} allowDecimals={false} tickFormatter={formatAxisTick} />
-                    <ChartTooltip
-                      cursor={false}
-                      content={
-                        <ChartTooltipContent
-                          indicator="dot"
-                          formatter={(value: number | string, name: string) => {
-                            const num = Number(value)
-                            if (num <= 0) return <span />
-                            return [
-                              <span key="value" className="tabular-nums text-primary">{formatMetric(num)}</span>,
-                              name as string,
-                            ]
-                          }}
-                        />
-                      }
-                    />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    {TRAFFIC_CHANNELS.map((channel, index) => (
-                      <Bar
-                        key={channel.key}
-                        dataKey={channel.key}
-                        name={channel.label}
-                        stackId="a"
-                        fill={channel.color}
-                        barSize={channelBarLayout.barSize}
-                        radius={
-                          index === TRAFFIC_CHANNELS.length - 1 ? [4, 4, 0, 0]
-                          : index === 0 ? [0, 0, 4, 4]
-                          : [0, 0, 0, 0]
-                        }
-                        isAnimationActive
-                      />
-                    ))}
-                  </BarChart>
-                </ChartContainer>
-              </div>
-            </div>
+                  }
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                {TRAFFIC_CHANNELS.map((channel) => (
+                  <Area
+                    key={channel.key}
+                    dataKey={channel.key}
+                    name={channel.label}
+                    type="natural"
+                    fill={`url(#fill-${channel.key})`}
+                    stroke={`var(--color-${channel.key})`}
+                    strokeWidth={2}
+                    stackId="a"
+                    dot={false}
+                    activeDot={{ r: 3 }}
+                    isAnimationActive
+                  />
+                ))}
+              </AreaChart>
+            </ChartContainer>
             {!hasChannelTrend && <ChartEmpty message="Aucune donnée de trafic pour cette période." />}
           </div>
         </Card>
