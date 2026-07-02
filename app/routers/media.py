@@ -1,3 +1,4 @@
+import logging
 import os
 import uuid
 from datetime import datetime, timezone
@@ -14,6 +15,9 @@ from app.models.media_asset import MediaAsset
 from app.models.project_member import ProjectMember
 from app.models.user import User
 from app.schemas.media import MediaCreate, MediaUpdate, MediaPublic
+from app.services import storage_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["media"])
 
@@ -94,14 +98,32 @@ async def upload_media(
 
     ext = os.path.splitext(file.filename or "image.png")[1] or ".png"
     saved_name = f"{uuid.uuid4()}{ext}"
-    upload_dir = os.path.join(settings.UPLOAD_DIR, project_id)
-    os.makedirs(upload_dir, exist_ok=True)
-    filepath = os.path.join(upload_dir, saved_name)
 
-    with open(filepath, "wb") as f:
-        f.write(content)
+    if storage_service.is_configured():
+        # Stockage permanent Supabase (le disque Render est éphémère)
+        try:
+            url = storage_service.upload_file(
+                file_content=content,
+                filename=file.filename or saved_name,
+                project_id=project_id,
+                content_type=file.content_type,
+            )
+        except Exception as exc:
+            logger.error("Supabase Storage upload failed: %s", exc)
+            raise HTTPException(
+                status_code=502,
+                detail="Échec de l'upload vers le stockage permanent. Réessayez ou contactez l'administrateur.",
+            )
+    else:
+        # Repli disque local (dev/test uniquement — éphémère en production)
+        upload_dir = os.path.join(settings.UPLOAD_DIR, project_id)
+        os.makedirs(upload_dir, exist_ok=True)
+        filepath = os.path.join(upload_dir, saved_name)
 
-    url = f"/uploads/{project_id}/{saved_name}"
+        with open(filepath, "wb") as f:
+            f.write(content)
+
+        url = f"/uploads/{project_id}/{saved_name}"
 
     media = MediaAsset(
         project_id=project_id,
@@ -211,9 +233,11 @@ def delete_media(
     if member.role == "viewer":
         raise HTTPException(status_code=403, detail="Viewers cannot delete media")
 
-    filepath = os.path.join(settings.UPLOAD_DIR, media.project_id, os.path.basename(media.url))
-    if os.path.exists(filepath):
-        os.remove(filepath)
+    if not storage_service.delete_file(media.url):
+        # Fichier local (legacy ou dev) : suppression sur disque
+        filepath = os.path.join(settings.UPLOAD_DIR, media.project_id, os.path.basename(media.url))
+        if os.path.exists(filepath):
+            os.remove(filepath)
 
     db.delete(media)
     db.commit()

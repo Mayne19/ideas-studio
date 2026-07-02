@@ -66,6 +66,10 @@ class Settings(BaseSettings):
 
     UPLOAD_DIR: str = "uploads"
 
+    SUPABASE_URL: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
+    SUPABASE_STORAGE_BUCKET: str = "ideas-media"
+
     BLOG_REVALIDATE_URL: str = ""
     BLOG_REVALIDATE_SECRET: str = ""
 
