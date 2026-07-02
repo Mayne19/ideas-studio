@@ -85,6 +85,8 @@ def check_monthly_idea_generation():
             .all()
         )
         for pipeline in pipelines:
+            # run_pipeline committe et expire la session : recharger avant tout accès aux attributs
+            db.refresh(pipeline)
             if pipeline.ideas_day_of_month != now.day:
                 continue
             if pipeline.launch_hour != now.hour:
@@ -111,6 +113,8 @@ def run_pipelines():
     try:
         pipelines = db.query(ProjectPipeline).filter(ProjectPipeline.enabled == True).all()
         for pipeline in pipelines:
+            # run_pipeline committe et expire la session : recharger avant tout accès aux attributs
+            db.refresh(pipeline)
             if _pipeline_already_ran_today(db, pipeline.project_id):
                 continue
             try:
