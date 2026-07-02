@@ -10,7 +10,10 @@ export type PeriodRange = {
 }
 
 function toDateKey(date: Date) {
-  return date.toISOString().slice(0, 10)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 function startOfDay(date: Date) {
@@ -48,14 +51,6 @@ function startOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1)
 }
 
-function startOfQuarter(date: Date) {
-  return new Date(date.getFullYear(), Math.floor(date.getMonth() / 3) * 3, 1)
-}
-
-function startOfSemester(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth() < 6 ? 0 : 6, 1)
-}
-
 function startOfYear(date: Date) {
   return new Date(date.getFullYear(), 0, 1)
 }
@@ -83,13 +78,13 @@ export function getPeriodRange(mode: PeriodMode, cursor: Date = new Date()): Per
     end = endOfDay(addDays(addMonths(start, 1), -1))
     label = formatMonth(start)
   } else if (mode === 'quarter') {
-    start = startOfQuarter(cursor)
-    end = endOfDay(addDays(addMonths(start, 3), -1))
-    label = `${formatMonth(start)} - ${formatMonth(end)}`
+    end = endOfDay(cursor)
+    start = startOfDay(addDays(end, -89))
+    label = `${formatLongDate(start)} - ${formatLongDate(end)}`
   } else if (mode === 'semester') {
-    start = startOfSemester(cursor)
-    end = endOfDay(addDays(addMonths(start, 6), -1))
-    label = `${formatMonth(start)} - ${formatMonth(end)}`
+    end = endOfDay(cursor)
+    start = startOfDay(addDays(end, -179))
+    label = `${formatLongDate(start)} - ${formatLongDate(end)}`
   } else if (mode === 'year') {
     start = startOfYear(cursor)
     end = endOfDay(new Date(start.getFullYear(), 11, 31))
@@ -98,7 +93,7 @@ export function getPeriodRange(mode: PeriodMode, cursor: Date = new Date()): Per
 
   return {
     mode,
-    cursor: toDateKey(start),
+    cursor: mode === 'quarter' || mode === 'semester' ? toDateKey(end) : toDateKey(start),
     startDate: toDateKey(start),
     endDate: toDateKey(end),
     label,
@@ -117,8 +112,8 @@ export function shiftPeriod(range: PeriodRange, direction: -1 | 1) {
   if (range.mode === 'day') return getPeriodRange('day', addDays(date, direction))
   if (range.mode === 'week') return getPeriodRange('week', addDays(date, direction * 7))
   if (range.mode === 'month') return getPeriodRange('month', addMonths(date, direction))
-  if (range.mode === 'quarter') return getPeriodRange('quarter', addMonths(date, direction * 3))
-  if (range.mode === 'semester') return getPeriodRange('semester', addMonths(date, direction * 6))
+  if (range.mode === 'quarter') return getPeriodRange('quarter', addDays(date, direction * 90))
+  if (range.mode === 'semester') return getPeriodRange('semester', addDays(date, direction * 180))
   return getPeriodRange('year', new Date(date.getFullYear() + direction, 0, 1))
 }
 

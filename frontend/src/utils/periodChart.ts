@@ -37,6 +37,32 @@ function hourKey(date: Date) {
   return `${dateKey(date)}T${pad(date.getHours())}`
 }
 
+function startOfIsoWeek(date: Date) {
+  const next = new Date(date)
+  const day = next.getDay() || 7
+  next.setDate(next.getDate() - day + 1)
+  return next
+}
+
+function isoWeekParts(date: Date) {
+  const utc = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const day = utc.getUTCDay() || 7
+  utc.setUTCDate(utc.getUTCDate() + 4 - day)
+  const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1))
+  const week = Math.ceil((((utc.getTime() - yearStart.getTime()) / 86_400_000) + 1) / 7)
+  return { year: utc.getUTCFullYear(), week }
+}
+
+function weekKey(date: Date) {
+  const { year, week } = isoWeekParts(date)
+  return `${year}-S${pad(week)}`
+}
+
+function weekLabel(date: Date) {
+  const { week } = isoWeekParts(date)
+  return `S${pad(week)}`
+}
+
 function addDays(date: Date, days: number) {
   const next = new Date(date)
   next.setDate(next.getDate() + days)
@@ -76,7 +102,21 @@ export function getPeriodBuckets(period: PeriodRange): PeriodBucket[] {
     })
   }
 
-  const monthCount = period.mode === 'quarter' ? 3 : period.mode === 'semester' ? 6 : 12
+  if (period.mode === 'quarter' || period.mode === 'semester') {
+    const end = parseLocalDate(period.endDate)
+    const weeks: PeriodBucket[] = []
+    let current = startOfIsoWeek(start)
+    while (current <= end) {
+      weeks.push({
+        key: weekKey(current),
+        label: weekLabel(current),
+      })
+      current = addDays(current, 7)
+    }
+    return weeks
+  }
+
+  const monthCount = 12
   return Array.from({ length: monthCount }, (_, index) => {
     const current = addMonths(start, index)
     return {
@@ -91,6 +131,7 @@ export function getPeriodBucketKey(value: string, period: PeriodRange) {
   if (Number.isNaN(date.getTime())) return null
   if (period.mode === 'day') return hourKey(date)
   if (period.mode === 'week' || period.mode === 'month') return dateKey(date)
+  if (period.mode === 'quarter' || period.mode === 'semester') return weekKey(date)
   return monthKey(date)
 }
 
