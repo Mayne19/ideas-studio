@@ -341,8 +341,8 @@ export default function CalendarPage() {
                               className="group flex items-center gap-3 rounded-[16px] border-2 border-border bg-transparent px-4 py-3 transition-colors hover:bg-surface-soft"
                             >
                               <div className="relative h-11 w-11 shrink-0">
-                                <span className="absolute inset-x-1 bottom-0 h-8 rounded-[10px] bg-surface-soft" />
-                                <div className="relative flex h-10 w-10 flex-col items-center justify-center rounded-[10px] border border-border bg-surface-soft">
+                                <span className="absolute inset-x-1 bottom-0 h-8 rounded-[10px] bg-surface-muted" />
+                                <div className="relative flex h-10 w-10 flex-col items-center justify-center rounded-[10px] border border-border bg-surface-muted">
                                   <span className="text-[16px] font-bold text-primary leading-none">{displayDay}</span>
                                   <span className="text-[9px] text-tertiary uppercase">{displayMonth}</span>
                                 </div>
