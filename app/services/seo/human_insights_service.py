@@ -323,6 +323,161 @@ def _detect_forum_type(page) -> str:
     return "generic"
 
 
+def _extract_google_autocomplete(keyword: str) -> list[HumanInsight]:
+    """
+    Google Autocomplete — suggestions réelles via l'API JSON publique Google Suggest.
+    Ce sont les vraies requêtes tapées par de vraies personnes.
+    Pas de Playwright nécessaire — JSON pur via httpx.
+    """
+    insights: list[HumanInsight] = []
+    encoded = urllib.parse.quote(keyword)
+
+    # Variantes : suffixes qui révèlent questions, problèmes, comparaisons
+    variants = [
+        f"https://suggestqueries.google.com/complete/search?client=firefox&hl=fr&q={encoded}",
+        f"https://suggestqueries.google.com/complete/search?client=firefox&hl=fr&q={encoded}+comment",
+        f"https://suggestqueries.google.com/complete/search?client=firefox&hl=fr&q={encoded}+pourquoi",
+        f"https://suggestqueries.google.com/complete/search?client=firefox&hl=fr&q={encoded}+problème",
+        f"https://suggestqueries.google.com/complete/search?client=firefox&hl=fr&q={encoded}+meilleur",
+        f"https://suggestqueries.google.com/complete/search?client=firefox&hl=en&q={encoded}",
+        f"https://suggestqueries.google.com/complete/search?client=firefox&hl=en&q={encoded}+how",
+        f"https://suggestqueries.google.com/complete/search?client=firefox&hl=en&q={encoded}+best",
+        f"https://suggestqueries.google.com/complete/search?client=firefox&hl=en&q={encoded}+problem",
+    ]
+
+    try:
+        import httpx
+        seen: set[str] = set()
+        for url in variants:
+            try:
+                resp = httpx.get(url, timeout=10, follow_redirects=True, headers=_HEADERS)
+                resp.raise_for_status()
+                # Réponse JSON : ["keyword", ["suggestion1", "suggestion2", ...], ...]
+                parsed = json.loads(resp.text)
+                suggestions = parsed[1] if len(parsed) > 1 and isinstance(parsed[1], list) else []
+                for suggestion in suggestions:
+                    suggestion = suggestion.strip()
+                    if suggestion and suggestion not in seen:
+                        seen.add(suggestion)
+                        insights.append(HumanInsight(
+                            source_type="google_autocomplete",
+                            source_url=url,
+                            source_name="Google Autocomplete",
+                            content=suggestion,
+                            insight_type=_classify(suggestion),
+                        ))
+            except Exception as exc:
+                logger.debug("Google Autocomplete URL failed %s: %s", url, exc)
+    except Exception as exc:
+        logger.warning("Google Autocomplete extractor failed: %s", exc)
+
+    return insights
+
+
+def _parse_paa_page(page, url: str) -> list[HumanInsight]:
+    """Extrait les questions People Also Ask depuis une page de résultats Google."""
+    found: list[HumanInsight] = []
+    questions: set[str] = set()
+
+    # Sélecteurs stables : data-q est l'attribut le plus pérenne
+    for q in page.css("[data-q]::attr(data-q)", auto_save=True).getall():
+        q = q.strip()
+        if q and "?" in q and len(q) > 10:
+            questions.add(q)
+
+    # Sélecteurs CSS des conteneurs PAA (Google les change fréquemment)
+    paa_selectors = (
+        ".related-question-pair span::text, "
+        ".iDjcJe::text, "
+        ".CSkcDe::text, "
+        ".HwtpBd::text, "
+        ".yu3lnd::text, "
+        "[jsname] span[role='heading']::text"
+    )
+    for q in page.css(paa_selectors, auto_save=True).getall():
+        q = q.strip()
+        if q and "?" in q and len(q) > 10:
+            questions.add(q)
+
+    # XPath fallback : texte contenant "?" dans les conteneurs de résultats
+    try:
+        for q in page.xpath(
+            "//*[contains(@class,'related-question') or contains(@data-q,'?')]//text()"
+        ).getall():
+            q = q.strip()
+            if q and "?" in q and len(q) > 10:
+                questions.add(q)
+    except Exception:
+        pass
+
+    # find_by_text : chercher des spans qui contiennent "?"
+    try:
+        for el in page.find_all("span"):
+            text = (el.text or "").strip()
+            if text and "?" in text and 10 < len(text) < 200:
+                questions.add(text)
+    except Exception:
+        pass
+
+    for question in questions:
+        found.append(HumanInsight(
+            source_type="people_also_ask",
+            source_url=url,
+            source_name="Google — People Also Ask",
+            content=question,
+            insight_type="question",
+        ))
+    return found
+
+
+def _extract_people_also_ask(keyword: str) -> list[HumanInsight]:
+    """
+    Google People Also Ask — questions les plus fréquentes autour d'un sujet.
+    Très précieux pour la FAQ et la structure des articles.
+
+    Utilise StealthyFetcher (playwright) pour contourner la détection bot Google.
+    Fallback httpx+Adaptor si playwright absent.
+    """
+    insights: list[HumanInsight] = []
+    encoded = urllib.parse.quote(keyword)
+    urls = [
+        f"https://www.google.com/search?q={encoded}&hl=fr&gl=fr",
+        f"https://www.google.com/search?q={encoded}&hl=en&gl=us",
+    ]
+
+    playwright_ok = False
+    try:
+        from playwright.sync_api import sync_playwright  # noqa: F401
+        playwright_ok = True
+    except ImportError:
+        pass
+
+    if playwright_ok:
+        try:
+            from scrapling.fetchers import StealthyFetcher
+            for url in urls:
+                try:
+                    # StealthyFetcher est un classmethod dans scrapling 0.4.9
+                    page = StealthyFetcher.fetch(url, headless=True, network_idle=True)
+                    insights.extend(_parse_paa_page(page, url))
+                except Exception as exc:
+                    logger.debug("StealthyFetcher PAA failed %s: %s", url, exc)
+            if insights:
+                return insights
+        except Exception as exc:
+            logger.debug("StealthyFetcher PAA overall failed: %s", exc)
+
+    # Fallback : httpx + Adaptor (peut retourner captcha sur Google)
+    for url in urls:
+        page = _fetch(url)
+        if page is None:
+            continue
+        results = _parse_paa_page(page, url)
+        insights.extend(results)
+
+    return insights
+
+
 def _extract_forums_from_serp(keyword: str, serp_results: list[dict]) -> list[HumanInsight]:
     """Détecte et scrape les forums présents dans les résultats SERP."""
     insights: list[HumanInsight] = []
@@ -413,26 +568,23 @@ def _extract_quora(keyword: str) -> list[HumanInsight]:
 
     try:
         from scrapling.fetchers import StealthyFetcher
-        with StealthyFetcher() as fetcher:
-            page = fetcher.fetch(
-                search_url, headless=True, network_idle=True, follow_redirects=True
-            )
-            for q in page.css("a.q-box span::text, .q-text::text", auto_save=True).getall():
-                q = q.strip()
-                if q and len(q) > 15 and "?" in q:
-                    insights.append(HumanInsight(
-                        source_type="quora", source_url=search_url, source_name="Quora",
-                        content=q, insight_type="question",
-                    ))
-            for ans in page.css("[class*='answer'] p::text", auto_save=True).getall():
-                ans = ans.strip()
-                if ans and len(ans) > 60:
-                    insights.append(HumanInsight(
-                        source_type="quora", source_url=search_url, source_name="Quora answer",
-                        content=ans, insight_type=_classify(ans),
-                    ))
+        page = StealthyFetcher.fetch(search_url, headless=True, network_idle=True)
+        for q in page.css("a.q-box span::text, .q-text::text", auto_save=True).getall():
+            q = q.strip()
+            if q and len(q) > 15 and "?" in q:
+                insights.append(HumanInsight(
+                    source_type="quora", source_url=search_url, source_name="Quora",
+                    content=q, insight_type="question",
+                ))
+        for ans in page.css("[class*='answer'] p::text", auto_save=True).getall():
+            ans = ans.strip()
+            if ans and len(ans) > 60:
+                insights.append(HumanInsight(
+                    source_type="quora", source_url=search_url, source_name="Quora answer",
+                    content=ans, insight_type=_classify(ans),
+                ))
     except Exception as exc:
-        logger.debug("Quora skipped (playwright/StealthyFetcher not available): %s", exc)
+        logger.debug("Quora skipped: %s", exc)
 
     return insights
 
@@ -445,26 +597,24 @@ def _extract_youtube(keyword: str) -> list[HumanInsight]:
 
     try:
         from scrapling.fetchers import DynamicFetcher
-        with DynamicFetcher() as fetcher:
-            page = fetcher.fetch(search_url, network_idle=True, follow_redirects=True)
-
-            for title in page.css("#video-title::text", auto_save=True).getall():
-                title = title.strip()
-                if title:
-                    insights.append(HumanInsight(
-                        source_type="youtube", source_url=search_url, source_name="YouTube",
-                        content=title, insight_type=_classify(title),
-                    ))
-
-            for desc in page.css("#description-text::text", auto_save=True).getall():
-                desc = desc.strip()
-                if desc and len(desc) > 30:
-                    insights.append(HumanInsight(
-                        source_type="youtube", source_url=search_url, source_name="YouTube",
-                        content=desc, insight_type=_classify(desc),
-                    ))
+        # DynamicFetcher est un classmethod dans scrapling 0.4.9
+        page = DynamicFetcher.fetch(search_url, network_idle=True)
+        for title in page.css("#video-title::text", auto_save=True).getall():
+            title = title.strip()
+            if title:
+                insights.append(HumanInsight(
+                    source_type="youtube", source_url=search_url, source_name="YouTube",
+                    content=title, insight_type=_classify(title),
+                ))
+        for desc in page.css("#description-text::text", auto_save=True).getall():
+            desc = desc.strip()
+            if desc and len(desc) > 30:
+                insights.append(HumanInsight(
+                    source_type="youtube", source_url=search_url, source_name="YouTube",
+                    content=desc, insight_type=_classify(desc),
+                ))
     except Exception as exc:
-        logger.debug("YouTube skipped (playwright/DynamicFetcher not available): %s", exc)
+        logger.debug("YouTube skipped: %s", exc)
 
     return insights
 
@@ -488,6 +638,8 @@ def extract_human_insights(
     all_insights: list[HumanInsight] = []
 
     extractors = [
+        ("Google Autocomplete", lambda: _extract_google_autocomplete(keyword)),
+        ("People Also Ask", lambda: _extract_people_also_ask(keyword)),
         ("Reddit", lambda: _extract_reddit(keyword)),
         ("StackOverflow", lambda: _extract_stackoverflow(keyword)),
         ("Twitter/Nitter", lambda: _extract_nitter(keyword)),

@@ -898,7 +898,7 @@ class SEOGenerationOrchestrator:
         if real_questions:
             human_context += (
                 "\nVraies questions posées par des utilisateurs réels "
-                "(inspire-toi sans les copier mot pour mot) :\n"
+                "(Google People Also Ask, Reddit, forums — inspire-toi sans les copier) :\n"
                 + "\n".join(f"- {q}" for q in real_questions[:8])
             )
         if real_pains:

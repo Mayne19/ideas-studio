@@ -39,7 +39,7 @@ def _fetch_adaptor(url: str, timeout: int = 20) -> Any | None:
 
 
 class ScraplingAdapter:
-    """Scrapling-backed content extractor — httpx fetching + Adaptor parsing."""
+    """Scrapling-backed content extractor — httpx+Adaptor parsing, Fetcher/StealthyFetcher si playwright dispo."""
 
     provider_name = "scrapling"
     enabled = False
@@ -49,6 +49,7 @@ class ScraplingAdapter:
     real_data_available = False
     fallback_mode = "not_configured"
     trust_level = "none"
+    playwright_available: bool = False
 
     def __init__(self):
         self._check_scrapling()
@@ -65,7 +66,16 @@ class ScraplingAdapter:
             self.fallback_mode = "scrapling+httpx"
             self.trust_level = "high"
         except ImportError:
-            pass
+            return
+
+        try:
+            from scrapling.fetchers import Fetcher  # noqa: F401
+            from playwright.sync_api import sync_playwright  # noqa: F401
+            self.playwright_available = True
+            self.fallback_mode = "scrapling+playwright"
+            logger.info("Playwright available — StealthyFetcher et DynamicFetcher actifs")
+        except (ImportError, Exception):
+            logger.info("Playwright non disponible — mode httpx+Adaptor uniquement")
 
     # ------------------------------------------------------------------
     # Core fetch
