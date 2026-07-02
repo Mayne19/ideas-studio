@@ -659,8 +659,40 @@ class SEOGenerationOrchestrator:
             "- Introduction courte et efficace (2-3 phrases max)",
             "- Après l'introduction, insère un callout résumé (blockquote HTML) récapitulant les 2-3 points clés en 1-2 phrases",
             "- Début qui satisfait rapidement l'intention du lecteur",
-            "- Ton humain, direct, concret — pas de texte robotique",
-            "- Pas de paraphrase faible",
+            "- Ton humain, direct, concret, pas de texte robotique",
+            "- N'utilise JAMAIS le tiret cadratin (—). "
+            "  Remplace-le systématiquement par une virgule, un point-virgule, ou reformule la phrase. "
+            "  Exemple interdit : 'Le résultat — surprenant — dépasse les attentes.' "
+            "  Correct : 'Le résultat, surprenant, dépasse les attentes.'",
+            "- REFORMULATION vs PARAPHRASE, règle absolue : "
+            "  La paraphrase est INTERDITE. La reformulation totale est OBLIGATOIRE. "
+            "  Différence : "
+            "  PARAPHRASE (interdit) = changer 2 ou 3 mots dans la phrase originale. "
+            "    Exemple : 'j'ai faim' → 'je suis affamé' : c'est la même idée avec un synonyme. INTERDIT. "
+            "  REFORMULATION (obligatoire) = exprimer la même idée avec un angle, une structure "
+            "  et des mots entièrement différents. "
+            "    Exemple : 'j'ai faim' → 'il me faut mettre quelque chose sous la dent' : angle différent. CORRECT. "
+            "  Cette règle s'applique à TOUTES les sources : insights humains, données SERP, "
+            "  textes concurrents, études, statistiques. "
+            "  Si tu ne peux pas reformuler totalement, utilise une citation formelle (blockquote).",
+            "- Quand tu utilises un insight venant d'un utilisateur réel (Reddit, forum, Stack Overflow...) : "
+            "  reformule complètement l'idée avec tes propres mots, puis ajoute un lien hypertexte "
+            "  sur la phrase pointant vers la source originale. "
+            "  Format : <a href='URL_SOURCE' target='_blank' rel='nofollow'>texte ancre naturel</a>",
+            "- Si tu veux reproduire exactement ce qu'une personne a dit mot pour mot : "
+            "  utilise obligatoirement une balise blockquote avec attribution et lien. "
+            "  Format HTML exact : "
+            "  <blockquote>"
+            "    'Texte exact de la citation telle que dite par la personne.'"
+            "    <cite><a href='URL_SOURCE' target='_blank' rel='nofollow'>Nom / Pseudo, Plateforme</a></cite>"
+            "  </blockquote>",
+            "- Pour les publications de personnalités d'autorité reconnues dans le domaine "
+            "  (PDG, experts de référence, chercheurs, etc.) publiées sur Twitter/X, LinkedIn, "
+            "  ou d'autres réseaux sociaux : intègre le post directement via son code d'intégration natif. "
+            "  Pour Twitter/X : utilise le format <blockquote class='twitter-tweet'>...</blockquote> "
+            "  avec le script https://platform.twitter.com/widgets.js "
+            "  Pour LinkedIn : utilise le lien embed natif de LinkedIn. "
+            "  Ne résume jamais un tweet d'autorité : intègre-le.",
             "- Inclus une liste à puces si pertinent",
             "- Tableau seulement si utile pour comparer ou résumer",
             "- Ne crée PAS de section 'Conclusion', 'En résumé' ou 'Pour conclure' séparée",
@@ -681,7 +713,7 @@ class SEOGenerationOrchestrator:
         prompt_parts.append("")
         if include_callouts:
             prompt_parts.append("Prévois 1-2 callouts pertinents sous forme de paragraphes introduits naturellement.")
-        prompt_parts.append("La FAQ sera générée séparément — ne l'inclus pas dans le contenu principal.")
+        prompt_parts.append("La FAQ sera générée séparément : ne l'inclus pas dans le contenu principal.")
         prompt_parts.append("Sois précis, original et utile.")
 
         # Injecter la matière humaine si disponible
@@ -722,6 +754,17 @@ class SEOGenerationOrchestrator:
                 prompt_parts.append(
                     "VOCABULAIRE utilisé par les vrais utilisateurs :\n"
                     + "\n".join(f"- {v}" for v in insights["vocabulary"][:8])
+                )
+            sourced = [i for i in insights.get("all_insights", []) if isinstance(i, dict) and i.get("source_url")]
+            if sourced:
+                prompt_parts.append(
+                    "SOURCES ORIGINALES des insights (à utiliser pour les liens hypertexte et les citations, "
+                    "n'invente jamais d'URL) :\n"
+                    + "\n".join(
+                        f"- \"{str(i.get('content', ''))[:90]}\" → {i.get('source_url')} "
+                        f"({i.get('source_name', '')}, {i.get('author') or 'anonyme'})"
+                        for i in sourced[:15]
+                    )
                 )
             prompt_parts.append(
                 "INSTRUCTIONS : réponds aux vraies questions ci-dessus. Adresse les vraies douleurs. "
@@ -927,7 +970,7 @@ class SEOGenerationOrchestrator:
         if real_questions:
             human_context += (
                 "\nVraies questions posées par des utilisateurs réels "
-                "(Google People Also Ask, Reddit, forums — inspire-toi sans les copier) :\n"
+                "(Google People Also Ask, Reddit, forums, inspire-toi sans les copier) :\n"
                 + "\n".join(f"- {q}" for q in real_questions[:8])
             )
         if real_pains:
