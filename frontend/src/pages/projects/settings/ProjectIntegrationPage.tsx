@@ -23,7 +23,8 @@ function deriveRevalidateUrl(publicSiteUrl: string) {
   if (!raw) return ''
   try {
     const url = new URL(raw.startsWith('http') ? raw : `https://${raw}`)
-    return `${url.origin}/api/ideas-studio/revalidate`
+    const basePath = url.pathname === '/' ? '' : url.pathname.replace(/\/+$/, '')
+    return `${url.origin}${basePath}/api/ideas-studio/revalidate`
   } catch {
     return ''
   }
@@ -32,6 +33,13 @@ function deriveRevalidateUrl(publicSiteUrl: string) {
 function cleanRevalidateForm(data: ConnectInfo) {
   const publicSiteUrl = data.public_site_url ?? ''
   const endpoint = data.revalidate_url ?? ''
+  if (!publicSiteUrl.trim()) {
+    return {
+      public_site_url: '',
+      revalidate_url: '',
+      revalidate_secret: '',
+    }
+  }
   const derived = deriveRevalidateUrl(publicSiteUrl)
   const safeEndpoint = looksLikeEmail(endpoint) ? '' : endpoint
   return {
@@ -39,6 +47,12 @@ function cleanRevalidateForm(data: ConnectInfo) {
     revalidate_url: safeEndpoint || derived,
     revalidate_secret: '',
   }
+}
+
+function generateRevalidationSecret() {
+  const bytes = new Uint8Array(24)
+  window.crypto?.getRandomValues(bytes)
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
 function InfoRow({
@@ -376,14 +390,11 @@ export default function ProjectIntegrationPage() {
                 value={revalidateForm.public_site_url}
                 onChange={(event) => {
                   const nextSiteUrl = event.target.value
-                  setRevalidateForm((form) => {
-                    const shouldDerive = !form.revalidate_url || looksLikeEmail(form.revalidate_url) || form.revalidate_url === deriveRevalidateUrl(form.public_site_url)
-                    return {
-                      ...form,
-                      public_site_url: nextSiteUrl,
-                      revalidate_url: shouldDerive ? deriveRevalidateUrl(nextSiteUrl) : form.revalidate_url,
-                    }
-                  })
+                  setRevalidateForm((form) => ({
+                    ...form,
+                    public_site_url: nextSiteUrl,
+                    revalidate_url: deriveRevalidateUrl(nextSiteUrl),
+                  }))
                 }}
                 placeholder="https://www.votresite.com"
                 className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
@@ -411,13 +422,22 @@ export default function ProjectIntegrationPage() {
             </label>
           </div>
           <label className="flex flex-col gap-1.5">
-            <span className="text-[12px] font-medium text-secondary">
-              Secret de revalidation {info?.revalidate_secret_configured ? '(déjà configuré)' : ''}
-            </span>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[12px] font-medium text-secondary">
+                Mot de passe de revalidation {info?.revalidate_secret_configured ? '(déjà configuré)' : ''}
+              </span>
+              <button
+                type="button"
+                onClick={() => setRevalidateForm((form) => ({ ...form, revalidate_secret: generateRevalidationSecret() }))}
+                className="text-[12px] font-medium text-secondary transition-colors hover:text-primary"
+              >
+                Générer
+              </button>
+            </div>
             <input
               value={revalidateForm.revalidate_secret}
               onChange={(event) => setRevalidateForm((form) => ({ ...form, revalidate_secret: event.target.value }))}
-              placeholder={info?.revalidate_secret_configured ? 'Laisser vide pour conserver le secret actuel' : 'Secret partagé avec le site public'}
+              placeholder={info?.revalidate_secret_configured ? 'Laisser vide pour conserver le mot de passe actuel' : 'Mot de passe partagé avec le site public'}
               type="password"
               className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
             />
