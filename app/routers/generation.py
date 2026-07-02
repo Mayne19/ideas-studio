@@ -148,6 +148,7 @@ def get_generation_report(
     article_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    _member=Depends(require_project_role("owner", "admin", "editor", "designer", "viewer")),
 ):
     article = db.query(Article).filter(Article.id == article_id, Article.project_id == project_id).first()
     if not article:
@@ -161,6 +162,7 @@ def get_seo_workflow(
     article_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    _member=Depends(require_project_role("owner", "admin", "editor", "designer", "viewer")),
 ):
     article = db.query(Article).filter(Article.id == article_id, Article.project_id == project_id).first()
     if not article:

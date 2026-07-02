@@ -205,6 +205,8 @@ def patch_member(
     db: Session = Depends(get_db),
 ):
     project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Projet introuvable")
     if target_user_id == project.owner_id:
         raise HTTPException(status_code=403, detail="Cannot change the role of the project owner")
 
@@ -260,6 +262,8 @@ def remove_member(
     db: Session = Depends(get_db),
 ):
     project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Projet introuvable")
     if target_user_id == project.owner_id:
         raise HTTPException(status_code=403, detail="Cannot remove the project owner")
 

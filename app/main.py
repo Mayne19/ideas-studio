@@ -133,6 +133,31 @@ def run_migrations():
         raise
     logger.info("Alembic migrations completed successfully. current_revision=%s", _read_alembic_revision())
 
+
+@app.on_event("startup")
+async def start_background_scheduler():
+    """Démarre le scheduler APScheduler pour les publications programmées et les pipelines."""
+    if settings.APP_ENV == "test":
+        return
+    # Render définit RENDER_INSTANCE_ID — le scheduler tourne sur le process unique
+    worker_id = os.getenv("RENDER_INSTANCE_ID", "local")
+    try:
+        from app.services.worker import start_scheduler
+        start_scheduler()
+        logger.info("Scheduler started on instance %s", worker_id)
+    except Exception as exc:
+        logger.error("Failed to start scheduler: %s", exc)
+
+
+@app.on_event("shutdown")
+async def stop_background_scheduler():
+    try:
+        from app.services.worker import stop_scheduler
+        stop_scheduler()
+    except Exception:
+        pass
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,

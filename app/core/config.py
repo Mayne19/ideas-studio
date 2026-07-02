@@ -1,5 +1,8 @@
+import logging
+import os
 import secrets
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 from sqlalchemy.engine.url import make_url
 
@@ -11,7 +14,7 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = ""
     CORS_ORIGINS: str = ""
     DATABASE_URL: str = "sqlite:///./ideas_studio.db"
-    SECRET_KEY: str = secrets.token_urlsafe(48)
+    SECRET_KEY: str = ""
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     IDEAS_PER_DAY: int = 1
     MIN_GENERATED_ARTICLE_WORDS: int = 800
@@ -96,14 +99,30 @@ class Settings(BaseSettings):
     AGENT_EDITOR_MODEL: str = ""
     AGENT_SEO_PROVIDER: str = ""
     AGENT_SEO_MODEL: str = ""
-    AGENT_FACT_CHECKER_PROVIDER: str = ""
-    AGENT_FACT_CHECKER_MODEL: str = ""
     AGENT_META_PROVIDER: str = ""
     AGENT_META_MODEL: str = ""
     AGENT_PRODUCT_WRITER_PROVIDER: str = ""
     AGENT_PRODUCT_WRITER_MODEL: str = ""
 
     model_config = {"env_file": ".env", "extra": "ignore"}
+
+    @field_validator("SECRET_KEY")
+    @classmethod
+    def secret_key_must_be_set(cls, v: str, info) -> str:
+        if not v:
+            app_env = info.data.get("APP_ENV") or os.getenv("APP_ENV", "development")
+            if app_env == "production":
+                raise ValueError(
+                    "SECRET_KEY must be explicitly set in production. "
+                    "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(48))\""
+                )
+            # En développement uniquement : générer une clé temporaire avec avertissement
+            logging.getLogger(__name__).warning(
+                "SECRET_KEY not set — using temporary random key (dev only). "
+                "All sessions and encrypted API keys will be lost on restart."
+            )
+            return secrets.token_urlsafe(48)
+        return v
 
     @property
     def database_url(self) -> str:
@@ -129,6 +148,11 @@ class Settings(BaseSettings):
                     origin = f"{host}:{port}"
                     if origin not in configured:
                         configured.append(origin)
+        if not configured and self.APP_ENV == "production":
+            raise ValueError(
+                "CORS_ORIGINS must be set in production. "
+                "Set CORS_ORIGINS or FRONTEND_URL environment variable."
+            )
         return configured or ["*"]
 
 

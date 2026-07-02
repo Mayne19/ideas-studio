@@ -34,6 +34,9 @@ from app.services.publication_revalidation_service import trigger_project_revali
 router = APIRouter(tags=["articles"])
 
 _MANAGE_ROLES = ("owner", "admin", "editor")
+
+# Statuts autorisés pour la publication en lot (exclut idées, publiés et archivés)
+PUBLISHABLE_STATUSES = {"draft", "draft_ready", "ready_to_publish", "scheduled", "review_needed"}
 _ALL_WRITE_ROLES = ("owner", "admin", "editor", "designer")
 
 
@@ -97,8 +100,6 @@ def patch_article_route(
     member = get_member_for_project(db, current_user.id, article.project_id)
     if not member:
         raise HTTPException(status_code=403, detail="Access denied")
-    if member.role == "viewer":
-        raise HTTPException(status_code=403, detail="Viewers cannot edit articles")
     if member.role == "viewer":
         raise HTTPException(status_code=403, detail="Viewers cannot edit articles")
     return update_article(db, article, data)
@@ -449,7 +450,15 @@ def bulk_publish_articles_route(
 
     project = db.query(Project).filter(Project.id == project_id).first()
     published_count = 0
+    blocked = []
     for article in articles:
+        if article.status not in PUBLISHABLE_STATUSES:
+            blocked.append({
+                "article_id": article.id,
+                "title": article.title,
+                "reasons": [f"Statut non publiable: {article.status}"],
+            })
+            continue
         published = publish_article(db, article)
         published_count += 1
         if project:
@@ -458,10 +467,10 @@ def bulk_publish_articles_route(
     return {
         "validated_count": published_count,
         "scheduled_count": published_count,
-        "blocked_count": 0,
+        "blocked_count": len(blocked),
         "not_found_count": len(not_found),
         "not_found_ids": not_found,
-        "blocked_articles": [],
+        "blocked_articles": blocked,
     }
 
 

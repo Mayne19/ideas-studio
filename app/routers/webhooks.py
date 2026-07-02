@@ -1,6 +1,8 @@
+import ipaddress
 import json
 import logging
 from typing import Optional
+from urllib.parse import urlparse
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -14,6 +16,29 @@ from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["webhooks"])
+
+
+def _validate_webhook_url(url: str) -> None:
+    """Bloque les URLs internes et non-HTTPS pour prévenir les requêtes vers le réseau interne."""
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        raise HTTPException(status_code=400, detail="URL webhook invalide")
+
+    if parsed.scheme != "https":
+        raise HTTPException(status_code=400, detail="Les webhooks doivent utiliser HTTPS")
+
+    hostname = parsed.hostname or ""
+    try:
+        addr = ipaddress.ip_address(hostname)
+        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
+            raise HTTPException(status_code=400, detail="URL webhook pointe vers une adresse réseau interne")
+    except ValueError:
+        pass  # C'est un hostname DNS, pas une IP — OK
+
+    blocked_hosts = {"localhost", "metadata.google.internal"}
+    if hostname.lower() in blocked_hosts:
+        raise HTTPException(status_code=400, detail="URL webhook non autorisée")
 
 
 @router.get("/projects/{project_id}/webhooks", response_model=list[WebhookPublic])
@@ -33,6 +58,7 @@ def create_webhook(
     member: ProjectMember = Depends(require_project_role("owner", "admin")),
     db: Session = Depends(get_db),
 ):
+    _validate_webhook_url(data.url)
     hook = Webhook(
         project_id=project_id,
         name=data.name,
@@ -59,6 +85,7 @@ def update_webhook(
     if data.name is not None:
         hook.name = data.name
     if data.url is not None:
+        _validate_webhook_url(data.url)
         hook.url = data.url
     if data.events is not None:
         hook.events = json.dumps(data.events)
@@ -114,10 +141,10 @@ def test_webhook(
                     "X-IdeasStudio-Event": "test",
                 },
             )
-            hook.last_status = "success" if resp.ok else f"HTTP {resp.status_code}"
+            hook.last_status = "success" if resp.is_success else f"HTTP {resp.status_code}"
             hook.last_triggered_at = datetime.now(timezone.utc)
             db.commit()
-            return {"status": "ok" if resp.ok else "error", "status_code": resp.status_code}
+            return {"status": "ok" if resp.is_success else "error", "status_code": resp.status_code}
     except Exception as exc:
         hook.last_status = "error"
         hook.last_error = str(exc)
@@ -175,7 +202,7 @@ def trigger_webhooks(db: Session, project_id: str, event: str, data: dict):
                         "X-IdeasStudio-Event": event,
                     },
                 )
-                hook.last_status = "success" if resp.ok else f"HTTP {resp.status_code}"
+                hook.last_status = "success" if resp.is_success else f"HTTP {resp.status_code}"
                 hook.last_triggered_at = datetime.now(timezone.utc)
         except Exception as exc:
             hook.last_status = "error"

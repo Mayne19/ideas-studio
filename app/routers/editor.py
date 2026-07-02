@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import logging
 import re
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -12,6 +13,8 @@ from app.models.user import User
 from app.schemas.editor import AutosaveRequest, AutosaveResponse, EditorData, AnalysisBrief, PreviewResponse
 from app.services.callout_template_service import extract_callouts_from_content
 from app.services.version_service import create_version, is_duplicate_autosave
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["editor"])
 
@@ -204,8 +207,12 @@ def autosave_article(
         article.global_score = scoring.get("global_score")
         article.global_score_valid = bool(scoring.get("global_score_valid", False))
         db.commit()
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.error("Autosave scoring failed: %s", exc)
+        try:
+            db.rollback()
+        except Exception:
+            pass
 
     return AutosaveResponse(
         id=article.id,

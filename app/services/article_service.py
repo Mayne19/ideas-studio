@@ -266,6 +266,15 @@ def unpublish_article(db: Session, article: Article) -> Article:
     article.status = "draft"
     db.commit()
     db.refresh(article)
+    try:
+        from app.models.project import Project
+        from app.services.publication_revalidation_service import trigger_project_revalidation
+        project = db.query(Project).filter(Project.id == article.project_id).first()
+        if project:
+            trigger_project_revalidation(db, project, article=article, event_type="article.unpublished")
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("Revalidation after unpublish failed: %s", exc)
     return article
 
 

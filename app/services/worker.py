@@ -111,6 +111,8 @@ def run_pipelines():
     try:
         pipelines = db.query(ProjectPipeline).filter(ProjectPipeline.enabled == True).all()
         for pipeline in pipelines:
+            if _pipeline_already_ran_today(db, pipeline.project_id):
+                continue
             try:
                 result = run_pipeline(db, pipeline.project_id)
                 logger.info(

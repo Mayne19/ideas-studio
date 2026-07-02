@@ -32,6 +32,14 @@ def _set_public_url(item: MediaAsset, base: str):
 _WRITE_ROLES = frozenset({"owner", "admin", "editor", "designer"})
 _MANAGE_ROLES = frozenset({"owner", "admin", "editor", "designer"})
 
+# Whitelist des types MIME acceptés
+ALLOWED_MIME_TYPES = {
+    "image/jpeg", "image/png", "image/webp",
+    "image/gif", "image/svg+xml",
+}
+MAX_FILE_SIZE_MB = 10
+MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
+
 
 @router.get("/projects/{project_id}/media", response_model=list[MediaPublic])
 def list_media(
@@ -60,6 +68,22 @@ async def upload_media(
     request: Request = None,
     db: Session = Depends(get_db),
 ):
+    # Vérifier le type MIME
+    if file.content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Type de fichier non autorisé: {file.content_type}. "
+                   f"Types acceptés: {', '.join(sorted(ALLOWED_MIME_TYPES))}"
+        )
+
+    # Lire avec limite de taille
+    content = await file.read(MAX_FILE_SIZE_BYTES + 1)
+    if len(content) > MAX_FILE_SIZE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Fichier trop volumineux. Maximum: {MAX_FILE_SIZE_MB} Mo"
+        )
+
     if article_id:
         article = db.query(Article).filter(
             Article.id == article_id,
@@ -74,7 +98,6 @@ async def upload_media(
     os.makedirs(upload_dir, exist_ok=True)
     filepath = os.path.join(upload_dir, saved_name)
 
-    content = await file.read()
     with open(filepath, "wb") as f:
         f.write(content)
 

@@ -36,12 +36,6 @@ def _mask_key(key: str) -> str:
 def _ensure_platform_admin(current_user: User, db: Session) -> None:
     if current_user.is_platform_admin:
         return
-    admin_exists = db.query(User.id).filter(User.is_platform_admin == True).first()
-    if not admin_exists:
-        current_user.is_platform_admin = True
-        db.commit()
-        db.refresh(current_user)
-        return
     raise HTTPException(status_code=403, detail="Admin access required")
 
 
