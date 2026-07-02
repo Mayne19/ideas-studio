@@ -10,8 +10,6 @@ import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import Input from '@/components/ui/Input'
-import Textarea from '@/components/ui/Textarea'
-import ToggleSwitch from '@/components/ui/ToggleSwitch'
 import ColorPickerField from '@/components/ui/ColorPickerField'
 import EmptyState from '@/components/ui/EmptyState'
 import ErrorState from '@/components/ui/ErrorState'
@@ -205,24 +203,16 @@ function UncategorizedColumn({
 
 type FormState = {
   name: string
-  description: string
   color: string
   target_frequency: string
-  pipeline_enabled: boolean
-  target_audience: string
-  editorial_goal: string
   word_count_min: string
   word_count_max: string
 }
 
 const EMPTY_FORM: FormState = {
   name: '',
-  description: '',
   color: DEFAULT_ACCENT_COLOR,
   target_frequency: '',
-  pipeline_enabled: true,
-  target_audience: '',
-  editorial_goal: '',
   word_count_min: '',
   word_count_max: '',
 }
@@ -294,12 +284,8 @@ export default function CategoriesPage() {
     setEditTarget(c)
     setForm({
       name: c.name,
-      description: c.description ?? '',
       color: categoryColor(c),
       target_frequency: (c.monthly_frequency ?? c.target_frequency) !== null ? String(c.monthly_frequency ?? c.target_frequency) : '',
-      pipeline_enabled: c.pipeline_enabled !== false,
-      target_audience: c.target_audience ?? '',
-      editorial_goal: c.editorial_goal ?? '',
       word_count_min: c.word_count_min != null ? String(c.word_count_min) : '',
       word_count_max: c.word_count_max != null ? String(c.word_count_max) : '',
     })
@@ -321,13 +307,9 @@ export default function CategoriesPage() {
       if (editTarget) {
         const payload: UpdateCategoryPayload = {
           name: form.name.trim(),
-          description: form.description.trim() || null,
           color: normalizeColor(form.color),
           target_frequency: freq,
           monthly_frequency: freq,
-          pipeline_enabled: form.pipeline_enabled,
-          target_audience: form.target_audience.trim() || null,
-          editorial_goal: form.editorial_goal.trim() || null,
           word_count_min: form.word_count_min.trim() ? parseInt(form.word_count_min) : null,
           word_count_max: form.word_count_max.trim() ? parseInt(form.word_count_max) : null,
         }
@@ -335,13 +317,9 @@ export default function CategoriesPage() {
       } else {
         const payload: CreateCategoryPayload = {
           name: form.name.trim(),
-          description: form.description.trim() || undefined,
           color: normalizeColor(form.color),
           target_frequency: freq ?? undefined,
           monthly_frequency: freq ?? undefined,
-          pipeline_enabled: form.pipeline_enabled,
-          target_audience: form.target_audience.trim() || null,
-          editorial_goal: form.editorial_goal.trim() || null,
           word_count_min: form.word_count_min.trim() ? parseInt(form.word_count_min) : null,
           word_count_max: form.word_count_max.trim() ? parseInt(form.word_count_max) : null,
         }
@@ -533,128 +511,69 @@ export default function CategoriesPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editTarget ? 'Modifier la catégorie' : 'Nouvelle catégorie'}
-        size="lg"
+        size="md"
       >
-        <form onSubmit={handleSubmit} className="flex max-h-[calc(100vh-170px)] flex-col gap-4 overflow-y-auto pr-1">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {formError && (
             <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">
               {formError}
             </div>
           )}
-          <div className="grid gap-4 md:grid-cols-[1fr_240px]">
-            <div className="flex flex-col gap-4">
-              <div className="rounded-[14px] border-2 border-border p-4">
-                <div className="mb-3 text-[12px] font-semibold uppercase tracking-[0.04em] text-tertiary">
-                  Informations
-                </div>
-                <div className="grid gap-3">
-                  <Input
-                    label="Nom"
-                    value={form.name}
-                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                    placeholder="SEO & Référencement"
-                    required
-                    autoFocus
-                  />
-                  <Textarea
-                    label="Description"
-                    value={form.description}
-                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                    placeholder="Articles sur les techniques SEO..."
-                    rows={2}
-                  />
-                </div>
-              </div>
+          <Input
+            label="Nom"
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            placeholder="SEO & Référencement"
+            required
+            autoFocus
+          />
 
-              <div className="rounded-[14px] border-2 border-border p-4">
-                <div className="mb-3 text-[12px] font-semibold uppercase tracking-[0.04em] text-tertiary">
-                  Cadrage éditorial
-                </div>
-                <div className="grid gap-3">
-                  <Input
-                    label="Audience cible"
-                    value={form.target_audience}
-                    onChange={(e) => setForm((f) => ({ ...f, target_audience: e.target.value }))}
-                    placeholder="Développeurs web, freelances, entrepreneurs..."
-                  />
-                  <Textarea
-                    label="Objectif éditorial"
-                    value={form.editorial_goal}
-                    onChange={(e) => setForm((f) => ({ ...f, editorial_goal: e.target.value }))}
-                    placeholder="Éduquer sur les bonnes pratiques, générer des leads..."
-                    rows={2}
-                  />
-                </div>
-              </div>
+          <div className="rounded-[14px] border-2 border-border p-4">
+            <div className="mb-3 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.04em] text-tertiary">
+              <Palette size={13} />
+              Couleur
             </div>
+            <ColorPickerField
+              value={form.color}
+              onChange={(color) => setForm((f) => ({ ...f, color }))}
+            />
+          </div>
 
-            <div className="flex flex-col gap-4">
-              <div className="rounded-[14px] border-2 border-border p-4">
-                <div className="mb-3 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.04em] text-tertiary">
-                  <Palette size={13} />
-                  Apparence
-                </div>
-                <ColorPickerField
-                  value={form.color}
-                  onChange={(color) => setForm((f) => ({ ...f, color }))}
-                />
-              </div>
+          <Input
+            label="Fréquence mensuelle"
+            type="number"
+            value={form.target_frequency}
+            onChange={(e) => setForm((f) => ({ ...f, target_frequency: e.target.value }))}
+            placeholder="4"
+            hint="Nombre d'articles dans cette catégorie par mois."
+          />
 
-              <div className="rounded-[14px] border-2 border-border p-4">
-                <div className="mb-3 text-[12px] font-semibold uppercase tracking-[0.04em] text-tertiary">
-                  Production
-                </div>
-                <div className="grid gap-3">
-                  <Input
-                    label="Fréquence mensuelle"
-                    type="number"
-                    value={form.target_frequency}
-                    onChange={(e) => setForm((f) => ({ ...f, target_frequency: e.target.value }))}
-                    placeholder="4"
-                    hint="Nombre d'articles par mois."
-                  />
-                  <div>
-                    <p className="mb-1 text-[12px] font-medium text-secondary">
-                      Volume spécifique
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min="300"
-                        step="100"
-                        value={form.word_count_min}
-                        onChange={(e) => setForm((f) => ({ ...f, word_count_min: e.target.value }))}
-                        placeholder="Min"
-                        className="h-9 min-w-0 flex-1 rounded-[8px] border-2 border-border bg-transparent px-2.5 text-[12px] text-primary outline-none transition-colors placeholder:text-tertiary focus:border-accent"
-                      />
-                      <span className="text-[12px] text-tertiary">à</span>
-                      <input
-                        type="number"
-                        min="300"
-                        step="100"
-                        value={form.word_count_max}
-                        onChange={(e) => setForm((f) => ({ ...f, word_count_max: e.target.value }))}
-                        placeholder="Max"
-                        className="h-9 min-w-0 flex-1 rounded-[8px] border-2 border-border bg-transparent px-2.5 text-[12px] text-primary outline-none transition-colors placeholder:text-tertiary focus:border-accent"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between rounded-[12px] bg-surface-soft px-3 py-2.5">
-                    <div>
-                      <p className="text-[13px] font-medium text-primary">Pipeline</p>
-                      <p className="mt-0.5 text-[12px] text-secondary">Inclure dans la génération.</p>
-                    </div>
-                    <ToggleSwitch
-                      checked={form.pipeline_enabled}
-                      onChange={(v) => setForm((f) => ({ ...f, pipeline_enabled: v }))}
-                      ariaLabel="Inclure dans le pipeline automatique"
-                    />
-                  </div>
-                </div>
-              </div>
+          <div>
+            <p className="mb-1 text-[14px] font-medium text-primary">Volume de mots</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="300"
+                step="100"
+                value={form.word_count_min}
+                onChange={(e) => setForm((f) => ({ ...f, word_count_min: e.target.value }))}
+                placeholder="Min"
+                className="h-10 min-w-0 flex-1 rounded-[8px] border-2 border-border bg-transparent px-3.5 text-[15px] text-primary outline-none transition-colors placeholder:text-tertiary focus:border-accent"
+              />
+              <span className="text-[13px] text-tertiary">à</span>
+              <input
+                type="number"
+                min="300"
+                step="100"
+                value={form.word_count_max}
+                onChange={(e) => setForm((f) => ({ ...f, word_count_max: e.target.value }))}
+                placeholder="Max"
+                className="h-10 min-w-0 flex-1 rounded-[8px] border-2 border-border bg-transparent px-3.5 text-[15px] text-primary outline-none transition-colors placeholder:text-tertiary focus:border-accent"
+              />
+              <span className="text-[13px] text-tertiary">mots</span>
             </div>
           </div>
-          <div className="sticky bottom-0 -mx-1 flex gap-2 border-t-2 border-border bg-bg px-1 pt-4">
+          <div className="flex gap-2 pt-2">
             <Button
               type="button"
               variant="secondary"
