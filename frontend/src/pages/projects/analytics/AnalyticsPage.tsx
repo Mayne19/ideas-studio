@@ -578,7 +578,14 @@ export default function AnalyticsPage() {
                   tickMargin={8}
                   minTickGap={32}
                 />
-                <YAxis tickLine={false} axisLine={false} width={36} allowDecimals={false} tickFormatter={formatAxisTick} />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  width={36}
+                  allowDecimals={false}
+                  domain={[0, 'auto']}
+                  tickFormatter={formatAxisTick}
+                />
                 <ChartTooltip
                   cursor={false}
                   content={
@@ -600,7 +607,7 @@ export default function AnalyticsPage() {
                     key={channel.key}
                     dataKey={channel.key}
                     name={channel.label}
-                    type="natural"
+                    type="monotone"
                     fill={`url(#fill-${channel.key})`}
                     stroke={`var(--color-${channel.key})`}
                     strokeWidth={2}
