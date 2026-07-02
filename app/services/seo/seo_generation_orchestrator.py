@@ -830,7 +830,7 @@ class SEOGenerationOrchestrator:
 
         # Cycle d'auto-amélioration si score insuffisant
         try:
-            if article.global_score is not None and article.global_score < 80:
+            if article.global_score is not None and article.global_score < 90:
                 self._auto_improve_score(article, max_iterations=2)
         except Exception as exc:
             self._error("AutoImprove", str(exc))
