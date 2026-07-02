@@ -198,7 +198,9 @@ def test_reject_recommendation(client: TestClient):
 
     db = TestingSessionLocal()
     try:
+        from app.models.notification import Notification
         from app.models.optimization_recommendation import OptimizationRecommendation
+        from app.services.notification_service import create_notification
         rec = OptimizationRecommendation(
             project_id=project["id"],
             article_id=article["id"],
@@ -207,14 +209,30 @@ def test_reject_recommendation(client: TestClient):
             suggestion="Add FAQ",
         )
         db.add(rec)
+        create_notification(
+            db,
+            project["id"],
+            f"Nouvelles recommandations pour « {article['title']} »",
+            "1 recommandation d'optimisation créée pour cet article.",
+            type="optimization",
+            link=f"/projects/{project['id']}/articles/{article['id']}/edit",
+        )
         db.commit()
         rec_id = rec.id
+        assert db.query(Notification).filter(Notification.type == "optimization").count() == 1
     finally:
         db.close()
 
     resp = client.post(f"/recommendations/{rec_id}/reject", headers=headers)
     assert resp.status_code == 200
     assert resp.json()["status"] == "rejected"
+
+    db = TestingSessionLocal()
+    try:
+        from app.models.notification import Notification
+        assert db.query(Notification).filter(Notification.type == "optimization").count() == 0
+    finally:
+        db.close()
 
 
 # ── Notifications ─────────────────────────────────────────────────────────────

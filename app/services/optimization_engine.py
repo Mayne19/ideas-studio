@@ -160,6 +160,7 @@ def review_published_articles(db: Session, project_id: str) -> dict:
                 message=f"{new_recs} recommandation(s) d'optimisation créée(s) pour cet article.",
                 level="info",
                 type="optimization",
+                link=f"/projects/{project_id}/articles/{article.id}/edit",
             )
             notifications_created += 1
         else:

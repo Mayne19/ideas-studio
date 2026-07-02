@@ -1,9 +1,12 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user, get_project_member
+from app.models.article import Article
+from app.models.notification import Notification
 from app.models.optimization_recommendation import OptimizationRecommendation
 from app.models.project_member import ProjectMember
 from app.models.user import User
@@ -28,6 +31,26 @@ def _check_member(db: Session, user_id: str, project_id: str) -> ProjectMember:
     if not member:
         raise HTTPException(status_code=403, detail="Not a project member")
     return member
+
+
+def _delete_optimization_notifications(db: Session, rec: OptimizationRecommendation) -> None:
+    if not rec.article_id:
+        return
+
+    query = db.query(Notification).filter(
+        Notification.project_id == rec.project_id,
+        Notification.type == "optimization",
+    )
+
+    article = db.query(Article).filter(Article.id == rec.article_id).first()
+    article_link = f"/projects/{rec.project_id}/articles/{rec.article_id}/edit"
+    filters = [Notification.link == article_link]
+    if article and article.title:
+        filters.append(Notification.title.ilike(f"%{article.title[:60]}%"))
+    query = query.filter(or_(*filters))
+
+    for notification in query.all():
+        db.delete(notification)
 
 
 @router.get("/projects/{project_id}/recommendations", response_model=list[RecommendationPublic])
@@ -93,6 +116,7 @@ def reject_recommendation(
 
     rec.status = "rejected"
     rec.updated_at = datetime.now(timezone.utc)
+    _delete_optimization_notifications(db, rec)
     db.commit()
     db.refresh(rec)
     return rec
