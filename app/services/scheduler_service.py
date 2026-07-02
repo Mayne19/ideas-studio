@@ -66,10 +66,14 @@ def run_daily_project_tasks(db: Session, project_id: str) -> dict:
         create_notification(
             db,
             project_id=project_id,
-            title="Nouvelles idées générées",
-            message=f"{generated_count} idée(s) générée(s) aujourd'hui.",
+            title=f"{generated_count} idées prêtes à valider",
+            message=(
+                f"Le pipeline a généré {generated_count} idée(s) ce mois-ci. "
+                f"Validez-les avant la fin du mois pour lancer la production."
+            ),
             level="success",
-            type="daily_ideas",
+            type="monthly_ideas_ready",
+            link=f"/projects/{project_id}/pipeline?tab=ideas",
         )
 
     db.commit()

@@ -12,6 +12,7 @@ def create_notification(
     level: str = "info",
     type: str = "system",
     user_id: str | None = None,
+    link: str | None = None,
 ) -> Notification:
     notif = Notification(
         project_id=project_id,
@@ -20,6 +21,7 @@ def create_notification(
         title=title,
         message=message,
         level=level,
+        link=link,
     )
     db.add(notif)
     db.flush()

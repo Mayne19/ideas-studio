@@ -383,6 +383,20 @@ class SEOGenerationOrchestrator:
             article.updated_at = datetime.now(timezone.utc)
             self.db.flush()
             self._finalize_report(article, category_name, intent_analysis, research_brief, keyword_brief, outline, faq_plan, callout_plan, image_plan_result)
+            try:
+                from app.services.notification_service import create_notification
+                create_notification(
+                    db=self.db,
+                    project_id=article.project_id,
+                    title="Échec de génération",
+                    message=f'La génération de "{article.title or article.keyword}" a échoué. '
+                            f'Vérifiez les logs dans Paramètres → IA.',
+                    level="error",
+                    type="generation_failed",
+                    link=f"/projects/{article.project_id}/settings/ia",
+                )
+            except Exception:
+                pass
             return article
 
         # 16. LanguageQualityPass
@@ -798,6 +812,21 @@ class SEOGenerationOrchestrator:
             self._step("AutoScoring")
         except Exception as exc:
             self._error("AutoScoring", str(exc))
+
+        # Notifier que l'article est prêt à valider
+        try:
+            from app.services.notification_service import create_notification
+            create_notification(
+                db=self.db,
+                project_id=article.project_id,
+                title="Article prêt à valider",
+                message=f'"{article.title}" a été rédigé et scoré. Score global : {article.global_score or "—"}.',
+                level="success",
+                type="article_ready",
+                link=f"/projects/{article.project_id}/pipeline?tab=validate",
+            )
+        except Exception:
+            pass
 
         # Cycle d'auto-amélioration si score insuffisant
         try:
