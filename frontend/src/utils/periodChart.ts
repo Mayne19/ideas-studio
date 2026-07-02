@@ -127,6 +127,11 @@ export function getPeriodBuckets(period: PeriodRange): PeriodBucket[] {
 }
 
 export function getPeriodBucketKey(value: string, period: PeriodRange) {
+  const hourMatch = value.match(/^(\d{2}):\d{2}$/)
+  if (hourMatch) return `${period.startDate}T${hourMatch[1]}`
+  if (/^\d{4}-S\d{2}$/.test(value)) return value
+  if (/^\d{4}-\d{2}$/.test(value)) return value
+
   const date = parseLocalDate(value)
   if (Number.isNaN(date.getTime())) return null
   if (period.mode === 'day') return hourKey(date)
