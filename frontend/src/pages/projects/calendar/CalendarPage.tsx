@@ -423,7 +423,7 @@ export default function CalendarPage() {
                         onClick={() => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
                         className={`rounded-[4px] px-1.5 py-0.5 text-left text-[10px] font-medium truncate transition-colors ${
                           a.status === 'scheduled'
-                            ? 'bg-accent/10 text-accent hover:bg-accent/20'
+                            ? 'bg-blue-500/10 text-blue-600 hover:bg-blue-500/15'
                             : a.status === 'published'
                             ? 'bg-success/8 text-success hover:bg-success/12'
                             : a.status === 'idea_proposed' || a.status === 'idea_priority'
@@ -459,7 +459,7 @@ export default function CalendarPage() {
               En rédaction
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-accent" />
+              <span className="h-2 w-2 rounded-full bg-blue-600" />
               {STATUS_LABELS['scheduled']}
             </span>
             <span className="flex items-center gap-1.5">
