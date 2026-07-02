@@ -48,6 +48,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/Popover'
 import Button from '@/components/ui/Button'
 import { useAuth } from '@/context/AuthContext'
+import { formatDate } from '@/utils/format'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -233,11 +234,6 @@ function buildPersistedSnapshot({
   }
 }
 
-function snapshotsEqual(a: PersistedSnapshot | null, b: PersistedSnapshot): boolean {
-  if (!a) return false
-  return JSON.stringify(a) === JSON.stringify(b)
-}
-
 function buildPublishedSnapshot(article: EditorArticle | null): PersistedSnapshot | null {
   if (!article || article.status !== 'published') return null
   const hasPublishedFields = article.published_content !== null || article.published_title !== null || article.published_excerpt !== null
@@ -311,8 +307,8 @@ export default function ArticleEditorPage() {
   const [manualAuthorName, setManualAuthorName] = useState('')
   const [manualReadingTime, setManualReadingTime] = useState<number | null>(null)
   const [featured, setFeatured] = useState(false)
-  const [persistedSnapshot, setPersistedSnapshot] = useState<PersistedSnapshot | null>(null)
-  const [lastPromotedSnapshot, setLastPromotedSnapshot] = useState<PersistedSnapshot | null>(null)
+  const [, setPersistedSnapshot] = useState<PersistedSnapshot | null>(null)
+  const [, setLastPromotedSnapshot] = useState<PersistedSnapshot | null>(null)
   const [faqItems, setFaqItems] = useState<FaqItem[]>([])
   const [faqOpen, setFaqOpen] = useState(false)
 
@@ -1197,21 +1193,6 @@ export default function ArticleEditorPage() {
 
   const calculatedReadingTime = Math.max(1, Math.ceil(wordCount / 200))
   const readingTime = normalizeReadingTime(manualReadingTime) ?? calculatedReadingTime
-  const currentSnapshot = buildPersistedSnapshot({
-    content: editor?.getHTML() ?? article?.content ?? '',
-    meta: metaFields,
-    coverImageUrl: coverImageUrl,
-    faqItems,
-    authorName: manualAuthorName,
-    readingTimeMinutes: manualReadingTime,
-    featured,
-  })
-  const hasUnsavedChanges = !snapshotsEqual(persistedSnapshot, currentSnapshot)
-  const showUpdateButton = article?.status === 'published' && (
-    hasUnsavedChanges ||
-    (lastPromotedSnapshot !== null && !snapshotsEqual(lastPromotedSnapshot, currentSnapshot))
-  )
-
   const isEditable = viewMode === 'edit'
   const busy = actionLoading !== null
   const selectedComment = comments.find((comment) => comment.id === selectedCommentId) ?? null
@@ -1612,6 +1593,43 @@ export default function ArticleEditorPage() {
                       <StatusBadge status={article.status} />
                     </div>
 
+                    {article.status === 'scheduled' && article.scheduled_at && (
+                      <div className="flex flex-col gap-2 px-3 pb-3">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => void handlePromote()}
+                          loading={actionLoading === 'promote'}
+                          disabled={busy}
+                        >
+                          Mettre à jour le contenu
+                        </Button>
+                        <p className="text-center text-[11px] text-tertiary">
+                          La date de publication reste le {formatDate(article.scheduled_at)}
+                        </p>
+                      </div>
+                    )}
+
+                    {article.status === 'published' && (
+                      <div className="flex flex-col gap-2 px-3 pb-3">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => void handlePromote()}
+                          loading={actionLoading === 'promote'}
+                          disabled={busy}
+                        >
+                          Mettre à jour
+                        </Button>
+                        <div className="px-1 text-[11px] text-tertiary">
+                          <p>Publié le {article.published_at ? formatDate(article.published_at) : '—'}</p>
+                          {article.updated_at && article.updated_at !== article.published_at && (
+                            <p>Dernière mise à jour : {formatDate(article.updated_at)}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex flex-col gap-2">
                       {/* Scheduled → Déprogrammer */}
                       {article.status === 'scheduled' && (
@@ -1629,28 +1647,16 @@ export default function ArticleEditorPage() {
 
                       {/* Published → Dépublier + promote si changements */}
                       {article.status === 'published' && (
-                        <>
-                          {showUpdateButton && (
-                            <button
-                              onClick={() => void handlePromote()}
-                              disabled={busy || actionLoading === 'promote'}
-                              className="w-full rounded-[8px] bg-accent py-2 text-[12px] font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-40"
-                            >
-                              {actionLoading === 'promote' ? <Loader2 size={12} className="animate-spin inline mr-1" /> : null}
-                              Mettre à jour la publication
-                            </button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="w-full justify-center"
-                            onClick={() => doAction('unpublish')}
-                            disabled={busy}
-                          >
-                            {actionLoading === 'unpublish' ? <Loader2 size={13} className="animate-spin" /> : null}
-                            Dépublier
-                          </Button>
-                        </>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="w-full justify-center"
+                          onClick={() => doAction('unpublish')}
+                          disabled={busy}
+                        >
+                          {actionLoading === 'unpublish' ? <Loader2 size={13} className="animate-spin" /> : null}
+                          Dépublier
+                        </Button>
                       )}
 
                       {/* Default (draft, ready_to_publish, etc.) → Publier + Archiver */}
