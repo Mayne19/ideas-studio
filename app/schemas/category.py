@@ -33,6 +33,8 @@ class CategoryCreate(BaseModel):
     internal_notes: Optional[str] = None
     vertical: Optional[str] = None
     niche: Optional[str] = None
+    word_count_min: Optional[int] = None
+    word_count_max: Optional[int] = None
 
     @field_validator("color")
     @classmethod
@@ -55,6 +57,8 @@ class CategoryUpdate(BaseModel):
     internal_notes: Optional[str] = None
     vertical: Optional[str] = None
     niche: Optional[str] = None
+    word_count_min: Optional[int] = None
+    word_count_max: Optional[int] = None
 
     @field_validator("color")
     @classmethod
@@ -81,5 +85,7 @@ class CategoryPublic(BaseModel):
     internal_notes: Optional[str] = None
     vertical: Optional[str] = None
     niche: Optional[str] = None
+    word_count_min: Optional[int] = None
+    word_count_max: Optional[int] = None
     created_at: datetime
     updated_at: datetime

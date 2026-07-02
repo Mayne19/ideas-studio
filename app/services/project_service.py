@@ -30,6 +30,8 @@ def create_project(db: Session, data: ProjectCreate, owner_id: str) -> Project:
         forbidden_topics=data.forbidden_topics,
         words_to_avoid=data.words_to_avoid,
         average_target_length=data.average_target_length,
+        word_count_min=data.word_count_min,
+        word_count_max=data.word_count_max,
         preferred_formats=data.preferred_formats,
         technical_level=data.technical_level,
         seo_rules=data.seo_rules,

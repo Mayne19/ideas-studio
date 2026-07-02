@@ -25,6 +25,8 @@ class Category(Base):
     internal_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     vertical: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     niche: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    word_count_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    word_count_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )

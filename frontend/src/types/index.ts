@@ -30,6 +30,8 @@ export type Project = {
   forbidden_topics: string | null
   words_to_avoid: string | null
   average_target_length: string | null
+  word_count_min: number | null
+  word_count_max: number | null
   preferred_formats: string | null
   technical_level: string | null
   seo_rules: string | null
@@ -287,6 +289,8 @@ export type Category = {
   internal_notes: string | null
   vertical?: string | null
   niche?: string | null
+  word_count_min?: number | null
+  word_count_max?: number | null
   created_at: string
   updated_at: string
 }

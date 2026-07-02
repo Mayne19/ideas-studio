@@ -213,6 +213,8 @@ type FormState = {
   pipeline_enabled: boolean
   target_audience: string
   editorial_goal: string
+  word_count_min: string
+  word_count_max: string
 }
 
 const EMPTY_FORM: FormState = {
@@ -224,6 +226,8 @@ const EMPTY_FORM: FormState = {
   pipeline_enabled: true,
   target_audience: '',
   editorial_goal: '',
+  word_count_min: '',
+  word_count_max: '',
 }
 
 export default function CategoriesPage() {
@@ -300,6 +304,8 @@ export default function CategoriesPage() {
       pipeline_enabled: c.pipeline_enabled !== false,
       target_audience: c.target_audience ?? '',
       editorial_goal: c.editorial_goal ?? '',
+      word_count_min: c.word_count_min != null ? String(c.word_count_min) : '',
+      word_count_max: c.word_count_max != null ? String(c.word_count_max) : '',
     })
     setFormError('')
     setModalOpen(true)
@@ -327,6 +333,8 @@ export default function CategoriesPage() {
           pipeline_enabled: form.pipeline_enabled,
           target_audience: form.target_audience.trim() || null,
           editorial_goal: form.editorial_goal.trim() || null,
+          word_count_min: form.word_count_min.trim() ? parseInt(form.word_count_min) : null,
+          word_count_max: form.word_count_max.trim() ? parseInt(form.word_count_max) : null,
         }
         await updateCategory(projectId, editTarget.id, payload)
       } else {
@@ -340,6 +348,8 @@ export default function CategoriesPage() {
           pipeline_enabled: form.pipeline_enabled,
           target_audience: form.target_audience.trim() || null,
           editorial_goal: form.editorial_goal.trim() || null,
+          word_count_min: form.word_count_min.trim() ? parseInt(form.word_count_min) : null,
+          word_count_max: form.word_count_max.trim() ? parseInt(form.word_count_max) : null,
         }
         await createCategory(projectId, payload)
       }
@@ -591,6 +601,37 @@ export default function CategoriesPage() {
             placeholder="Éduquer sur les bonnes pratiques, générer des leads..."
             rows={2}
           />
+          {/* Surcharge volume — optionnel, laissez vide pour utiliser le défaut projet */}
+          <div>
+            <p className="text-[12px] font-medium text-secondary mb-1">
+              Volume spécifique (optionnel)
+            </p>
+            <p className="text-[11px] text-tertiary mb-1.5">
+              Laissez vide pour utiliser la plage définie dans les paramètres du projet.
+            </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                type="number"
+                min="300"
+                step="100"
+                value={form.word_count_min}
+                onChange={(e) => setForm((f) => ({ ...f, word_count_min: e.target.value }))}
+                placeholder="Min"
+                className="h-9 w-24 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
+              />
+              <span className="text-[12px] text-tertiary">à</span>
+              <input
+                type="number"
+                min="300"
+                step="100"
+                value={form.word_count_max}
+                onChange={(e) => setForm((f) => ({ ...f, word_count_max: e.target.value }))}
+                placeholder="Max"
+                className="h-9 w-24 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
+              />
+              <span className="text-[12px] text-tertiary">mots</span>
+            </div>
+          </div>
           <div className="flex items-center justify-between rounded-[12px] bg-surface-soft px-3.5 py-3">
             <div>
               <p className="text-[14px] font-medium text-primary">Inclure dans le pipeline</p>

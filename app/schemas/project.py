@@ -22,6 +22,8 @@ class ProjectCreate(BaseModel):
     forbidden_topics: Optional[str] = None
     words_to_avoid: Optional[str] = None
     average_target_length: Optional[str] = None
+    word_count_min: Optional[int] = None
+    word_count_max: Optional[int] = None
     preferred_formats: Optional[str] = None
     technical_level: Optional[str] = None
     seo_rules: Optional[str] = None
@@ -51,6 +53,8 @@ class ProjectUpdate(BaseModel):
     forbidden_topics: Optional[str] = None
     words_to_avoid: Optional[str] = None
     average_target_length: Optional[str] = None
+    word_count_min: Optional[int] = None
+    word_count_max: Optional[int] = None
     preferred_formats: Optional[str] = None
     technical_level: Optional[str] = None
     seo_rules: Optional[str] = None
@@ -87,6 +91,8 @@ class ProjectPublic(BaseModel):
     forbidden_topics: Optional[str] = None
     words_to_avoid: Optional[str] = None
     average_target_length: Optional[str] = None
+    word_count_min: Optional[int] = None
+    word_count_max: Optional[int] = None
     preferred_formats: Optional[str] = None
     technical_level: Optional[str] = None
     seo_rules: Optional[str] = None

@@ -11,6 +11,8 @@ export type CreateCategoryPayload = {
   pipeline_enabled?: boolean
   target_audience?: string | null
   editorial_goal?: string | null
+  word_count_min?: number | null
+  word_count_max?: number | null
 }
 
 export type UpdateCategoryPayload = {
@@ -23,6 +25,8 @@ export type UpdateCategoryPayload = {
   pipeline_enabled?: boolean
   target_audience?: string | null
   editorial_goal?: string | null
+  word_count_min?: number | null
+  word_count_max?: number | null
 }
 
 export function listCategories(projectId: string): Promise<Category[]> {

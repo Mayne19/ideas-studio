@@ -31,6 +31,8 @@ export type CreateProjectPayload = {
   forbidden_topics?: string
   words_to_avoid?: string
   average_target_length?: string
+  word_count_min?: number | null
+  word_count_max?: number | null
   preferred_formats?: string
   technical_level?: string
   seo_rules?: string
@@ -60,6 +62,8 @@ export type UpdateProjectPayload = {
   forbidden_topics?: string
   words_to_avoid?: string
   average_target_length?: string
+  word_count_min?: number | null
+  word_count_max?: number | null
   preferred_formats?: string
   technical_level?: string
   seo_rules?: string

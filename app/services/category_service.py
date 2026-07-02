@@ -42,6 +42,8 @@ def create_category(db: Session, data: CategoryCreate, project_id: str) -> Categ
         editorial_goal=data.editorial_goal,
         target_audience=data.target_audience,
         internal_notes=data.internal_notes,
+        word_count_min=data.word_count_min,
+        word_count_max=data.word_count_max,
     )
     db.add(category)
     db.commit()

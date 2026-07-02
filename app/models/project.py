@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, DateTime, ForeignKey, Text
+from sqlalchemy import String, DateTime, ForeignKey, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
@@ -28,6 +28,8 @@ class Project(Base):
     forbidden_topics: Mapped[str | None] = mapped_column(Text, nullable=True)
     words_to_avoid: Mapped[str | None] = mapped_column(Text, nullable=True)
     average_target_length: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    word_count_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    word_count_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
     preferred_formats: Mapped[str | None] = mapped_column(Text, nullable=True)
     technical_level: Mapped[str | None] = mapped_column(String(120), nullable=True)
     seo_rules: Mapped[str | None] = mapped_column(Text, nullable=True)

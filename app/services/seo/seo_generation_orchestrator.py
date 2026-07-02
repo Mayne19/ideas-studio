@@ -352,10 +352,36 @@ class SEOGenerationOrchestrator:
         article.external_links_json = safe_json_dump(external_links)
         article.human_insights_json = self.context.get("human_insights") or {}
 
+        # Plage de mots : catégorie (prioritaire) puis projet
+        wc_min, wc_max = None, None
+        if article.category_id:
+            cat = self.db.query(Category).filter(Category.id == article.category_id).first()
+            if cat:
+                wc_min = cat.word_count_min
+                wc_max = cat.word_count_max
+        if not wc_min and not wc_max:
+            wc_min = getattr(self.project, "word_count_min", None)
+            wc_max = getattr(self.project, "word_count_max", None)
+
+        # Passer la plage au prompt du writer
+        if wc_min or wc_max:
+            wc_instruction = []
+            if wc_min:
+                wc_instruction.append(f"minimum {wc_min} mots")
+            if wc_max:
+                wc_instruction.append(f"maximum {wc_max} mots")
+            self.context["word_count_range"] = " et ".join(wc_instruction)
+
         # Infer content_format from target_word_count if not already set
         if not getattr(article, "content_format", None):
             from app.services.seo.format_expectations import infer_format
             target_wc = getattr(article, "target_word_count", None)
+            if target_wc is None:
+                # Inférer depuis le milieu de la plage configurée
+                if wc_min and wc_max:
+                    target_wc = (wc_min + wc_max) // 2
+                else:
+                    target_wc = wc_max or wc_min
             article.content_format = infer_format(target_wc)
             self._log(
                 f"content_format inféré : {article.content_format} (target_word_count={target_wc})",
@@ -698,9 +724,15 @@ class SEOGenerationOrchestrator:
             "- Ne crée PAS de section 'Conclusion', 'En résumé' ou 'Pour conclure' séparée",
             "- Termine l'article dans la dernière section du plan sans H2 supplémentaire",
             "- Si un résumé est utile, intègre-le dans la dernière section existante",
-            "",
-            "Plan à suivre :",
         ]
+
+        if self.context.get("word_count_range"):
+            prompt_parts.append(
+                f"- Volume obligatoire : {self.context['word_count_range']}. "
+                "Ne dépasse jamais le maximum. Ne descends jamais sous le minimum."
+            )
+
+        prompt_parts.extend(["", "Plan à suivre :"])
 
         for section in outline_sections:
             heading = section.get("heading", "")

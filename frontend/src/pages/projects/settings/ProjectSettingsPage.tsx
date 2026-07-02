@@ -73,6 +73,8 @@ type FormState = {
   description: string
   industry: string
   industry_custom: string
+  word_count_min: string
+  word_count_max: string
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -90,6 +92,8 @@ export default function ProjectSettingsPage() {
     description: '',
     industry: '',
     industry_custom: '',
+    word_count_min: '',
+    word_count_max: '',
   })
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [errorMsg, setErrorMsg] = useState('')
@@ -110,6 +114,8 @@ export default function ProjectSettingsPage() {
       description: project.description ?? '',
       industry: isCustom ? '__custom__' : raw,
       industry_custom: isCustom ? raw : '',
+      word_count_min: project.word_count_min != null ? String(project.word_count_min) : '',
+      word_count_max: project.word_count_max != null ? String(project.word_count_max) : '',
     }
     Promise.resolve().then(() => setForm(values))
   }, [project])
@@ -137,6 +143,8 @@ export default function ProjectSettingsPage() {
         timezone: form.timezone.trim() || undefined,
         description: form.description.trim() || undefined,
         industry: industry || undefined,
+        word_count_min: form.word_count_min.trim() ? parseInt(form.word_count_min) : null,
+        word_count_max: form.word_count_max.trim() ? parseInt(form.word_count_max) : null,
       }
       await updateProject(projectId, payload)
       setSaveStatus('saved')
@@ -236,6 +244,42 @@ export default function ProjectSettingsPage() {
             placeholder="Décrivez ce que publie le site, pour qui, et pourquoi."
             rows={3}
           />
+          {/* Volume éditorial — plage de mots par défaut pour tout le projet */}
+          <div>
+            <p className="text-[13px] font-medium text-primary mb-1">
+              Volume éditorial par défaut
+            </p>
+            <p className="text-[11px] text-tertiary mb-2">
+              Plage de mots appliquée à tous les articles du projet.
+              Peut être surchargée catégorie par catégorie.
+            </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                type="number"
+                min="300"
+                step="100"
+                value={form.word_count_min}
+                onChange={set('word_count_min')}
+                placeholder="Min (ex. 900)"
+                className="h-9 w-28 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
+              />
+              <span className="text-[12px] text-tertiary">à</span>
+              <input
+                type="number"
+                min="300"
+                step="100"
+                value={form.word_count_max}
+                onChange={set('word_count_max')}
+                placeholder="Max (ex. 1400)"
+                className="h-9 w-28 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
+              />
+              <span className="text-[12px] text-tertiary">mots</span>
+            </div>
+            <p className="mt-1.5 text-[11px] text-tertiary">
+              Le système génère des articles dans cette plage.
+              En dessous du minimum et au-dessus du maximum : jamais.
+            </p>
+          </div>
         </div>
       </FormCard>
     </form>
