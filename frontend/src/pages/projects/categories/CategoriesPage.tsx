@@ -83,7 +83,6 @@ function CategoryColumn({
             {(category.monthly_frequency ?? category.target_frequency) !== null && (
               <span>{category.monthly_frequency ?? category.target_frequency} art./mois</span>
             )}
-            <span>Priorité {category.priority}</span>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -208,7 +207,6 @@ type FormState = {
   name: string
   description: string
   color: string
-  priority: string
   target_frequency: string
   pipeline_enabled: boolean
   target_audience: string
@@ -221,7 +219,6 @@ const EMPTY_FORM: FormState = {
   name: '',
   description: '',
   color: DEFAULT_ACCENT_COLOR,
-  priority: '0',
   target_frequency: '',
   pipeline_enabled: true,
   target_audience: '',
@@ -299,7 +296,6 @@ export default function CategoriesPage() {
       name: c.name,
       description: c.description ?? '',
       color: categoryColor(c),
-      priority: String(c.priority),
       target_frequency: (c.monthly_frequency ?? c.target_frequency) !== null ? String(c.monthly_frequency ?? c.target_frequency) : '',
       pipeline_enabled: c.pipeline_enabled !== false,
       target_audience: c.target_audience ?? '',
@@ -327,7 +323,6 @@ export default function CategoriesPage() {
           name: form.name.trim(),
           description: form.description.trim() || null,
           color: normalizeColor(form.color),
-          priority: parseInt(form.priority) || 0,
           target_frequency: freq,
           monthly_frequency: freq,
           pipeline_enabled: form.pipeline_enabled,
@@ -342,7 +337,6 @@ export default function CategoriesPage() {
           name: form.name.trim(),
           description: form.description.trim() || undefined,
           color: normalizeColor(form.color),
-          priority: parseInt(form.priority) || 0,
           target_frequency: freq ?? undefined,
           monthly_frequency: freq ?? undefined,
           pipeline_enabled: form.pipeline_enabled,
@@ -539,111 +533,128 @@ export default function CategoriesPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editTarget ? 'Modifier la catégorie' : 'Nouvelle catégorie'}
-        size="sm"
+        size="lg"
       >
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex max-h-[calc(100vh-170px)] flex-col gap-4 overflow-y-auto pr-1">
           {formError && (
             <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">
               {formError}
             </div>
           )}
-          <Input
-            label="Nom"
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            placeholder="SEO & Référencement"
-            required
-            autoFocus
-          />
-          <Textarea
-            label="Description"
-            value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-            placeholder="Articles sur les techniques SEO..."
-            rows={2}
-          />
-          <div className="rounded-[16px] bg-surface-soft p-3">
-            <div className="mb-2 flex items-center gap-2 text-[12px] font-medium uppercase tracking-[0.04em] text-tertiary">
-              <Palette size={13} />
-              Apparence
+          <div className="grid gap-4 md:grid-cols-[1fr_240px]">
+            <div className="flex flex-col gap-4">
+              <div className="rounded-[14px] border-2 border-border p-4">
+                <div className="mb-3 text-[12px] font-semibold uppercase tracking-[0.04em] text-tertiary">
+                  Informations
+                </div>
+                <div className="grid gap-3">
+                  <Input
+                    label="Nom"
+                    value={form.name}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                    placeholder="SEO & Référencement"
+                    required
+                    autoFocus
+                  />
+                  <Textarea
+                    label="Description"
+                    value={form.description}
+                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                    placeholder="Articles sur les techniques SEO..."
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-[14px] border-2 border-border p-4">
+                <div className="mb-3 text-[12px] font-semibold uppercase tracking-[0.04em] text-tertiary">
+                  Cadrage éditorial
+                </div>
+                <div className="grid gap-3">
+                  <Input
+                    label="Audience cible"
+                    value={form.target_audience}
+                    onChange={(e) => setForm((f) => ({ ...f, target_audience: e.target.value }))}
+                    placeholder="Développeurs web, freelances, entrepreneurs..."
+                  />
+                  <Textarea
+                    label="Objectif éditorial"
+                    value={form.editorial_goal}
+                    onChange={(e) => setForm((f) => ({ ...f, editorial_goal: e.target.value }))}
+                    placeholder="Éduquer sur les bonnes pratiques, générer des leads..."
+                    rows={2}
+                  />
+                </div>
+              </div>
             </div>
-            <ColorPickerField
-              value={form.color}
-              onChange={(color) => setForm((f) => ({ ...f, color }))}
-            />
-          </div>
-          <div className="flex gap-3">
-            <Input
-              label="Priorité"
-              type="number"
-              value={form.priority}
-              onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value }))}
-              placeholder="0"
-            />
-            <Input
-              label="Fréquence mensuelle (art./mois)"
-              type="number"
-              value={form.target_frequency}
-              onChange={(e) => setForm((f) => ({ ...f, target_frequency: e.target.value }))}
-              placeholder="4"
-            />
-          </div>
-          <Input
-            label="Audience cible"
-            value={form.target_audience}
-            onChange={(e) => setForm((f) => ({ ...f, target_audience: e.target.value }))}
-            placeholder="Développeurs web, freelances, entrepreneurs..."
-          />
-          <Textarea
-            label="Objectif éditorial"
-            value={form.editorial_goal}
-            onChange={(e) => setForm((f) => ({ ...f, editorial_goal: e.target.value }))}
-            placeholder="Éduquer sur les bonnes pratiques, générer des leads..."
-            rows={2}
-          />
-          {/* Surcharge volume — optionnel, laissez vide pour utiliser le défaut projet */}
-          <div>
-            <p className="text-[12px] font-medium text-secondary mb-1">
-              Volume spécifique (optionnel)
-            </p>
-            <p className="text-[11px] text-tertiary mb-1.5">
-              Laissez vide pour utiliser la plage définie dans les paramètres du projet.
-            </p>
-            <div className="flex items-center gap-2 flex-wrap">
-              <input
-                type="number"
-                min="300"
-                step="100"
-                value={form.word_count_min}
-                onChange={(e) => setForm((f) => ({ ...f, word_count_min: e.target.value }))}
-                placeholder="Min"
-                className="h-9 w-24 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
-              />
-              <span className="text-[12px] text-tertiary">à</span>
-              <input
-                type="number"
-                min="300"
-                step="100"
-                value={form.word_count_max}
-                onChange={(e) => setForm((f) => ({ ...f, word_count_max: e.target.value }))}
-                placeholder="Max"
-                className="h-9 w-24 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
-              />
-              <span className="text-[12px] text-tertiary">mots</span>
+
+            <div className="flex flex-col gap-4">
+              <div className="rounded-[14px] border-2 border-border p-4">
+                <div className="mb-3 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.04em] text-tertiary">
+                  <Palette size={13} />
+                  Apparence
+                </div>
+                <ColorPickerField
+                  value={form.color}
+                  onChange={(color) => setForm((f) => ({ ...f, color }))}
+                />
+              </div>
+
+              <div className="rounded-[14px] border-2 border-border p-4">
+                <div className="mb-3 text-[12px] font-semibold uppercase tracking-[0.04em] text-tertiary">
+                  Production
+                </div>
+                <div className="grid gap-3">
+                  <Input
+                    label="Fréquence mensuelle"
+                    type="number"
+                    value={form.target_frequency}
+                    onChange={(e) => setForm((f) => ({ ...f, target_frequency: e.target.value }))}
+                    placeholder="4"
+                    hint="Nombre d'articles par mois."
+                  />
+                  <div>
+                    <p className="mb-1 text-[12px] font-medium text-secondary">
+                      Volume spécifique
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="300"
+                        step="100"
+                        value={form.word_count_min}
+                        onChange={(e) => setForm((f) => ({ ...f, word_count_min: e.target.value }))}
+                        placeholder="Min"
+                        className="h-9 min-w-0 flex-1 rounded-[8px] border-2 border-border bg-transparent px-2.5 text-[12px] text-primary outline-none transition-colors placeholder:text-tertiary focus:border-accent"
+                      />
+                      <span className="text-[12px] text-tertiary">à</span>
+                      <input
+                        type="number"
+                        min="300"
+                        step="100"
+                        value={form.word_count_max}
+                        onChange={(e) => setForm((f) => ({ ...f, word_count_max: e.target.value }))}
+                        placeholder="Max"
+                        className="h-9 min-w-0 flex-1 rounded-[8px] border-2 border-border bg-transparent px-2.5 text-[12px] text-primary outline-none transition-colors placeholder:text-tertiary focus:border-accent"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between rounded-[12px] bg-surface-soft px-3 py-2.5">
+                    <div>
+                      <p className="text-[13px] font-medium text-primary">Pipeline</p>
+                      <p className="mt-0.5 text-[12px] text-secondary">Inclure dans la génération.</p>
+                    </div>
+                    <ToggleSwitch
+                      checked={form.pipeline_enabled}
+                      onChange={(v) => setForm((f) => ({ ...f, pipeline_enabled: v }))}
+                      ariaLabel="Inclure dans le pipeline automatique"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="flex items-center justify-between rounded-[12px] bg-surface-soft px-3.5 py-3">
-            <div>
-              <p className="text-[14px] font-medium text-primary">Inclure dans le pipeline</p>
-              <p className="mt-0.5 text-[12px] text-secondary">Génération automatique d'idées activée.</p>
-            </div>
-            <ToggleSwitch
-              checked={form.pipeline_enabled}
-              onChange={(v) => setForm((f) => ({ ...f, pipeline_enabled: v }))}
-              ariaLabel="Inclure dans le pipeline automatique"
-            />
-          </div>
-          <div className="flex gap-2 pt-1">
+          <div className="sticky bottom-0 -mx-1 flex gap-2 border-t-2 border-border bg-bg px-1 pt-4">
             <Button
               type="button"
               variant="secondary"
