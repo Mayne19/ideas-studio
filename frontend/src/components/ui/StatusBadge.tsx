@@ -22,7 +22,7 @@ const COMPACT_STATUS_LABELS: Partial<Record<ArticleStatus, string>> = {
   draft_ready: 'Prêt',
   correction_needed: 'Correction',
   ready_to_publish: 'Validable',
-  update_recommended: 'MAJ reco.',
+  update_recommended: 'MAJ',
   improvement_proposed: 'Amél. proposée',
   improvement_in_progress: 'Amél. en cours',
   improvement_ready: 'Amél. prête',
@@ -88,7 +88,7 @@ export default function StatusBadge({ status, className }: StatusBadgeProps) {
   return (
     <Badge variant={variant} className={className} title={label}>
       <Icon aria-hidden="true" data-icon="inline-start" size={12} className="shrink-0" />
-      <span className="truncate">{visibleLabel}</span>
+      <span className="max-w-[108px] truncate">{visibleLabel}</span>
     </Badge>
   )
 }

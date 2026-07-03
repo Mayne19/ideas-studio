@@ -16,6 +16,7 @@ import Input from '@/components/ui/Input'
 import Textarea from '@/components/ui/Textarea'
 import ErrorState from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
+import StatusBadge from '@/components/ui/StatusBadge'
 
 const IDEA_STATUSES_TO_FETCH = [
   'idea_proposed', 'idea_priority', 'idea_rejected',
@@ -78,19 +79,6 @@ function OpportunityBadge({ score, reason }: { score: number | null | undefined;
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium ${color}`} title={reason ?? `${pct}/100`}>
       {pct}/100
-    </span>
-  )
-}
-
-function StatusBadgeSmall({ status }: { status: string }) {
-  const match = IDEA_STATI.find((s) => s.key === status)
-  if (!match) return <span className="text-[12px] text-tertiary">{status}</span>
-  return (
-    <span
-      className={`inline-flex max-w-[92px] items-center truncate rounded-full px-2 py-0.5 text-[10px] font-medium ${match.color}`}
-      title={match.title ?? match.label}
-    >
-      {match.label}
     </span>
   )
 }
@@ -566,7 +554,7 @@ export default function IdeasPipelinePage() {
                         )}
                       </td>
                       <td className="px-2 py-2.5 hidden lg:table-cell">
-                        <StatusBadgeSmall status={article.status} />
+                        <StatusBadge status={article.status} />
                       </td>
                       <td className="px-2 py-2.5 hidden xl:table-cell">
                         <span className="text-[12px] text-tertiary">{lastAgent ?? '—'}</span>
@@ -655,7 +643,7 @@ export default function IdeasPipelinePage() {
             {/* Meta row */}
             <div className="flex flex-wrap items-center gap-2">
               <OpportunityBadge score={previewIdea.opportunity_score} />
-              <StatusBadgeSmall status={previewIdea.status} />
+              <StatusBadge status={previewIdea.status} />
               {previewIdea.priority > 0 && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-warning/8 px-2 py-0.5 text-[10px] font-medium text-warning">
                   <Star size={10} className="fill-warning" /> Prioritaire

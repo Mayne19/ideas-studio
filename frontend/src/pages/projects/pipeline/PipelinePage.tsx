@@ -107,31 +107,6 @@ function TabButton({
   )
 }
 
-// ── Writing step badge ───────────────────────────────────────────────────────
-
-function StepBadge({ status }: { status: string }) {
-  if (status === 'writing_in_progress') {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/8 px-2.5 py-1 text-[12px] font-medium text-accent">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
-        En cours…
-      </span>
-    )
-  }
-  if (status === 'outline_ready') {
-    return (
-      <span className="inline-flex items-center rounded-full bg-accent/8 px-2.5 py-1 text-[12px] font-medium text-accent">
-        Plan prêt
-      </span>
-    )
-  }
-  return (
-    <span className="inline-flex items-center rounded-full bg-surface-soft px-2.5 py-1 text-[12px] font-medium text-secondary">
-      En attente
-    </span>
-  )
-}
-
 // ── Ideas Tab ────────────────────────────────────────────────────────────────
 
 function IdeasTab({ projectId, categories }: { projectId: string; categories: Category[] }) {
@@ -541,7 +516,7 @@ function WritingTab({ projectId }: { projectId: string }) {
           >
             <p className="truncate text-[14px] font-medium text-primary">{article.title || '(sans titre)'}</p>
             <span className="truncate text-[12px] text-secondary">{article.category_id || '—'}</span>
-            <StepBadge status={article.status} />
+            <StatusBadge status={article.status} />
             <span className="text-[12px] text-tertiary">{formatDate(article.updated_at)}</span>
             <button
               type="button"
