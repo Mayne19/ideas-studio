@@ -277,7 +277,14 @@ def run_pipeline(db: Session, project_id: str) -> dict:
     log_entry.articles_created = articles_created
     log_entry.errors = "\n".join(errors) if errors else None
     log_entry.finished_at = datetime.now(timezone.utc)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        # Session invalidée par l'échec du run : rollback puis ré-insérer le log seul
+        logger.exception("Failed to persist pipeline log for project %s", project_id)
+        db.rollback()
+        db.add(log_entry)
+        db.commit()
     db.refresh(log_entry)
 
     return {
