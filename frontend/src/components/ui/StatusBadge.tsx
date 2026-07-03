@@ -15,6 +15,10 @@ type BadgeVariant = 'default' | 'blue' | 'green' | 'orange' | 'red' | 'gray'
 
 const STATUS_LABELS = ARTICLE_STATUS_LABELS
 
+const COMPACT_STATUS_LABELS: Partial<Record<ArticleStatus, string>> = {
+  idea_proposed: 'Proposée',
+}
+
 const STATUS_VARIANTS: Record<ArticleStatus, BadgeVariant> = {
   draft:                'gray',
   idea_proposed:        'blue',
@@ -68,13 +72,14 @@ type StatusBadgeProps = {
 
 export default function StatusBadge({ status, className }: StatusBadgeProps) {
   const label = STATUS_LABELS[status as ArticleStatus] ?? status
+  const visibleLabel = COMPACT_STATUS_LABELS[status as ArticleStatus] ?? label
   const variant = STATUS_VARIANTS[status as ArticleStatus] ?? 'default'
   const Icon = STATUS_ICONS[status as ArticleStatus] ?? FileText
 
   return (
-    <Badge variant={variant} className={className}>
+    <Badge variant={variant} className={className} title={label}>
       <Icon aria-hidden="true" data-icon="inline-start" size={12} className="shrink-0" />
-      {label}
+      {visibleLabel}
     </Badge>
   )
 }
