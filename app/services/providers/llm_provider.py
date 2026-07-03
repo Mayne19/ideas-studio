@@ -1,7 +1,10 @@
 import json
+import logging
 from abc import ABC, abstractmethod
 
 from sqlalchemy.exc import SQLAlchemyError
+
+logger = logging.getLogger(__name__)
 
 
 class ProviderUnavailableError(RuntimeError):
@@ -179,7 +182,7 @@ class OllamaLLMProvider(LLMProvider):
             return {"provider": "ollama", "model": self.model, "configured": True, "available": False, "error": str(exc)}
 
 
-def get_llm_provider() -> LLMProvider:
+def get_llm_provider(project_id: str | None = None) -> LLMProvider:
     from app.core.config import settings
     from app.services.providers.openai_provider import OpenAILLMProvider
     from app.services.providers.openrouter_provider import OpenRouterLLMProvider
@@ -200,14 +203,29 @@ def get_llm_provider() -> LLMProvider:
 
         db = SessionLocal()
         try:
-            config = db.query(AIProviderConfig).filter(
+            base = db.query(AIProviderConfig).filter(
                 AIProviderConfig.is_default == True,
                 AIProviderConfig.enabled == True,
-            ).first()
+            )
+            config = None
+            if project_id is not None:
+                # Provider par défaut du projet d'abord, puis default global (plateforme)
+                config = base.filter(AIProviderConfig.project_id == project_id).first()
+                if config is None:
+                    config = base.filter(AIProviderConfig.project_id.is_(None)).first()
+            if config is None:
+                config = base.first()
             if not config:
                 return None
             api_key = decrypt_secret(config.api_key_encrypted)
             provider_name = config.provider
+
+            if provider_name != "ollama" and not api_key:
+                logger.warning(
+                    "Provider DB '%s' (config %s) ignoré : clé API absente ou indéchiffrable — repli sur les variables d'environnement.",
+                    provider_name, config.id,
+                )
+                return None
 
             if provider_name == "ollama":
                 base_url = (config.base_url or settings.OLLAMA_BASE_URL or settings.OLLAMA_URL or "http://127.0.0.1:11434").rstrip("/")
@@ -253,8 +271,13 @@ def get_llm_provider() -> LLMProvider:
 
             if provider.is_available():
                 return provider
+            logger.warning(
+                "Provider DB '%s' (config %s) trouvé mais indisponible (is_available=false) — repli sur les variables d'environnement.",
+                provider_name, config.id,
+            )
             return None
         except SQLAlchemyError:
+            logger.warning("Lecture du provider DB échouée — repli sur les variables d'environnement.", exc_info=True)
             return None
         finally:
             db.close()

@@ -125,7 +125,7 @@ def generate_idea(
 
     if agent_router is not None:
         try:
-            llm = agent_router.get_provider("idea_generator")
+            llm = agent_router.get_provider("idea_generator", project_id=project_id)
         except Exception:
             pass
     log_step(

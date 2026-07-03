@@ -168,6 +168,7 @@ def run_pipeline(db: Session, project_id: str) -> dict:
     from app.services.agents.agent_router import get_agent_router
     from app.models.project import Project
 
+    logger.info("Pipeline run start project=%s mode=%s", project_id, settings.PIPELINE_MODE)
     pipe = get_or_create_pipeline(db, project_id)
     project = db.query(Project).filter(Project.id == project_id).first()
 
@@ -195,7 +196,11 @@ def run_pipeline(db: Session, project_id: str) -> dict:
                 errors.append(f"Max pending drafts reached ({pending}/{max_drafts})")
                 log_entry.status = "skipped"
             else:
-                llm = get_llm_provider()
+                llm = get_llm_provider(project_id=project_id)
+                logger.info(
+                    "Pipeline provider loaded project=%s provider=%s model=%s is_mock=%s",
+                    project_id, llm.provider_name, llm.model_name, llm.is_mock,
+                )
                 search = get_search_provider()
                 agent_router = get_agent_router(db=db)
 

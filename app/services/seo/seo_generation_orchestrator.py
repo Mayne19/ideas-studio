@@ -645,7 +645,7 @@ class SEOGenerationOrchestrator:
     def _get_agent_provider(self, agent_id: str, fallback: LLMProvider | None = None) -> LLMProvider:
         if self.agent_router is not None:
             try:
-                return self.agent_router.get_provider(agent_id)
+                return self.agent_router.get_provider(agent_id, project_id=self.project_id)
             except Exception:
                 pass
         return fallback or self.llm
