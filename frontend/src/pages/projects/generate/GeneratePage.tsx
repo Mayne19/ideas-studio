@@ -53,6 +53,7 @@ export default function GeneratePage() {
   const [articles, setArticles] = useState<Article[]>([])
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [runState, setRunState] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
+  const [openLogIndex, setOpenLogIndex] = useState<number>(0)
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
@@ -92,6 +93,10 @@ export default function GeneratePage() {
   const recentGenerations = useMemo(
     () => [...workflowArticles].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()).slice(0, 8),
     [workflowArticles],
+  )
+  const sortedLogs = useMemo(
+    () => [...logs].sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime()),
+    [logs],
   )
   const activeProviderLabel = activeProviders[0]?.label ?? 'Aucun'
   const pipelineLabel = pipeline?.enabled ? 'Actif' : 'Inactif'
@@ -215,23 +220,85 @@ export default function GeneratePage() {
 
         <div className="rounded-[14px] border border-border bg-surface p-4">
           <SectionTitle>Logs agents</SectionTitle>
-          {logs.length === 0 ? (
+          {sortedLogs.length === 0 ? (
             <p className="rounded-[12px] border border-border px-3 py-3 text-[14px] text-secondary">Aucun log pipeline disponible.</p>
           ) : (
-            <div className="flex flex-col gap-2">
-              {logs.slice(0, 5).map((log) => (
-                <div key={log.id} className="rounded-[12px] border border-border px-3 py-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="flex items-center gap-1.5 text-[12px] font-medium text-primary">
-                      <History size={13} />
-                      {log.status === 'completed' ? 'Terminé' : 'Échec'}
-                    </span>
-                    <span className="text-[12px] text-tertiary">{new Date(log.started_at).toLocaleString('fr-FR')}</span>
+            <div className="overflow-y-auto max-h-[420px] pr-1">
+              {sortedLogs.map((log, index) => {
+                const extendedLog = log as PipelineLog & {
+                  created_at?: string
+                  message?: string | null
+                  error?: string | null
+                  details?: unknown
+                }
+                const isOpen = openLogIndex === index
+                const isLatest = index === 0
+                const isSuccess = log.status === 'success' || log.status === 'completed'
+                const logDate = extendedLog.created_at || log.started_at
+                const firstLine = (extendedLog.message || extendedLog.error || log.errors || '').split('\n')[0].slice(0, 120)
+                const details = extendedLog.details ?? {
+                  id: log.id,
+                  status: log.status,
+                  ideas_generated: log.ideas_generated,
+                  articles_created: log.articles_created,
+                  errors: log.errors,
+                  started_at: log.started_at,
+                  finished_at: log.finished_at,
+                }
+                const detailText = typeof details === 'string' ? details : JSON.stringify(details, null, 2)
+
+                return (
+                  <div key={log.id || index} className="border border-border rounded-[8px] overflow-hidden mb-2">
+                    <div
+                      className="flex items-center justify-between gap-3 px-3 py-2 cursor-pointer hover:bg-surface-soft"
+                      onClick={() => setOpenLogIndex(isOpen ? -1 : index)}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <History size={13} className="shrink-0 text-tertiary" />
+                        {isSuccess
+                          ? <span className="text-success text-[12px] font-medium">✓ Succès</span>
+                          : <span className="text-danger text-[12px] font-medium">✗ Échec</span>
+                        }
+                        <span className="text-[11px] text-tertiary whitespace-nowrap">{new Date(logDate).toLocaleString('fr-FR')}</span>
+                        {isLatest && (
+                          <span className="text-[10px] bg-bg-accent text-accent px-1.5 py-0.5 rounded-full">
+                            Dernier
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[11px] text-tertiary">
+                          {log.ideas_generated ?? 0} idée(s) · {log.articles_created ?? 0} article(s)
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            navigator.clipboard.writeText(detailText)
+                          }}
+                          className="text-[11px] text-secondary hover:text-primary px-2 py-0.5 border border-border rounded-[6px]"
+                        >
+                          Copier
+                        </button>
+                        <span className="text-[12px] text-tertiary">{isOpen ? '▼' : '▶'}</span>
+                      </div>
+                    </div>
+
+                    {!isSuccess && firstLine && (
+                      <div className="px-3 py-1.5 border-t border-border bg-bg-danger/30">
+                        <p className="text-[11px] text-danger truncate">{firstLine}</p>
+                      </div>
+                    )}
+
+                    {isOpen && (
+                      <div className="border-t border-border">
+                        <pre className="text-[10px] text-secondary p-3 overflow-auto max-h-48 whitespace-pre-wrap break-all leading-relaxed">
+                          {detailText}
+                        </pre>
+                      </div>
+                    )}
                   </div>
-                  <p className="mt-1 text-[12px] text-tertiary">{log.ideas_generated} idée(s) · {log.articles_created} article(s)</p>
-                  {log.errors && <p className="mt-1 text-[12px] text-danger">{log.errors}</p>}
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
