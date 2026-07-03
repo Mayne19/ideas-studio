@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { CheckCircle, Loader2, RefreshCw } from '@/components/ui/hugeIcons'
+import { Bot, CheckCircle, Loader2, RefreshCw } from '@/components/ui/hugeIcons'
 import { api } from '@/api/client'
 import Button from '@/components/ui/Button'
 import Select from '@/components/ui/Select'
@@ -41,6 +41,8 @@ export default function ProjectAgentsPage() {
   const [error, setError] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [assignAllOpen, setAssignAllOpen] = useState(false)
+  const [assigningAll, setAssigningAll] = useState(false)
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
@@ -105,6 +107,33 @@ export default function ProjectAgentsPage() {
     }
   }
 
+  const handleAssignAll = async (providerId: string) => {
+    setAssignAllOpen(false)
+    setAssigningAll(true)
+    setSuccessMsg(null)
+    try {
+      const results = await Promise.allSettled(
+        agents.map((agent) =>
+          api.put<AgentAssignment>('/settings/ai-agents/assignments', {
+            agent_id: agent.agent_id,
+            provider_id: providerId,
+            project_id: projectId,
+            enabled: true,
+            priority: 0,
+          })
+        )
+      )
+      const failed = results.filter((r) => r.status === 'rejected').length
+      await fetchAll()
+      setSuccessMsg(failed === 0 ? `${agents.length} agents assignés` : `${agents.length - failed} agents assignés, ${failed} en échec`)
+      setTimeout(() => setSuccessMsg(null), 3000)
+    } catch (err) {
+      console.error('Failed to assign all agents:', err)
+    } finally {
+      setAssigningAll(false)
+    }
+  }
+
   const handleToggle = async (agentId: string, currentEnabled: boolean) => {
     const ass = getAssignment(agentId)
     if (!ass) return
@@ -156,6 +185,43 @@ export default function ProjectAgentsPage() {
               <CheckCircle size={14} /> {successMsg}
             </span>
           )}
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={assigningAll || enabledProviders.length === 0}
+              onClick={() => setAssignAllOpen((open) => !open)}
+              title={enabledProviders.length === 0 ? 'Aucun provider actif configuré' : 'Assigner tous les agents au même provider'}
+            >
+              {assigningAll ? <Loader2 size={14} className="mr-1 animate-spin" /> : <Bot size={14} className="mr-1" />}
+              Tout assigner
+            </Button>
+            {assignAllOpen && (
+              <>
+                <button
+                  type="button"
+                  aria-label="Fermer"
+                  className="fixed inset-0 z-10 cursor-default"
+                  onClick={() => setAssignAllOpen(false)}
+                />
+                <div className="absolute right-0 z-20 mt-1 w-64 rounded-[12px] border border-border bg-surface p-1 shadow-lg">
+                  <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-tertiary">
+                    Assigner tous les agents à
+                  </p>
+                  {enabledProviders.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handleAssignAll(p.id)}
+                      className="block w-full rounded-[8px] px-3 py-2 text-left text-[13px] text-primary transition-colors hover:bg-surface-soft"
+                    >
+                      {p.label} <span className="text-tertiary">({p.provider})</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           <Button variant="ghost" size="sm" onClick={fetchAll}>
             <RefreshCw size={14} className="mr-1" /> Rafraîchir
           </Button>
