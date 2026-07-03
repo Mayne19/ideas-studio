@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { AlertTriangle, Bot, CheckCircle, History, Loader2, Play, RotateCw, Settings, TestTube2 } from '@/components/ui/hugeIcons'
+import { AlertTriangle, Bot, CheckCircle, ChevronDown, ChevronUp, History, Loader2, Play, RotateCw, Settings, TestTube2 } from '@/components/ui/hugeIcons'
 import { listAIProviders } from '@/api/aiProviders'
 import { getPipelineLogs, getPipelineSettings, triggerPipelineRun } from '@/api/pipeline'
 import { listArticles } from '@/api/articles'
@@ -42,6 +42,15 @@ function workflowStatus(article: Article) {
   return 'not_started'
 }
 
+function isLogSuccess(status: string) {
+  return ['completed', 'done', 'success'].includes(status.toLowerCase())
+}
+
+function isLogFailure(log: PipelineLog) {
+  const status = log.status.toLowerCase()
+  return Boolean(log.errors) || ['failed', 'failure', 'error'].includes(status)
+}
+
 export default function GeneratePage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
@@ -53,7 +62,9 @@ export default function GeneratePage() {
   const [articles, setArticles] = useState<Article[]>([])
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [runState, setRunState] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
-  const [openLogIndex, setOpenLogIndex] = useState<number>(0)
+  const [openLogId, setOpenLogId] = useState<string | null>(null)
+  const [copiedLogId, setCopiedLogId] = useState<string | null>(null)
+  const autoOpenedLogId = useRef<string | null>(null)
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
@@ -98,9 +109,20 @@ export default function GeneratePage() {
     () => [...logs].sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime()),
     [logs],
   )
+  const failedPipelineLogs = sortedLogs.filter(isLogFailure)
+  const failureCount = failedPipelineLogs.length || failedWorkflows.length
+  const visibleLogs = sortedLogs.slice(0, 2)
+  const olderLogs = sortedLogs.slice(2)
   const activeProviderLabel = activeProviders[0]?.label ?? 'Aucun'
   const pipelineLabel = pipeline?.enabled ? 'Actif' : 'Inactif'
-  const hasSystemIssue = activeProviders.length === 0 || assignedAgentIds.size === 0 || !pipeline?.enabled || failedWorkflows.length > 0
+  const hasSystemIssue = activeProviders.length === 0 || assignedAgentIds.size === 0 || !pipeline?.enabled || failureCount > 0
+
+  useEffect(() => {
+    const latestLogId = sortedLogs[0]?.id ?? null
+    if (!latestLogId || autoOpenedLogId.current === latestLogId) return
+    autoOpenedLogId.current = latestLogId
+    setOpenLogId(latestLogId)
+  }, [sortedLogs])
 
   async function handleRunPipeline() {
     if (!projectId) return
@@ -113,6 +135,94 @@ export default function GeneratePage() {
     } catch {
       setRunState('error')
     }
+  }
+
+  function copyLog(logId: string, detailText: string) {
+    navigator.clipboard.writeText(detailText)
+    setCopiedLogId(logId)
+    window.setTimeout(() => {
+      setCopiedLogId((current) => current === logId ? null : current)
+    }, 1200)
+  }
+
+  function renderLog(log: PipelineLog, index: number) {
+    const extendedLog = log as PipelineLog & {
+      created_at?: string
+      message?: string | null
+      error?: string | null
+      details?: unknown
+    }
+    const isOpen = openLogId === log.id
+    const isLatest = index === 0
+    const isSuccess = isLogSuccess(log.status)
+    const logDate = extendedLog.created_at || log.started_at
+    const firstLine = (extendedLog.message || extendedLog.error || log.errors || '').split('\n')[0].slice(0, 120)
+    const details = extendedLog.details ?? {
+      id: log.id,
+      status: log.status,
+      ideas_generated: log.ideas_generated,
+      articles_created: log.articles_created,
+      errors: log.errors,
+      started_at: log.started_at,
+      finished_at: log.finished_at,
+    }
+    const detailText = typeof details === 'string' ? details : JSON.stringify(details, null, 2)
+    const copied = copiedLogId === log.id
+
+    return (
+      <div key={log.id || index} className="mb-2 overflow-hidden rounded-[8px] border border-border">
+        <div
+          className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2 hover:bg-surface-soft"
+          onClick={() => setOpenLogId(isOpen ? null : log.id)}
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            <History size={13} className="shrink-0 text-tertiary" />
+            {isSuccess
+              ? <span className="text-[12px] font-medium text-success">✓ Succès</span>
+              : <span className="text-[12px] font-medium text-danger">✗ Échec</span>
+            }
+            <span className="whitespace-nowrap text-[11px] text-tertiary">{new Date(logDate).toLocaleString('fr-FR')}</span>
+            {isLatest && (
+              <span className="rounded-full bg-bg-accent px-1.5 py-0.5 text-[10px] text-accent">
+                Dernier
+              </span>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="text-[11px] text-tertiary">
+              {log.ideas_generated ?? 0} idée(s) · {log.articles_created ?? 0} article(s)
+            </span>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                copyLog(log.id, detailText)
+              }}
+              className="inline-flex h-7 items-center justify-center rounded-[7px] border border-border bg-surface px-2 text-[11px] font-medium text-secondary shadow-sm transition-all hover:border-accent/30 hover:bg-surface-soft hover:text-primary active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-accent/20"
+            >
+              {copied ? 'Copié' : 'Copier'}
+            </button>
+            <span className="flex h-7 w-7 items-center justify-center rounded-[7px] text-tertiary">
+              {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </span>
+          </div>
+        </div>
+
+        {!isSuccess && firstLine && (
+          <div className="border-t border-border bg-bg-danger/30 px-3 py-1.5">
+            <p className="truncate text-[11px] text-danger">{firstLine}</p>
+          </div>
+        )}
+
+        {isOpen && (
+          <div className="border-t border-border">
+            <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all p-3 text-[10px] leading-relaxed text-secondary">
+              {detailText}
+            </pre>
+          </div>
+        )}
+      </div>
+    )
   }
 
   if (loadState === 'loading') return <LoadingState />
@@ -182,7 +292,7 @@ export default function GeneratePage() {
           </div>
           <div className="p-4">
             <p className="text-[12px] font-medium text-tertiary">Échecs</p>
-            <p className={`mt-1 text-[20px] font-semibold tracking-tight ${failedWorkflows.length ? 'text-danger' : 'text-primary'}`}>{failedWorkflows.length}</p>
+            <p className={`mt-1 text-[20px] font-semibold tracking-tight ${failureCount ? 'text-danger' : 'text-primary'}`}>{failureCount}</p>
           </div>
         </div>
 
@@ -190,7 +300,7 @@ export default function GeneratePage() {
           <StatusPill ok={activeProviders.length > 0} label={activeProviders.length ? `${activeProviders.length} provider configuré` : 'Aucun provider actif'} />
           <StatusPill ok={assignedAgentIds.size > 0} label={assignedAgentIds.size ? `${assignedAgentIds.size} agent assigné` : 'Aucun agent assigné'} />
           <StatusPill ok={Boolean(pipeline?.enabled)} label={pipeline?.enabled ? 'Automatisation active' : 'Automatisation inactive'} />
-          <StatusPill ok={failedWorkflows.length === 0} label={failedWorkflows.length ? `${failedWorkflows.length} échec` : 'Aucun échec'} />
+          <StatusPill ok={failureCount === 0} label={failureCount ? `${failureCount} échec${failureCount > 1 ? 's' : ''}` : 'Aucun échec'} />
         </div>
       </div>
 
@@ -207,7 +317,7 @@ export default function GeneratePage() {
               <p className="text-[12px] text-tertiary">Terminés</p>
             </div>
             <div className="rounded-[12px] border border-border px-3 py-3">
-              <p className="text-[18px] font-semibold text-primary">{failedWorkflows.length}</p>
+              <p className="text-[18px] font-semibold text-primary">{failureCount}</p>
               <p className="text-[12px] text-tertiary">Échoués</p>
             </div>
           </div>
@@ -223,82 +333,13 @@ export default function GeneratePage() {
           {sortedLogs.length === 0 ? (
             <p className="rounded-[12px] border border-border px-3 py-3 text-[14px] text-secondary">Aucun log pipeline disponible.</p>
           ) : (
-            <div className="overflow-y-auto max-h-[420px] pr-1">
-              {sortedLogs.map((log, index) => {
-                const extendedLog = log as PipelineLog & {
-                  created_at?: string
-                  message?: string | null
-                  error?: string | null
-                  details?: unknown
-                }
-                const isOpen = openLogIndex === index
-                const isLatest = index === 0
-                const isSuccess = log.status === 'success' || log.status === 'completed'
-                const logDate = extendedLog.created_at || log.started_at
-                const firstLine = (extendedLog.message || extendedLog.error || log.errors || '').split('\n')[0].slice(0, 120)
-                const details = extendedLog.details ?? {
-                  id: log.id,
-                  status: log.status,
-                  ideas_generated: log.ideas_generated,
-                  articles_created: log.articles_created,
-                  errors: log.errors,
-                  started_at: log.started_at,
-                  finished_at: log.finished_at,
-                }
-                const detailText = typeof details === 'string' ? details : JSON.stringify(details, null, 2)
-
-                return (
-                  <div key={log.id || index} className="border border-border rounded-[8px] overflow-hidden mb-2">
-                    <div
-                      className="flex items-center justify-between gap-3 px-3 py-2 cursor-pointer hover:bg-surface-soft"
-                      onClick={() => setOpenLogIndex(isOpen ? -1 : index)}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <History size={13} className="shrink-0 text-tertiary" />
-                        {isSuccess
-                          ? <span className="text-success text-[12px] font-medium">✓ Succès</span>
-                          : <span className="text-danger text-[12px] font-medium">✗ Échec</span>
-                        }
-                        <span className="text-[11px] text-tertiary whitespace-nowrap">{new Date(logDate).toLocaleString('fr-FR')}</span>
-                        {isLatest && (
-                          <span className="text-[10px] bg-bg-accent text-accent px-1.5 py-0.5 rounded-full">
-                            Dernier
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[11px] text-tertiary">
-                          {log.ideas_generated ?? 0} idée(s) · {log.articles_created ?? 0} article(s)
-                        </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            navigator.clipboard.writeText(detailText)
-                          }}
-                          className="text-[11px] text-secondary hover:text-primary px-2 py-0.5 border border-border rounded-[6px]"
-                        >
-                          Copier
-                        </button>
-                        <span className="text-[12px] text-tertiary">{isOpen ? '▼' : '▶'}</span>
-                      </div>
-                    </div>
-
-                    {!isSuccess && firstLine && (
-                      <div className="px-3 py-1.5 border-t border-border bg-bg-danger/30">
-                        <p className="text-[11px] text-danger truncate">{firstLine}</p>
-                      </div>
-                    )}
-
-                    {isOpen && (
-                      <div className="border-t border-border">
-                        <pre className="text-[10px] text-secondary p-3 overflow-auto max-h-48 whitespace-pre-wrap break-all leading-relaxed">
-                          {detailText}
-                        </pre>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+            <div>
+              {visibleLogs.map((log, index) => renderLog(log, index))}
+              {olderLogs.length > 0 && (
+                <div className="mt-2 max-h-[260px] overflow-y-auto pr-1">
+                  {olderLogs.map((log, index) => renderLog(log, index + 2))}
+                </div>
+              )}
             </div>
           )}
         </div>
