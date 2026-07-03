@@ -159,7 +159,9 @@ export default function ProjectProvidersPage() {
         is_default: form.is_default,
         enabled: form.enabled,
       }
-      if (form.api_key) body.api_key = form.api_key
+      // Trim : une clé collée avec espaces/saut de ligne serait stockée cassée
+      const apiKey = form.api_key.trim()
+      if (apiKey) body.api_key = apiKey
 
       if (editingId) {
         await api.patch(`/settings/ai-providers/${editingId}`, body)
