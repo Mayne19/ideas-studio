@@ -27,9 +27,9 @@ const IDEA_STATI: { key: string; label: string; title?: string; color: string }[
   { key: 'idea_proposed', label: 'Proposée', title: 'Idée proposée', color: 'bg-accent/8 text-accent' },
   { key: 'idea_priority', label: 'Prioritaire', color: 'bg-warning/8 text-warning' },
   { key: 'idea_rejected', label: 'Rejetée', color: 'bg-danger/8 text-danger' },
-  { key: 'writing_requested', label: 'Rédaction demandée', color: 'bg-accent/8 text-accent' },
-  { key: 'writing_in_progress', label: 'En rédaction', color: 'bg-accent/8 text-accent' },
-  { key: 'draft_ready', label: 'Brouillon prêt', color: 'bg-success/8 text-success' },
+  { key: 'writing_requested', label: 'Demandée', title: 'Rédaction demandée', color: 'bg-accent/8 text-accent' },
+  { key: 'writing_in_progress', label: 'En cours', title: 'En rédaction', color: 'bg-accent/8 text-accent' },
+  { key: 'draft_ready', label: 'Prêt', title: 'Brouillon prêt', color: 'bg-success/8 text-success' },
 ]
 
 function translateIdeaError(err: unknown, context: 'action' | 'generate' | 'reject'): string {

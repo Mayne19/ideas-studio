@@ -17,6 +17,15 @@ const STATUS_LABELS = ARTICLE_STATUS_LABELS
 
 const COMPACT_STATUS_LABELS: Partial<Record<ArticleStatus, string>> = {
   idea_proposed: 'Proposée',
+  writing_requested: 'Demandée',
+  writing_in_progress: 'En cours',
+  draft_ready: 'Prêt',
+  correction_needed: 'Correction',
+  ready_to_publish: 'Validable',
+  update_recommended: 'MAJ reco.',
+  improvement_proposed: 'Amél. proposée',
+  improvement_in_progress: 'Amél. en cours',
+  improvement_ready: 'Amél. prête',
 }
 
 const STATUS_VARIANTS: Record<ArticleStatus, BadgeVariant> = {
@@ -79,7 +88,7 @@ export default function StatusBadge({ status, className }: StatusBadgeProps) {
   return (
     <Badge variant={variant} className={className} title={label}>
       <Icon aria-hidden="true" data-icon="inline-start" size={12} className="shrink-0" />
-      {visibleLabel}
+      <span className="truncate">{visibleLabel}</span>
     </Badge>
   )
 }
