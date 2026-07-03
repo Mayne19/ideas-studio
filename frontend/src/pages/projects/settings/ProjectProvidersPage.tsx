@@ -163,6 +163,12 @@ export default function ProjectProvidersPage() {
       const apiKey = form.api_key.trim()
       if (apiKey) body.api_key = apiKey
 
+      // Confirmer la présence d'api_key dans le payload (valeur masquée, jamais la clé en clair)
+      console.debug(`[providers] ${editingId ? 'PATCH' : 'POST'} payload`, {
+        ...body,
+        api_key: apiKey ? `<${apiKey.length} caractères>` : '<absent : clé existante conservée>',
+      })
+
       if (editingId) {
         await api.patch(`/settings/ai-providers/${editingId}`, body)
       } else {
