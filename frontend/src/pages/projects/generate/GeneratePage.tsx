@@ -116,11 +116,9 @@ export default function GeneratePage() {
   const failureCount = failedPipelineLogs.length || failedWorkflows.length
   const successPipelineLogs = sortedLogs.filter((log) => isLogSuccess(log.status) && !isLogFailure(log))
   const successCount = successPipelineLogs.length || completedWorkflows.length
-  const activeAgentKey = runningWorkflows.find((article) => article.next_agent_key)?.next_agent_key ?? null
-  const activeAgentLabel = activeAgentKey
-    ? agents.find((agent) => agent.agent_id === activeAgentKey)?.name ?? activeAgentKey
-    : 'Aucun'
-  const activeProviderLabel = activeProviders[0]?.label ?? 'Aucun'
+  const activeProvider = activeProviders[0]
+  const activeProviderLabel = activeProvider?.label ?? 'Aucun'
+  const activeProviderModelLabel = activeProvider?.model || (activeProvider ? 'Non défini' : 'Aucun')
   const pipelineLabel = pipeline?.enabled ? 'Actif' : 'Inactif'
   const hasSystemIssue = activeProviders.length === 0 || assignedAgentIds.size === 0 || !pipeline?.enabled || failureCount > 0
 
@@ -294,8 +292,8 @@ export default function GeneratePage() {
             <p className="mt-1 truncate text-[20px] font-semibold tracking-tight text-primary">{activeProviderLabel}</p>
           </div>
           <div className="border-b border-border p-4 xl:border-b-0 xl:border-r">
-            <p className="text-[12px] font-medium text-tertiary">Agent actif</p>
-            <p className="mt-1 truncate text-[20px] font-semibold tracking-tight text-primary" title={activeAgentLabel}>{activeAgentLabel}</p>
+            <p className="text-[12px] font-medium text-tertiary">Modèle</p>
+            <p className="mt-1 truncate text-[20px] font-semibold tracking-tight text-primary" title={activeProviderModelLabel}>{activeProviderModelLabel}</p>
           </div>
           <div className="border-b border-border p-4 sm:border-r xl:border-b-0">
             <p className="text-[12px] font-medium text-tertiary">Agents assignés</p>
