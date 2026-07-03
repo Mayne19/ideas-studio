@@ -797,8 +797,8 @@ export default function PipelinePage() {
     <div className="project-page project-page--wide">
       <div className="project-page-header">
         <div>
-          <h1 className="text-[20px] font-semibold tracking-tight text-primary">Pipeline</h1>
-          <p className="mt-0.5 text-[14px] text-secondary">Idées, rédaction en cours et articles à valider.</p>
+          <h1 className="text-[20px] font-semibold tracking-tight text-primary">Production</h1>
+          <p className="mt-0.5 text-[14px] text-secondary">Suivez les contenus en cours, de l’idée validée à l’article prêt à publier.</p>
         </div>
       </div>
 

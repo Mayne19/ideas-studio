@@ -1238,8 +1238,8 @@ export default function ArticleEditorPage() {
               <RefreshCw size={13} />
               Rafraîchir
             </button>
-            <button onClick={() => navigate(`/projects/${projectId}/ideas`)} className="text-[12px] text-tertiary hover:text-secondary transition-colors">
-              ← Retour au pipeline d'idées
+            <button onClick={() => navigate(`/projects/${projectId}/production?tab=ideas`)} className="text-[12px] text-tertiary hover:text-secondary transition-colors">
+              ← Retour à la production
             </button>
           </div>
         </div>

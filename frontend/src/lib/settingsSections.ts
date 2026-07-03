@@ -35,7 +35,7 @@ export function getSettingsSections(
     { key: 'callouts', label: 'Callouts', description: 'Templates éditoriaux', path: `${projectBase}/callouts` },
     { key: 'providers', label: 'Providers', description: 'Services IA connectés', path: `${projectBase}/providers`, adminOnly: true },
     { key: 'agents', label: 'Agents', description: 'Routage des agents IA', path: `${projectBase}/agents`, adminOnly: true },
-    { key: 'pipeline', label: 'Pipeline', description: 'Automatisations éditoriales', path: `${projectBase}/pipeline`, adminOnly: true },
+    { key: 'pipeline', label: 'Pipeline', description: 'Fréquences, planning et automatisations', path: `${projectBase}/pipeline`, adminOnly: true },
     { key: 'ia', label: 'IA & Workflows', description: 'Providers, agents, pipeline IA', path: `${projectBase}/ia`, adminOnly: true },
   ]
 

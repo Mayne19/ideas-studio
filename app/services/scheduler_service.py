@@ -73,7 +73,7 @@ def run_daily_project_tasks(db: Session, project_id: str) -> dict:
             ),
             level="success",
             type="monthly_ideas_ready",
-            link=f"/projects/{project_id}/pipeline?tab=ideas",
+            link=f"/projects/{project_id}/production?tab=ideas",
         )
 
     db.commit()

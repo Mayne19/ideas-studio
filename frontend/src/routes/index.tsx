@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { lazy, Suspense, useEffect } from 'react'
-import { createBrowserRouter, Navigate, useParams, useRouteError } from 'react-router-dom'
+import { createBrowserRouter, Navigate, useLocation, useParams, useRouteError } from 'react-router-dom'
 import LoginPage from '@/pages/auth/LoginPage'
 import RegisterPage from '@/pages/auth/RegisterPage'
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage'
@@ -46,6 +46,12 @@ const DocumentationPage = lazy(() => import('@/pages/DocumentationPage'))
 function OptimizationsRedirect() {
   const { projectId } = useParams<{ projectId: string }>()
   return <Navigate to={`/projects/${projectId}/recommendations`} replace />
+}
+
+function ProductionAliasRedirect({ tab }: { tab?: 'ideas' | 'writing' | 'validate' }) {
+  const location = useLocation()
+  const suffix = tab ? `?tab=${tab}` : location.search
+  return <Navigate to={`../production${suffix}`} replace />
 }
 
 function RouteErrorFallback() {
@@ -286,7 +292,7 @@ export const router = createBrowserRouter([
         element: <CategoriesPage />,
       },
       {
-        path: 'projects/:projectId/pipeline',
+        path: 'projects/:projectId/production',
         element: (
           <Suspense fallback={<LoadingState />}>
             <PipelinePage />
@@ -301,10 +307,10 @@ export const router = createBrowserRouter([
           </Suspense>
         ),
       },
-      { path: 'projects/:projectId/ideas', element: <Navigate to="../pipeline" replace /> },
-      { path: 'projects/:projectId/kanban', element: <Navigate to="../pipeline" replace /> },
-      { path: 'projects/:projectId/production', element: <Navigate to="../pipeline?tab=writing" replace /> },
-      { path: 'projects/:projectId/validation', element: <Navigate to="../pipeline?tab=validate" replace /> },
+      { path: 'projects/:projectId/pipeline', element: <ProductionAliasRedirect /> },
+      { path: 'projects/:projectId/ideas', element: <ProductionAliasRedirect tab="ideas" /> },
+      { path: 'projects/:projectId/kanban', element: <ProductionAliasRedirect /> },
+      { path: 'projects/:projectId/validation', element: <ProductionAliasRedirect tab="validate" /> },
       { path: 'projects/:projectId/performance', element: <Navigate to="../analytics" replace /> },
       { path: 'projects/:projectId/performance/articles', element: <Navigate to="../analytics" replace /> },
       { path: 'projects/:projectId/performance/:articleId', element: <Navigate to="../../analytics" replace /> },

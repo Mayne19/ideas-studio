@@ -898,7 +898,7 @@ class SEOGenerationOrchestrator:
                 message=f'"{article.title}" a été rédigé et scoré. Score global : {article.global_score or "—"}.',
                 level="success",
                 type="article_ready",
-                link=f"/projects/{article.project_id}/pipeline?tab=validate",
+                link=f"/projects/{article.project_id}/production?tab=validate",
             )
         except Exception:
             pass

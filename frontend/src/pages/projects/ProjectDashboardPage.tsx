@@ -536,7 +536,7 @@ export default function ProjectDashboardPage() {
             {firstName ? `Bonjour, ${firstName} 👋` : 'Bonjour 👋'}
           </h1>
           <p className="mt-1.5 text-[14px] text-secondary">
-            Vue d'ensemble de votre pipeline éditorial et de vos performances.
+            Vue d'ensemble de votre production éditoriale et de vos performances.
           </p>
         </div>
       </section>
@@ -587,7 +587,7 @@ export default function ProjectDashboardPage() {
         {/* Pipeline + runs */}
         <div className="flex h-full min-w-0 items-center gap-2 border-r border-border px-6">
           <Clock size={15} className="shrink-0" />
-          <span className="truncate">Pipeline : <strong className="text-primary">{pipelineActive ? 'Actif' : 'Inactif'}</strong></span>
+          <span className="truncate">Automatisation : <strong className="text-primary">{pipelineActive ? 'Active' : 'Inactive'}</strong></span>
         </div>
         <div className="flex h-full min-w-0 items-center border-r border-border px-6">
           <span className="truncate">Dernier run : <strong className="text-primary">{lastRunLabel}</strong></span>

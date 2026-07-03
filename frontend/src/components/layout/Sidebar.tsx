@@ -162,7 +162,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
               </SidebarSection>
 
               <SidebarSection title="Éditorial" collapsed={collapsed}>
-                <SidebarLink to={`/projects/${projectId}/pipeline`} icon={<HugeIcon icon={WorkflowCircle03Icon} size={15} />} label="Pipeline" collapsed={collapsed} />
+                <SidebarLink to={`/projects/${projectId}/production`} icon={<HugeIcon icon={WorkflowCircle03Icon} size={15} />} label="Production" collapsed={collapsed} />
                 <SidebarLink to={`/projects/${projectId}/articles`} icon={<HugeIcon icon={File01Icon} size={15} />} label="Articles" collapsed={collapsed} />
                 <SidebarLink to={`/projects/${projectId}/categories`} icon={<HugeIcon icon={Folder01Icon} size={15} />} label="Catégories" collapsed={collapsed} />
                 <SidebarLink to={`/projects/${projectId}/media`} icon={<HugeIcon icon={Image01Icon} size={15} />} label="Médias" collapsed={collapsed} />
