@@ -88,7 +88,7 @@ export default function StatusBadge({ status, className }: StatusBadgeProps) {
   return (
     <Badge variant={variant} className={className} title={label}>
       <Icon aria-hidden="true" data-icon="inline-start" size={12} className="shrink-0" />
-      <span className="max-w-[108px] truncate">{visibleLabel}</span>
+      <span className="max-w-[92px] truncate">{visibleLabel}</span>
     </Badge>
   )
 }

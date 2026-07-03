@@ -83,8 +83,11 @@ function OpportunityBadge({ score, reason }: { score: number | null | undefined;
   )
 }
 
-type SortField = 'opportunity_score' | 'priority' | 'created_at' | 'title'
+type SortField = 'priority' | 'created_at' | 'title'
 type SortDir = 'asc' | 'desc'
+
+const ACTION_BUTTON_BASE =
+  'inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-border bg-surface text-tertiary shadow-sm transition-all hover:-translate-y-px hover:bg-surface-soft active:translate-y-0 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-accent/20'
 
 export default function IdeasPipelinePage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -100,7 +103,7 @@ export default function IdeasPipelinePage() {
   const [filterStatus, setFilterStatus] = useState('')
   const [filterSearch, setFilterSearch] = useState('')
   const [filterMinScore, setFilterMinScore] = useState(0)
-  const [sortField, setSortField] = useState<SortField>('opportunity_score')
+  const [sortField, setSortField] = useState<SortField>('created_at')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
 
   const [selectedIdeas, setSelectedIdeas] = useState<Set<string>>(new Set())
@@ -160,9 +163,7 @@ export default function IdeasPipelinePage() {
       })
     }
     items.sort((a, b) => {
-      const cmp = sortField === 'opportunity_score'
-        ? (normalizeOpportunityScore(a.opportunity_score) ?? 0) - (normalizeOpportunityScore(b.opportunity_score) ?? 0)
-        : sortField === 'priority'
+      const cmp = sortField === 'priority'
         ? a.priority - b.priority
         : sortField === 'created_at'
         ? a.created_at.localeCompare(b.created_at)
@@ -470,7 +471,6 @@ export default function IdeasPipelinePage() {
                       className="rounded-[4px] border-border"
                     />
                   </th>
-                  <th className="px-2 py-2 text-left"><button onClick={() => toggleSort('opportunity_score')} className="flex items-center gap-1 text-[12px] font-semibold uppercase tracking-wider text-tertiary hover:text-secondary transition-colors">Score{sortField === 'opportunity_score' && <span className="text-accent">{sortDir === 'desc' ? '↓' : '↑'}</span>}</button></th>
                   <th className="px-2 py-2 text-left"><button onClick={() => toggleSort('priority')} className="flex items-center gap-1 text-[12px] font-semibold uppercase tracking-wider text-tertiary hover:text-secondary transition-colors">Prio{sortField === 'priority' && <span className="text-accent">{sortDir === 'desc' ? '↓' : '↑'}</span>}</button></th>
                   <th className="px-2 py-2 text-left"><button onClick={() => toggleSort('title')} className="flex items-center gap-1 text-[12px] font-semibold uppercase tracking-wider text-tertiary hover:text-secondary transition-colors">Titre / Brief{sortField === 'title' && <span className="text-accent">{sortDir === 'desc' ? '↓' : '↑'}</span>}</button></th>
                   <th className="px-2 py-2 text-left hidden md:table-cell">Catégorie</th>
@@ -479,7 +479,7 @@ export default function IdeasPipelinePage() {
                   <th className="px-2 py-2 text-left hidden xl:table-cell">Dernier agent</th>
                   <th className="px-2 py-2 text-left hidden xl:table-cell">Prochain agent</th>
                   <th className="px-2 py-2 text-left"><button onClick={() => toggleSort('created_at')} className="flex items-center gap-1 text-[12px] font-semibold uppercase tracking-wider text-tertiary hover:text-secondary transition-colors">Date{sortField === 'created_at' && <span className="text-accent">{sortDir === 'desc' ? '↓' : '↑'}</span>}</button></th>
-                  <th className="w-28 px-2 py-2 text-right">Actions</th>
+                  <th className="sticky right-0 z-10 w-[168px] bg-bg px-2 py-2 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -501,9 +501,6 @@ export default function IdeasPipelinePage() {
                           onChange={() => toggleSelect(article.id)}
                           className="rounded-[4px] border-border"
                         />
-                      </td>
-                      <td className="px-2 py-2.5">
-                        <OpportunityBadge score={article.opportunity_score} />
                       </td>
                       <td className="px-2 py-2.5">
                         {article.priority > 0 ? (
@@ -554,7 +551,7 @@ export default function IdeasPipelinePage() {
                         )}
                       </td>
                       <td className="px-2 py-2.5 hidden lg:table-cell">
-                        <StatusBadge status={article.status} />
+                        <StatusBadge status={article.status} className="px-1.5" />
                       </td>
                       <td className="px-2 py-2.5 hidden xl:table-cell">
                         <span className="text-[12px] text-tertiary">{lastAgent ?? '—'}</span>
@@ -565,36 +562,40 @@ export default function IdeasPipelinePage() {
                       <td className="px-2 py-2.5 whitespace-nowrap">
                         <span className="text-[12px] text-tertiary">{formatDate(article.created_at)}</span>
                       </td>
-                      <td className="px-2 py-2.5 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="sticky right-0 z-10 bg-bg px-2 py-2.5 text-right">
+                        <div className="flex min-w-[160px] items-center justify-end gap-1.5">
                           {isIdea && !isRejected && (
                             <>
                               {article.status === 'idea_proposed' && (
                                 <button
+                                  type="button"
                                   onClick={() => handleAction('prioritize', article)}
-                                  className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary transition-colors hover:bg-warning/8 hover:text-warning"
+                                  className={`${ACTION_BUTTON_BASE} hover:border-warning/30 hover:text-warning`}
                                   title="Prioriser"
                                 >
                                   <Star size={12} />
                                 </button>
                               )}
                               <button
+                                type="button"
                                 onClick={() => handleAction('start-writing', article)}
-                                className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary transition-colors hover:bg-accent/8 hover:text-accent"
+                                className={`${ACTION_BUTTON_BASE} hover:border-accent/30 hover:text-accent`}
                                 title="Lancer la rédaction"
                               >
                                 <Pencil size={12} />
                               </button>
                               <button
+                                type="button"
                                 onClick={() => handleAction('send-to-production', article)}
-                                className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-accent/10 hover:text-accent transition-colors"
+                                className={`${ACTION_BUTTON_BASE} hover:border-accent/30 hover:text-accent`}
                                 title="Envoyer en production"
                               >
                                 <Send size={12} />
                               </button>
                               <button
+                                type="button"
                                 onClick={() => handleAction('reject', article)}
-                                className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-danger/10 hover:text-danger transition-colors"
+                                className={`${ACTION_BUTTON_BASE} hover:border-danger/30 hover:text-danger`}
                                 title="Rejeter"
                               >
                                 <X size={12} />
@@ -602,8 +603,9 @@ export default function IdeasPipelinePage() {
                             </>
                           )}
                           <button
+                            type="button"
                             onClick={() => setPreviewIdea(article)}
-                            className="flex h-7 w-7 items-center justify-center rounded-[6px] text-tertiary hover:bg-surface-muted hover:text-primary transition-colors"
+                            className={`${ACTION_BUTTON_BASE} hover:border-secondary/30 hover:text-primary`}
                             title="Voir le brief"
                           >
                             <Eye size={12} />
