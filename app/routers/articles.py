@@ -314,7 +314,7 @@ def mark_ready_route(
     from app.services.scoring_service import compute_global_score
     scoring = compute_global_score(article)
     article.global_score = scoring["global_score"]
-    article.global_score_valid = 1 if scoring["global_score_valid"] else 0
+    article.global_score_valid = bool(scoring["global_score_valid"])
     from datetime import datetime, timezone
     article.human_validated_at = datetime.now(timezone.utc)
 

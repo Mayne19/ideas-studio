@@ -90,7 +90,7 @@ def _attach_validation_summary(article: Article) -> Article:
         from app.services.validation_service import check_validation_thresholds
         result = check_validation_thresholds(article)
         article.global_score = result["global_score"]
-        article.global_score_valid = 1 if result["global_score_valid"] else 0
+        article.global_score_valid = bool(result["global_score_valid"])
         article.is_validable = result["valid"]
         article.validation_reasons = result["reasons"]
         article.critical_warnings = result["critical_warnings"]
@@ -176,7 +176,7 @@ def publish_article(db: Session, article: Article) -> Article:
     # Compute and store global score
     scoring = compute_global_score(article)
     article.global_score = scoring["global_score"]
-    article.global_score_valid = 1 if scoring["global_score_valid"] else 0
+    article.global_score_valid = bool(scoring["global_score_valid"])
     db.commit()
     db.refresh(article)
     return article
@@ -197,7 +197,7 @@ def schedule_article_with_validation(db: Session, article: Article, scheduled_at
     # Compute and store global score
     scoring = compute_global_score(article)
     article.global_score = scoring["global_score"]
-    article.global_score_valid = 1 if scoring["global_score_valid"] else 0
+    article.global_score_valid = bool(scoring["global_score_valid"])
 
     article.status = "scheduled"
     article.scheduled_at = scheduled_at

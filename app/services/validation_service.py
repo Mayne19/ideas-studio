@@ -250,7 +250,7 @@ def validate_bulk_articles(db_session, project_id: str, article_ids: list[str]) 
             continue
         scoring = compute_global_score(article)
         article.global_score = scoring["global_score"]
-        article.global_score_valid = 1 if scoring["global_score_valid"] else 0
+        article.global_score_valid = bool(scoring["global_score_valid"])
         article.status = "scheduled"
         article.scheduled_at = scheduled_at
         article.human_validated_at = datetime.now(timezone.utc)

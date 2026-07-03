@@ -208,8 +208,8 @@ def generate_idea(
         opportunity_justification=idea_data.get("opportunity_justification"),
         recommended_format=idea_data.get("recommended_format"),
         target_word_count=idea_data.get("target_word_count"),
-        needs_faq=idea_data.get("needs_faq"),
-        needs_images=idea_data.get("needs_images"),
+        needs_faq=bool(idea_data["needs_faq"]) if idea_data.get("needs_faq") is not None else None,
+        needs_images=bool(idea_data["needs_images"]) if idea_data.get("needs_images") is not None else None,
         estimated_difficulty=idea_data.get("estimated_difficulty"),
         proposal_source="ia_generation",
         # Secondary keywords stored as secondary_keywords_json

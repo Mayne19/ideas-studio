@@ -119,7 +119,7 @@ class Article(Base):
 
     # --- Global score ---
     global_score: Mapped[float | None] = mapped_column(Float, nullable=True)
-    global_score_valid: Mapped[bool | None] = mapped_column(Integer, nullable=True)
+    global_score_valid: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     # --- Editorial dates ---
     idea_generated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -145,8 +145,8 @@ class Article(Base):
     recommended_format: Mapped[str | None] = mapped_column(String(100), nullable=True)
     target_word_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     content_format: Mapped[str | None] = mapped_column(String(20), nullable=True)  # short|medium|long|pillar
-    needs_faq: Mapped[bool | None] = mapped_column(Integer, nullable=True)
-    needs_images: Mapped[bool | None] = mapped_column(Integer, nullable=True)
+    needs_faq: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    needs_images: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     suggested_internal_links: Mapped[str | None] = mapped_column(Text, nullable=True)
     suggested_external_links: Mapped[str | None] = mapped_column(Text, nullable=True)
     estimated_difficulty: Mapped[str | None] = mapped_column(String(50), nullable=True)
