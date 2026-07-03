@@ -153,6 +153,171 @@ def test_generate_idea_with_context_hint(client: TestClient):
     assert resp.json()["status"] == "idea_proposed"
 
 
+class _FakeIdeaProvider:
+    is_mock = False
+    provider_name = "fake"
+    model_name = "test"
+
+    def __init__(self, payload: dict):
+        self.payload = payload
+
+    def generate_text(self, prompt: str, system: str | None = None, temperature: float = 0.7) -> str:
+        return ""
+
+    def generate_json(self, prompt: str, schema_hint: str | None = None):
+        return dict(self.payload)
+
+    def is_available(self) -> bool:
+        return True
+
+    def describe(self) -> str:
+        return "fake model=test mock=False"
+
+
+def test_generate_idea_matches_ai_category_and_cleans_keyword(client: TestClient):
+    from app.models.category import Category
+    from app.services.idea_engine import generate_idea
+    from app.services.providers.search_provider import MockSearchProvider
+    import uuid
+
+    headers = register_and_login(client, email="idea_category_keyword@test.com")
+    project = _create_project(client, headers)
+
+    db = TestingSessionLocal()
+    try:
+        category = Category(
+            id=str(uuid.uuid4()),
+            project_id=project["id"],
+            name="SEO technique",
+            slug="seo-technique",
+            color="#ff6600",
+            priority=10,
+        )
+        db.add(category)
+        db.commit()
+
+        raw_keyword = "Comment améliorer la vitesse de chargement de votre site web en 2026 ?"
+        article = generate_idea(
+            db=db,
+            project_id=project["id"],
+            project_audience="Freelances web",
+            project_language="fr",
+            llm=_FakeIdeaProvider({
+                "title": raw_keyword,
+                "keyword": raw_keyword,
+                "category_name": "SEO technique",
+                "angle": "Guide pratique",
+                "search_intent": "informational",
+                "audience": "Freelances web",
+                "main_answer_summary": "Résumé",
+                "opportunity_justification": "Opportunité",
+                "recommended_format": "guide",
+                "target_word_count": 1800,
+                "needs_faq": True,
+                "needs_images": False,
+                "estimated_difficulty": "moyenne",
+                "secondary_keywords": ["vitesse de chargement site web"],
+            }),
+            search=MockSearchProvider(),
+        )
+
+        assert article is not None
+        assert article.category_id == category.id
+        assert article.keyword != raw_keyword
+        assert "?" not in article.keyword
+        assert 2 <= len(article.keyword.split()) <= 6
+    finally:
+        db.close()
+
+
+def test_generate_idea_keeps_uncategorized_when_ai_category_is_unmatched(client: TestClient):
+    from app.models.category import Category
+    from app.services.idea_engine import generate_idea
+    from app.services.providers.search_provider import MockSearchProvider
+    import uuid
+
+    headers = register_and_login(client, email="idea_uncategorized@test.com")
+    project = _create_project(client, headers)
+
+    db = TestingSessionLocal()
+    try:
+        db.add(Category(
+            id=str(uuid.uuid4()),
+            project_id=project["id"],
+            name="SEO technique",
+            slug="seo-technique",
+            color="#ff6600",
+            priority=0,
+        ))
+        db.commit()
+
+        article = generate_idea(
+            db=db,
+            project_id=project["id"],
+            project_audience="Freelances web",
+            project_language="fr",
+            llm=_FakeIdeaProvider({
+                "title": "Optimiser une page service",
+                "keyword": "optimisation page service",
+                "category_name": "Catégorie inventée",
+                "angle": "Guide pratique",
+                "search_intent": "informational",
+                "secondary_keywords": [],
+            }),
+            search=MockSearchProvider(),
+        )
+
+        assert article is not None
+        assert article.category_id is None
+    finally:
+        db.close()
+
+
+def test_generate_idea_preserves_explicit_category(client: TestClient):
+    from app.models.category import Category
+    from app.services.idea_engine import generate_idea
+    from app.services.providers.search_provider import MockSearchProvider
+    import uuid
+
+    headers = register_and_login(client, email="idea_explicit_category@test.com")
+    project = _create_project(client, headers)
+
+    db = TestingSessionLocal()
+    try:
+        category = Category(
+            id=str(uuid.uuid4()),
+            project_id=project["id"],
+            name="E-commerce",
+            slug="e-commerce",
+            color="#ff6600",
+            priority=0,
+        )
+        db.add(category)
+        db.commit()
+
+        article = generate_idea(
+            db=db,
+            project_id=project["id"],
+            project_audience="Boutiques en ligne",
+            project_language="fr",
+            llm=_FakeIdeaProvider({
+                "title": "Optimiser les fiches produit",
+                "keyword": "optimisation fiche produit",
+                "category_name": "Autre catégorie",
+                "angle": "Guide pratique",
+                "search_intent": "commercial",
+                "secondary_keywords": [],
+            }),
+            search=MockSearchProvider(),
+            category_id=category.id,
+        )
+
+        assert article is not None
+        assert article.category_id == category.id
+    finally:
+        db.close()
+
+
 @_REQUIRES_OPENROUTER
 def test_generate_idea_respects_preferred_title(client: TestClient):
     headers = register_and_login(client, email="preferred_title@test.com")

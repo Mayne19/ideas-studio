@@ -22,9 +22,9 @@ const IDEA_STATUSES_TO_FETCH = [
   'outline_ready', 'writing_requested', 'writing_in_progress', 'draft_ready',
 ]
 
-const IDEA_STATI: { key: string; label: string; color: string }[] = [
+const IDEA_STATI: { key: string; label: string; title?: string; color: string }[] = [
   { key: '', label: 'Tous', color: '' },
-  { key: 'idea_proposed', label: 'Proposée', color: 'bg-accent/8 text-accent' },
+  { key: 'idea_proposed', label: 'Proposée', title: 'Idée proposée', color: 'bg-accent/8 text-accent' },
   { key: 'idea_priority', label: 'Prioritaire', color: 'bg-warning/8 text-warning' },
   { key: 'idea_rejected', label: 'Rejetée', color: 'bg-danger/8 text-danger' },
   { key: 'writing_requested', label: 'Rédaction demandée', color: 'bg-accent/8 text-accent' },
@@ -76,7 +76,7 @@ function OpportunityBadge({ score, reason }: { score: number | null | undefined;
   if (pct === null) return <span className="text-[12px] text-tertiary">—</span>
   const color = pct >= 70 ? 'bg-success/8 text-success' : pct >= 40 ? 'bg-warning/10 text-warning' : 'bg-danger/10 text-danger'
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium ${color}`} title={reason ?? ''}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium ${color}`} title={reason ?? `${pct}/100`}>
       {pct}/100
     </span>
   )
@@ -86,7 +86,10 @@ function StatusBadgeSmall({ status }: { status: string }) {
   const match = IDEA_STATI.find((s) => s.key === status)
   if (!match) return <span className="text-[12px] text-tertiary">{status}</span>
   return (
-    <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${match.color}`}>
+    <span
+      className={`inline-flex max-w-[92px] items-center truncate rounded-full px-2 py-0.5 text-[10px] font-medium ${match.color}`}
+      title={match.title ?? match.label}
+    >
       {match.label}
     </span>
   )
@@ -371,9 +374,10 @@ export default function IdeasPipelinePage() {
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="h-10 rounded-[10px] border border-border bg-transparent px-3 text-[12px] text-secondary cursor-pointer"
+              className="h-10 max-w-[190px] rounded-[10px] border border-border bg-transparent px-3 text-[12px] text-secondary cursor-pointer"
+              title="Toutes les catégories"
             >
-              <option value="">Toutes catégories</option>
+              <option value="">Toutes les catégories</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
@@ -524,23 +528,39 @@ export default function IdeasPipelinePage() {
                         <button
                           onClick={() => setPreviewIdea(article)}
                           className="text-[14px] font-medium text-primary hover:text-accent transition-colors text-left line-clamp-1"
+                          title={article.title}
                         >
                           {article.title}
                         </button>
                         {article.angle && (
-                          <p className="text-[12px] text-tertiary line-clamp-1 mt-0.5">{article.angle}</p>
+                          <p className="text-[12px] text-tertiary line-clamp-1 mt-0.5" title={article.angle}>{article.angle}</p>
                         )}
                       </td>
                       <td className="px-2 py-2.5 hidden md:table-cell">
                         {cat ? (
-                          <span className="text-[12px] text-secondary">{cat.name}</span>
+                          <span
+                            className="inline-flex max-w-[120px] items-center truncate rounded-full bg-surface-soft px-2 py-0.5 text-[11px] text-secondary"
+                            title={cat.name}
+                          >
+                            {cat.name}
+                          </span>
                         ) : (
-                          <span className="text-[12px] text-tertiary">—</span>
+                          <span
+                            className="inline-flex items-center rounded-full bg-surface-soft px-2 py-0.5 text-[11px] text-tertiary"
+                            title="À classer"
+                          >
+                            À classer
+                          </span>
                         )}
                       </td>
                       <td className="px-2 py-2.5 hidden lg:table-cell">
                         {article.keyword ? (
-                          <span className="rounded-full bg-accent/8 px-2 py-0.5 text-[10px] text-accent">{article.keyword}</span>
+                          <span
+                            className="inline-flex max-w-[180px] items-center truncate rounded-full bg-accent/8 px-2 py-0.5 text-[10px] text-accent"
+                            title={article.keyword}
+                          >
+                            {article.keyword}
+                          </span>
                         ) : (
                           <span className="text-[12px] text-tertiary">—</span>
                         )}
@@ -896,9 +916,9 @@ export default function IdeasPipelinePage() {
                   <div key={idea.id} className="rounded-[10px] border border-border bg-surface-soft p-3">
                     <p className="text-[14px] font-medium text-primary">{idea.title}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                      {idea.keyword && <span className="rounded-full bg-accent/8 px-2 py-0.5 text-[10px] text-accent">{idea.keyword}</span>}
+                      {idea.keyword && <span className="inline-flex max-w-full truncate rounded-full bg-accent/8 px-2 py-0.5 text-[10px] text-accent" title={idea.keyword}>{idea.keyword}</span>}
                       {normalizeOpportunityScore(idea.opportunity_score) !== null && (
-                        <span className="text-[10px] text-tertiary">Score: {normalizeOpportunityScore(idea.opportunity_score)}%</span>
+                        <span className="text-[10px] text-tertiary">{normalizeOpportunityScore(idea.opportunity_score)}/100</span>
                       )}
                     </div>
                   </div>

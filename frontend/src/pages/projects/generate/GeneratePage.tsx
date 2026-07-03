@@ -97,7 +97,10 @@ export default function GeneratePage() {
 
   const activeProviders = providers.filter((provider) => provider.enabled && provider.api_key_configured)
   const assignedAgentIds = new Set(assignments.filter((item) => item.enabled).map((item) => item.agent_id))
-  const workflowArticles = articles.filter((article) => article.workflow_run_id || article.next_agent_key || article.completed_agent_keys || article.workflow_status)
+  const workflowArticles = useMemo(
+    () => articles.filter((article) => article.workflow_run_id || article.next_agent_key || article.completed_agent_keys || article.workflow_status),
+    [articles],
+  )
   const failedWorkflows = workflowArticles.filter((article) => workflowStatus(article) === 'failed' || article.status === 'failed')
   const runningWorkflows = workflowArticles.filter((article) => ['running', 'in_progress', 'queued'].includes(workflowStatus(article)) || article.next_agent_key)
   const completedWorkflows = workflowArticles.filter((article) => workflowStatus(article) === 'completed')
@@ -111,8 +114,12 @@ export default function GeneratePage() {
   )
   const failedPipelineLogs = sortedLogs.filter(isLogFailure)
   const failureCount = failedPipelineLogs.length || failedWorkflows.length
-  const visibleLogs = sortedLogs.slice(0, 2)
-  const olderLogs = sortedLogs.slice(2)
+  const successPipelineLogs = sortedLogs.filter((log) => isLogSuccess(log.status) && !isLogFailure(log))
+  const successCount = successPipelineLogs.length || completedWorkflows.length
+  const activeAgentKey = runningWorkflows.find((article) => article.next_agent_key)?.next_agent_key ?? null
+  const activeAgentLabel = activeAgentKey
+    ? agents.find((agent) => agent.agent_id === activeAgentKey)?.name ?? activeAgentKey
+    : 'Aucun'
   const activeProviderLabel = activeProviders[0]?.label ?? 'Aucun'
   const pipelineLabel = pipeline?.enabled ? 'Actif' : 'Inactif'
   const hasSystemIssue = activeProviders.length === 0 || assignedAgentIds.size === 0 || !pipeline?.enabled || failureCount > 0
@@ -198,7 +205,11 @@ export default function GeneratePage() {
                 event.stopPropagation()
                 copyLog(log.id, detailText)
               }}
-              className="inline-flex h-7 items-center justify-center rounded-[7px] border border-border bg-surface px-2 text-[11px] font-medium text-secondary shadow-sm transition-all hover:border-accent/30 hover:bg-surface-soft hover:text-primary active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-accent/20"
+              className={`inline-flex h-7 items-center justify-center rounded-[7px] border px-2 text-[11px] font-medium shadow-sm transition-all active:scale-[0.98] focus:outline-none focus:ring-2 ${
+                copied
+                  ? 'border-success/25 bg-success/10 text-success focus:ring-success/20'
+                  : 'border-border bg-surface text-secondary hover:border-accent/30 hover:bg-surface-soft hover:text-primary focus:ring-accent/20'
+              }`}
             >
               {copied ? 'Copié' : 'Copier'}
             </button>
@@ -277,18 +288,26 @@ export default function GeneratePage() {
           </div>
         </div>
 
-        <div className="mt-4 grid overflow-hidden rounded-[12px] border border-border sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-4 grid overflow-hidden rounded-[12px] border border-border sm:grid-cols-2 xl:grid-cols-6">
           <div className="border-b border-border p-4 sm:border-r xl:border-b-0">
             <p className="text-[12px] font-medium text-tertiary">Provider</p>
             <p className="mt-1 truncate text-[20px] font-semibold tracking-tight text-primary">{activeProviderLabel}</p>
           </div>
           <div className="border-b border-border p-4 xl:border-b-0 xl:border-r">
+            <p className="text-[12px] font-medium text-tertiary">Agent actif</p>
+            <p className="mt-1 truncate text-[20px] font-semibold tracking-tight text-primary" title={activeAgentLabel}>{activeAgentLabel}</p>
+          </div>
+          <div className="border-b border-border p-4 sm:border-r xl:border-b-0">
             <p className="text-[12px] font-medium text-tertiary">Agents assignés</p>
             <p className="mt-1 text-[20px] font-semibold tracking-tight text-primary">{assignedAgentIds.size}/{agents.length || '—'}</p>
           </div>
-          <div className="border-b border-border p-4 sm:border-r sm:border-b-0">
+          <div className="border-b border-border p-4 xl:border-b-0 xl:border-r">
             <p className="text-[12px] font-medium text-tertiary">Pipeline</p>
             <p className="mt-1 text-[20px] font-semibold tracking-tight text-primary">{pipelineLabel}</p>
+          </div>
+          <div className="border-b border-border p-4 sm:border-r sm:border-b-0">
+            <p className="text-[12px] font-medium text-tertiary">Réussites</p>
+            <p className="mt-1 text-[20px] font-semibold tracking-tight text-success">{successCount}</p>
           </div>
           <div className="p-4">
             <p className="text-[12px] font-medium text-tertiary">Échecs</p>
@@ -333,13 +352,8 @@ export default function GeneratePage() {
           {sortedLogs.length === 0 ? (
             <p className="rounded-[12px] border border-border px-3 py-3 text-[14px] text-secondary">Aucun log pipeline disponible.</p>
           ) : (
-            <div>
-              {visibleLogs.map((log, index) => renderLog(log, index))}
-              {olderLogs.length > 0 && (
-                <div className="mt-2 max-h-[260px] overflow-y-auto pr-1">
-                  {olderLogs.map((log, index) => renderLog(log, index + 2))}
-                </div>
-              )}
+            <div className="max-h-[168px] overflow-y-auto pr-1">
+              {sortedLogs.map((log, index) => renderLog(log, index))}
             </div>
           )}
         </div>
