@@ -101,8 +101,9 @@ export default function GeneratePage() {
     if (!projectId) return
     setRunState('running')
     try {
-      await triggerPipelineRun(projectId)
-      setRunState('done')
+      const result = await triggerPipelineRun(projectId)
+      // Le backend répond 200 même quand le run échoue (ex. provider IA indisponible)
+      setRunState(result.status === 'failed' ? 'error' : 'done')
       setTick((value) => value + 1)
     } catch {
       setRunState('error')
