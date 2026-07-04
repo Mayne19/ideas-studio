@@ -106,14 +106,28 @@ export function pipelineStatusTone(status: string): 'success' | 'warning' | 'dan
   return 'secondary'
 }
 
-export function pipelineRunMessage(result: Pick<PipelineRunResult, 'status' | 'expected_ideas' | 'generated_ideas' | 'failed_categories'>): string {
+function translateRunError(error: string): string {
+  const pending = error.match(/^Max pending drafts reached \((\d+)\/(\d+)\)/)
+  if (pending) {
+    return `Limite de brouillons en attente atteinte (${pending[1]}/${pending[2]}). Validez, annulez ou supprimez des brouillons en production, ou augmentez la limite dans Paramètres → Pipeline.`
+  }
+  if (error.startsWith('Pipeline is paused')) {
+    return 'Le pipeline est en pause. Réactivez-le dans Paramètres → Pipeline.'
+  }
+  return error
+}
+
+export function pipelineRunMessage(result: Pick<PipelineRunResult, 'status' | 'expected_ideas' | 'generated_ideas' | 'failed_categories' | 'errors'>): string {
   if (result.status === 'running') return 'Exécution en cours…'
   if (result.status === 'success') return `${result.generated_ideas} idée(s) générée(s) avec succès.`
   if (result.status === 'partial_success') {
     const failed = result.failed_categories.length
     return `${result.generated_ideas} idée(s) générée(s), ${failed || Math.max(0, result.expected_ideas - result.generated_ideas)} catégorie(s) en erreur.`
   }
-  return 'Aucune idée générée. Voir les détails.'
+  const firstError = result.errors?.[0]
+    ?? result.failed_categories?.find((c) => c.errors?.length)?.errors?.[0]
+  if (firstError) return `Aucune idée générée : ${translateRunError(firstError)}`
+  return 'Aucune idée générée. Consultez le journal du pipeline pour le détail.'
 }
 
 export function getPipelineSettings(projectId: string): Promise<PipelineSettings> {
