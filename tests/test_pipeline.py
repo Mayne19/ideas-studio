@@ -129,3 +129,76 @@ def test_pipeline_articles_per_week_affects_daily_target_and_never_publishes(cli
     assert len(articles) == data["ideas_generated"]
     if articles:
         assert all(article["status"] == "idea_proposed" for article in articles)
+
+
+def test_pipeline_generates_monthly_volume_from_active_categories(client: TestClient):
+    headers, project = _setup(client, "pipe_monthly_volume@test.com")
+    category_ids = []
+    for index in range(10):
+        resp = client.post(
+            f"/projects/{project['id']}/categories",
+            json={
+                "name": f"Catégorie {index + 1}",
+                "monthly_frequency": 1,
+                "pipeline_enabled": True,
+                "priority": 10 - index,
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 201
+        category_ids.append(resp.json()["id"])
+
+    run = client.post(f"/projects/{project['id']}/pipeline/run", headers=headers)
+    assert run.status_code == 200
+    data = run.json()
+    assert data["status"] == "completed"
+    assert data["workflow_run_id"]
+    assert data["total_expected_ideas"] == 10
+    assert data["total_generated_ideas"] == 10
+    assert data["ideas_generated"] == 10
+    assert len(data["categories_processed"]) == 10
+    assert all(row["expected"] == 1 for row in data["categories_processed"])
+    assert all(row["generated"] == 1 for row in data["categories_processed"])
+
+    articles = client.get(f"/projects/{project['id']}/articles?status=idea_proposed&limit=50", headers=headers).json()
+    generated = [article for article in articles if article["workflow_run_id"] == data["workflow_run_id"]]
+    assert len(generated) == 10
+    assert all(article["category_id"] in category_ids for article in generated)
+    assert all(article["category_id"] is not None for article in generated)
+
+
+def test_pipeline_category_error_does_not_block_batch(client: TestClient, monkeypatch):
+    from app.services.idea_engine import generate_idea as real_generate_idea
+
+    headers, project = _setup(client, "pipe_partial_category@test.com")
+    failing_category_id = None
+    for name in ("SEO", "Performance", "Marketing"):
+        resp = client.post(
+            f"/projects/{project['id']}/categories",
+            json={"name": name, "monthly_frequency": 1, "pipeline_enabled": True},
+            headers=headers,
+        )
+        assert resp.status_code == 201
+        if name == "Performance":
+            failing_category_id = resp.json()["id"]
+
+    def flaky_generate_idea(*args, **kwargs):
+        if kwargs.get("category_id") == failing_category_id:
+            raise RuntimeError("Provider indisponible pour cette catégorie")
+        return real_generate_idea(*args, **kwargs)
+
+    monkeypatch.setattr("app.services.idea_engine.generate_idea", flaky_generate_idea)
+
+    run = client.post(f"/projects/{project['id']}/pipeline/run", headers=headers)
+    assert run.status_code == 200
+    data = run.json()
+    assert data["status"] == "completed_with_errors"
+    assert data["total_expected_ideas"] == 3
+    assert data["total_generated_ideas"] == 2
+    assert data["ideas_generated"] == 2
+    assert len(data["errors"]) == 1
+
+    articles = client.get(f"/projects/{project['id']}/articles?status=idea_proposed&limit=50", headers=headers).json()
+    generated = [article for article in articles if article["workflow_run_id"] == data["workflow_run_id"]]
+    assert len(generated) == 2
+    assert all(article["category_id"] for article in generated)

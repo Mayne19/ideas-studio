@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 from pydantic import BaseModel, ConfigDict
 
 
@@ -135,6 +135,23 @@ class ArticlePublic(BaseModel):
     content_format: Optional[str] = None
     updated_at: datetime
 
+    # Idea-specific fields
+    angle: Optional[str] = None
+    search_intent: Optional[str] = None
+    opportunity_score: Optional[float] = None
+    audience: Optional[str] = None
+    rejection_reason: Optional[str] = None
+    rejection_note: Optional[str] = None
+
+    # Workflow tracking
+    workflow_run_id: Optional[str] = None
+    completed_agent_keys: Optional[str] = None
+    next_agent_key: Optional[str] = None
+    agent_outputs_json: Optional[Any] = None
+    planning_brief_json: Optional[Any] = None
+    production_brief_json: Optional[Any] = None
+    workflow_status: Optional[str] = None
+
     # Editorial dates
     target_write_at: Optional[datetime] = None
     target_review_at: Optional[datetime] = None
@@ -146,6 +163,24 @@ class ArticlePublic(BaseModel):
     estimated_cost_json: Optional[dict] = None
     actual_cost_json: Optional[dict] = None
     geo_optimization_json: Optional[dict] = None
+    main_answer_summary: Optional[str] = None
+    opportunity_justification: Optional[str] = None
+    recommended_format: Optional[str] = None
+    needs_faq: Optional[bool] = None
+    needs_images: Optional[bool] = None
+    suggested_internal_links: Optional[str] = None
+    suggested_external_links: Optional[str] = None
+    estimated_difficulty: Optional[str] = None
+    proposal_source: Optional[str] = None
+    secondary_keywords_json: Optional[str] = None
+    improvement_proposal_json: Optional[Any] = None
+    performance_diagnosis_json: Optional[Any] = None
+    original_article_id: Optional[str] = None
+    revision_of_article_id: Optional[str] = None
+    proposed_changes_json: Optional[Any] = None
+    improvement_reason: Optional[str] = None
+    monitoring_status: Optional[str] = None
+    next_review_at: Optional[datetime] = None
 
 
 class BulkValidateRequest(BaseModel):

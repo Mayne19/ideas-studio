@@ -50,8 +50,22 @@ export type PipelineLog = {
 
 export type PipelineRunResult = {
   status: string
+  workflow_run_id: string
+  total_expected_ideas: number
+  total_generated_ideas: number
   ideas_generated: number
   articles_created: number
+  categories_processed: Array<{
+    category_id: string
+    category_name: string
+    expected: number
+    generated: number
+    errors: string[]
+  }>
+  errors: string[]
+  started_at: string
+  finished_at: string | null
+  pipeline_mode: string
 }
 
 export function getPipelineSettings(projectId: string): Promise<PipelineSettings> {

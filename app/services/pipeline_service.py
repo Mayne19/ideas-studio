@@ -1,7 +1,7 @@
 import json
-from math import ceil
 from datetime import datetime, timezone
 import logging
+import re
 from sqlalchemy.orm import Session
 from app.models.pipeline import ProjectPipeline
 from app.models.pipeline_log import PipelineLog
@@ -11,14 +11,46 @@ from app.schemas.pipeline import PipelineSettingsUpdate, PipelineSettingsPublic,
 
 logger = logging.getLogger(__name__)
 
+ACTIVE_IDEA_STATUSES = {
+    "idea_proposed",
+    "idea_priority",
+    "idea_rejected",
+    "outline_ready",
+    "writing_requested",
+    "writing_in_progress",
+    "draft",
+    "draft_ready",
+    "review_needed",
+    "correction_needed",
+    "scheduled",
+    "published",
+}
+
 
 def _parse_json_field(value: str | None, default):
     if not value:
         return default
     try:
-        return json.loads(value)
+        parsed = json.loads(value)
+        return default if parsed is None else parsed
     except (json.JSONDecodeError, TypeError):
         return default
+
+
+def _parse_json_object(value) -> dict:
+    if isinstance(value, dict):
+        return value
+    if not value:
+        return {}
+    current = value
+    for _ in range(2):
+        if not isinstance(current, str):
+            break
+        try:
+            current = json.loads(current)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+    return current if isinstance(current, dict) else {}
 
 
 def _category_frequency_summary(db: Session, project_id: str) -> tuple[int, list[dict]]:
@@ -43,6 +75,92 @@ def _category_frequency_summary(db: Session, project_id: str) -> tuple[int, list
             "priority": category.priority,
         })
     return total, rows
+
+
+def _category_monthly_frequency(category: Category) -> int:
+    frequency = category.monthly_frequency if category.monthly_frequency is not None else category.target_frequency
+    try:
+        return max(0, int(frequency or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _active_pipeline_categories(db: Session, project_id: str) -> list[Category]:
+    return [
+        category
+        for category in (
+            db.query(Category)
+            .filter(Category.project_id == project_id)
+            .order_by(Category.priority.desc(), Category.name.asc())
+            .all()
+        )
+        if category.pipeline_enabled is not False and _category_monthly_frequency(category) > 0
+    ]
+
+
+def _normalize_topic(value: str | None) -> str:
+    if not value:
+        return ""
+    normalized = re.sub(r"[^a-z0-9àâäéèêëîïôöùûüçñ]+", " ", value.lower())
+    return re.sub(r"\s+", " ", normalized).strip()
+
+
+def _topic_signature(article: Article) -> tuple[str, str]:
+    return (_normalize_topic(article.title), _normalize_topic(article.keyword))
+
+
+def _existing_topic_signatures(db: Session, project_id: str, category_id: str) -> set[tuple[str, str]]:
+    existing = (
+        db.query(Article)
+        .filter(
+            Article.project_id == project_id,
+            Article.category_id == category_id,
+            Article.status.in_(ACTIVE_IDEA_STATUSES),
+        )
+        .all()
+    )
+    return {_topic_signature(article) for article in existing}
+
+
+def _looks_duplicate(article: Article, signatures: set[tuple[str, str]]) -> bool:
+    title, keyword = _topic_signature(article)
+    if not title and not keyword:
+        return False
+    for existing_title, existing_keyword in signatures:
+        if keyword and existing_keyword and keyword == existing_keyword:
+            return True
+        if title and existing_title and title == existing_title:
+            return True
+    return False
+
+
+def _category_context(category: Category, slot: int, frequency: int, duplicate_titles: list[str]) -> str:
+    lines = [
+        "Génération pipeline mensuelle par catégorie.",
+        f"Catégorie obligatoire: {category.name}",
+        f"category_id obligatoire: {category.id}",
+        f"slug: {category.slug}",
+        f"unité de fréquence: {slot}/{frequency}",
+        "Crée une idée unique pour cette catégorie. Ne choisis pas une autre catégorie.",
+    ]
+    if category.description:
+        lines.append(f"description: {category.description}")
+    if category.editorial_goal:
+        lines.append(f"objectif éditorial: {category.editorial_goal}")
+    if category.target_audience:
+        lines.append(f"audience catégorie: {category.target_audience}")
+    if category.internal_notes:
+        lines.append(f"notes internes: {category.internal_notes}")
+    if category.vertical:
+        lines.append(f"vertical: {category.vertical}")
+    if category.niche:
+        lines.append(f"niche: {category.niche}")
+    if category.word_count_min or category.word_count_max:
+        lines.append(f"longueur cible catégorie: {category.word_count_min or 'min non défini'}-{category.word_count_max or 'max non défini'} mots")
+    if duplicate_titles:
+        lines.append("Sujets déjà présents à éviter strictement:")
+        lines.extend(f"- {title}" for title in duplicate_titles[-8:])
+    return "\n".join(lines)
 
 
 def _model_to_settings(pipe: ProjectPipeline, db: Session | None = None) -> PipelineSettingsPublic:
@@ -184,6 +302,10 @@ def run_pipeline(db: Session, project_id: str) -> dict:
     ideas_generated = 0
     articles_created = 0
     pipeline_mode = settings.PIPELINE_MODE
+    workflow_run_id = log_entry.id
+    categories_processed: list[dict] = []
+    generated_idea_ids: list[str] = []
+    total_expected_ideas = 0
 
     try:
         if _is_paused(pipe):
@@ -204,35 +326,98 @@ def run_pipeline(db: Session, project_id: str) -> dict:
                 search = get_search_provider()
                 agent_router = get_agent_router(db=db)
 
-                active_days = []
-                if pipe.active_days:
-                    try:
-                        active_days = json.loads(pipe.active_days) if isinstance(pipe.active_days, str) else pipe.active_days
-                    except Exception:
-                        active_days = []
-                active_day_count = len(active_days) or 7
-                weekly_target = max(1, pipe.articles_per_week or 5)
-                daily_target = max(1, ceil(weekly_target / active_day_count))
                 project_audience = project.audience if project else None
                 project_language = project.language if project else "fr"
+                active_categories = _active_pipeline_categories(db, project_id)
+                total_expected_ideas = sum(_category_monthly_frequency(category) for category in active_categories)
+
+                if not active_categories or total_expected_ideas <= 0:
+                    errors.append("Aucune catégorie active avec volume mensuel configuré.")
 
                 # Phase 1: Generate ideas (always)
-                for i in range(daily_target):
-                    try:
-                        idea = generate_idea(
-                            db=db,
-                            project_id=project_id,
-                            project_audience=project_audience,
-                            project_language=project_language,
-                            llm=llm,
-                            search=search,
-                            agent_router=agent_router,
+                for category in active_categories:
+                    frequency = _category_monthly_frequency(category)
+                    category_report = {
+                        "category_id": category.id,
+                        "category_name": category.name,
+                        "expected": frequency,
+                        "generated": 0,
+                        "errors": [],
+                    }
+                    signatures = _existing_topic_signatures(db, project_id, category.id)
+                    category_titles = [
+                        article.title
+                        for article in (
+                            db.query(Article.title)
+                            .filter(
+                                Article.project_id == project_id,
+                                Article.category_id == category.id,
+                                Article.status.in_(ACTIVE_IDEA_STATUSES),
+                            )
+                            .order_by(Article.created_at.desc())
+                            .limit(12)
+                            .all()
                         )
-                        if idea:
-                            ideas_generated += 1
-                    except Exception as exc:
-                        logger.exception("Pipeline idea generation failed")
-                        errors.append(f"Idea {i + 1}: {exc}")
+                        if article.title
+                    ]
+                    for slot in range(1, frequency + 1):
+                        created = None
+                        for attempt in range(1, 4):
+                            try:
+                                idea = generate_idea(
+                                    db=db,
+                                    project_id=project_id,
+                                    project_audience=project_audience,
+                                    project_language=project_language,
+                                    llm=llm,
+                                    search=search,
+                                    context_hint=_category_context(category, slot, frequency, category_titles),
+                                    keyword=f"{category.name} idee {slot}" if llm.is_mock else None,
+                                    category_id=category.id,
+                                    audience=category.target_audience or project_audience,
+                                    agent_router=agent_router,
+                                )
+                                if not idea:
+                                    category_report["errors"].append(f"Idée {slot}: doublon ou proposition inexploitable (tentative {attempt}).")
+                                    continue
+                                if not idea.category_id:
+                                    idea.category_id = category.id
+                                if _looks_duplicate(idea, signatures):
+                                    db.delete(idea)
+                                    db.flush()
+                                    category_report["errors"].append(f"Idée {slot}: doublon détecté (tentative {attempt}).")
+                                    continue
+
+                                idea.workflow_run_id = workflow_run_id
+                                idea.workflow_status = "idea_prebrief"
+                                idea.completed_agent_keys = json.dumps(["idea_generator"], ensure_ascii=False)
+                                idea.next_agent_key = "human_validation"
+                                planning_brief = _parse_json_object(idea.planning_brief_json)
+                                planning_brief.update({
+                                    "workflow_run_id": workflow_run_id,
+                                    "phase_current": "Idée / Pré-brief",
+                                    "next_step": "Envoyer en production",
+                                    "category_name": category.name,
+                                    "category_slug": category.slug,
+                                    "category_frequency_slot": slot,
+                                    "category_monthly_frequency": frequency,
+                                })
+                                idea.planning_brief_json = planning_brief
+                                db.flush()
+
+                                signatures.add(_topic_signature(idea))
+                                category_titles.append(idea.title)
+                                generated_idea_ids.append(idea.id)
+                                ideas_generated += 1
+                                category_report["generated"] += 1
+                                created = idea
+                                break
+                            except Exception as exc:
+                                logger.exception("Pipeline idea generation failed category=%s slot=%s attempt=%s", category.id, slot, attempt)
+                                category_report["errors"].append(f"Idée {slot}: {exc}")
+                        if created is None:
+                            errors.append(f"{category.name}: idée {slot}/{frequency} non générée.")
+                    categories_processed.append(category_report)
 
                 # Phase 2: Generate briefs / full drafts based on pipeline mode
                 if pipeline_mode in ("brief_only", "draft_generation") and ideas_generated > 0:
@@ -243,9 +428,9 @@ def run_pipeline(db: Session, project_id: str) -> dict:
                         .filter(
                             Article.project_id == project_id,
                             Article.status == "idea_proposed",
+                            Article.id.in_(generated_idea_ids),
                         )
                         .order_by(Article.opportunity_score.desc().nullslast())
-                        .limit(daily_target)
                         .all()
                     )
                     for idea in pending_ideas:
@@ -280,7 +465,14 @@ def run_pipeline(db: Session, project_id: str) -> dict:
 
     log_entry.ideas_generated = ideas_generated
     log_entry.articles_created = articles_created
-    log_entry.errors = "\n".join(errors) if errors else None
+    run_summary = {
+        "workflow_run_id": workflow_run_id,
+        "total_expected_ideas": total_expected_ideas,
+        "total_generated_ideas": ideas_generated,
+        "categories_processed": categories_processed,
+        "errors": errors,
+    }
+    log_entry.errors = json.dumps(run_summary, ensure_ascii=False) if errors or categories_processed else None
     log_entry.finished_at = datetime.now(timezone.utc)
     try:
         db.commit()
@@ -294,8 +486,15 @@ def run_pipeline(db: Session, project_id: str) -> dict:
 
     return {
         "status": log_entry.status,
+        "workflow_run_id": workflow_run_id,
+        "total_expected_ideas": total_expected_ideas,
+        "total_generated_ideas": ideas_generated,
         "ideas_generated": ideas_generated,
         "articles_created": articles_created,
+        "categories_processed": categories_processed,
+        "errors": errors,
+        "started_at": log_entry.started_at.isoformat(),
+        "finished_at": log_entry.finished_at.isoformat() if log_entry.finished_at else None,
         "pipeline_mode": pipeline_mode,
     }
 

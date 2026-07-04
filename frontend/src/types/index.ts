@@ -168,7 +168,7 @@ export type Article = {
   completed_agent_keys: string | null
   next_agent_key: string | null
   agent_outputs_json: Record<string, unknown> | null
-  planning_brief_json: Record<string, unknown> | null
+  planning_brief_json: Record<string, unknown> | string | null
   production_brief_json: Record<string, unknown> | null
   workflow_status: string | null
   // Target dates

@@ -17,7 +17,6 @@ import { listArticles, bulkValidateByScore, bulkValidateArticles, bulkPublishArt
 import type { BulkValidateResponse } from '@/api/articles'
 import {
   generateIdea,
-  autoGenerateIdeas,
   sendToProduction,
   rejectIdea,
   setIdeaPriority,
@@ -25,6 +24,8 @@ import {
   bulkDeleteIdeas,
   restoreIdea,
 } from '@/api/ideas'
+import { triggerPipelineRun } from '@/api/pipeline'
+import type { PipelineRunResult } from '@/api/pipeline'
 import { listCategories } from '@/api/categories'
 import type { Article, Category } from '@/types'
 import { formatDate } from '@/utils/format'
@@ -72,6 +73,42 @@ const SCORE_THRESHOLD_OPTIONS = [
   { value: '80', label: 'Score ≥ 80' },
   { value: '75', label: 'Score ≥ 75' },
 ]
+
+function parseJsonValue(value: unknown): unknown {
+  let current = value
+  for (let i = 0; i < 2; i += 1) {
+    if (typeof current !== 'string') break
+    try {
+      current = JSON.parse(current)
+    } catch {
+      return value
+    }
+  }
+  return current
+}
+
+function parseJsonObject(value: unknown): Record<string, unknown> {
+  const parsed = parseJsonValue(value)
+  return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {}
+}
+
+function parseJsonList(value: unknown): string[] {
+  const parsed = parseJsonValue(value)
+  if (!Array.isArray(parsed)) return []
+  return parsed.map((item) => String(item)).filter(Boolean)
+}
+
+function stringifyTechnical(value: unknown): string {
+  const parsed = parseJsonValue(value)
+  return JSON.stringify(parsed ?? {}, null, 2)
+}
+
+function textValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '—'
+  if (Array.isArray(value)) return value.map((item) => String(item)).join(', ') || '—'
+  if (typeof value === 'object') return JSON.stringify(value)
+  return String(value)
+}
 
 // ── Tab button ──────────────────────────────────────────────────────────────
 
@@ -134,9 +171,10 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
   const [bulkGenerateOpen, setBulkGenerateOpen] = useState(false)
   const [generateTitle, setGenerateTitle] = useState('')
   const [generateContext, setGenerateContext] = useState('')
-  const [bulkCount, setBulkCount] = useState(3)
   const [generating, setGenerating] = useState(false)
   const [generateResult, setGenerateResult] = useState('')
+  const [batchResult, setBatchResult] = useState<PipelineRunResult | null>(null)
+  const [previewIdea, setPreviewIdea] = useState<Article | null>(null)
 
   const load = useCallback(() => {
     setLoadStatus('loading')
@@ -163,7 +201,12 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
   }, [articles, search, categoryFilter, statusFilter, scoreFilter])
 
   function toggle(id: string, checked: boolean) {
-    setSelectedIds((prev) => { const s = new Set(prev); checked ? s.add(id) : s.delete(id); return s })
+    setSelectedIds((prev) => {
+      const s = new Set(prev)
+      if (checked) s.add(id)
+      else s.delete(id)
+      return s
+    })
   }
 
   function toggleAll(checked: boolean) {
@@ -171,6 +214,13 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
   }
 
   const selected = visible.filter((a) => selectedIds.has(a.id))
+  const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories])
+  const monthlyVolume = useMemo(
+    () => categories
+      .filter((category) => category.pipeline_enabled !== false)
+      .reduce((sum, category) => sum + Math.max(0, Number(category.monthly_frequency ?? category.target_frequency ?? 0)), 0),
+    [categories],
+  )
 
   async function handlePrioritize(article: Article) {
     setActionLoading(article.id + '-prioritize')
@@ -315,11 +365,14 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
     setGenerating(true)
     setGenerateResult('')
     setError('')
+    setBatchResult(null)
     try {
-      const res = await autoGenerateIdeas(projectId, bulkCount)
-      setGenerateResult(`${res.generated} idée(s) créée(s).`)
+      const res = await triggerPipelineRun(projectId)
+      setBatchResult(res)
+      const errorLabel = res.errors.length > 0 ? `, ${res.errors.length} erreur${res.errors.length > 1 ? 's' : ''}` : ''
+      setGenerateResult(`${res.total_expected_ideas} idée(s) attendue(s), ${res.total_generated_ideas} générée(s)${errorLabel}.`)
       setTick((t) => t + 1)
-    } catch { setGenerateResult('Erreur lors de la génération en masse.') }
+    } catch { setGenerateResult('Erreur lors de la génération du volume mensuel.') }
     finally { setGenerating(false) }
   }
 
@@ -327,6 +380,16 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
     { value: '', label: 'Toutes les catégories' },
     ...categories.map((c) => ({ value: c.id, label: c.name })),
   ]
+  const previewBrief = useMemo(() => parseJsonObject(previewIdea?.planning_brief_json), [previewIdea])
+  const previewSecondaryKeywords = useMemo(
+    () => parseJsonList(previewIdea?.secondary_keywords_json || previewBrief.secondary_keywords),
+    [previewIdea, previewBrief],
+  )
+  const previewCompletedAgents = useMemo(
+    () => parseJsonList(previewIdea?.completed_agent_keys),
+    [previewIdea],
+  )
+  const previewCategory = previewIdea?.category_id ? categoryMap.get(previewIdea.category_id)?.name ?? 'À classer' : 'À classer'
 
   if (loadStatus === 'loading') return (
     <div className="flex flex-col gap-2">
@@ -356,7 +419,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="secondary" icon={<Sparkles size={13} />} onClick={() => setBulkGenerateOpen(true)}>
-            Générer en masse
+            Générer le volume mensuel
           </Button>
           <Button size="sm" icon={<Plus size={13} />} onClick={() => setGenerateOpen(true)}>
             Nouvelle idée
@@ -413,7 +476,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
 
           <div className="flex flex-col">
             {visible.map((article) => {
-              const catName = categories.find((c) => c.id === article.category_id)?.name ?? '—'
+              const catName = article.category_id ? categoryMap.get(article.category_id)?.name ?? 'À classer' : 'À classer'
               return (
                 <div
                   key={article.id}
@@ -421,13 +484,20 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
                 >
                   <input type="checkbox" checked={selectedIds.has(article.id)} onChange={(e) => toggle(article.id, e.target.checked)} />
                   <div className="min-w-0">
-                    <p className="truncate text-[14px] font-medium text-primary">{article.title || '(sans titre)'}</p>
+                    <button
+                      type="button"
+                      title={article.title || '(sans titre)'}
+                      onClick={() => setPreviewIdea(article)}
+                      className="block max-w-full truncate text-left text-[14px] font-medium text-primary transition-colors hover:text-accent"
+                    >
+                      {article.title || '(sans titre)'}
+                    </button>
                     {article.meta_description && (
-                      <p className="mt-0.5 truncate text-[12px] text-tertiary">{article.meta_description}</p>
+                      <p className="mt-0.5 truncate text-[12px] text-tertiary" title={article.meta_description}>{article.meta_description}</p>
                     )}
                   </div>
-                  <span className="truncate text-[12px] text-secondary">{catName}</span>
-                  <span className="truncate text-[12px] text-secondary">{article.keyword ?? '—'}</span>
+                  <span className="truncate text-[12px] text-secondary" title={catName}>{catName}</span>
+                  <span className="truncate text-[12px] text-secondary" title={article.keyword ?? '—'}>{article.keyword ?? '—'}</span>
                   <StatusBadge status={article.status} />
                   <span className="text-[12px] text-tertiary">{article.created_at ? formatDate(article.created_at) : '—'}</span>
                   <div className="flex items-center justify-end gap-1">
@@ -541,24 +611,109 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
       </Modal>
 
       {/* Bulk generate modal */}
-      <Modal open={bulkGenerateOpen} onClose={() => { setBulkGenerateOpen(false); setGenerateResult('') }} title="Générer en masse" size="sm">
+      <Modal open={bulkGenerateOpen} onClose={() => { setBulkGenerateOpen(false); setGenerateResult(''); setBatchResult(null) }} title="Générer le volume mensuel" size="sm">
         <div className="flex flex-col gap-3">
-          <div>
-            <label className="mb-1 block text-[12px] font-medium text-secondary">Nombre d'idées</label>
-            <select
-              value={bulkCount}
-              onChange={(e) => setBulkCount(Number(e.target.value))}
-              className="w-full rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary focus:outline-none focus:ring-2 focus:ring-accent/30"
-            >
-              {[3, 5, 10, 20].map((n) => <option key={n} value={n}>{n} idées</option>)}
-            </select>
+          <div className="rounded-[12px] border border-border bg-surface-soft px-3 py-3">
+            <p className="text-[14px] font-medium text-primary">{monthlyVolume || 0} idée{monthlyVolume > 1 ? 's' : ''} attendue{monthlyVolume > 1 ? 's' : ''}</p>
+            <p className="mt-1 text-[12px] leading-snug text-secondary">
+              Le volume est calculé depuis les catégories actives et leur fréquence mensuelle.
+            </p>
           </div>
           {generateResult && <p className="rounded-[10px] bg-surface-soft px-3 py-2 text-[14px] text-secondary">{generateResult}</p>}
+          {batchResult && batchResult.categories_processed.length > 0 && (
+            <div className="max-h-44 overflow-y-auto rounded-[10px] border border-border">
+              {batchResult.categories_processed.map((row) => (
+                <div key={row.category_id} className="flex items-start justify-between gap-3 border-b border-border/40 px-3 py-2 text-[12px] last:border-0">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-primary" title={row.category_name}>{row.category_name}</p>
+                    {row.errors.length > 0 && <p className="mt-0.5 truncate text-danger" title={row.errors.join('\n')}>{row.errors[0]}</p>}
+                  </div>
+                  <span className={row.generated === row.expected ? 'text-success' : 'text-warning'}>{row.generated}/{row.expected}</span>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="flex gap-2">
             <Button size="sm" variant="secondary" className="flex-1 justify-center" onClick={() => setBulkGenerateOpen(false)}>Fermer</Button>
-            <Button size="sm" className="flex-1 justify-center" loading={generating} onClick={handleBulkGenerate}>Générer {bulkCount} idées</Button>
+            <Button size="sm" className="flex-1 justify-center" loading={generating} onClick={handleBulkGenerate}>Lancer le volume</Button>
           </div>
         </div>
+      </Modal>
+
+      <Modal open={!!previewIdea} onClose={() => setPreviewIdea(null)} title="Brief de l'idée" size="lg">
+        {previewIdea && (
+          <div className="flex max-h-[72vh] flex-col gap-4 overflow-y-auto pr-1">
+            <div className="rounded-[12px] border border-border bg-surface-soft px-3.5 py-3">
+              <p className="text-[12px] font-semibold uppercase tracking-wide text-tertiary">Phase actuelle</p>
+              <p className="mt-1 text-[14px] font-medium text-primary">Idée / Pré-brief</p>
+              <p className="mt-1 text-[12px] text-secondary">Prochaine étape : Envoyer en production. La rédaction article démarre seulement après validation.</p>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              {([
+                ['Titre proposé', previewIdea.title],
+                ['Catégorie', previewCategory],
+                ['Mot-clé principal', previewIdea.keyword],
+                ['Mots-clés secondaires', previewSecondaryKeywords],
+                ['Audience cible', previewIdea.audience || previewBrief.audience],
+                ['Intention de recherche', previewIdea.search_intent || previewBrief.search_intent],
+                ['Angle éditorial', previewIdea.angle || previewBrief.angle],
+                ['Format recommandé', previewIdea.recommended_format || previewBrief.recommended_format],
+                ['Longueur cible', previewIdea.target_word_count || previewBrief.target_word_count],
+                ['Difficulté estimée', previewIdea.estimated_difficulty || previewBrief.estimated_difficulty],
+                ['FAQ nécessaire', previewIdea.needs_faq === null ? previewBrief.needs_faq : (previewIdea.needs_faq ? 'Oui' : 'Non')],
+                ['Images nécessaires', previewIdea.needs_images === null ? previewBrief.needs_images : (previewIdea.needs_images ? 'Oui' : 'Non')],
+                ['Statut workflow', previewIdea.workflow_status || previewBrief.phase_current],
+                ['Dernier agent terminé', previewCompletedAgents.at(-1)],
+                ['Prochain agent', previewIdea.next_agent_key || previewBrief.next_step],
+                ['Agents complétés', previewCompletedAgents],
+              ] as Array<[string, unknown]>).map(([label, value]) => (
+                <div key={String(label)} className="rounded-[10px] border border-border px-3 py-2.5">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-tertiary">{label}</p>
+                  <p className="mt-1 break-words text-[13px] text-primary">{textValue(value)}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-[10px] border border-border px-3 py-2.5">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-tertiary">Résumé attendu</p>
+                <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-primary">{textValue(previewIdea.main_answer_summary || previewBrief.main_answer_summary)}</p>
+              </div>
+              <div className="rounded-[10px] border border-border px-3 py-2.5">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-tertiary">Réponse principale attendue</p>
+                <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-primary">{textValue(previewBrief.main_answer || previewBrief.expected_answer || previewIdea.main_answer_summary)}</p>
+              </div>
+              <div className="rounded-[10px] border border-border px-3 py-2.5">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-tertiary">Justification de l'opportunité</p>
+                <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-primary">{textValue(previewIdea.opportunity_justification || previewBrief.opportunity_justification)}</p>
+              </div>
+              <div className="rounded-[10px] border border-border px-3 py-2.5">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-tertiary">Liens suggérés</p>
+                <p className="mt-1 text-[13px] text-primary">Internes : {textValue(previewIdea.suggested_internal_links || previewBrief.internal_links)}</p>
+                <p className="mt-1 text-[13px] text-primary">Externes : {textValue(previewIdea.suggested_external_links || previewBrief.external_links)}</p>
+              </div>
+            </div>
+
+            <details className="rounded-[10px] border border-border">
+              <summary className="cursor-pointer px-3 py-2 text-[13px] font-medium text-primary">Données techniques</summary>
+              <pre className="max-h-72 overflow-auto border-t border-border p-3 text-[11px] leading-relaxed text-secondary">
+                {stringifyTechnical({
+                  article: previewIdea,
+                  planning_brief_json: previewIdea.planning_brief_json,
+                  parsed_planning_brief: previewBrief,
+                })}
+              </pre>
+            </details>
+
+            <div className="flex justify-end gap-2">
+              <Button size="sm" variant="secondary" onClick={() => setPreviewIdea(null)}>Fermer</Button>
+              <Button size="sm" icon={<ExternalLink size={13} />} onClick={() => navigate(`/projects/${projectId}/articles/${previewIdea.id}/edit`)}>
+                Ouvrir l'éditeur
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* Delete confirmation modal */}

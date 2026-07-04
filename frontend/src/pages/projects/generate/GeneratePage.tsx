@@ -62,6 +62,7 @@ export default function GeneratePage() {
   const [articles, setArticles] = useState<Article[]>([])
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [runState, setRunState] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
+  const [runSummary, setRunSummary] = useState('')
   const [openLogId, setOpenLogId] = useState<string | null>(null)
   const [copiedLogId, setCopiedLogId] = useState<string | null>(null)
   const autoOpenedLogId = useRef<string | null>(null)
@@ -132,10 +133,13 @@ export default function GeneratePage() {
   async function handleRunPipeline() {
     if (!projectId) return
     setRunState('running')
+    setRunSummary('')
     try {
       const result = await triggerPipelineRun(projectId)
       // Le backend répond 200 même quand le run échoue (ex. provider IA indisponible)
       setRunState(result.status === 'failed' ? 'error' : 'done')
+      const errorLabel = result.errors.length > 0 ? `, ${result.errors.length} erreur${result.errors.length > 1 ? 's' : ''}` : ''
+      setRunSummary(`${result.total_expected_ideas} idée(s) attendue(s), ${result.total_generated_ideas} générée(s)${errorLabel}.`)
       setTick((value) => value + 1)
     } catch {
       setRunState('error')
@@ -261,7 +265,9 @@ export default function GeneratePage() {
         <div className="mb-4 rounded-[12px] border border-danger/20 bg-danger/5 px-4 py-3 text-[14px] text-danger">Le lancement manuel a échoué. Consultez l’historique ou les providers.</div>
       )}
       {runState === 'done' && (
-        <div className="mb-4 rounded-[12px] border border-success/20 bg-success/8 px-4 py-3 text-[14px] text-success">Pipeline lancé. L’historique a été rafraîchi.</div>
+        <div className="mb-4 rounded-[12px] border border-success/20 bg-success/8 px-4 py-3 text-[14px] text-success">
+          Pipeline lancé. {runSummary || "L’historique a été rafraîchi."}
+        </div>
       )}
 
       <div className="mb-6 rounded-[14px] border border-border bg-surface p-4">
