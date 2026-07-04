@@ -12,7 +12,7 @@ export const STATUS_LABELS: Record<ArticleStatus, string> = {
   idea_priority: 'Prioritaire',
   idea_rejected: 'Rejetée',
   outline_ready: 'Plan prêt',
-  writing_requested: 'Rédaction demandée',
+  writing_requested: "En file d'attente rédaction",
   writing_in_progress: 'En rédaction',
   draft_ready: 'Brouillon prêt',
   review_needed: 'À relire',

@@ -444,6 +444,39 @@ def send_to_production_route(
     }
 
 
+@router.post("/articles/{article_id}/requeue-writing")
+def requeue_writing_route(
+    article_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Relance la rédaction d'un article en échec ou bloqué (remise en file d'attente)."""
+    article = _get_article_or_404(article_id, db)
+    _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor"))
+    if article.status not in ("failed", "writing_in_progress", "writing_requested"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Impossible de relancer la rédaction depuis le statut '{article.status}'",
+        )
+    article.status = "writing_requested"
+    article.workflow_status = "production"
+    article.updated_at = datetime.now(timezone.utc)
+    from app.services.log_service import log_step
+    log_step(
+        db, article.project_id,
+        f"Rédaction relancée manuellement : {article.title}",
+        level="info", step="writing_queue", article_id=article.id,
+    )
+    db.commit()
+    db.refresh(article)
+    return {
+        "id": article.id,
+        "title": article.title,
+        "status": article.status,
+        "workflow_status": article.workflow_status,
+    }
+
+
 @router.get("/projects/{project_id}/production/queue")
 def get_production_queue_route(
     project_id: str,
@@ -461,10 +494,14 @@ def process_production_queue_route(
     current_user: User = Depends(get_current_user),
     _member=Depends(require_project_role("owner", "admin")),
 ):
-    processed = process_queue(db, project_id, max_articles=1)
+    from app.services.production_queue import process_writing_queue
+    outcome = process_writing_queue(db, project_id)
+    ids = [r["id"] for r in outcome["results"] if r.get("status") != "not_found"]
+    articles = db.query(Article).filter(Article.id.in_(ids)).all() if ids else []
     return {
-        "processed": len(processed),
-        "articles": [{"id": a.id, "title": a.title, "status": a.status, "next_agent_key": a.next_agent_key} for a in processed],
+        "processed": len(articles),
+        "requeued_stale": outcome["requeued_stale"],
+        "articles": [{"id": a.id, "title": a.title, "status": a.status, "next_agent_key": a.next_agent_key} for a in articles],
     }
 
 

@@ -151,83 +151,190 @@ _FIELDS_TO_COPY = [
 ]
 
 
-def process_queue(db: Session, project_id: str, max_articles: int = 1) -> list[Article]:
-    """Process the production queue. For articles with next_agent_key, runs the full orchestrator."""
-    pending = (
+WRITING_STALE_MINUTES = 30
+
+
+def requeue_stale_writing(db: Session, project_id: str, minutes: int = WRITING_STALE_MINUTES) -> int:
+    """Remet en file les rédactions bloquées (writing_in_progress sans update depuis X minutes)."""
+    from datetime import timedelta
+    threshold = datetime.now(timezone.utc) - timedelta(minutes=minutes)
+    stale = (
+        db.query(Article)
+        .filter(
+            Article.project_id == project_id,
+            Article.status == "writing_in_progress",
+            Article.updated_at < threshold,
+        )
+        .all()
+    )
+    for article in stale:
+        article.status = "writing_requested"
+        article.workflow_status = "production"
+        article.updated_at = datetime.now(timezone.utc)
+        log_step(
+            db, project_id,
+            f"Rédaction bloquée depuis plus de {minutes} min, remise en file : {article.title}",
+            level="warning", step="writing_queue", article_id=article.id,
+        )
+    if stale:
+        db.commit()
+    return len(stale)
+
+
+def claim_for_writing(db: Session, project_id: str, limit: int) -> list[str]:
+    """Réclame atomiquement jusqu'à `limit` idées en file (writing_requested -> writing_in_progress).
+
+    Le claim par UPDATE conditionnel garantit qu'aucun article n'est pris
+    par deux workers en même temps.
+    """
+    candidate_ids = (
         db.execute(
-            select(Article)
+            select(Article.id)
             .where(
                 Article.project_id == project_id,
-                Article.status.in_(["writing_requested", "writing_in_progress", "draft_ready", "review_needed"]),
-                Article.workflow_status.in_(["production", "quality"]),
+                Article.status == "writing_requested",
+                Article.workflow_status == "production",
             )
             .order_by(Article.priority.desc().nullslast(), Article.created_at.asc())
-            .limit(max_articles)
+            .limit(limit)
         )
         .scalars()
         .all()
     )
+    claimed: list[str] = []
+    for article_id in candidate_ids:
+        updated = (
+            db.query(Article)
+            .filter(Article.id == article_id, Article.status == "writing_requested")
+            .update(
+                {"status": "writing_in_progress", "updated_at": datetime.now(timezone.utc)},
+                synchronize_session=False,
+            )
+        )
+        if updated:
+            claimed.append(article_id)
+    db.commit()
+    return claimed
 
-    processed = []
-    for article in pending:
+
+def write_queued_article(article_id: str, project_id: str) -> dict:
+    """Rédige un article réclamé, dans sa propre session (exécutable en thread parallèle)."""
+    from app.core.database import SessionLocal
+    from app.services.providers.llm_provider import get_llm_provider, ProviderUnavailableError
+    from app.services.providers.search_provider import get_search_provider
+    from app.services.agents.agent_router import get_agent_router
+    from app.services.seo.seo_generation_orchestrator import generate_full_article
+
+    db = SessionLocal()
+    try:
+        article = db.get(Article, article_id)
+        if not article:
+            return {"id": article_id, "status": "not_found"}
+        title = article.title
         try:
-            if article.next_agent_key:
-                from app.services.seo.seo_generation_orchestrator import SEOGenerationOrchestrator
-                from app.services.providers.llm_provider import get_llm_provider
-                from app.services.providers.search_provider import get_search_provider
-
-                llm = get_llm_provider()
-                search = get_search_provider()
-                orchestrator = SEOGenerationOrchestrator(db, project_id, llm, search)
-
-                generated = orchestrator.generate_full_article(
-                    preferred_title=article.title,
-                    keyword=article.keyword,
-                    category_id=article.category_id,
-                    audience=article.audience,
-                    angle=article.angle,
-                    search_intent=article.search_intent,
-                )
-
-                if generated.status not in ("failed",):
-                    for field in _FIELDS_TO_COPY:
-                        val = getattr(generated, field, None)
-                        if val is not None:
-                            setattr(article, field, val)
-                    article.status = "draft_ready"
-                    article.workflow_status = "completed"
-                    article.next_agent_key = None
-                    article.updated_at = datetime.now(timezone.utc)
-                    db.flush()
-                    # Remove the temporary article created by the orchestrator
-                    db.delete(generated)
-                    db.flush()
-                    log_step(
-                        db, project_id,
-                        f"Génération orchestrateur terminée : {article.title}",
-                        level="info", step="production_queue", article_id=article.id,
-                    )
-                else:
-                    log_step(
-                        db, project_id,
-                        f"Orchestrateur en échec pour {article.title}",
-                        level="error", step="production_queue", article_id=article.id,
-                    )
-                processed.append(article)
-            else:
-                advanced = advance_workflow(db, article)
-                processed.append(advanced)
-        except Exception as exc:
-            logger.exception("Failed to process article %s in queue", article.id)
+            llm = get_llm_provider(project_id=project_id)
+            search = get_search_provider()
+            generate_full_article(
+                db=db,
+                project_id=project_id,
+                llm=llm,
+                search=search,
+                agent_router=get_agent_router(db=db),
+                preferred_title=article.title,
+                keyword=article.keyword,
+                category_id=article.category_id,
+                audience=article.audience,
+                angle=article.angle,
+                search_intent=article.search_intent,
+                existing_article_id=article_id,
+            )
+            db.commit()
+            db.refresh(article)
             log_step(
                 db, project_id,
-                f"Erreur de production pour {article.title}: {exc}",
-                level="error", step="production_queue", article_id=article.id,
+                f"Rédaction terminée ({article.status}) : {title}",
+                level="info" if article.status != "failed" else "error",
+                step="writing_queue", article_id=article_id,
             )
-    db.commit()
-    for a in processed:
-        db.refresh(a)
-    return processed
+            db.commit()
+            return {"id": article_id, "status": article.status}
+        except ProviderUnavailableError as exc:
+            db.rollback()
+            article = db.get(Article, article_id)
+            if article:
+                # Pas d'échec définitif : provider indisponible, on remet en file
+                article.status = "writing_requested"
+                article.updated_at = datetime.now(timezone.utc)
+                log_step(
+                    db, project_id,
+                    f"Provider IA indisponible, rédaction remise en file : {title} ({exc})",
+                    level="warning", step="writing_queue", article_id=article_id,
+                )
+                db.commit()
+            return {"id": article_id, "status": "requeued", "error": str(exc)}
+        except Exception as exc:
+            logger.exception("Writing job failed for article %s", article_id)
+            db.rollback()
+            article = db.get(Article, article_id)
+            if article:
+                article.status = "failed"
+                article.workflow_status = "error"
+                article.updated_at = datetime.now(timezone.utc)
+                log_step(
+                    db, project_id,
+                    f"Rédaction échouée : {title} — {exc}",
+                    level="error", step="writing_queue", article_id=article_id,
+                )
+                db.commit()
+            return {"id": article_id, "status": "failed", "error": str(exc)}
+    finally:
+        db.close()
+
+
+def resolve_max_parallel(db: Session, project_id: str) -> int:
+    from app.models.pipeline import ProjectPipeline
+    pipe = db.query(ProjectPipeline).filter(ProjectPipeline.project_id == project_id).first()
+    value = pipe.max_parallel_writing_jobs if pipe and pipe.max_parallel_writing_jobs else 3
+    return max(1, min(int(value), 10))
+
+
+def process_writing_queue(db: Session, project_id: str, max_parallel: int | None = None) -> dict:
+    """Draine la file de rédaction : claim + rédactions en parallèle (bornées)."""
+    from app.core.database import engine
+
+    if max_parallel is None:
+        max_parallel = resolve_max_parallel(db, project_id)
+    # SQLite ne supporte pas les écritures concurrentes : on sérialise en dev
+    if engine.dialect.name == "sqlite":
+        max_parallel = 1
+
+    requeued = requeue_stale_writing(db, project_id)
+    claimed = claim_for_writing(db, project_id, max_parallel)
+
+    results: list[dict] = []
+    if claimed:
+        log_step(
+            db, project_id,
+            f"File de rédaction : {len(claimed)} rédaction(s) lancée(s) (max parallèle : {max_parallel})",
+            level="info", step="writing_queue",
+        )
+        db.commit()
+        if len(claimed) == 1:
+            results.append(write_queued_article(claimed[0], project_id))
+        else:
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=max_parallel) as pool:
+                results = list(pool.map(lambda aid: write_queued_article(aid, project_id), claimed))
+    return {"requeued_stale": requeued, "claimed": len(claimed), "results": results}
+
+
+def process_queue(db: Session, project_id: str, max_articles: int = 1) -> list[Article]:
+    """Compat : draine la file via le nouveau mécanisme et retourne les articles traités."""
+    outcome = process_writing_queue(db, project_id, max_parallel=max_articles)
+    ids = [r["id"] for r in outcome["results"] if r.get("status") != "not_found"]
+    if not ids:
+        return []
+    return db.query(Article).filter(Article.id.in_(ids)).all()
 
 
 def get_queue_summary(db: Session, project_id: str) -> dict:
@@ -247,6 +354,16 @@ def get_queue_summary(db: Session, project_id: str) -> dict:
         )
         counts[status] = cnt
         total += cnt
+
+    counts["failed"] = (
+        db.query(Article)
+        .filter(
+            Article.project_id == project_id,
+            Article.status == "failed",
+            Article.workflow_status == "error",
+        )
+        .count()
+    )
 
     next_up = (
         db.execute(

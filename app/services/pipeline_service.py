@@ -243,6 +243,7 @@ def _model_to_settings(pipe: ProjectPipeline, db: Session | None = None) -> Pipe
         category_priorities=_parse_json_field(pipe.category_priorities, {}),
         ideas_per_week=pipe.ideas_per_week,
         max_pending_drafts=pipe.max_pending_drafts,
+        max_parallel_writing_jobs=pipe.max_parallel_writing_jobs,
         paused_until=pipe.paused_until,
         paused_indefinitely=pipe.paused_indefinitely,
         default_quality_mode=pipe.default_quality_mode,

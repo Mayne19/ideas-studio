@@ -131,6 +131,36 @@ def run_pipelines():
         db.close()
 
 
+def process_writing_queues():
+    """Drain the article writing queues for all projects with pending work."""
+    from app.models.article import Article
+    from app.services.production_queue import process_writing_queue
+
+    db = SessionLocal()
+    try:
+        project_ids = [
+            row[0]
+            for row in (
+                db.query(Article.project_id)
+                .filter(Article.status.in_(["writing_requested", "writing_in_progress"]))
+                .distinct()
+                .all()
+            )
+        ]
+        for project_id in project_ids:
+            try:
+                outcome = process_writing_queue(db, project_id)
+                if outcome["claimed"] or outcome["requeued_stale"]:
+                    logger.info(
+                        "Writing queue project=%s claimed=%s requeued_stale=%s",
+                        project_id, outcome["claimed"], outcome["requeued_stale"],
+                    )
+            except Exception as e:
+                logger.error("Writing queue failed for project %s: %s", project_id, e)
+    finally:
+        db.close()
+
+
 def start_scheduler():
     """Start the background scheduler with all recurring jobs."""
     if scheduler.running:
@@ -165,8 +195,17 @@ def start_scheduler():
         replace_existing=True,
     )
 
+    scheduler.add_job(
+        process_writing_queues,
+        trigger=CronTrigger(minute="*/2"),
+        id="process_writing_queues",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+
     scheduler.start()
-    logger.info("Background scheduler started with jobs: check_scheduled_publications, run_daily_tasks, run_pipelines, check_monthly_idea_generation")
+    logger.info("Background scheduler started with jobs: check_scheduled_publications, run_daily_tasks, run_pipelines, check_monthly_idea_generation, process_writing_queues")
 
 
 def stop_scheduler():

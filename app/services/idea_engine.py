@@ -171,6 +171,40 @@ def _resolve_category_id(
     return None
 
 
+def _resolve_word_count_range(
+    db: Session,
+    project_id: str,
+    category: Category | None,
+) -> tuple[int | None, int | None, str | None]:
+    """Plage de mots applicable : override catégorie, sinon paramètres projet."""
+    if category and (category.word_count_min or category.word_count_max):
+        return category.word_count_min, category.word_count_max, "categorie"
+    from app.models.project import Project
+    project = db.get(Project, project_id)
+    if project and (project.word_count_min or project.word_count_max):
+        return project.word_count_min, project.word_count_max, "projet"
+    return None, None, None
+
+
+def _clamp_target_word_count(value, wc_min: int | None, wc_max: int | None) -> int | None:
+    """target_word_count ne doit jamais sortir de la plage configurée."""
+    try:
+        target = int(value) if value is not None else None
+    except (TypeError, ValueError):
+        target = None
+    if wc_min is None and wc_max is None:
+        return target
+    if target is None:
+        if wc_min and wc_max:
+            return (wc_min + wc_max) // 2
+        return wc_max or wc_min
+    if wc_max and target > wc_max:
+        return wc_max
+    if wc_min and target < wc_min:
+        return wc_min
+    return target
+
+
 def _keyword_words(value: str) -> list[str]:
     return [word for word in re.split(r"\s+", value.strip()) if word]
 
@@ -303,9 +337,44 @@ def generate_idea(
         search_results = search.search(query, limit=5)
         serp_snippets = "\n".join(f"- {r.title}: {r.snippet}" for r in search_results)
 
+        from app.models.project import Project
+        project = db.get(Project, project_id)
+        imposed_category = next((c for c in categories if c.id == category_id), None) if category_id else None
+        wc_min, wc_max, _ = _resolve_word_count_range(db, project_id, imposed_category)
+
+        project_lines = []
+        if project:
+            for label, value in (
+                ("Projet", project.name),
+                ("Domaine", project.domain),
+                ("Pays cible", project.country_target),
+                ("Secteur", project.industry),
+                ("Vertical", project.vertical),
+                ("Ton éditorial", project.tone),
+                ("Objectif éditorial", project.editorial_goal),
+                ("Sujets interdits", project.forbidden_topics),
+                ("Contraintes SEO", project.seo_rules),
+                ("Contraintes GEO", project.geo_rules),
+            ):
+                if value:
+                    project_lines.append(f"{label} : {value}")
+        project_context = "\n".join(project_lines) or "aucun"
+
+        if wc_min and wc_max:
+            wc_instruction = (
+                f"Longueur cible imposée : entre {wc_min} et {wc_max} mots. "
+                f"target_word_count DOIT être compris entre {wc_min} et {wc_max}. Ne propose jamais une longueur hors de cette plage.\n"
+            )
+        elif wc_min or wc_max:
+            bound = wc_max or wc_min
+            wc_instruction = f"Longueur cible imposée : environ {bound} mots (target_word_count = {bound}).\n"
+        else:
+            wc_instruction = ""
+
         schema_hint = '{"title": "...", "keyword": "expression courte 2-6 mots", "category_id": "id exact si catégorie fiable", "category_slug": "slug exact si catégorie fiable", "category_name": "nom exact si catégorie fiable", "angle": "...", "search_intent": "informational|commercial|transactional|navigational", "audience": "...", "main_answer_summary": "...", "opportunity_justification": "...", "recommended_format": "guide|list|comparatif|tutoriel|analyse|definition", "target_word_count": 2000, "needs_faq": true, "needs_images": true, "estimated_difficulty": "faible|moyenne|forte", "secondary_keywords": ["kw1", "kw2"], "search_questions": ["question longue ici"]}'
         prompt = (
             f"Génère une idée d'article SEO originale pour un blog en langue '{project_language}'.\n"
+            f"Contexte projet :\n{project_context}\n"
             f"Audience cible : {audience or project_audience or 'grand public'}.\n"
             f"Titre souhaité : {preferred_title or 'à proposer librement'}.\n"
             f"Mot-clé prioritaire : {keyword or 'à déduire du contexte'}.\n"
@@ -313,6 +382,7 @@ def generate_idea(
             f"Catégories existantes du projet :\n{_category_prompt(categories)}\n"
             f"Angle éditorial souhaité : {angle or 'à proposer librement'}.\n"
             f"Intention de recherche souhaitée : {search_intent or 'à estimer'}.\n"
+            f"{wc_instruction}"
             f"Contexte utilisateur : {context_hint or 'aucun contexte additionnel'}.\n"
             f"Contexte SERP actuel :\n{serp_snippets}\n\n"
             f"L'idée doit inclure un pré-brief complet : résumé de la réponse principale, justification du score d'opportunité, format recommandé, longueur cible, besoin FAQ/images, difficulté estimée et mots-clés secondaires.\n"
@@ -343,6 +413,11 @@ def generate_idea(
 
     final_title = preferred_title or generated_title
     final_category_id = _resolve_category_id(categories, category_id=category_id, idea_data=idea_data)
+
+    # Respect strict des paramètres projet/catégorie : clamp de la longueur cible
+    final_category = next((c for c in categories if c.id == final_category_id), None)
+    wc_min, wc_max, _wc_source = _resolve_word_count_range(db, project_id, final_category)
+    idea_data["target_word_count"] = _clamp_target_word_count(idea_data.get("target_word_count"), wc_min, wc_max)
     final_audience = audience or idea_data.get("audience") or project_audience
     final_angle = angle or idea_data.get("angle")
     final_search_intent = search_intent or idea_data.get("search_intent")

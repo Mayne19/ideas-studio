@@ -52,6 +52,7 @@ export default function ProjectPipelinePage() {
   const [publishHourStart, setPublishHourStart] = useState(8)
   const [publishHourEnd, setPublishHourEnd] = useState(10)
   const [costLimitPerArticle, setCostLimitPerArticle] = useState('')
+  const [maxParallelWriting, setMaxParallelWriting] = useState('3')
 
   useEffect(() => {
     if (!projectId) return
@@ -69,6 +70,7 @@ export default function ProjectPipelinePage() {
         setPublishHourStart(s.publish_hour_start ?? 8)
         setPublishHourEnd(s.publish_hour_end ?? 10)
         setCostLimitPerArticle(s.cost_limit_per_article_eur == null ? '' : String(s.cost_limit_per_article_eur))
+        setMaxParallelWriting(s.max_parallel_writing_jobs == null ? '3' : String(s.max_parallel_writing_jobs))
         setLogs(l)
         setLoadStatus('success')
         setLoadError('')
@@ -99,6 +101,7 @@ export default function ProjectPipelinePage() {
         publish_hour_start: publishHourStart,
         publish_hour_end: publishHourEnd,
         cost_limit_per_article_eur: costLimitPerArticle.trim() === '' ? null : Number(costLimitPerArticle),
+        max_parallel_writing_jobs: Math.max(1, Math.min(10, Number(maxParallelWriting) || 3)),
       })
       setSettings(updated)
       setDirty(false)
@@ -272,6 +275,23 @@ export default function ProjectPipelinePage() {
                 className="h-9 w-32 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary placeholder:text-tertiary focus:outline-none focus:ring-1 focus:ring-accent/50"
               />
               <span className="text-[12px] text-tertiary">€ — laisser vide = pas de limite</span>
+            </div>
+          </div>
+
+          {/* Rédactions parallèles */}
+          <div>
+            <p className="mb-1.5 text-[12px] font-medium text-secondary">Rédactions IA simultanées</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                max="10"
+                step="1"
+                value={maxParallelWriting}
+                onChange={(e) => { setMaxParallelWriting(e.target.value); setDirty(true) }}
+                className="h-9 w-32 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary placeholder:text-tertiary focus:outline-none focus:ring-1 focus:ring-accent/50"
+              />
+              <span className="text-[12px] text-tertiary">rédactions en parallèle max (limite de sécurité coût)</span>
             </div>
           </div>
         </Card>

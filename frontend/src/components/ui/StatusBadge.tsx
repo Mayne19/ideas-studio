@@ -17,7 +17,7 @@ const STATUS_LABELS = ARTICLE_STATUS_LABELS
 
 const COMPACT_STATUS_LABELS: Partial<Record<ArticleStatus, string>> = {
   idea_proposed: 'Proposée',
-  writing_requested: 'Demandée',
+  writing_requested: 'En attente',
   writing_in_progress: 'En cours',
   draft_ready: 'Prêt',
   correction_needed: 'Correction',

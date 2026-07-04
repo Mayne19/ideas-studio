@@ -21,6 +21,7 @@ class ProjectPipeline(Base):
     category_priorities: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
     ideas_per_week: Mapped[int | None] = mapped_column(Integer, default=5, nullable=True)
     max_pending_drafts: Mapped[int | None] = mapped_column(Integer, default=10, nullable=True)
+    max_parallel_writing_jobs: Mapped[int | None] = mapped_column(Integer, default=3, nullable=True)
     paused_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     paused_indefinitely: Mapped[bool | None] = mapped_column(Boolean, default=False, nullable=True)
     default_quality_mode: Mapped[str | None] = mapped_column(String(20), default="quality", nullable=True)

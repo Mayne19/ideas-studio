@@ -80,6 +80,10 @@ export type SendToProductionResponse = {
   workflow_status: string | null
 }
 
+export function requeueWriting(articleId: string): Promise<{ id: string; title: string; status: string }> {
+  return api.post(`/articles/${articleId}/requeue-writing`)
+}
+
 export function sendToProduction(articleId: string): Promise<SendToProductionResponse> {
   return api.post<SendToProductionResponse>(`/articles/${articleId}/send-to-production`)
 }

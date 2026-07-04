@@ -14,6 +14,7 @@ export type PipelineSettings = {
   articles_per_week: number
   category_priorities: Record<string, number>
   cost_limit_per_article_eur: number | null
+  max_parallel_writing_jobs?: number | null
   total_monthly_from_categories: number | null
   categories_frequencies: Array<{
     id: string
@@ -29,6 +30,7 @@ export type PipelineSettings = {
 
 export type PipelineSettingsUpdate = {
   enabled?: boolean
+  max_parallel_writing_jobs?: number
   active_days?: string[]
   launch_hour?: number
   ideas_day_of_month?: number | null

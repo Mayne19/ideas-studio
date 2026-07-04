@@ -29,6 +29,7 @@ class PipelineSettingsUpdate(BaseModel):
     category_priorities: Optional[dict[str, int]] = None
     ideas_per_week: Optional[int] = None
     max_pending_drafts: Optional[int] = None
+    max_parallel_writing_jobs: Optional[int] = None
     paused_until: Optional[datetime] = None
     paused_indefinitely: Optional[bool] = None
     default_quality_mode: Optional[str] = None
@@ -56,6 +57,7 @@ class PipelineSettingsPublic(BaseModel):
     category_priorities: dict[str, int]
     ideas_per_week: Optional[int] = None
     max_pending_drafts: Optional[int] = None
+    max_parallel_writing_jobs: Optional[int] = None
     paused_until: Optional[datetime] = None
     paused_indefinitely: Optional[bool] = None
     default_quality_mode: Optional[str] = None

@@ -24,10 +24,12 @@ import {
   deleteIdea,
   bulkDeleteIdeas,
   restoreIdea,
+  requeueWriting,
 } from '@/api/ideas'
 import { pipelineRunMessage, triggerPipelineRun } from '@/api/pipeline'
 import type { PipelineRunResult } from '@/api/pipeline'
 import { listCategories } from '@/api/categories'
+import { useProject } from '@/context/ProjectContext'
 import type { Article, Category } from '@/types'
 import { formatDate } from '@/utils/format'
 import { finiteScore } from '@/lib/scoreBadge'
@@ -44,7 +46,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const IDEAS_STATUSES = ['idea_proposed', 'idea_priority', 'idea_rejected']
-const WRITING_STATUSES = ['writing_requested', 'writing_in_progress', 'outline_ready']
+const WRITING_STATUSES = ['writing_requested', 'writing_in_progress', 'outline_ready', 'failed']
 const VALIDATE_STATUSES = ['draft_ready', 'ready_to_publish', 'review_needed', 'correction_needed']
 
 const STATUS_OPTIONS = [
@@ -390,6 +392,27 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
     [previewIdea],
   )
   const previewCategory = previewIdea?.category_id ? categoryMap.get(previewIdea.category_id)?.name ?? 'À classer' : 'À classer'
+  const { project } = useProject()
+  const previewWordRange = useMemo(() => {
+    if (!previewIdea) return null
+    const cat = previewIdea.category_id ? categories.find((c) => c.id === previewIdea.category_id) : null
+    const fromCategory = Boolean(cat?.word_count_min || cat?.word_count_max)
+    const min = (fromCategory ? cat?.word_count_min : project?.word_count_min) ?? null
+    const max = (fromCategory ? cat?.word_count_max : project?.word_count_max) ?? null
+    if (!min && !max) return null
+    const source = fromCategory ? 'Catégorie' : 'Paramètres projet'
+    const rawTarget = Number(previewIdea.target_word_count ?? previewBrief.target_word_count) || null
+    let target = rawTarget
+    if (target !== null) {
+      if (max && target > max) target = max
+      if (min && target < min) target = min
+    } else if (min && max) {
+      target = Math.floor((min + max) / 2)
+    } else {
+      target = max ?? min
+    }
+    return { min, max, source, target }
+  }, [previewIdea, previewBrief, categories, project])
 
   if (loadStatus === 'loading') return (
     <div className="flex flex-col gap-2">
@@ -659,7 +682,8 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
                 ['Intention de recherche', previewIdea.search_intent || previewBrief.search_intent],
                 ['Angle éditorial', previewIdea.angle || previewBrief.angle],
                 ['Format recommandé', previewIdea.recommended_format || previewBrief.recommended_format],
-                ['Longueur cible', previewIdea.target_word_count || previewBrief.target_word_count],
+                ['Longueur cible', previewWordRange ? `${previewWordRange.target} mots` : (previewIdea.target_word_count || previewBrief.target_word_count)],
+                ['Plage autorisée', previewWordRange ? `${previewWordRange.min ?? '—'}–${previewWordRange.max ?? '—'} mots (${previewWordRange.source})` : null],
                 ['Difficulté estimée', previewIdea.estimated_difficulty || previewBrief.estimated_difficulty],
                 ['FAQ nécessaire', previewIdea.needs_faq === null ? previewBrief.needs_faq : (previewIdea.needs_faq ? 'Oui' : 'Non')],
                 ['Images nécessaires', previewIdea.needs_images === null ? previewBrief.needs_images : (previewIdea.needs_images ? 'Oui' : 'Non')],
@@ -765,11 +789,31 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
 
 // ── Writing Tab ──────────────────────────────────────────────────────────────
 
+const WRITING_STALE_MS = 30 * 60 * 1000
+
+function isStaleWriting(article: Article): boolean {
+  if (article.status !== 'writing_in_progress') return false
+  return Date.now() - new Date(article.updated_at).getTime() > WRITING_STALE_MS
+}
+
 function WritingTab({ projectId, categories }: { projectId: string; categories: Category[] }) {
   const navigate = useNavigate()
   const [articles, setArticles] = useState<Article[]>([])
   const [loadStatus, setLoadStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [tick, setTick] = useState(0)
+  const [retryingId, setRetryingId] = useState<string | null>(null)
+
+  async function handleRetry(article: Article) {
+    setRetryingId(article.id)
+    try {
+      await requeueWriting(article.id)
+      setTick((t) => t + 1)
+    } catch (err) {
+      console.error('requeueWriting failed:', err)
+    } finally {
+      setRetryingId(null)
+    }
+  }
   const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories])
 
   useEffect(() => {
@@ -825,11 +869,28 @@ function WritingTab({ projectId, categories }: { projectId: string; categories: 
                   {article.title || '(sans titre)'}
                 </button>
                 <span className="truncate text-[12px] text-secondary" title={categoryName}>{categoryName}</span>
-                <div className="min-w-0">
+                <div className="flex min-w-0 items-center gap-1.5">
                   <StatusBadge status={article.status} />
+                  {isStaleWriting(article) && (
+                    <span className="inline-flex items-center rounded-full bg-danger/8 px-2 py-0.5 text-[10px] font-medium text-danger" title="Aucune mise à jour depuis plus de 30 minutes">
+                      Bloqué
+                    </span>
+                  )}
                 </div>
                 <span className="whitespace-nowrap text-[12px] text-tertiary">{formatDate(article.updated_at)}</span>
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-1.5">
+                  {(article.status === 'failed' || isStaleWriting(article)) && (
+                    <button
+                      type="button"
+                      title="Relancer la rédaction"
+                      disabled={retryingId === article.id}
+                      onClick={() => handleRetry(article)}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-border bg-surface px-2.5 text-[12px] font-medium text-secondary shadow-sm transition-all hover:-translate-y-px hover:border-warning/40 hover:text-warning active:translate-y-0 disabled:opacity-50"
+                    >
+                      <RefreshCw size={13} className={retryingId === article.id ? 'animate-spin' : ''} />
+                      Relancer
+                    </button>
+                  )}
                   <button
                     type="button"
                     title="Ouvrir dans l'éditeur"
