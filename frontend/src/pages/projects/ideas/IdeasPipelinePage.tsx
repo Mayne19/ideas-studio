@@ -98,6 +98,7 @@ export default function IdeasPipelinePage() {
   const [loadStatus, setLoadStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [tick, setTick] = useState(0)
   const [actionError, setActionError] = useState('')
+  const [actionMessage, setActionMessage] = useState('')
 
   const [filterCategory, setFilterCategory] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
@@ -123,6 +124,7 @@ export default function IdeasPipelinePage() {
   const [rejectError, setRejectError] = useState('')
 
   const [deleteTarget, setDeleteTarget] = useState<Article | null>(null)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
   const [autoOpen, setAutoOpen] = useState(false)
@@ -276,9 +278,18 @@ export default function IdeasPipelinePage() {
     if (!projectId || !deleteTarget) return
     setDeleting(true)
     try {
+      setActionError('')
+      setActionMessage('')
       await deleteIdea(projectId, deleteTarget.id)
       setAllIdeas((prev) => prev.filter((a) => a.id !== deleteTarget.id))
+      setSelectedIdeas((prev) => {
+        const next = new Set(prev)
+        next.delete(deleteTarget.id)
+        return next
+      })
       setDeleteTarget(null)
+      setActionMessage('1 idée supprimée.')
+      setTick((t) => t + 1)
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Impossible de supprimer cette idée.'
       console.error('deleteIdea error:', err)
@@ -303,10 +314,16 @@ export default function IdeasPipelinePage() {
     if (!projectId || selectedIdeas.size === 0) return
     setDeleting(true)
     try {
+      setActionError('')
+      setActionMessage('')
       const ids = Array.from(selectedIdeas)
-      await bulkDeleteIdeas(projectId, ids)
-      setAllIdeas((prev) => prev.filter((a) => !ids.includes(a.id)))
+      const result = await bulkDeleteIdeas(projectId, ids)
+      const deletedIds = result.deleted_ids.length > 0 ? result.deleted_ids : ids
+      setAllIdeas((prev) => prev.filter((a) => !deletedIds.includes(a.id)))
       setSelectedIdeas(new Set())
+      setBulkDeleteOpen(false)
+      setActionMessage(result.message || `${result.deleted} idée(s) supprimée(s).`)
+      setTick((t) => t + 1)
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Impossible de supprimer les idées sélectionnées.'
       console.error('bulkDeleteIdeas error:', err)
@@ -459,7 +476,7 @@ export default function IdeasPipelinePage() {
               <Button size="sm" variant="secondary" className="text-[12px]" onClick={() => handleBatchAction('reject')}>
                 <X size={11} /> Rejeter
               </Button>
-              <Button size="sm" variant="danger" className="text-[12px]" loading={deleting} onClick={handleBatchDelete}>
+              <Button size="sm" variant="danger" className="text-[12px]" loading={deleting} onClick={() => setBulkDeleteOpen(true)}>
                 Supprimer ({selectedIdeas.size})
               </Button>
             </div>
@@ -477,6 +494,12 @@ export default function IdeasPipelinePage() {
           <div className="mb-3 flex items-center justify-between rounded-[10px] border border-danger/20 bg-danger/5 px-4 py-2.5 text-[14px] text-danger shrink-0">
             <span>{actionError}</span>
             <button onClick={() => setActionError('')} className="ml-3 shrink-0 text-danger/60 hover:text-danger transition-colors">✕</button>
+          </div>
+        )}
+        {actionMessage && (
+          <div className="mb-3 flex items-center justify-between rounded-[10px] border border-success/20 bg-success/5 px-4 py-2.5 text-[14px] text-success shrink-0">
+            <span>{actionMessage}</span>
+            <button onClick={() => setActionMessage('')} className="ml-3 shrink-0 text-success/60 hover:text-success transition-colors">✕</button>
           </div>
         )}
 
@@ -1110,6 +1133,32 @@ export default function IdeasPipelinePage() {
               Annuler
             </Button>
             <Button size="sm" variant="danger" loading={deleting} className="flex-1 justify-center" onClick={handleDeleteConfirm}>
+              Supprimer
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={bulkDeleteOpen}
+        onClose={() => { if (!deleting) setBulkDeleteOpen(false) }}
+        title={`Supprimer définitivement ${selectedIdeas.size} idée${selectedIdeas.size > 1 ? 's' : ''} ?`}
+        size="sm"
+      >
+        <div className="flex flex-col gap-4">
+          <div className="rounded-[12px] border border-danger/20 bg-danger/5 px-3.5 py-3">
+            <p className="text-[14px] font-medium text-primary">
+              Supprimer définitivement {selectedIdeas.size} idée{selectedIdeas.size > 1 ? 's' : ''} ?
+            </p>
+            <p className="mt-1 text-[12px] leading-snug text-secondary">
+              Cette action est irréversible. Les idées déjà en production ou publiées seront ignorées par sécurité.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" size="sm" className="flex-1 justify-center" onClick={() => setBulkDeleteOpen(false)} disabled={deleting}>
+              Annuler
+            </Button>
+            <Button size="sm" variant="danger" loading={deleting} className="flex-1 justify-center" onClick={handleBatchDelete}>
               Supprimer
             </Button>
           </div>

@@ -16,12 +16,13 @@ from app.models.project_member import ProjectMember
 from app.schemas.ideas import (
     IdeaGenerateRequest, IdeaGenerateResponse,
     IdeaRejectRequest, IdeaPriorityRequest,
-    LaunchRequest, BulkDeleteRequest,
+    LaunchRequest, BulkDeleteRequest, BulkDeleteResponse,
 )
 from app.services.idea_engine import generate_idea
 from app.services.writing_engine import start_writing_from_idea, _mock_content_from_outline, _MOCK_OUTLINE
 from app.services.log_service import log_step
 from app.services.production_queue import send_to_production, process_queue, get_queue_summary
+from app.services.article_service import prepare_article_delete
 from app.services.providers.llm_provider import (
     GenerationFailedError,
     ProviderUnavailableError,
@@ -32,6 +33,15 @@ from app.services.providers.search_provider import get_search_provider
 router = APIRouter(tags=["ideas"])
 
 _IDEA_STATUSES = frozenset({"idea_proposed", "idea_priority"})
+_DELETABLE_IDEA_STATUSES = frozenset({
+    "idea_proposed",
+    "idea_priority",
+    "idea_rejected",
+    "idea_prioritized",
+    "proposed",
+    "rejected",
+})
+_PRODUCTION_WORKFLOW_STATUSES = frozenset({"production", "quality", "published"})
 _WRITABLE_STATUSES = frozenset({"idea_proposed", "idea_priority", "outline_ready", "failed", "update_recommended"})
 _RERUN_STATUSES = frozenset({"idea_proposed", "idea_priority", "outline_ready", "failed", "draft_ready", "correction_needed", "update_recommended"})
 
@@ -89,6 +99,20 @@ def _generation_http_error(exc: Exception) -> HTTPException:
     if isinstance(exc, GenerationFailedError):
         return HTTPException(status_code=502, detail=str(exc))
     raise exc
+
+
+def _idea_delete_refusal(article: Article) -> str | None:
+    if article.status in {"published", "scheduled"} or article.published_at is not None:
+        return "Cet article est déjà publié ou planifié et ne peut pas être supprimé depuis la page Idées."
+    if article.workflow_status in _PRODUCTION_WORKFLOW_STATUSES:
+        return "Cette idée est déjà en production et ne peut pas être supprimée depuis la page Idées."
+    if article.status not in _DELETABLE_IDEA_STATUSES:
+        return "Cette idée est déjà en production et ne peut pas être supprimée depuis la page Idées."
+    return None
+
+
+def _delete_idea(db: Session, article: Article) -> None:
+    prepare_article_delete(db, article)
 
 
 @router.post("/projects/{project_id}/ideas/generate", response_model=IdeaGenerateResponse)
@@ -455,13 +479,14 @@ def delete_idea_route(
     if article.project_id != project_id:
         raise HTTPException(status_code=404, detail="Idea not found in project")
     _check_role(db, current_user.id, project_id, ("owner", "admin", "editor"))
-    if article.status not in ("idea_proposed", "idea_priority", "idea_rejected"):
-        raise HTTPException(status_code=400, detail="Only ideas can be deleted")
-    db.delete(article)
+    refusal = _idea_delete_refusal(article)
+    if refusal:
+        raise HTTPException(status_code=400, detail=refusal)
+    _delete_idea(db, article)
     db.commit()
 
 
-@router.post("/projects/{project_id}/ideas/bulk-delete")
+@router.post("/projects/{project_id}/ideas/bulk-delete", response_model=BulkDeleteResponse)
 def bulk_delete_ideas_route(
     project_id: str,
     body: BulkDeleteRequest,
@@ -469,22 +494,53 @@ def bulk_delete_ideas_route(
     current_user: User = Depends(get_current_user),
 ):
     _check_role(db, current_user.id, project_id, ("owner", "admin", "editor"))
+    requested_ids = list(dict.fromkeys(body.article_ids))
+    if not requested_ids:
+        raise HTTPException(status_code=400, detail="Aucune idée sélectionnée.")
+
     articles = (
         db.query(Article)
         .filter(
-            Article.id.in_(body.article_ids),
+            Article.id.in_(requested_ids),
             Article.project_id == project_id,
-            Article.status.in_(["idea_proposed", "idea_priority", "idea_rejected"]),
         )
         .all()
     )
-    if not articles:
-        raise HTTPException(status_code=404, detail="No ideas found to delete")
-    count = len(articles)
-    for article in articles:
-        db.delete(article)
+    by_id = {article.id: article for article in articles}
+    deleted_ids: list[str] = []
+    skipped_items: list[dict[str, str]] = []
+
+    for idea_id in requested_ids:
+        article = by_id.get(idea_id)
+        if not article:
+            skipped_items.append({"id": idea_id, "reason": "Idée introuvable dans ce projet."})
+            continue
+        refusal = _idea_delete_refusal(article)
+        if refusal:
+            skipped_items.append({"id": idea_id, "reason": refusal})
+            continue
+        _delete_idea(db, article)
+        deleted_ids.append(idea_id)
+
+    if not deleted_ids:
+        detail = skipped_items[0]["reason"] if skipped_items else "Aucune idée supprimable."
+        raise HTTPException(status_code=400, detail=detail)
+
     db.commit()
-    return {"deleted": count}
+    deleted_count = len(deleted_ids)
+    skipped_count = len(skipped_items)
+    message = (
+        f"{deleted_count} supprimée(s), {skipped_count} ignorée(s)."
+        if skipped_count
+        else f"{deleted_count} idée(s) supprimée(s)."
+    )
+    return {
+        "deleted": deleted_count,
+        "skipped": skipped_count,
+        "deleted_ids": deleted_ids,
+        "skipped_items": skipped_items,
+        "message": message,
+    }
 
 
 @router.post("/articles/{article_id}/restore-idea")

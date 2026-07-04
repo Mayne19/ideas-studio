@@ -124,9 +124,11 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
   const [rejectTarget, setRejectTarget] = useState<Article | null>(null)
   const [rejectNote, setRejectNote] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<Article | null>(null)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [generateOpen, setGenerateOpen] = useState(false)
   const [bulkGenerateOpen, setBulkGenerateOpen] = useState(false)
@@ -208,9 +210,17 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
     setDeleting(true)
     setError('')
     try {
+      setMessage('')
       await deleteIdea(projectId, deleteTarget.id)
       setArticles((prev) => prev.filter((a) => a.id !== deleteTarget.id))
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(deleteTarget.id)
+        return next
+      })
       setDeleteTarget(null)
+      setMessage('1 idée supprimée.')
+      setTick((t) => t + 1)
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Impossible de supprimer cette idée.'
       console.error('deleteIdea error:', err)
@@ -237,9 +247,13 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
     setError('')
     try {
       const ids = Array.from(selectedIds)
-      await bulkDeleteIdeas(projectId, ids)
-      setArticles((prev) => prev.filter((a) => !ids.includes(a.id)))
+      const result = await bulkDeleteIdeas(projectId, ids)
+      const deletedIds = result.deleted_ids.length > 0 ? result.deleted_ids : ids
+      setArticles((prev) => prev.filter((a) => !deletedIds.includes(a.id)))
       setSelectedIds(new Set())
+      setBulkDeleteOpen(false)
+      setMessage(result.message || `${result.deleted} idée(s) supprimée(s).`)
+      setTick((t) => t + 1)
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Impossible de supprimer les idées sélectionnées.'
       console.error('bulkDeleteIdeas error:', err)
@@ -353,6 +367,9 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
       {error && (
         <div className="mb-3 rounded-[10px] border border-danger/20 bg-danger/5 px-3 py-2 text-[14px] text-danger">{error}</div>
       )}
+      {message && (
+        <div className="mb-3 rounded-[10px] border border-success/20 bg-success/5 px-3 py-2 text-[14px] text-success">{message}</div>
+      )}
 
       {/* Batch bar */}
       {selected.length > 0 && (
@@ -368,7 +385,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
           <Button size="sm" variant="danger" loading={actionLoading === 'bulk-reject'} onClick={handleBulkReject}>
             Rejeter ({selected.length})
           </Button>
-          <Button size="sm" variant="danger" loading={deleting} onClick={handleBulkDelete}>
+          <Button size="sm" variant="danger" loading={deleting} onClick={() => setBulkDeleteOpen(true)}>
             Supprimer ({selected.length})
           </Button>
         </div>
@@ -561,6 +578,27 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
               Annuler
             </Button>
             <Button size="sm" variant="danger" loading={deleting} className="flex-1 justify-center" onClick={handleDeleteConfirm}>
+              Supprimer
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={bulkDeleteOpen} onClose={() => { if (!deleting) setBulkDeleteOpen(false) }} title={`Supprimer définitivement ${selected.length} idée${selected.length > 1 ? 's' : ''} ?`} size="sm">
+        <div className="flex flex-col gap-4">
+          <div className="rounded-[12px] border border-danger/20 bg-danger/5 px-3.5 py-3">
+            <p className="text-[14px] font-medium text-primary">
+              Supprimer définitivement {selected.length} idée{selected.length > 1 ? 's' : ''} ?
+            </p>
+            <p className="mt-1 text-[12px] leading-snug text-secondary">
+              Cette action est irréversible. Les idées déjà en production ou publiées seront ignorées par sécurité.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" size="sm" className="flex-1 justify-center" onClick={() => setBulkDeleteOpen(false)} disabled={deleting}>
+              Annuler
+            </Button>
+            <Button size="sm" variant="danger" loading={deleting} className="flex-1 justify-center" onClick={handleBulkDelete}>
               Supprimer
             </Button>
           </div>

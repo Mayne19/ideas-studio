@@ -151,8 +151,16 @@ export function deleteIdea(projectId: string, articleId: string): Promise<void> 
   return api.delete(`/projects/${projectId}/ideas/${articleId}`)
 }
 
-export function bulkDeleteIdeas(projectId: string, ids: string[]): Promise<{ deleted: number }> {
-  return api.post<{ deleted: number }>(`/projects/${projectId}/ideas/bulk-delete`, { article_ids: ids })
+export type BulkDeleteIdeasResponse = {
+  deleted: number
+  skipped: number
+  deleted_ids: string[]
+  skipped_items: Array<{ id: string; reason: string }>
+  message: string
+}
+
+export function bulkDeleteIdeas(projectId: string, ids: string[]): Promise<BulkDeleteIdeasResponse> {
+  return api.post<BulkDeleteIdeasResponse>(`/projects/${projectId}/ideas/bulk-delete`, { article_ids: ids })
 }
 
 export function restoreIdea(articleId: string): Promise<{ status: string; id: string; title: string }> {

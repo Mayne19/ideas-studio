@@ -287,9 +287,12 @@ def unschedule_article(db: Session, article: Article) -> Article:
     return article
 
 
-def delete_article(db: Session, article: Article) -> None:
+def prepare_article_delete(db: Session, article: Article) -> None:
+    from app.models.article_comment import ArticleComment
+
     db.query(SeoAnalysis).filter(SeoAnalysis.article_id == article.id).delete(synchronize_session=False)
     db.query(ArticleVersion).filter(ArticleVersion.article_id == article.id).delete(synchronize_session=False)
+    db.query(ArticleComment).filter(ArticleComment.article_id == article.id).delete(synchronize_session=False)
     db.query(ArticleLog).filter(ArticleLog.article_id == article.id).update(
         {ArticleLog.article_id: None},
         synchronize_session=False,
@@ -302,7 +305,19 @@ def delete_article(db: Session, article: Article) -> None:
         {OptimizationRecommendation.article_id: None},
         synchronize_session=False,
     )
+    db.query(Article).filter(Article.original_article_id == article.id).update(
+        {Article.original_article_id: None},
+        synchronize_session=False,
+    )
+    db.query(Article).filter(Article.revision_of_article_id == article.id).update(
+        {Article.revision_of_article_id: None},
+        synchronize_session=False,
+    )
     db.delete(article)
+
+
+def delete_article(db: Session, article: Article) -> None:
+    prepare_article_delete(db, article)
     db.commit()
 
 

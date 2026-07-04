@@ -842,6 +842,65 @@ def test_delete_rejected_idea(client: TestClient):
     assert resp.status_code == 204
 
 
+def test_delete_rejected_idea_with_linked_records(client: TestClient):
+    headers = register_and_login(client)
+    user = client.get("/auth/me", headers=headers).json()
+    project = _create_project(client, headers)
+    idea_id = _make_idea(client, headers, project, "idea_rejected")
+
+    db = TestingSessionLocal()
+    try:
+        from app.models.article_comment import ArticleComment
+        from app.models.article_log import ArticleLog
+        from app.models.article_version import ArticleVersion
+        from app.models.media_asset import MediaAsset
+        from app.models.optimization_recommendation import OptimizationRecommendation
+        from app.models.seo_analysis import SeoAnalysis
+
+        db.add(SeoAnalysis(
+            project_id=project["id"],
+            article_id=idea_id,
+            seo_score=50,
+            readability_score=50,
+            quality_score=50,
+            eeat_score=50,
+            readiness_status="needs_improvement",
+        ))
+        db.add(ArticleVersion(
+            project_id=project["id"],
+            article_id=idea_id,
+            title="Version idee",
+            slug="version-idee",
+            version_number=1,
+            created_by=user["id"],
+        ))
+        db.add(ArticleComment(
+            project_id=project["id"],
+            article_id=idea_id,
+            author_id=user["id"],
+            author_name=user["name"],
+            text="test comment",
+        ))
+        db.add(ArticleLog(project_id=project["id"], article_id=idea_id, level="info", step="test", message="linked log"))
+        db.add(MediaAsset(project_id=project["id"], article_id=idea_id, url="https://example.com/a.png", filename="a.png"))
+        db.add(OptimizationRecommendation(
+            project_id=project["id"],
+            article_id=idea_id,
+            type="improve_title",
+            reason="test",
+            suggestion="test",
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+    resp = client.delete(f"/projects/{project['id']}/ideas/{idea_id}", headers=headers)
+    assert resp.status_code == 204
+
+    resp = client.get(f"/articles/{idea_id}", headers=headers)
+    assert resp.status_code == 404
+
+
 def test_delete_non_idea_fails(client: TestClient):
     headers = register_and_login(client)
     project = _create_project(client, headers)
@@ -856,6 +915,25 @@ def test_delete_non_idea_fails(client: TestClient):
 
     resp = client.delete(f"/projects/{project['id']}/ideas/{article_id}", headers=headers)
     assert resp.status_code == 400
+    assert "déjà en production" in resp.json()["detail"]
+
+
+def test_delete_published_article_from_ideas_fails(client: TestClient):
+    headers = register_and_login(client)
+    project = _create_project(client, headers)
+
+    resp = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Published Article", "slug": "published-article"},
+        headers=headers,
+    )
+    assert resp.status_code == 201
+    article_id = resp.json()["id"]
+    force_publish_article(article_id)
+
+    resp = client.delete(f"/projects/{project['id']}/ideas/{article_id}", headers=headers)
+    assert resp.status_code == 400
+    assert "publié" in resp.json()["detail"]
 
 
 def test_delete_idea_wrong_project_fails(client: TestClient):
@@ -910,6 +988,37 @@ def test_bulk_delete_ideas(client: TestClient):
     for idea_id in ids:
         resp = client.get(f"/articles/{idea_id}", headers=headers)
         assert resp.status_code == 404
+
+
+def test_bulk_delete_ideas_partial_success(client: TestClient):
+    headers = register_and_login(client)
+    project = _create_project(client, headers)
+    rejected_id = _make_idea(client, headers, project, "idea_rejected")
+    proposed_id = _make_idea(client, headers, project, "idea_proposed")
+
+    resp = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "Real Draft", "slug": "real-draft"},
+        headers=headers,
+    )
+    assert resp.status_code == 201
+    draft_id = resp.json()["id"]
+
+    resp = client.post(
+        f"/projects/{project['id']}/ideas/bulk-delete",
+        json={"article_ids": [rejected_id, draft_id, proposed_id]},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["deleted"] == 2
+    assert data["skipped"] == 1
+    assert set(data["deleted_ids"]) == {rejected_id, proposed_id}
+    assert "ignorée" in data["message"]
+
+    assert client.get(f"/articles/{rejected_id}", headers=headers).status_code == 404
+    assert client.get(f"/articles/{proposed_id}", headers=headers).status_code == 404
+    assert client.get(f"/articles/{draft_id}", headers=headers).status_code == 200
 
 
 # ── Restore ───────────────────────────────────────────────────────────────────

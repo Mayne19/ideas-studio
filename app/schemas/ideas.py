@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Literal
 
 
@@ -55,3 +55,11 @@ class LaunchRequest(BaseModel):
 
 class BulkDeleteRequest(BaseModel):
     article_ids: list[str]
+
+
+class BulkDeleteResponse(BaseModel):
+    deleted: int
+    skipped: int = 0
+    deleted_ids: list[str] = Field(default_factory=list)
+    skipped_items: list[dict[str, str]] = Field(default_factory=list)
+    message: str
