@@ -8,6 +8,7 @@ import {
   CheckCircle,
   XCircle,
   ExternalLink,
+  Pencil,
   Sparkles,
   Send,
   Calendar,
@@ -764,11 +765,12 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
 
 // ── Writing Tab ──────────────────────────────────────────────────────────────
 
-function WritingTab({ projectId }: { projectId: string }) {
+function WritingTab({ projectId, categories }: { projectId: string; categories: Category[] }) {
   const navigate = useNavigate()
   const [articles, setArticles] = useState<Article[]>([])
   const [loadStatus, setLoadStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [tick, setTick] = useState(0)
+  const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories])
 
   useEffect(() => {
     setLoadStatus('loading')
@@ -797,36 +799,53 @@ function WritingTab({ projectId }: { projectId: string }) {
   )
 
   return (
-    <>
-      <div className="mb-1 hidden grid-cols-[minmax(0,1fr)_180px_140px_120px_40px] gap-3 px-3 text-[12px] font-medium uppercase tracking-wide text-tertiary lg:grid">
-        <div>Titre</div>
-        <div>Catégorie</div>
-        <div>Étape</div>
-        <div>Mis à jour</div>
-        <div />
+    <div className="overflow-x-auto">
+      <div className="min-w-[1120px]">
+        <div className="mb-1 hidden grid-cols-[minmax(420px,1.45fr)_minmax(190px,0.55fr)_160px_120px_120px] gap-5 px-3 text-[12px] font-medium uppercase tracking-wide text-tertiary lg:grid">
+          <div>Titre</div>
+          <div>Catégorie</div>
+          <div>Étape</div>
+          <div>Mis à jour</div>
+          <div className="text-right">Actions</div>
+        </div>
+        <div className="flex flex-col">
+          {articles.map((article) => {
+            const categoryName = article.category_id ? categoryMap.get(article.category_id)?.name ?? 'À classer' : 'À classer'
+            return (
+              <div
+                key={article.id}
+                className="group grid grid-cols-[minmax(420px,1.45fr)_minmax(190px,0.55fr)_160px_120px_120px] items-center gap-5 border-b border-border/30 px-3 py-3 transition-colors hover:bg-surface-soft"
+              >
+                <button
+                  type="button"
+                  title={article.title || '(sans titre)'}
+                  onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
+                  className="min-w-0 truncate text-left text-[14px] font-medium text-primary transition-colors hover:text-accent"
+                >
+                  {article.title || '(sans titre)'}
+                </button>
+                <span className="truncate text-[12px] text-secondary" title={categoryName}>{categoryName}</span>
+                <div className="min-w-0">
+                  <StatusBadge status={article.status} />
+                </div>
+                <span className="whitespace-nowrap text-[12px] text-tertiary">{formatDate(article.updated_at)}</span>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    title="Ouvrir dans l'éditeur"
+                    onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-border bg-surface px-2.5 text-[12px] font-medium text-secondary shadow-sm transition-all hover:-translate-y-px hover:border-accent/30 hover:bg-surface-soft hover:text-accent active:translate-y-0 active:scale-[0.98]"
+                  >
+                    <Pencil size={13} />
+                    Éditer
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
-      <div className="flex flex-col">
-        {articles.map((article) => (
-          <div
-            key={article.id}
-            className="group grid grid-cols-[minmax(0,1fr)_180px_140px_120px_40px] items-center gap-3 border-b border-border/30 px-3 py-3 transition-colors hover:bg-surface-soft"
-          >
-            <p className="truncate text-[14px] font-medium text-primary">{article.title || '(sans titre)'}</p>
-            <span className="truncate text-[12px] text-secondary">{article.category_id || '—'}</span>
-            <StatusBadge status={article.status} />
-            <span className="text-[12px] text-tertiary">{formatDate(article.updated_at)}</span>
-            <button
-              type="button"
-              title="Ouvrir"
-              onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
-              className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary opacity-0 transition-opacity hover:bg-surface-soft hover:text-primary group-hover:opacity-100"
-            >
-              <ExternalLink size={14} />
-            </button>
-          </div>
-        ))}
-      </div>
-    </>
+    </div>
   )
 }
 
@@ -1113,7 +1132,7 @@ export default function PipelinePage() {
           categories={categories}
         />
       )}
-      {tab === 'writing' && <WritingTab key="writing" projectId={projectId} />}
+      {tab === 'writing' && <WritingTab key="writing" projectId={projectId} categories={categories} />}
       {tab === 'validate' && (
         <ValidateTab
           key="validate"
