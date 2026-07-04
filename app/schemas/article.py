@@ -151,6 +151,8 @@ class ArticlePublic(BaseModel):
     planning_brief_json: Optional[Any] = None
     production_brief_json: Optional[Any] = None
     workflow_status: Optional[str] = None
+    writing_error: Optional[str] = None
+    writing_cancel_requested: Optional[bool] = None
 
     # Editorial dates
     target_write_at: Optional[datetime] = None

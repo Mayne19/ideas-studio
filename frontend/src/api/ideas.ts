@@ -84,6 +84,10 @@ export function requeueWriting(articleId: string): Promise<{ id: string; title: 
   return api.post(`/articles/${articleId}/requeue-writing`)
 }
 
+export function cancelWriting(articleId: string): Promise<{ id: string; status: string; cancelled: boolean; cancel_requested?: boolean }> {
+  return api.post(`/articles/${articleId}/cancel-writing`)
+}
+
 export function sendToProduction(articleId: string): Promise<SendToProductionResponse> {
   return api.post<SendToProductionResponse>(`/articles/${articleId}/send-to-production`)
 }

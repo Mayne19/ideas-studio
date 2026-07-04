@@ -205,9 +205,17 @@ def claim_for_writing(db: Session, project_id: str, limit: int) -> list[str]:
     for article_id in candidate_ids:
         updated = (
             db.query(Article)
-            .filter(Article.id == article_id, Article.status == "writing_requested")
+            .filter(
+                Article.id == article_id,
+                Article.status == "writing_requested",
+                Article.writing_cancel_requested.isnot(True),
+            )
             .update(
-                {"status": "writing_in_progress", "updated_at": datetime.now(timezone.utc)},
+                {
+                    "status": "writing_in_progress",
+                    "writing_error": None,
+                    "updated_at": datetime.now(timezone.utc),
+                },
                 synchronize_session=False,
             )
         )
@@ -223,7 +231,7 @@ def write_queued_article(article_id: str, project_id: str) -> dict:
     from app.services.providers.llm_provider import get_llm_provider, ProviderUnavailableError
     from app.services.providers.search_provider import get_search_provider
     from app.services.agents.agent_router import get_agent_router
-    from app.services.seo.seo_generation_orchestrator import generate_full_article
+    from app.services.seo.seo_generation_orchestrator import WritingCancelledError, generate_full_article
 
     db = SessionLocal()
     try:
@@ -250,14 +258,37 @@ def write_queued_article(article_id: str, project_id: str) -> dict:
             )
             db.commit()
             db.refresh(article)
+            if article.status == "failed":
+                # L'orchestrateur a échoué en interne : remonter la raison dans l'UI
+                report = article.generation_report_json if isinstance(article.generation_report_json, dict) else {}
+                errors = report.get("errors") if isinstance(report.get("errors"), list) else []
+                article.writing_error = "\n".join(str(e) for e in errors[-3:]) or "Échec de rédaction (voir le journal du projet)."
+                article.workflow_status = "error"
             log_step(
                 db, project_id,
-                f"Rédaction terminée ({article.status}) : {title}",
+                f"Rédaction terminée ({article.status}) : {title}"
+                + (f" — {article.writing_error}" if article.writing_error else ""),
                 level="info" if article.status != "failed" else "error",
                 step="writing_queue", article_id=article_id,
             )
             db.commit()
             return {"id": article_id, "status": article.status}
+        except WritingCancelledError:
+            db.rollback()
+            article = db.get(Article, article_id)
+            if article:
+                article.status = "idea_proposed"
+                article.workflow_status = "planning"
+                article.writing_cancel_requested = False
+                article.writing_error = None
+                article.updated_at = datetime.now(timezone.utc)
+                log_step(
+                    db, project_id,
+                    f"Rédaction annulée à la demande : {title}",
+                    level="info", step="writing_queue", article_id=article_id,
+                )
+                db.commit()
+            return {"id": article_id, "status": "cancelled"}
         except ProviderUnavailableError as exc:
             db.rollback()
             article = db.get(Article, article_id)
@@ -279,6 +310,7 @@ def write_queued_article(article_id: str, project_id: str) -> dict:
             if article:
                 article.status = "failed"
                 article.workflow_status = "error"
+                article.writing_error = str(exc)[:2000]
                 article.updated_at = datetime.now(timezone.utc)
                 log_step(
                     db, project_id,

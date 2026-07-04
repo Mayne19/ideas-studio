@@ -14,7 +14,7 @@ import {
   Calendar,
   AlertTriangle,
 } from '@/components/ui/hugeIcons'
-import { listArticles, bulkValidateByScore, bulkValidateArticles, bulkPublishArticles, patchArticle } from '@/api/articles'
+import { listArticles, bulkValidateByScore, bulkValidateArticles, bulkPublishArticles, patchArticle, deleteArticle } from '@/api/articles'
 import type { BulkValidateResponse } from '@/api/articles'
 import {
   generateIdea,
@@ -25,6 +25,7 @@ import {
   bulkDeleteIdeas,
   restoreIdea,
   requeueWriting,
+  cancelWriting,
 } from '@/api/ideas'
 import { pipelineRunMessage, triggerPipelineRun } from '@/api/pipeline'
 import type { PipelineRunResult } from '@/api/pipeline'
@@ -814,6 +815,36 @@ function WritingTab({ projectId, categories }: { projectId: string; categories: 
       setRetryingId(null)
     }
   }
+
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Article | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleCancel(article: Article) {
+    setCancellingId(article.id)
+    try {
+      await cancelWriting(article.id)
+      setTick((t) => t + 1)
+    } catch (err) {
+      console.error('cancelWriting failed:', err)
+    } finally {
+      setCancellingId(null)
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await deleteArticle(projectId, deleteTarget.id)
+      setDeleteTarget(null)
+      setTick((t) => t + 1)
+    } catch (err) {
+      console.error('deleteArticle failed:', err)
+    } finally {
+      setDeleting(false)
+    }
+  }
   const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories])
 
   useEffect(() => {
@@ -860,17 +891,29 @@ function WritingTab({ projectId, categories }: { projectId: string; categories: 
                 key={article.id}
                 className="group grid grid-cols-[minmax(420px,1.45fr)_minmax(190px,0.55fr)_160px_120px_120px] items-center gap-5 border-b border-border/30 px-3 py-3 transition-colors hover:bg-surface-soft"
               >
-                <button
-                  type="button"
-                  title={article.title || '(sans titre)'}
-                  onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
-                  className="min-w-0 truncate text-left text-[14px] font-medium text-primary transition-colors hover:text-accent"
-                >
-                  {article.title || '(sans titre)'}
-                </button>
+                <div className="min-w-0">
+                  <button
+                    type="button"
+                    title={article.title || '(sans titre)'}
+                    onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
+                    className="block w-full min-w-0 truncate text-left text-[14px] font-medium text-primary transition-colors hover:text-accent"
+                  >
+                    {article.title || '(sans titre)'}
+                  </button>
+                  {article.status === 'failed' && article.writing_error && (
+                    <p className="mt-0.5 truncate text-[11px] text-danger" title={article.writing_error}>
+                      {article.writing_error}
+                    </p>
+                  )}
+                </div>
                 <span className="truncate text-[12px] text-secondary" title={categoryName}>{categoryName}</span>
                 <div className="flex min-w-0 items-center gap-1.5">
                   <StatusBadge status={article.status} />
+                  {article.writing_cancel_requested && article.status === 'writing_in_progress' && (
+                    <span className="inline-flex items-center rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-medium text-warning" title="La rédaction s'arrêtera au prochain point de contrôle">
+                      Annulation…
+                    </span>
+                  )}
                   {isStaleWriting(article) && (
                     <span className="inline-flex items-center rounded-full bg-danger/8 px-2 py-0.5 text-[10px] font-medium text-danger" title="Aucune mise à jour depuis plus de 30 minutes">
                       Bloqué
@@ -891,6 +934,28 @@ function WritingTab({ projectId, categories }: { projectId: string; categories: 
                       Relancer
                     </button>
                   )}
+                  {['writing_requested', 'writing_in_progress', 'failed'].includes(article.status) && !article.writing_cancel_requested && (
+                    <button
+                      type="button"
+                      title={article.status === 'writing_in_progress' ? "La rédaction s'arrêtera au prochain point de contrôle" : "Annuler et remettre en idée"}
+                      disabled={cancellingId === article.id}
+                      onClick={() => handleCancel(article)}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-border bg-surface px-2.5 text-[12px] font-medium text-secondary shadow-sm transition-all hover:-translate-y-px hover:border-danger/30 hover:text-danger active:translate-y-0 disabled:opacity-50"
+                    >
+                      <XCircle size={13} />
+                      Annuler
+                    </button>
+                  )}
+                  {['writing_requested', 'failed'].includes(article.status) && (
+                    <button
+                      type="button"
+                      title="Supprimer définitivement"
+                      onClick={() => setDeleteTarget(article)}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-border bg-surface text-tertiary shadow-sm transition-all hover:-translate-y-px hover:border-danger/30 hover:text-danger active:translate-y-0"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    </button>
+                  )}
                   <button
                     type="button"
                     title="Ouvrir dans l'éditeur"
@@ -906,6 +971,25 @@ function WritingTab({ projectId, categories }: { projectId: string; categories: 
           })}
         </div>
       </div>
+
+      <Modal open={!!deleteTarget} onClose={() => { if (!deleting) setDeleteTarget(null) }} title="Supprimer cet article ?" size="sm">
+        <div className="flex flex-col gap-4">
+          <div className="rounded-[12px] border border-danger/20 bg-danger/5 px-3.5 py-3">
+            <p className="text-[14px] font-medium text-primary">{deleteTarget?.title}</p>
+            <p className="mt-0.5 text-[12px] leading-snug text-secondary">
+              L'article sera définitivement supprimé. Cette action est irréversible.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" size="sm" className="flex-1 justify-center" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+              Annuler
+            </Button>
+            <Button size="sm" variant="danger" loading={deleting} className="flex-1 justify-center" onClick={handleDelete}>
+              Supprimer
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

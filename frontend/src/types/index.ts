@@ -171,6 +171,8 @@ export type Article = {
   planning_brief_json: Record<string, unknown> | string | null
   production_brief_json: Record<string, unknown> | null
   workflow_status: string | null
+  writing_error?: string | null
+  writing_cancel_requested?: boolean | null
   // Target dates
   target_write_at: string | null
   target_review_at: string | null

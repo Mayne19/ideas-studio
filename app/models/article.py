@@ -134,6 +134,8 @@ class Article(Base):
     planning_brief_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     production_brief_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     workflow_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    writing_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    writing_cancel_requested: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     # --- Target dates ---
     target_write_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

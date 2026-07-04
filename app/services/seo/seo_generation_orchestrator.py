@@ -54,6 +54,10 @@ from app.services.seo.adapters.readability_adapter import readability_adapter
 from app.services.seo.adapters.google_watch_adapter import google_watch_adapter
 
 
+class WritingCancelledError(RuntimeError):
+    """Levée quand l'utilisateur demande l'annulation d'une rédaction en cours."""
+
+
 class SEOGenerationOrchestrator:
     def __init__(
         self,
@@ -403,6 +407,8 @@ class SEOGenerationOrchestrator:
         # 15. Writing
         try:
             self._generate_content(article, outline, keyword_brief, include_callouts, include_faq)
+        except WritingCancelledError:
+            raise
         except Exception as exc:
             self._error("Writing", str(exc))
             article.status = "failed"
@@ -642,6 +648,18 @@ class SEOGenerationOrchestrator:
                 missing.append(label)
         return len(missing) == 0, missing
 
+    def _raise_if_cancelled(self, article: Article) -> None:
+        """Vérifie en base (valeur fraîche) si l'annulation a été demandée."""
+        try:
+            from sqlalchemy import select as sa_select
+            flag = self.db.execute(
+                sa_select(Article.writing_cancel_requested).where(Article.id == article.id)
+            ).scalar()
+        except Exception:
+            return
+        if flag:
+            raise WritingCancelledError(f"Annulation demandée pour l'article {article.id}")
+
     def _get_agent_provider(self, agent_id: str, fallback: LLMProvider | None = None) -> LLMProvider:
         if self.agent_router is not None:
             try:
@@ -655,6 +673,7 @@ class SEOGenerationOrchestrator:
         return provider.generate_text(prompt, **kwargs)
 
     def _generate_content(self, article: Article, outline: dict, keyword_brief: dict, include_callouts: bool | None, include_faq: bool | None = None):
+        self._raise_if_cancelled(article)
         writer_llm = self._get_agent_provider("content_writer", self.llm)
         if writer_llm.is_mock:
             article.content = f"<h1>{article.title}</h1><p>Contenu mock pour {article.keyword}</p>"
@@ -824,6 +843,8 @@ class SEOGenerationOrchestrator:
         if not content or not content.strip():
             raise GenerationFailedError("Le provider IA n'a pas retourné de contenu exploitable pour la rédaction.")
 
+        self._raise_if_cancelled(article)
+
         article.content = content
         article.word_count = calculate_word_count(content)
         article.reading_time_minutes = calculate_reading_time_minutes(article.word_count)
@@ -904,6 +925,7 @@ class SEOGenerationOrchestrator:
             pass
 
         # Cycle d'auto-amélioration si score insuffisant
+        self._raise_if_cancelled(article)
         try:
             if article.global_score is not None and article.global_score < 90:
                 self._auto_improve_score(article, max_iterations=2)

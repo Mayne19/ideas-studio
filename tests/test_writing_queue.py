@@ -203,3 +203,93 @@ def test_stale_writing_is_requeued(client):
         assert article.status == "writing_requested"
     finally:
         db.close()
+
+
+def test_cancel_queued_writing_returns_to_idea(client):
+    """Annuler un article en file le fait revenir en idée."""
+    headers, project = _setup_project(client)
+    db = TestingSessionLocal()
+    try:
+        from app.services.production_queue import send_to_production
+        idea = _generate_idea(project["id"], db)
+        send_to_production(db, idea.id)
+        db.commit()
+        idea_id = idea.id
+    finally:
+        db.close()
+
+    resp = client.post(f"/articles/{idea_id}/cancel-writing", headers=headers)
+    assert resp.status_code == 200
+    assert resp.json() == {"id": idea_id, "status": "idea_proposed", "cancelled": True}
+
+
+def test_cancel_in_progress_stops_at_checkpoint(client, monkeypatch):
+    """Une rédaction en cours avec annulation demandée s'arrête au checkpoint et revient en idée."""
+    import app.core.database as core_db
+    from app.models.article import Article
+    from app.services.production_queue import claim_for_writing, send_to_production, write_queued_article
+
+    monkeypatch.setattr(core_db, "SessionLocal", TestingSessionLocal)
+
+    headers, project = _setup_project(client)
+    db = TestingSessionLocal()
+    try:
+        idea = _generate_idea(project["id"], db)
+        send_to_production(db, idea.id)
+        db.commit()
+        claim_for_writing(db, project["id"], 1)
+        idea_id = idea.id
+    finally:
+        db.close()
+
+    # L'utilisateur demande l'annulation pendant que le job est claimé
+    resp = client.post(f"/articles/{idea_id}/cancel-writing", headers=headers)
+    assert resp.status_code == 200
+    assert resp.json()["cancel_requested"] is True
+
+    result = write_queued_article(idea_id, project["id"])
+    assert result["status"] == "cancelled"
+
+    db = TestingSessionLocal()
+    try:
+        article = db.get(Article, idea_id)
+        assert article.status == "idea_proposed"
+        assert article.writing_cancel_requested is False
+    finally:
+        db.close()
+
+
+def test_writing_error_visible_on_failure(client, monkeypatch):
+    """L'échec d'une rédaction doit exposer sa raison dans writing_error."""
+    import app.core.database as core_db
+    import app.services.seo.seo_generation_orchestrator as orch
+    from app.models.article import Article
+    from app.services.production_queue import claim_for_writing, send_to_production, write_queued_article
+
+    monkeypatch.setattr(core_db, "SessionLocal", TestingSessionLocal)
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("quota provider dépassé")
+
+    monkeypatch.setattr(orch, "generate_full_article", boom)
+
+    _headers, project = _setup_project(client)
+    db = TestingSessionLocal()
+    try:
+        idea = _generate_idea(project["id"], db)
+        send_to_production(db, idea.id)
+        db.commit()
+        claim_for_writing(db, project["id"], 1)
+        idea_id = idea.id
+    finally:
+        db.close()
+
+    write_queued_article(idea_id, project["id"])
+
+    db = TestingSessionLocal()
+    try:
+        article = db.get(Article, idea_id)
+        assert article.status == "failed"
+        assert "quota provider dépassé" in (article.writing_error or "")
+    finally:
+        db.close()

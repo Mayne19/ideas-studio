@@ -444,6 +444,50 @@ def send_to_production_route(
     }
 
 
+@router.post("/articles/{article_id}/cancel-writing")
+def cancel_writing_route(
+    article_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Annule une rédaction : immédiat si en file/échec, au prochain checkpoint si en cours."""
+    from app.services.log_service import log_step
+
+    article = _get_article_or_404(article_id, db)
+    _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor"))
+
+    if article.status in ("writing_requested", "failed"):
+        article.status = "idea_proposed"
+        article.workflow_status = "planning"
+        article.writing_cancel_requested = False
+        article.writing_error = None
+        article.updated_at = datetime.now(timezone.utc)
+        log_step(
+            db, article.project_id,
+            f"Rédaction annulée (retour en idée) : {article.title}",
+            level="info", step="writing_queue", article_id=article.id,
+        )
+        db.commit()
+        db.refresh(article)
+        return {"id": article.id, "status": article.status, "cancelled": True}
+
+    if article.status == "writing_in_progress":
+        article.writing_cancel_requested = True
+        article.updated_at = datetime.now(timezone.utc)
+        log_step(
+            db, article.project_id,
+            f"Annulation demandée pour la rédaction en cours : {article.title}",
+            level="info", step="writing_queue", article_id=article.id,
+        )
+        db.commit()
+        return {"id": article.id, "status": article.status, "cancelled": False, "cancel_requested": True}
+
+    raise HTTPException(
+        status_code=400,
+        detail=f"Impossible d'annuler depuis le statut '{article.status}'",
+    )
+
+
 @router.post("/articles/{article_id}/requeue-writing")
 def requeue_writing_route(
     article_id: str,
