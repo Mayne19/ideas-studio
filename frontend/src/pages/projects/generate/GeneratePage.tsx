@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AlertTriangle, Bot, CheckCircle, ChevronDown, ChevronUp, History, Loader2, Play, RotateCw, Settings, TestTube2 } from '@/components/ui/hugeIcons'
 import { listAIProviders } from '@/api/aiProviders'
-import { getPipelineLogs, getPipelineSettings, triggerPipelineRun } from '@/api/pipeline'
+import { getPipelineLogs, getPipelineSettings, pipelineRunMessage, pipelineStatusLabel, triggerPipelineRun } from '@/api/pipeline'
 import { listArticles } from '@/api/articles'
 import { api } from '@/api/client'
 import type { AIProviderPublic } from '@/api/aiProviders'
@@ -43,12 +43,16 @@ function workflowStatus(article: Article) {
 }
 
 function isLogSuccess(status: string) {
-  return ['completed', 'done', 'success'].includes(status.toLowerCase())
+  return status.toLowerCase() === 'success'
 }
 
 function isLogFailure(log: PipelineLog) {
   const status = log.status.toLowerCase()
-  return Boolean(log.errors) || ['failed', 'failure', 'error'].includes(status)
+  return ['failed', 'failure', 'error'].includes(status)
+}
+
+function isLogPartial(status: string) {
+  return status.toLowerCase() === 'partial_success'
 }
 
 export default function GeneratePage() {
@@ -102,7 +106,6 @@ export default function GeneratePage() {
     () => articles.filter((article) => article.workflow_run_id || article.next_agent_key || article.completed_agent_keys || article.workflow_status),
     [articles],
   )
-  const failedWorkflows = workflowArticles.filter((article) => workflowStatus(article) === 'failed' || article.status === 'failed')
   const runningWorkflows = workflowArticles.filter((article) => ['running', 'in_progress', 'queued'].includes(workflowStatus(article)) || article.next_agent_key)
   const completedWorkflows = workflowArticles.filter((article) => workflowStatus(article) === 'completed')
   const recentGenerations = useMemo(
@@ -114,9 +117,11 @@ export default function GeneratePage() {
     [logs],
   )
   const failedPipelineLogs = sortedLogs.filter(isLogFailure)
-  const failureCount = failedPipelineLogs.length || failedWorkflows.length
-  const successPipelineLogs = sortedLogs.filter((log) => isLogSuccess(log.status) && !isLogFailure(log))
-  const successCount = successPipelineLogs.length || completedWorkflows.length
+  const failureCount = failedPipelineLogs.length
+  const successPipelineLogs = sortedLogs.filter((log) => isLogSuccess(log.status))
+  const successCount = successPipelineLogs.length
+  const partialCount = sortedLogs.filter((log) => isLogPartial(log.status)).length
+  const runningPipelineCount = sortedLogs.filter((log) => log.status === 'running').length
   const activeProvider = activeProviders[0]
   const activeProviderLabel = activeProvider?.label ?? 'Aucun'
   const activeProviderModelLabel = activeProvider?.model || (activeProvider ? 'Non défini' : 'Aucun')
@@ -131,15 +136,13 @@ export default function GeneratePage() {
   }, [sortedLogs])
 
   async function handleRunPipeline() {
-    if (!projectId) return
+    if (!projectId || runState === 'running' || runningPipelineCount > 0) return
     setRunState('running')
     setRunSummary('')
     try {
       const result = await triggerPipelineRun(projectId)
-      // Le backend répond 200 même quand le run échoue (ex. provider IA indisponible)
       setRunState(result.status === 'failed' ? 'error' : 'done')
-      const errorLabel = result.errors.length > 0 ? `, ${result.errors.length} erreur${result.errors.length > 1 ? 's' : ''}` : ''
-      setRunSummary(`${result.total_expected_ideas} idée(s) attendue(s), ${result.total_generated_ideas} générée(s)${errorLabel}.`)
+      setRunSummary(pipelineRunMessage(result))
       setTick((value) => value + 1)
     } catch {
       setRunState('error')
@@ -164,14 +167,19 @@ export default function GeneratePage() {
     const isOpen = openLogId === log.id
     const isLatest = index === 0
     const isSuccess = isLogSuccess(log.status)
+    const isPartial = isLogPartial(log.status)
     const logDate = extendedLog.created_at || log.started_at
-    const firstLine = (extendedLog.message || extendedLog.error || log.errors || '').split('\n')[0].slice(0, 120)
+    const firstLine = (extendedLog.message || extendedLog.error || log.run_errors?.[0] || '').split('\n')[0].slice(0, 120)
     const details = extendedLog.details ?? {
       id: log.id,
       status: log.status,
+      workflow_run_id: log.workflow_run_id || log.id,
+      expected_ideas: log.expected_ideas,
+      generated_ideas: log.generated_ideas,
+      failed_categories: log.failed_categories,
+      run_errors: log.run_errors,
       ideas_generated: log.ideas_generated,
       articles_created: log.articles_created,
-      errors: log.errors,
       started_at: log.started_at,
       finished_at: log.finished_at,
     }
@@ -186,10 +194,11 @@ export default function GeneratePage() {
         >
           <div className="flex min-w-0 items-center gap-2">
             <History size={13} className="shrink-0 text-tertiary" />
-            {isSuccess
-              ? <span className="text-[12px] font-medium text-success">✓ Succès</span>
-              : <span className="text-[12px] font-medium text-danger">✗ Échec</span>
-            }
+            <span className={`text-[12px] font-medium ${
+              isSuccess ? 'text-success' : isPartial ? 'text-warning' : log.status === 'running' ? 'text-secondary' : 'text-danger'
+            }`}>
+              {isSuccess ? '✓ Succès' : isPartial ? '⚠ Partiel' : log.status === 'running' ? pipelineStatusLabel(log.status) : '✗ Échec'}
+            </span>
             <span className="whitespace-nowrap text-[11px] text-tertiary">{new Date(logDate).toLocaleString('fr-FR')}</span>
             {isLatest && (
               <span className="rounded-full bg-bg-accent px-1.5 py-0.5 text-[10px] text-accent">
@@ -199,7 +208,7 @@ export default function GeneratePage() {
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <span className="text-[11px] text-tertiary">
-              {log.ideas_generated ?? 0} idée(s) · {log.articles_created ?? 0} article(s)
+              {log.generated_ideas ?? log.ideas_generated ?? 0}/{log.expected_ideas ?? 0} idée(s)
             </span>
             <button
               type="button"
@@ -222,8 +231,8 @@ export default function GeneratePage() {
         </div>
 
         {!isSuccess && firstLine && (
-          <div className="border-t border-border bg-bg-danger/30 px-3 py-1.5">
-            <p className="truncate text-[11px] text-danger">{firstLine}</p>
+          <div className={`border-t border-border px-3 py-1.5 ${isPartial ? 'bg-warning/10' : 'bg-bg-danger/30'}`}>
+            <p className={`truncate text-[11px] ${isPartial ? 'text-warning' : 'text-danger'}`}>{firstLine}</p>
           </div>
         )}
 
@@ -255,8 +264,14 @@ export default function GeneratePage() {
           <Button size="sm" variant="secondary" icon={<Bot size={13} />} onClick={() => navigate(`/projects/${projectId}/settings/agents`)}>
             Agents
           </Button>
-          <Button size="sm" icon={runState === 'running' ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />} loading={runState === 'running'} onClick={handleRunPipeline}>
-            Tester le pipeline
+          <Button
+            size="sm"
+            icon={runState === 'running' || runningPipelineCount > 0 ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
+            loading={runState === 'running'}
+            disabled={runState === 'running' || runningPipelineCount > 0}
+            onClick={handleRunPipeline}
+          >
+            {runState === 'running' || runningPipelineCount > 0 ? 'Exécution en cours…' : 'Tester le pipeline'}
           </Button>
         </div>
       </div>
@@ -292,7 +307,7 @@ export default function GeneratePage() {
           </div>
         </div>
 
-        <div className="mt-4 grid overflow-hidden rounded-[12px] border border-border sm:grid-cols-2 xl:grid-cols-6">
+        <div className="mt-4 grid overflow-hidden rounded-[12px] border border-border sm:grid-cols-2 xl:grid-cols-7">
           <div className="border-b border-border p-4 sm:border-r xl:border-b-0">
             <p className="text-[12px] font-medium text-tertiary">Provider</p>
             <p className="mt-1 truncate text-[20px] font-semibold tracking-tight text-primary">{activeProviderLabel}</p>
@@ -313,6 +328,10 @@ export default function GeneratePage() {
             <p className="text-[12px] font-medium text-tertiary">Réussites</p>
             <p className="mt-1 text-[20px] font-semibold tracking-tight text-success">{successCount}</p>
           </div>
+          <div className="border-b border-border p-4 sm:border-r sm:border-b-0">
+            <p className="text-[12px] font-medium text-tertiary">Partiels</p>
+            <p className="mt-1 text-[20px] font-semibold tracking-tight text-warning">{partialCount}</p>
+          </div>
           <div className="p-4">
             <p className="text-[12px] font-medium text-tertiary">Échecs</p>
             <p className={`mt-1 text-[20px] font-semibold tracking-tight ${failureCount ? 'text-danger' : 'text-primary'}`}>{failureCount}</p>
@@ -323,6 +342,7 @@ export default function GeneratePage() {
           <StatusPill ok={activeProviders.length > 0} label={activeProviders.length ? `${activeProviders.length} provider configuré` : 'Aucun provider actif'} />
           <StatusPill ok={assignedAgentIds.size > 0} label={assignedAgentIds.size ? `${assignedAgentIds.size} agent assigné` : 'Aucun agent assigné'} />
           <StatusPill ok={Boolean(pipeline?.enabled)} label={pipeline?.enabled ? 'Automatisation active' : 'Automatisation inactive'} />
+          <StatusPill ok={partialCount === 0} label={partialCount ? `${partialCount} partiel${partialCount > 1 ? 's' : ''}` : 'Aucun partiel'} />
           <StatusPill ok={failureCount === 0} label={failureCount ? `${failureCount} échec${failureCount > 1 ? 's' : ''}` : 'Aucun échec'} />
         </div>
       </div>
@@ -345,7 +365,9 @@ export default function GeneratePage() {
             </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button size="sm" variant="secondary" icon={<TestTube2 size={13} />} onClick={handleRunPipeline}>Tester pipeline</Button>
+            <Button size="sm" variant="secondary" icon={<TestTube2 size={13} />} disabled={runState === 'running' || runningPipelineCount > 0} onClick={handleRunPipeline}>
+              {runState === 'running' || runningPipelineCount > 0 ? 'Exécution en cours…' : 'Tester pipeline'}
+            </Button>
             <Button size="sm" variant="secondary" icon={<RotateCw size={13} />} onClick={() => setTick((value) => value + 1)}>Rafraîchir</Button>
           </div>
           <p className="mt-3 text-[12px] text-tertiary">Reprise depuis l’étape échouée : non disponible en V1 côté API.</p>

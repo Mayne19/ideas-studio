@@ -26,6 +26,8 @@ ACTIVE_IDEA_STATUSES = {
     "published",
 }
 
+FINAL_PIPELINE_STATUSES = {"success", "partial_success", "failed"}
+
 
 def _parse_json_field(value: str | None, default):
     if not value:
@@ -51,6 +53,59 @@ def _parse_json_object(value) -> dict:
         except (json.JSONDecodeError, TypeError):
             return {}
     return current if isinstance(current, dict) else {}
+
+
+def _pipeline_status(expected_ideas: int, generated_ideas: int, raw_status: str | None = None) -> str:
+    if raw_status == "running":
+        return "running"
+    if generated_ideas <= 0:
+        return "failed"
+    if expected_ideas > 0 and generated_ideas < expected_ideas:
+        return "partial_success"
+    return "success"
+
+
+def _failed_categories(categories_processed: list[dict]) -> list[dict]:
+    failed = []
+    for category in categories_processed:
+        expected = int(category.get("expected") or 0)
+        generated = int(category.get("generated") or 0)
+        errors = category.get("errors") if isinstance(category.get("errors"), list) else []
+        if generated < expected:
+            failed.append({
+                "category_id": category.get("category_id"),
+                "category_name": category.get("category_name"),
+                "expected": expected,
+                "generated": generated,
+                "errors": errors,
+            })
+    return failed
+
+
+def _summary_from_log(log: PipelineLog) -> dict:
+    summary = _parse_json_object(log.errors)
+    expected = int(summary.get("expected_ideas") or summary.get("total_expected_ideas") or 0)
+    generated = int(summary.get("generated_ideas") or summary.get("total_generated_ideas") or log.ideas_generated or 0)
+    categories = summary.get("categories_processed") if isinstance(summary.get("categories_processed"), list) else []
+    failed_categories = summary.get("failed_categories") if isinstance(summary.get("failed_categories"), list) else _failed_categories(categories)
+    errors = summary.get("errors") if isinstance(summary.get("errors"), list) else []
+    status = log.status if log.status in FINAL_PIPELINE_STATUSES or log.status == "running" else _pipeline_status(expected, generated, log.status)
+    return {
+        "workflow_run_id": summary.get("workflow_run_id") or log.id,
+        "status": status,
+        "expected_ideas": expected,
+        "generated_ideas": generated,
+        "total_expected_ideas": expected,
+        "total_generated_ideas": generated,
+        "ideas_generated": log.ideas_generated,
+        "articles_created": log.articles_created,
+        "categories_processed": categories,
+        "failed_categories": failed_categories,
+        "errors": errors,
+        "run_errors": errors,
+        "started_at": log.started_at.isoformat(),
+        "finished_at": log.finished_at.isoformat() if log.finished_at else None,
+    }
 
 
 def _category_frequency_summary(db: Session, project_id: str) -> tuple[int, list[dict]]:
@@ -289,6 +344,21 @@ def run_pipeline(db: Session, project_id: str) -> dict:
     logger.info("Pipeline run start project=%s mode=%s", project_id, settings.PIPELINE_MODE)
     pipe = get_or_create_pipeline(db, project_id)
     project = db.query(Project).filter(Project.id == project_id).first()
+    running_log = (
+        db.query(PipelineLog)
+        .filter(
+            PipelineLog.project_id == project_id,
+            PipelineLog.status == "running",
+            PipelineLog.finished_at.is_(None),
+        )
+        .order_by(PipelineLog.started_at.desc())
+        .first()
+    )
+    if running_log:
+        logger.info("Pipeline run already active project=%s workflow_run_id=%s", project_id, running_log.id)
+        payload = _summary_from_log(running_log)
+        payload["pipeline_mode"] = settings.PIPELINE_MODE
+        return payload
 
     log_entry = PipelineLog(
         project_id=project_id,
@@ -306,17 +376,16 @@ def run_pipeline(db: Session, project_id: str) -> dict:
     categories_processed: list[dict] = []
     generated_idea_ids: list[str] = []
     total_expected_ideas = 0
+    critical_failure = False
 
     try:
         if _is_paused(pipe):
             errors.append("Pipeline is paused")
-            log_entry.status = "skipped"
         else:
             max_drafts = pipe.max_pending_drafts or 10
             pending = _count_pending_drafts(db, project_id)
             if pending >= max_drafts:
                 errors.append(f"Max pending drafts reached ({pending}/{max_drafts})")
-                log_entry.status = "skipped"
             else:
                 llm = get_llm_provider(project_id=project_id)
                 logger.info(
@@ -456,23 +525,38 @@ def run_pipeline(db: Session, project_id: str) -> dict:
                         except Exception as exc:
                             logger.exception("Pipeline article generation failed")
                             errors.append(f"Article from idea {idea.id}: {exc}")
-
-                log_entry.status = "completed" if not errors else "completed_with_errors"
     except Exception as exc:
         logger.exception("Pipeline run failed for project %s", project_id)
         errors.append(str(exc))
-        log_entry.status = "failed"
+        critical_failure = True
+
+    if generated_idea_ids:
+        ideas_generated = (
+            db.query(Article)
+            .filter(
+                Article.project_id == project_id,
+                Article.workflow_run_id == workflow_run_id,
+            )
+            .count()
+        )
 
     log_entry.ideas_generated = ideas_generated
     log_entry.articles_created = articles_created
+    failed_categories = _failed_categories(categories_processed)
+    final_status = "failed" if critical_failure and ideas_generated == 0 else _pipeline_status(total_expected_ideas, ideas_generated)
+    log_entry.status = final_status
     run_summary = {
         "workflow_run_id": workflow_run_id,
+        "status": final_status,
+        "expected_ideas": total_expected_ideas,
+        "generated_ideas": ideas_generated,
         "total_expected_ideas": total_expected_ideas,
         "total_generated_ideas": ideas_generated,
         "categories_processed": categories_processed,
+        "failed_categories": failed_categories,
         "errors": errors,
     }
-    log_entry.errors = json.dumps(run_summary, ensure_ascii=False) if errors or categories_processed else None
+    log_entry.errors = json.dumps(run_summary, ensure_ascii=False)
     log_entry.finished_at = datetime.now(timezone.utc)
     try:
         db.commit()
@@ -484,19 +568,9 @@ def run_pipeline(db: Session, project_id: str) -> dict:
         db.commit()
     db.refresh(log_entry)
 
-    return {
-        "status": log_entry.status,
-        "workflow_run_id": workflow_run_id,
-        "total_expected_ideas": total_expected_ideas,
-        "total_generated_ideas": ideas_generated,
-        "ideas_generated": ideas_generated,
-        "articles_created": articles_created,
-        "categories_processed": categories_processed,
-        "errors": errors,
-        "started_at": log_entry.started_at.isoformat(),
-        "finished_at": log_entry.finished_at.isoformat() if log_entry.finished_at else None,
-        "pipeline_mode": pipeline_mode,
-    }
+    payload = _summary_from_log(log_entry)
+    payload["pipeline_mode"] = pipeline_mode
+    return payload
 
 
 def list_pipeline_logs(db: Session, project_id: str, limit: int = 20) -> list[PipelineLogPublic]:
@@ -507,16 +581,22 @@ def list_pipeline_logs(db: Session, project_id: str, limit: int = 20) -> list[Pi
         .limit(limit)
         .all()
     )
-    return [
-        PipelineLogPublic(
+    items = []
+    for log in logs:
+        summary = _summary_from_log(log)
+        items.append(PipelineLogPublic(
             id=log.id,
             project_id=log.project_id,
-            status=log.status,
+            status=summary["status"],
+            workflow_run_id=summary["workflow_run_id"],
+            expected_ideas=summary["expected_ideas"],
+            generated_ideas=summary["generated_ideas"],
+            failed_categories=summary["failed_categories"],
+            run_errors=summary["run_errors"],
             ideas_generated=log.ideas_generated,
             articles_created=log.articles_created,
             errors=log.errors,
             started_at=log.started_at,
             finished_at=log.finished_at,
-        )
-        for log in logs
-    ]
+        ))
+    return items

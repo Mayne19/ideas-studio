@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Play, RotateCw, History } from '@/components/ui/hugeIcons'
-import { getPipelineSettings, updatePipelineSettings, triggerPipelineRun, getPipelineLogs } from '@/api/pipeline'
+import { getPipelineSettings, updatePipelineSettings, triggerPipelineRun, getPipelineLogs, pipelineRunMessage, pipelineStatusLabel, pipelineStatusTone } from '@/api/pipeline'
 import type { PipelineLog, PipelineSettings } from '@/api/pipeline'
 import { Card } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -112,15 +112,21 @@ export default function ProjectPipelinePage() {
   }
 
   async function handleRun() {
-    if (!projectId) return
+    if (!projectId || running || logs.some((log) => log.status === 'running')) return
     setRunning(true)
     setRunStatus(null)
     try {
       const result = await triggerPipelineRun(projectId)
-      setRunStatus(result.status === 'completed' ? 'Exécution terminée' : `Échec : ${result.status}`)
-      getPipelineLogs(projectId, 10).then(setLogs).catch(() => {})
+      setRunStatus(pipelineRunMessage(result))
+      Promise.all([
+        getPipelineSettings(projectId).catch(() => settings),
+        getPipelineLogs(projectId, 10).catch(() => logs),
+      ]).then(([nextSettings, nextLogs]) => {
+        if (nextSettings) setSettings(nextSettings)
+        setLogs(nextLogs)
+      }).catch(() => {})
     } catch {
-      setRunStatus("Erreur lors de l'exécution")
+      setRunStatus("Aucune idée générée. Voir les détails.")
     } finally {
       setRunning(false)
     }
@@ -149,6 +155,7 @@ export default function ProjectPipelinePage() {
   }
 
   const totalMonthly = settings?.total_monthly_from_categories ?? 0
+  const hasRunningRun = logs.some((log) => log.status === 'running')
 
   return (
     <div className="flex flex-col gap-6">
@@ -285,11 +292,11 @@ export default function ProjectPipelinePage() {
           size="sm"
           variant="ghost"
           onClick={handleRun}
-          disabled={running}
+          disabled={running || hasRunningRun}
           loading={running}
           icon={!running ? <Play size={13} /> : undefined}
         >
-          Lancer maintenant
+          {running || hasRunningRun ? 'Exécution en cours…' : 'Lancer maintenant'}
         </Button>
         {saveStatus === 'error' && <p className="text-[12px] text-danger">Erreur lors de l'enregistrement</p>}
         {runStatus && <p className="text-[12px] text-secondary">{runStatus}</p>}
@@ -315,11 +322,21 @@ export default function ProjectPipelinePage() {
                     })}
                   </p>
                   <p className="text-[12px] text-tertiary">
-                    {log.ideas_generated} idée(s) · {log.articles_created} article(s)
+                    {log.generated_ideas}/{log.expected_ideas} idée(s) · {log.articles_created} article(s)
                   </p>
+                  {log.failed_categories.length > 0 && (
+                    <p className="mt-0.5 max-w-md truncate text-[11px] text-warning">
+                      {log.failed_categories.map((category) => category.category_name || 'Catégorie').join(', ')}
+                    </p>
+                  )}
                 </div>
-                <span className={`text-[12px] font-medium ${log.status === 'completed' ? 'text-success' : 'text-danger'}`}>
-                  {log.status === 'completed' ? 'OK' : 'Échec'}
+                <span className={`text-[12px] font-medium ${
+                  pipelineStatusTone(log.status) === 'success' ? 'text-success'
+                    : pipelineStatusTone(log.status) === 'warning' ? 'text-warning'
+                      : pipelineStatusTone(log.status) === 'danger' ? 'text-danger'
+                        : 'text-secondary'
+                }`}>
+                  {pipelineStatusLabel(log.status)}
                 </span>
               </div>
             ))}

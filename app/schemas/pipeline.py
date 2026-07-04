@@ -77,6 +77,11 @@ class PipelineLogPublic(BaseModel):
     id: str
     project_id: str
     status: str
+    workflow_run_id: str | None = None
+    expected_ideas: int = 0
+    generated_ideas: int = 0
+    failed_categories: list[dict] = []
+    run_errors: list[str] = []
     ideas_generated: int
     articles_created: int
     errors: Optional[str] = None

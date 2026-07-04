@@ -24,7 +24,7 @@ import {
   bulkDeleteIdeas,
   restoreIdea,
 } from '@/api/ideas'
-import { triggerPipelineRun } from '@/api/pipeline'
+import { pipelineRunMessage, triggerPipelineRun } from '@/api/pipeline'
 import type { PipelineRunResult } from '@/api/pipeline'
 import { listCategories } from '@/api/categories'
 import type { Article, Category } from '@/types'
@@ -369,10 +369,9 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
     try {
       const res = await triggerPipelineRun(projectId)
       setBatchResult(res)
-      const errorLabel = res.errors.length > 0 ? `, ${res.errors.length} erreur${res.errors.length > 1 ? 's' : ''}` : ''
-      setGenerateResult(`${res.total_expected_ideas} idée(s) attendue(s), ${res.total_generated_ideas} générée(s)${errorLabel}.`)
+      setGenerateResult(pipelineRunMessage(res))
       setTick((t) => t + 1)
-    } catch { setGenerateResult('Erreur lors de la génération du volume mensuel.') }
+    } catch { setGenerateResult('Aucune idée générée. Voir les détails.') }
     finally { setGenerating(false) }
   }
 

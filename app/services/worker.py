@@ -65,7 +65,7 @@ def _pipeline_already_ran_today(db, project_id: str) -> bool:
         .filter(
             PipelineLog.project_id == project_id,
             PipelineLog.started_at >= today_start,
-            PipelineLog.status.in_(["completed", "completed_with_errors", "running"]),
+            PipelineLog.status.in_(["success", "partial_success", "running", "completed", "completed_with_errors"]),
         )
         .first()
     ) is not None

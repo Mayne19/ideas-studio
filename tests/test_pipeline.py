@@ -1,4 +1,5 @@
 """Tests for the automatic article creation pipeline."""
+from datetime import datetime, timezone
 from fastapi.testclient import TestClient
 from tests.conftest import register_and_login, TestingSessionLocal
 
@@ -76,7 +77,7 @@ def test_pipeline_run_creates_log(client: TestClient):
     assert logs.status_code == 200
     entries = logs.json()
     assert len(entries) >= 1
-    assert entries[0]["status"] in ("completed", "completed_with_errors", "failed")  # may depend on LLM availability
+    assert entries[0]["status"] in ("success", "partial_success", "failed")
 
 
 def test_pipeline_logs_empty_when_no_runs(client: TestClient):
@@ -123,7 +124,7 @@ def test_pipeline_articles_per_week_affects_daily_target_and_never_publishes(cli
     data = run.json()
     assert data["articles_created"] == 0
     assert data["ideas_generated"] >= 0
-    assert data["status"] in ("completed", "completed_with_errors", "failed")
+    assert data["status"] in ("success", "partial_success", "failed")
 
     articles = client.get(f"/projects/{project['id']}/articles", headers=headers).json()
     assert len(articles) == data["ideas_generated"]
@@ -151,8 +152,10 @@ def test_pipeline_generates_monthly_volume_from_active_categories(client: TestCl
     run = client.post(f"/projects/{project['id']}/pipeline/run", headers=headers)
     assert run.status_code == 200
     data = run.json()
-    assert data["status"] == "completed"
+    assert data["status"] == "success"
     assert data["workflow_run_id"]
+    assert data["expected_ideas"] == 10
+    assert data["generated_ideas"] == 10
     assert data["total_expected_ideas"] == 10
     assert data["total_generated_ideas"] == 10
     assert data["ideas_generated"] == 10
@@ -192,13 +195,68 @@ def test_pipeline_category_error_does_not_block_batch(client: TestClient, monkey
     run = client.post(f"/projects/{project['id']}/pipeline/run", headers=headers)
     assert run.status_code == 200
     data = run.json()
-    assert data["status"] == "completed_with_errors"
+    assert data["status"] == "partial_success"
+    assert data["expected_ideas"] == 3
+    assert data["generated_ideas"] == 2
     assert data["total_expected_ideas"] == 3
     assert data["total_generated_ideas"] == 2
     assert data["ideas_generated"] == 2
     assert len(data["errors"]) == 1
+    assert len(data["failed_categories"]) == 1
 
     articles = client.get(f"/projects/{project['id']}/articles?status=idea_proposed&limit=50", headers=headers).json()
     generated = [article for article in articles if article["workflow_run_id"] == data["workflow_run_id"]]
     assert len(generated) == 2
     assert all(article["category_id"] for article in generated)
+
+
+def test_pipeline_total_failure_returns_failed(client: TestClient, monkeypatch):
+    headers, project = _setup(client, "pipe_total_failure@test.com")
+    resp = client.post(
+        f"/projects/{project['id']}/categories",
+        json={"name": "SEO", "monthly_frequency": 2, "pipeline_enabled": True},
+        headers=headers,
+    )
+    assert resp.status_code == 201
+
+    def always_fail(*args, **kwargs):
+        raise RuntimeError("Provider indisponible")
+
+    monkeypatch.setattr("app.services.idea_engine.generate_idea", always_fail)
+
+    run = client.post(f"/projects/{project['id']}/pipeline/run", headers=headers)
+    assert run.status_code == 200
+    data = run.json()
+    assert data["status"] == "failed"
+    assert data["expected_ideas"] == 2
+    assert data["generated_ideas"] == 0
+    assert data["ideas_generated"] == 0
+    assert len(data["failed_categories"]) == 1
+
+
+def test_pipeline_running_lock_returns_existing_run(client: TestClient):
+    from app.models.pipeline_log import PipelineLog
+
+    headers, project = _setup(client, "pipe_lock@test.com")
+    with TestingSessionLocal() as db:
+        running = PipelineLog(
+            project_id=project["id"],
+            status="running",
+            ideas_generated=0,
+            articles_created=0,
+            started_at=datetime.now(timezone.utc),
+            finished_at=None,
+        )
+        db.add(running)
+        db.commit()
+        running_id = running.id
+
+    run = client.post(f"/projects/{project['id']}/pipeline/run", headers=headers)
+    assert run.status_code == 200
+    data = run.json()
+    assert data["status"] == "running"
+    assert data["workflow_run_id"] == running_id
+
+    logs = client.get(f"/projects/{project['id']}/pipeline/logs", headers=headers).json()
+    running_logs = [log for log in logs if log["status"] == "running"]
+    assert len(running_logs) == 1

@@ -1,5 +1,7 @@
 import { api } from './client'
 
+export type PipelineRunStatus = 'running' | 'success' | 'partial_success' | 'failed'
+
 export type PipelineSettings = {
   id: string
   project_id: string
@@ -40,7 +42,18 @@ export type PipelineSettingsUpdate = {
 export type PipelineLog = {
   id: string
   project_id: string
-  status: string
+  status: PipelineRunStatus
+  workflow_run_id: string | null
+  expected_ideas: number
+  generated_ideas: number
+  failed_categories: Array<{
+    category_id?: string | null
+    category_name?: string | null
+    expected: number
+    generated: number
+    errors: string[]
+  }>
+  run_errors: string[]
   ideas_generated: number
   articles_created: number
   errors: string | null
@@ -49,8 +62,10 @@ export type PipelineLog = {
 }
 
 export type PipelineRunResult = {
-  status: string
+  status: PipelineRunStatus
   workflow_run_id: string
+  expected_ideas: number
+  generated_ideas: number
   total_expected_ideas: number
   total_generated_ideas: number
   ideas_generated: number
@@ -62,10 +77,41 @@ export type PipelineRunResult = {
     generated: number
     errors: string[]
   }>
+  failed_categories: Array<{
+    category_id?: string | null
+    category_name?: string | null
+    expected: number
+    generated: number
+    errors: string[]
+  }>
   errors: string[]
   started_at: string
   finished_at: string | null
   pipeline_mode: string
+}
+
+export function pipelineStatusLabel(status: string): string {
+  if (status === 'success') return 'Succès'
+  if (status === 'partial_success') return 'Partiel'
+  if (status === 'running') return 'En cours'
+  return 'Échec'
+}
+
+export function pipelineStatusTone(status: string): 'success' | 'warning' | 'danger' | 'secondary' {
+  if (status === 'success') return 'success'
+  if (status === 'partial_success') return 'warning'
+  if (status === 'failed') return 'danger'
+  return 'secondary'
+}
+
+export function pipelineRunMessage(result: Pick<PipelineRunResult, 'status' | 'expected_ideas' | 'generated_ideas' | 'failed_categories'>): string {
+  if (result.status === 'running') return 'Exécution en cours…'
+  if (result.status === 'success') return `${result.generated_ideas} idée(s) générée(s) avec succès.`
+  if (result.status === 'partial_success') {
+    const failed = result.failed_categories.length
+    return `${result.generated_ideas} idée(s) générée(s), ${failed || Math.max(0, result.expected_ideas - result.generated_ideas)} catégorie(s) en erreur.`
+  }
+  return 'Aucune idée générée. Voir les détails.'
 }
 
 export function getPipelineSettings(projectId: string): Promise<PipelineSettings> {
