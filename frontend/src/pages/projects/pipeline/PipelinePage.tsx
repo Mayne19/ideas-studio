@@ -32,7 +32,6 @@ import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
 import EmptyState from '@/components/ui/EmptyState'
 import ErrorState from '@/components/ui/ErrorState'
-import ScoreBadge from '@/components/ui/ScoreBadge'
 import StatusBadge from '@/components/ui/StatusBadge'
 import { Skeleton } from '@/components/ui/Skeleton'
 
@@ -332,9 +331,8 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
       ) : (
         <>
           {/* Header row */}
-          <div className="mb-1 hidden grid-cols-[20px_56px_minmax(0,1fr)_140px_140px_100px_80px_130px] gap-3 px-3 text-[12px] font-medium uppercase tracking-wide text-tertiary lg:grid">
+          <div className="mb-1 hidden grid-cols-[20px_minmax(0,1fr)_140px_140px_100px_80px_130px] gap-3 px-3 text-[12px] font-medium uppercase tracking-wide text-tertiary lg:grid">
             <label><input type="checkbox" checked={selected.length > 0 && selected.length === visible.length} onChange={(e) => toggleAll(e.target.checked)} /></label>
-            <div>Score</div>
             <div>Titre / Angle</div>
             <div>Catégorie</div>
             <div>Mot-clé</div>
@@ -346,14 +344,12 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
           <div className="flex flex-col">
             {visible.map((article) => {
               const catName = categories.find((c) => c.id === article.category_id)?.name ?? '—'
-              const score = finiteScore(article.global_score)
               return (
                 <div
                   key={article.id}
-                  className="group grid grid-cols-[20px_56px_minmax(0,1fr)_140px_140px_100px_80px_130px] items-center gap-3 border-b border-border/30 px-3 py-2.5 transition-colors hover:bg-surface-soft"
+                  className="group grid grid-cols-[20px_minmax(0,1fr)_140px_140px_100px_80px_130px] items-center gap-3 border-b border-border/30 px-3 py-2.5 transition-colors hover:bg-surface-soft"
                 >
                   <input type="checkbox" checked={selectedIds.has(article.id)} onChange={(e) => toggle(article.id, e.target.checked)} />
-                  <ScoreBadge label="Score" value={score} valid={article.global_score_valid} />
                   <div className="min-w-0">
                     <p className="truncate text-[14px] font-medium text-primary">{article.title || '(sans titre)'}</p>
                     {article.meta_description && (
@@ -364,14 +360,14 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
                   <span className="truncate text-[12px] text-secondary">{article.keyword ?? '—'}</span>
                   <StatusBadge status={article.status} />
                   <span className="text-[12px] text-tertiary">{article.created_at ? formatDate(article.created_at) : '—'}</span>
-                  <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex items-center justify-end gap-1">
                     {article.status !== 'idea_rejected' && (
                       <button
                         type="button"
                         title={article.status === 'idea_priority' ? 'Retirer priorité' : 'Prioriser'}
                         onClick={() => handlePrioritize(article)}
                         disabled={actionLoading === article.id + '-prioritize'}
-                        className={`flex h-7 w-7 items-center justify-center rounded-[8px] transition-colors hover:bg-surface-soft ${article.status === 'idea_priority' ? 'text-warning' : 'text-tertiary'}`}
+                        className={`inline-flex h-7 w-7 items-center justify-center rounded-[8px] border border-border bg-surface shadow-sm transition-all hover:-translate-y-px active:translate-y-0 active:scale-[0.98] ${article.status === 'idea_priority' ? 'border-warning/30 text-warning' : 'text-tertiary hover:border-warning/30 hover:text-warning'}`}
                       >
                         <Star size={14} />
                       </button>
@@ -382,7 +378,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
                         title="Valider → production"
                         onClick={() => handleSendToProduction(article)}
                         disabled={actionLoading === article.id + '-send'}
-                        className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary transition-colors hover:bg-accent/10 hover:text-accent"
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] border border-border bg-surface text-tertiary shadow-sm transition-all hover:-translate-y-px hover:border-accent/30 hover:text-accent active:translate-y-0 active:scale-[0.98]"
                       >
                         <CheckCircle size={14} />
                       </button>
@@ -391,7 +387,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
                       type="button"
                       title="Rejeter"
                       onClick={() => setRejectTarget(article)}
-                      className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary transition-colors hover:bg-danger/10 hover:text-danger"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] border border-border bg-surface text-tertiary shadow-sm transition-all hover:-translate-y-px hover:border-danger/30 hover:text-danger active:translate-y-0 active:scale-[0.98]"
                     >
                       <XCircle size={14} />
                     </button>
@@ -399,7 +395,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
                       type="button"
                       title="Ouvrir dans l'éditeur"
                       onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}
-                      className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary transition-colors hover:bg-surface-soft hover:text-primary"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] border border-border bg-surface text-tertiary shadow-sm transition-all hover:-translate-y-px hover:border-secondary/30 hover:text-primary active:translate-y-0 active:scale-[0.98]"
                     >
                       <ExternalLink size={14} />
                     </button>
