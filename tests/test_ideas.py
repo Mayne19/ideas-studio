@@ -1,3 +1,4 @@
+import uuid
 import pytest
 from fastapi.testclient import TestClient
 from tests.conftest import force_publish_article, register_and_login, TestingSessionLocal
@@ -795,6 +796,159 @@ def test_launch_dry_run(client: TestClient):
     data = resp.json()
     assert data["dry_run"] is True
     assert data["ideas_generated"] == 0
+
+
+# ── Delete ────────────────────────────────────────────────────────────────────
+
+
+def _make_idea(client, headers, project, status="idea_proposed"):
+    """Create a draft article then flip its status to the desired idea status."""
+    resp = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": f"Test idea {uuid.uuid4().hex[:8]}", "slug": f"test-{uuid.uuid4().hex[:8]}"},
+        headers=headers,
+    )
+    assert resp.status_code == 201
+    article_id = resp.json()["id"]
+    db = TestingSessionLocal()
+    try:
+        from app.models.article import Article
+        article = db.get(Article, article_id)
+        article.status = status
+        db.commit()
+    finally:
+        db.close()
+    return article_id
+
+
+def test_delete_proposed_idea(client: TestClient):
+    headers = register_and_login(client)
+    project = _create_project(client, headers)
+    idea_id = _make_idea(client, headers, project, "idea_proposed")
+
+    resp = client.delete(f"/projects/{project['id']}/ideas/{idea_id}", headers=headers)
+    assert resp.status_code == 204
+
+    resp = client.get(f"/articles/{idea_id}", headers=headers)
+    assert resp.status_code == 404
+
+
+def test_delete_rejected_idea(client: TestClient):
+    headers = register_and_login(client)
+    project = _create_project(client, headers)
+    idea_id = _make_idea(client, headers, project, "idea_rejected")
+
+    resp = client.delete(f"/projects/{project['id']}/ideas/{idea_id}", headers=headers)
+    assert resp.status_code == 204
+
+
+def test_delete_non_idea_fails(client: TestClient):
+    headers = register_and_login(client)
+    project = _create_project(client, headers)
+
+    resp = client.post(
+        f"/projects/{project['id']}/articles",
+        json={"title": "A Draft Article", "slug": "a-draft"},
+        headers=headers,
+    )
+    assert resp.status_code == 201
+    article_id = resp.json()["id"]
+
+    resp = client.delete(f"/projects/{project['id']}/ideas/{article_id}", headers=headers)
+    assert resp.status_code == 400
+
+
+def test_delete_idea_wrong_project_fails(client: TestClient):
+    headers = register_and_login(client)
+    project = _create_project(client, headers)
+    other = _create_project(client, register_and_login(client, email="other@test.com"), name="Other")
+
+    idea_id = _make_idea(client, headers, project, "idea_proposed")
+
+    resp = client.delete(f"/projects/{other['id']}/ideas/{idea_id}", headers=headers)
+    assert resp.status_code == 404
+
+
+def test_delete_idea_viewer_cannot(client: TestClient):
+    owner_headers = register_and_login(client, email="owner_del@test.com")
+    viewer_headers = register_and_login(client, email="viewer_del@test.com", name="ViewerDel")
+    project = _create_project(client, owner_headers)
+
+    idea_id = _make_idea(client, owner_headers, project, "idea_proposed")
+
+    viewer_id = client.get("/auth/me", headers=viewer_headers).json()["id"]
+    from tests.conftest import TestingSessionLocal
+    from app.models.project_member import ProjectMember
+    import uuid
+    db = TestingSessionLocal()
+    try:
+        db.add(ProjectMember(id=str(uuid.uuid4()), project_id=project["id"], user_id=viewer_id, role="viewer", status="active"))
+        db.commit()
+    finally:
+        db.close()
+
+    resp = client.delete(f"/projects/{project['id']}/ideas/{idea_id}", headers=viewer_headers)
+    assert resp.status_code == 403
+
+
+def test_bulk_delete_ideas(client: TestClient):
+    headers = register_and_login(client)
+    project = _create_project(client, headers)
+    ids = []
+
+    for _ in range(3):
+        ids.append(_make_idea(client, headers, project, "idea_proposed"))
+
+    resp = client.post(
+        f"/projects/{project['id']}/ideas/bulk-delete",
+        json={"article_ids": ids},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["deleted"] == 3
+
+    for idea_id in ids:
+        resp = client.get(f"/articles/{idea_id}", headers=headers)
+        assert resp.status_code == 404
+
+
+# ── Restore ───────────────────────────────────────────────────────────────────
+
+
+def test_restore_rejected_idea(client: TestClient):
+    headers = register_and_login(client)
+    project = _create_project(client, headers)
+
+    idea_id = _make_idea(client, headers, project, "idea_rejected")
+
+    db = TestingSessionLocal()
+    try:
+        from app.models.article import Article
+        article = db.get(Article, idea_id)
+        article.rejection_reason = "off_topic"
+        article.rejection_note = "Not relevant"
+        db.commit()
+    finally:
+        db.close()
+
+    resp = client.post(f"/articles/{idea_id}/restore-idea", json={}, headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "restored"
+
+    resp = client.get(f"/articles/{idea_id}", headers=headers)
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "idea_proposed"
+
+
+def test_restore_non_rejected_fails(client: TestClient):
+    headers = register_and_login(client)
+    project = _create_project(client, headers)
+
+    idea_id = _make_idea(client, headers, project, "idea_proposed")
+
+    resp = client.post(f"/articles/{idea_id}/restore-idea", json={}, headers=headers)
+    assert resp.status_code == 400
 
 
 # ── Scheduler ─────────────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import {
   Lightbulb, Plus, Star, Pencil, X, ExternalLink, RefreshCw,
   Search, Info, Sparkles, CheckCircle, Eye, Send,
 } from '@/components/ui/hugeIcons'
-import { listIdeas, generateIdea, rejectIdea, setIdeaPriority, startWriting, createManualDraft, autoGenerateIdeas, sendToProduction } from '@/api/ideas'
+import { listIdeas, generateIdea, rejectIdea, setIdeaPriority, startWriting, createManualDraft, autoGenerateIdeas, sendToProduction, deleteIdea, bulkDeleteIdeas, restoreIdea } from '@/api/ideas'
 import type { AutoGenerateIdeasResponse } from '@/api/ideas'
 import { listCategories } from '@/api/categories'
 import { ApiError } from '@/api/client'
@@ -121,6 +121,9 @@ export default function IdeasPipelinePage() {
   const [rejectNote, setRejectNote] = useState('')
   const [rejecting, setRejecting] = useState(false)
   const [rejectError, setRejectError] = useState('')
+
+  const [deleteTarget, setDeleteTarget] = useState<Article | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const [autoOpen, setAutoOpen] = useState(false)
   const [autoGenerating, setAutoGenerating] = useState(false)
@@ -269,6 +272,46 @@ export default function IdeasPipelinePage() {
     }
   }
 
+  async function handleDeleteConfirm() {
+    if (!projectId || !deleteTarget) return
+    setDeleting(true)
+    try {
+      await deleteIdea(projectId, deleteTarget.id)
+      setAllIdeas((prev) => prev.filter((a) => a.id !== deleteTarget.id))
+      setDeleteTarget(null)
+    } catch {
+      setActionError('Impossible de supprimer cette idée.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  async function handleRestore(article: Article) {
+    if (!projectId) return
+    try {
+      setActionError('')
+      await restoreIdea(article.id)
+      setTick((t) => t + 1)
+    } catch (err) {
+      setActionError(translateIdeaError(err, 'action'))
+    }
+  }
+
+  async function handleBatchDelete() {
+    if (!projectId || selectedIdeas.size === 0) return
+    setDeleting(true)
+    try {
+      const ids = Array.from(selectedIdeas)
+      await bulkDeleteIdeas(projectId, ids)
+      setAllIdeas((prev) => prev.filter((a) => !ids.includes(a.id)))
+      setSelectedIdeas(new Set())
+    } catch {
+      setActionError('Impossible de supprimer les idées sélectionnées.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   async function handleAutoGenerate() {
     if (!projectId) return
     setAutoError('')
@@ -411,6 +454,9 @@ export default function IdeasPipelinePage() {
               </Button>
               <Button size="sm" variant="secondary" className="text-[12px]" onClick={() => handleBatchAction('reject')}>
                 <X size={11} /> Rejeter
+              </Button>
+              <Button size="sm" variant="danger" className="text-[12px]" loading={deleting} onClick={handleBatchDelete}>
+                Supprimer ({selectedIdeas.size})
               </Button>
             </div>
             <button
@@ -599,6 +645,34 @@ export default function IdeasPipelinePage() {
                                 title="Rejeter"
                               >
                                 <X size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeleteTarget(article)}
+                                className={`${ACTION_BUTTON_BASE} hover:border-danger/30 hover:text-danger`}
+                                title="Supprimer définitivement"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                              </button>
+                            </>
+                          )}
+                          {isRejected && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleRestore(article)}
+                                className={`${ACTION_BUTTON_BASE} hover:border-success/30 hover:text-success`}
+                                title="Restaurer"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeleteTarget(article)}
+                                className={`${ACTION_BUTTON_BASE} hover:border-danger/30 hover:text-danger`}
+                                title="Supprimer définitivement"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                               </button>
                             </>
                           )}
@@ -836,6 +910,16 @@ export default function IdeasPipelinePage() {
                   </Button>
                 </>
               )}
+              {previewIdea.status === 'idea_rejected' && (
+                <>
+                  <Button size="sm" icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>} variant="secondary" onClick={() => { handleRestore(previewIdea); setPreviewIdea(null) }}>
+                    Restaurer
+                  </Button>
+                  <Button size="sm" variant="danger" onClick={() => { const t = previewIdea; setPreviewIdea(null); setDeleteTarget(t) }}>
+                    Supprimer
+                  </Button>
+                </>
+              )}
               <Button size="sm" variant="secondary" icon={<ExternalLink size={12} />} onClick={() => { navigate(`/projects/${projectId}/articles/${previewIdea.id}/edit`); setPreviewIdea(null) }}>
                 Ouvrir l'article
               </Button>
@@ -998,6 +1082,34 @@ export default function IdeasPipelinePage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Delete confirmation modal */}
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => { if (!deleting) setDeleteTarget(null) }}
+        title="Supprimer cette idée ?"
+        size="sm"
+      >
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start gap-3 rounded-[12px] border border-danger/20 bg-danger/5 px-3.5 py-3">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0 text-danger"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            <div>
+              <p className="text-[14px] font-medium text-primary">{deleteTarget?.title}</p>
+              <p className="mt-0.5 text-[12px] text-secondary leading-snug">
+                Cette idée sera définitivement supprimée. Cette action est irréversible.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" size="sm" className="flex-1 justify-center" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+              Annuler
+            </Button>
+            <Button size="sm" variant="danger" loading={deleting} className="flex-1 justify-center" onClick={handleDeleteConfirm}>
+              Supprimer
+            </Button>
+          </div>
+        </div>
       </Modal>
     </>
   )

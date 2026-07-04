@@ -16,7 +16,7 @@ from app.models.project_member import ProjectMember
 from app.schemas.ideas import (
     IdeaGenerateRequest, IdeaGenerateResponse,
     IdeaRejectRequest, IdeaPriorityRequest,
-    LaunchRequest,
+    LaunchRequest, BulkDeleteRequest,
 )
 from app.services.idea_engine import generate_idea
 from app.services.writing_engine import start_writing_from_idea, _mock_content_from_outline, _MOCK_OUTLINE
@@ -442,3 +442,65 @@ def process_production_queue_route(
         "processed": len(processed),
         "articles": [{"id": a.id, "title": a.title, "status": a.status, "next_agent_key": a.next_agent_key} for a in processed],
     }
+
+
+@router.delete("/projects/{project_id}/ideas/{article_id}", status_code=204)
+def delete_idea_route(
+    project_id: str,
+    article_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    article = _get_article_or_404(article_id, db)
+    if article.project_id != project_id:
+        raise HTTPException(status_code=404, detail="Idea not found in project")
+    _check_role(db, current_user.id, project_id, ("owner", "admin", "editor"))
+    if article.status not in ("idea_proposed", "idea_priority", "idea_rejected"):
+        raise HTTPException(status_code=400, detail="Only ideas can be deleted")
+    db.delete(article)
+    db.commit()
+
+
+@router.post("/projects/{project_id}/ideas/bulk-delete")
+def bulk_delete_ideas_route(
+    project_id: str,
+    body: BulkDeleteRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _check_role(db, current_user.id, project_id, ("owner", "admin", "editor"))
+    articles = (
+        db.query(Article)
+        .filter(
+            Article.id.in_(body.article_ids),
+            Article.project_id == project_id,
+            Article.status.in_(["idea_proposed", "idea_priority", "idea_rejected"]),
+        )
+        .all()
+    )
+    if not articles:
+        raise HTTPException(status_code=404, detail="No ideas found to delete")
+    count = len(articles)
+    for article in articles:
+        db.delete(article)
+    db.commit()
+    return {"deleted": count}
+
+
+@router.post("/articles/{article_id}/restore-idea")
+def restore_idea_route(
+    article_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    article = _get_article_or_404(article_id, db)
+    _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor"))
+    if article.status != "idea_rejected":
+        raise HTTPException(status_code=400, detail="Only rejected ideas can be restored")
+    article.status = "idea_proposed"
+    article.rejection_reason = None
+    article.rejection_note = None
+    article.updated_at = datetime.now(timezone.utc)
+    log_step(db, article.project_id, f"Idée restaurée : {article.title}", level="info", step="restore", article_id=article.id)
+    db.commit()
+    return {"status": "restored", "id": article.id, "title": article.title}

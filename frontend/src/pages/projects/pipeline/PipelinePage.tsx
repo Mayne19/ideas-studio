@@ -21,6 +21,9 @@ import {
   sendToProduction,
   rejectIdea,
   setIdeaPriority,
+  deleteIdea,
+  bulkDeleteIdeas,
+  restoreIdea,
 } from '@/api/ideas'
 import { listCategories } from '@/api/categories'
 import type { Article, Category } from '@/types'
@@ -122,6 +125,8 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
   const [error, setError] = useState('')
   const [rejectTarget, setRejectTarget] = useState<Article | null>(null)
   const [rejectNote, setRejectNote] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<Article | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [generateOpen, setGenerateOpen] = useState(false)
   const [bulkGenerateOpen, setBulkGenerateOpen] = useState(false)
   const [generateTitle, setGenerateTitle] = useState('')
@@ -195,6 +200,40 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
       setTick((t) => t + 1)
     } catch { setError('Impossible de rejeter.') }
     finally { setActionLoading(null) }
+  }
+
+  async function handleDeleteConfirm() {
+    if (!projectId || !deleteTarget) return
+    setDeleting(true)
+    setError('')
+    try {
+      await deleteIdea(projectId, deleteTarget.id)
+      setArticles((prev) => prev.filter((a) => a.id !== deleteTarget.id))
+      setDeleteTarget(null)
+    } catch { setError('Impossible de supprimer cette idée.') }
+    finally { setDeleting(false) }
+  }
+
+  async function handleRestore(article: Article) {
+    if (!projectId) return
+    setError('')
+    try {
+      await restoreIdea(article.id)
+      setTick((t) => t + 1)
+    } catch { setError('Impossible de restaurer cette idée.') }
+  }
+
+  async function handleBulkDelete() {
+    if (!projectId || selectedIds.size === 0) return
+    setDeleting(true)
+    setError('')
+    try {
+      const ids = Array.from(selectedIds)
+      await bulkDeleteIdeas(projectId, ids)
+      setArticles((prev) => prev.filter((a) => !ids.includes(a.id)))
+      setSelectedIds(new Set())
+    } catch { setError('Impossible de supprimer les idées sélectionnées.') }
+    finally { setDeleting(false) }
   }
 
   async function handleBulkSend() {
@@ -318,6 +357,9 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
           <Button size="sm" variant="danger" loading={actionLoading === 'bulk-reject'} onClick={handleBulkReject}>
             Rejeter ({selected.length})
           </Button>
+          <Button size="sm" variant="danger" loading={deleting} onClick={handleBulkDelete}>
+            Supprimer ({selected.length})
+          </Button>
         </div>
       )}
 
@@ -393,6 +435,37 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
                         <XCircle size={14} />
                       </button>
                     )}
+                    {article.status !== 'idea_rejected' && (
+                      <button
+                        type="button"
+                        title="Supprimer définitivement"
+                        onClick={() => setDeleteTarget(article)}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] border border-border bg-surface text-tertiary shadow-sm transition-all hover:-translate-y-px hover:border-danger/30 hover:text-danger active:translate-y-0 active:scale-[0.98]"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                      </button>
+                    )}
+                    {article.status === 'idea_rejected' && (
+                      <>
+                        <button
+                          type="button"
+                          title="Restaurer"
+                          onClick={() => handleRestore(article)}
+                          disabled={!!actionLoading?.includes(article.id)}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] border border-border bg-surface text-tertiary shadow-sm transition-all hover:-translate-y-px hover:border-success/30 hover:text-success active:translate-y-0 active:scale-[0.98]"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                        </button>
+                        <button
+                          type="button"
+                          title="Supprimer définitivement"
+                          onClick={() => setDeleteTarget(article)}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] border border-border bg-surface text-tertiary shadow-sm transition-all hover:-translate-y-px hover:border-danger/30 hover:text-danger active:translate-y-0 active:scale-[0.98]"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                        </button>
+                      </>
+                    )}
                     <button
                       type="button"
                       title="Ouvrir dans l'éditeur"
@@ -456,6 +529,29 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
           <div className="flex gap-2">
             <Button size="sm" variant="secondary" className="flex-1 justify-center" onClick={() => setBulkGenerateOpen(false)}>Fermer</Button>
             <Button size="sm" className="flex-1 justify-center" loading={generating} onClick={handleBulkGenerate}>Générer {bulkCount} idées</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete confirmation modal */}
+      <Modal open={!!deleteTarget} onClose={() => { if (!deleting) setDeleteTarget(null) }} title="Supprimer cette idée ?" size="sm">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start gap-3 rounded-[12px] border border-danger/20 bg-danger/5 px-3.5 py-3">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0 text-danger"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            <div>
+              <p className="text-[14px] font-medium text-primary">{deleteTarget?.title}</p>
+              <p className="mt-0.5 text-[12px] text-secondary leading-snug">
+                Cette idée sera définitivement supprimée. Cette action est irréversible.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" size="sm" className="flex-1 justify-center" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+              Annuler
+            </Button>
+            <Button size="sm" variant="danger" loading={deleting} className="flex-1 justify-center" onClick={handleDeleteConfirm}>
+              Supprimer
+            </Button>
           </div>
         </div>
       </Modal>

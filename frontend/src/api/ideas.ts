@@ -146,3 +146,15 @@ export type ScanMonitoringResponse = {
 export function scanMonitoring(projectId: string): Promise<ScanMonitoringResponse> {
   return api.post<ScanMonitoringResponse>(`/projects/${projectId}/monitoring/scan`)
 }
+
+export function deleteIdea(projectId: string, articleId: string): Promise<void> {
+  return api.delete(`/projects/${projectId}/ideas/${articleId}`)
+}
+
+export function bulkDeleteIdeas(projectId: string, ids: string[]): Promise<{ deleted: number }> {
+  return api.post<{ deleted: number }>(`/projects/${projectId}/ideas/bulk-delete`, { article_ids: ids })
+}
+
+export function restoreIdea(articleId: string): Promise<{ status: string; id: string; title: string }> {
+  return api.post<{ status: string; id: string; title: string }>(`/articles/${articleId}/restore-idea`)
+}

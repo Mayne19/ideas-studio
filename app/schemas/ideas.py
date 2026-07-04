@@ -51,3 +51,7 @@ class LaunchRequest(BaseModel):
     search_intent: str | None = None
     include_faq: bool | None = None
     include_callouts: bool | None = None
+
+
+class BulkDeleteRequest(BaseModel):
+    article_ids: list[str]
