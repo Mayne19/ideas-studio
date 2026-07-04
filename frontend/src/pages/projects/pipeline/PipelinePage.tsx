@@ -383,14 +383,16 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
                         <CheckCircle size={14} />
                       </button>
                     )}
-                    <button
-                      type="button"
-                      title="Rejeter"
-                      onClick={() => setRejectTarget(article)}
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] border border-border bg-surface text-tertiary shadow-sm transition-all hover:-translate-y-px hover:border-danger/30 hover:text-danger active:translate-y-0 active:scale-[0.98]"
-                    >
-                      <XCircle size={14} />
-                    </button>
+                    {article.status !== 'idea_rejected' && (
+                      <button
+                        type="button"
+                        title="Rejeter"
+                        onClick={() => setRejectTarget(article)}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] border border-border bg-surface text-tertiary shadow-sm transition-all hover:-translate-y-px hover:border-danger/30 hover:text-danger active:translate-y-0 active:scale-[0.98]"
+                      >
+                        <XCircle size={14} />
+                      </button>
+                    )}
                     <button
                       type="button"
                       title="Ouvrir dans l'éditeur"
