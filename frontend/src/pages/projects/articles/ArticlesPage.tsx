@@ -473,7 +473,8 @@ export default function ArticlesPage() {
               options={categoryOptions}
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="w-[185px]"
+              className="w-[200px]"
+              title={filterCategory ? categories.find((c) => c.id === filterCategory)?.name : 'Toutes les catégories'}
             />
           )}
           {authors.length > 0 ? (
@@ -511,8 +512,9 @@ export default function ArticlesPage() {
         )}
         {status === 'success' && visibleArticles.length > 0 && (
           <>
-            <TableRoot className="overflow-visible rounded-none border-0">
-              <Table className="border-separate border-spacing-y-2">
+            <TableRoot className="rounded-none border-0">
+              {/* table-fixed : la colonne Titre absorbe l'espace restant et tronque ; les colonnes fixes gardent leur largeur */}
+              <Table className="min-w-[880px] table-fixed border-separate border-spacing-y-2">
                 <TableHeader className="border-0">
                   <TableRow className="hover:bg-transparent">
                   <TableHead className="pr-8">Titre</TableHead>

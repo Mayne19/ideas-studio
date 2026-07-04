@@ -76,7 +76,12 @@ _KEYWORD_STOP_WORDS = {
     "votre", "vos", "notre", "nos", "mon", "ma", "mes", "son", "sa", "ses",
     "leur", "leurs", "le", "la", "les", "un", "une", "des", "du", "au", "aux",
     "pour", "par", "avec", "sans", "dans", "sur", "en", "et", "ou",
+    "qui", "dont", "il", "elle", "ils", "elles", "on", "nous", "vous",
+    "cette", "cet", "ces", "sont", "être",
 }
+
+# Inversions interrogatives françaises : est-il, sont-elles, a-t-on, peut-on…
+_INVERSION_RE = re.compile(r"(est|sont|a|ont|peut|doit|faut|va|vont)(-t)?-(il|elle|ils|elles|on)")
 
 _USEFUL_PREPOSITIONS = {"de", "d", "à"}
 
@@ -197,6 +202,8 @@ def _extract_keyword(value: str) -> str:
             continue
         normalized = clean.lower().replace("’", "'").strip("'")
         normalized = normalized.replace("l'", "").replace("d'", "")
+        if _INVERSION_RE.fullmatch(normalized):
+            continue
         if normalized in _KEYWORD_STOP_WORDS and normalized not in _USEFUL_PREPOSITIONS:
             continue
         if normalized.isdigit() and len(normalized) == 4:
@@ -208,6 +215,11 @@ def _extract_keyword(value: str) -> str:
     if len(tokens) < 2:
         fallback = [word.strip("'’").strip("-") for word in _keyword_words(text) if word.strip("'’").strip("-")]
         tokens = fallback[:6]
+
+    # Un mot-clé ne doit pas se terminer par un mot-outil (préposition, pronom…)
+    weak_endings = _KEYWORD_STOP_WORDS | _USEFUL_PREPOSITIONS
+    while tokens and tokens[-1].lower().strip("'’") in weak_endings:
+        tokens.pop()
     return " ".join(tokens[:6]).strip()
 
 
