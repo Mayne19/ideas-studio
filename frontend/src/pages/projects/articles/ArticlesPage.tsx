@@ -24,6 +24,10 @@ import { useProject } from '@/context/ProjectContext'
 
 const PAGE_SIZE = 20
 
+// Cette page ne liste que les articles sortis de production :
+// validés, programmés, publiés ou publiés à mettre à jour.
+const POST_PRODUCTION_STATUSES = ['ready_to_publish', 'scheduled', 'published', 'update_recommended']
+
 type ScoreFilter = '' | 'global_gte_90' | 'global_lt_90' | 'seo_lt_85' | 'quality_lt_85' | 'readability_lt_80' | 'geo_lt_80' | 'originality_lt_85' | 'critical'
 
 function getPublicUrl(domain: string | undefined | null, slug: string): string {
@@ -196,6 +200,7 @@ export default function ArticlesPage() {
     Promise.resolve().then(() => { if (!cancelled) setStatus('loading') })
     listArticles(projectId, {
       status: filterStatus || undefined,
+      statuses: filterStatus ? undefined : POST_PRODUCTION_STATUSES,
       category_id: filterCategory || undefined,
       search: debouncedSearch || undefined,
       skip: 0,
@@ -223,6 +228,7 @@ export default function ArticlesPage() {
     setLoadingMore(true)
     listArticles(projectId, {
       status: filterStatus || undefined,
+      statuses: filterStatus ? undefined : POST_PRODUCTION_STATUSES,
       category_id: filterCategory || undefined,
       search: debouncedSearch || undefined,
       skip: articles.length,
@@ -352,18 +358,10 @@ export default function ArticlesPage() {
 
   const statusOptions = [
     { value: '', label: 'Tous les statuts' },
-    { value: 'draft', label: 'Brouillon' },
-    { value: 'outline_ready', label: 'Plan prêt' },
-    { value: 'writing_requested', label: 'Rédaction demandée' },
-    { value: 'writing_in_progress', label: 'En rédaction' },
-    { value: 'draft_ready', label: 'Brouillon prêt' },
-    { value: 'review_needed', label: 'Révision requise' },
-    { value: 'correction_needed', label: 'Correction requise' },
     { value: 'ready_to_publish', label: 'Prêt à publier' },
     { value: 'scheduled', label: 'Programmé' },
     { value: 'published', label: 'Publié' },
     { value: 'update_recommended', label: 'Mise à jour conseillée' },
-    { value: 'failed', label: 'Échec' },
   ]
 
   const categoryOptions = [
@@ -422,7 +420,7 @@ export default function ArticlesPage() {
           <div>
             <h1 className="text-[20px] font-semibold text-primary tracking-tight">Articles</h1>
             <p className="mt-0.5 text-[14px] text-secondary">
-              Gérez l'ensemble de votre contenu éditorial.
+              Articles sortis de production : validés, programmés ou publiés.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -506,7 +504,7 @@ export default function ArticlesPage() {
           <EmptyState
             icon={<FileText size={22} />}
             title="Aucun article"
-            description={filterStatus || filterCategory || debouncedSearch ? 'Aucun article ne correspond aux filtres sélectionnés.' : 'Créez votre premier article pour commencer.'}
+            description={filterStatus || filterCategory || debouncedSearch ? 'Aucun article ne correspond aux filtres sélectionnés.' : 'Les articles validés, programmés ou publiés en sortie de production apparaîtront ici.'}
             action={!filterStatus && !filterCategory && !debouncedSearch ? { label: 'Créer un article', onClick: () => setCreateOpen(true) } : undefined}
           />
         )}

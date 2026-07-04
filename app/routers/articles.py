@@ -44,6 +44,7 @@ _ALL_WRITE_ROLES = ("owner", "admin", "editor", "designer")
 def list_articles_route(
     project_id: str,
     status: Optional[str] = None,
+    statuses: Optional[str] = None,
     category_id: Optional[str] = None,
     search: Optional[str] = None,
     published_only: bool = False,
@@ -56,7 +57,9 @@ def list_articles_route(
     db: Session = Depends(get_db),
 ):
     effective_offset = skip if skip is not None else offset
-    return list_articles(db, project_id, status=status, category_id=category_id, search=search,
+    statuses_list = [s.strip() for s in statuses.split(",") if s.strip()] if statuses else None
+    return list_articles(db, project_id, status=status, statuses=statuses_list,
+                         category_id=category_id, search=search,
                          published_only=published_only, archived=archived,
                          blocked_cost_limit=blocked_cost_limit,
                          limit=limit, offset=effective_offset)

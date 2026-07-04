@@ -105,6 +105,7 @@ def list_articles(
     db: Session,
     project_id: str,
     status: str | None = None,
+    statuses: list[str] | None = None,
     category_id: str | None = None,
     search: str | None = None,
     published_only: bool = False,
@@ -120,6 +121,8 @@ def list_articles(
         q = q.filter(Article.status == "archived")
     elif status:
         q = q.filter(Article.status == status)
+    elif statuses:
+        q = q.filter(Article.status.in_(statuses))
     if category_id:
         q = q.filter(Article.category_id == category_id)
     if search:

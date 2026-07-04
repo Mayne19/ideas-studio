@@ -3,6 +3,7 @@ import type { Article } from '@/types'
 
 export type ArticleFilters = {
   status?: string
+  statuses?: string[]
   category_id?: string
   search?: string
   skip?: number
@@ -37,6 +38,7 @@ export type BulkValidateResponse = {
 export function listArticles(projectId: string, filters: ArticleFilters = {}): Promise<Article[]> {
   const params = new URLSearchParams()
   if (filters.status) params.set('status', filters.status)
+  if (filters.statuses && filters.statuses.length > 0) params.set('statuses', filters.statuses.join(','))
   if (filters.category_id) params.set('category_id', filters.category_id)
   if (filters.search) params.set('search', filters.search)
   if (filters.skip !== undefined) params.set('skip', String(filters.skip))
