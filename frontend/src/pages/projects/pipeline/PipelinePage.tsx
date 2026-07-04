@@ -29,6 +29,7 @@ import { listCategories } from '@/api/categories'
 import type { Article, Category } from '@/types'
 import { formatDate } from '@/utils/format'
 import { finiteScore } from '@/lib/scoreBadge'
+import { ApiError } from '@/api/client'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
@@ -210,8 +211,11 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
       await deleteIdea(projectId, deleteTarget.id)
       setArticles((prev) => prev.filter((a) => a.id !== deleteTarget.id))
       setDeleteTarget(null)
-    } catch { setError('Impossible de supprimer cette idée.') }
-    finally { setDeleting(false) }
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Impossible de supprimer cette idée.'
+      console.error('deleteIdea error:', err)
+      setError(msg)
+    } finally { setDeleting(false) }
   }
 
   async function handleRestore(article: Article) {
@@ -220,7 +224,11 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
     try {
       await restoreIdea(article.id)
       setTick((t) => t + 1)
-    } catch { setError('Impossible de restaurer cette idée.') }
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Impossible de restaurer cette idée.'
+      console.error('restoreIdea error:', err)
+      setError(msg)
+    }
   }
 
   async function handleBulkDelete() {
@@ -232,8 +240,11 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
       await bulkDeleteIdeas(projectId, ids)
       setArticles((prev) => prev.filter((a) => !ids.includes(a.id)))
       setSelectedIds(new Set())
-    } catch { setError('Impossible de supprimer les idées sélectionnées.') }
-    finally { setDeleting(false) }
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Impossible de supprimer les idées sélectionnées.'
+      console.error('bulkDeleteIdeas error:', err)
+      setError(msg)
+    } finally { setDeleting(false) }
   }
 
   async function handleBulkSend() {

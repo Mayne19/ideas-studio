@@ -279,8 +279,10 @@ export default function IdeasPipelinePage() {
       await deleteIdea(projectId, deleteTarget.id)
       setAllIdeas((prev) => prev.filter((a) => a.id !== deleteTarget.id))
       setDeleteTarget(null)
-    } catch {
-      setActionError('Impossible de supprimer cette idée.')
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Impossible de supprimer cette idée.'
+      console.error('deleteIdea error:', err)
+      setActionError(msg)
     } finally {
       setDeleting(false)
     }
@@ -305,8 +307,10 @@ export default function IdeasPipelinePage() {
       await bulkDeleteIdeas(projectId, ids)
       setAllIdeas((prev) => prev.filter((a) => !ids.includes(a.id)))
       setSelectedIdeas(new Set())
-    } catch {
-      setActionError('Impossible de supprimer les idées sélectionnées.')
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Impossible de supprimer les idées sélectionnées.'
+      console.error('bulkDeleteIdeas error:', err)
+      setActionError(msg)
     } finally {
       setDeleting(false)
     }
