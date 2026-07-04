@@ -24,9 +24,10 @@ import { useProject } from '@/context/ProjectContext'
 
 const PAGE_SIZE = 20
 
-// Cette page ne liste que les articles sortis de production :
-// validés, programmés, publiés ou publiés à mettre à jour.
-const POST_PRODUCTION_STATUSES = ['ready_to_publish', 'scheduled', 'published', 'update_recommended']
+// Cette page ne liste que les articles validés en sortie de production :
+// programmés ou publiés. Tout le reste (idées, brouillons, rédaction,
+// validation) vit dans les pages Idées et Production.
+const POST_PRODUCTION_STATUSES = ['scheduled', 'published']
 
 type ScoreFilter = '' | 'global_gte_90' | 'global_lt_90' | 'seo_lt_85' | 'quality_lt_85' | 'readability_lt_80' | 'geo_lt_80' | 'originality_lt_85' | 'critical'
 
@@ -358,10 +359,8 @@ export default function ArticlesPage() {
 
   const statusOptions = [
     { value: '', label: 'Tous les statuts' },
-    { value: 'ready_to_publish', label: 'Prêt à publier' },
     { value: 'scheduled', label: 'Programmé' },
     { value: 'published', label: 'Publié' },
-    { value: 'update_recommended', label: 'Mise à jour conseillée' },
   ]
 
   const categoryOptions = [
@@ -420,7 +419,7 @@ export default function ArticlesPage() {
           <div>
             <h1 className="text-[20px] font-semibold text-primary tracking-tight">Articles</h1>
             <p className="mt-0.5 text-[14px] text-secondary">
-              Articles sortis de production : validés, programmés ou publiés.
+              Articles validés en sortie de production : programmés ou publiés.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -504,7 +503,7 @@ export default function ArticlesPage() {
           <EmptyState
             icon={<FileText size={22} />}
             title="Aucun article"
-            description={filterStatus || filterCategory || debouncedSearch ? 'Aucun article ne correspond aux filtres sélectionnés.' : 'Les articles validés, programmés ou publiés en sortie de production apparaîtront ici.'}
+            description={filterStatus || filterCategory || debouncedSearch ? 'Aucun article ne correspond aux filtres sélectionnés.' : 'Les articles que vous aurez validés (programmés ou publiés) apparaîtront ici.'}
             action={!filterStatus && !filterCategory && !debouncedSearch ? { label: 'Créer un article', onClick: () => setCreateOpen(true) } : undefined}
           />
         )}
