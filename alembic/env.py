@@ -35,7 +35,11 @@ database_url = settings.database_url.replace("%", "%%")
 config.set_main_option("sqlalchemy.url", database_url)
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # disable_existing_loggers=False : sinon ce fileConfig désactive silencieusement
+    # tous les loggers déjà créés au moment des migrations de démarrage (uvicorn.access,
+    # uvicorn.error...), y compris ceux qui journalisent les tracebacks des erreurs 500 —
+    # plus aucune requête ni exception n'est journalisée après le démarrage de l'app.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 
