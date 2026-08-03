@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ideas
+      POSTGRES_PASSWORD: ideas
+      POSTGRES_DB: ideas_studio_dev
+    ports: ["5433:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ideas"]
+      interval: 5s
+volumes:
+  pgdata:

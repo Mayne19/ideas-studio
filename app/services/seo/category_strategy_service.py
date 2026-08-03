@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from app.models.article import Article
-from app.models.category import Category
+from app.models.content import Article, Category
+from app.models.reference import ArticleStatus
 from app.schemas.seo_workflow import CategoryStrategy, asdict
+
+_PENDING_STATUSES = (ArticleStatus.DRAFT, ArticleStatus.DRAFT_READY, ArticleStatus.WRITING_IN_PROGRESS)
 
 
 def compute_category_strategy(db: Session, project_id: str) -> CategoryStrategy:
-    categories = db.query(Category).filter(Category.project_id == project_id).all()
+    categories = db.execute(select(Category).where(Category.project_id == project_id)).scalars().all()
     if not categories:
         return CategoryStrategy(limitations=["No categories found"])
 
@@ -19,25 +22,29 @@ def compute_category_strategy(db: Session, project_id: str) -> CategoryStrategy:
     best_score = -1
 
     for cat in categories:
-        priority = getattr(cat, "priority_score", None) or cat.priority or 0
-        freq = getattr(cat, "monthly_frequency", None) or getattr(cat, "target_frequency", None) or 0
-        pipeline_enabled = getattr(cat, "pipeline_enabled", True)
-
-        published_this_month = db.query(Article).filter(
-            Article.project_id == project_id,
-            Article.category_id == cat.id,
-            Article.status == "published",
-            Article.published_at >= first_of_month,
-        ).count()
-
-        pending_drafts = db.query(Article).filter(
-            Article.project_id == project_id,
-            Article.category_id == cat.id,
-            Article.status.in_(["draft", "draft_ready", "writing_in_progress"]),
-        ).count()
+        priority = float(cat.priority_score) if cat.priority_score is not None else 0
+        freq = cat.monthly_target or 0
+        pipeline_enabled = cat.is_pipeline_enabled
 
         if not pipeline_enabled:
             continue
+
+        published_this_month = db.execute(
+            select(func.count()).select_from(Article).where(
+                Article.project_id == project_id,
+                Article.category_id == cat.id,
+                Article.status_reason_id == ArticleStatus.PUBLISHED,
+                Article.published_at >= first_of_month,
+            )
+        ).scalar_one()
+
+        pending_drafts = db.execute(
+            select(func.count()).select_from(Article).where(
+                Article.project_id == project_id,
+                Article.category_id == cat.id,
+                Article.status_reason_id.in_(_PENDING_STATUSES),
+            )
+        ).scalar_one()
 
         saturation_ratio = published_this_month / max(freq, 1) if freq > 0 else 0
         underfed = freq > 0 and published_this_month < freq * 0.5
@@ -68,8 +75,8 @@ def compute_category_strategy(db: Session, project_id: str) -> CategoryStrategy:
             chosen_category_id=cat.id,
             chosen_category_name=cat.name,
             reason="No better option available",
-            priority=cat.priority or 0,
-            expected_frequency=getattr(cat, "target_frequency", None) or 0,
+            priority=float(cat.priority_score) if cat.priority_score is not None else 0,
+            expected_frequency=cat.monthly_target or 0,
             limitations=["All categories saturated or disabled"],
         )
 

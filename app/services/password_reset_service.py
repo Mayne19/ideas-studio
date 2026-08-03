@@ -5,20 +5,20 @@ import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.security import hash_password
-from app.models.password_reset_token import PasswordResetToken
-from app.models.user import User
+from app.models.core import PasswordResetToken, User
 
 logger = logging.getLogger(__name__)
 
 RESET_TOKEN_TTL_MINUTES = 45
 
 
-def _hash_token(token: str) -> str:
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+def _hash_token(token: str) -> bytes:
+    return hashlib.sha256(token.encode("utf-8")).digest()
 
 
 def _frontend_base_url() -> str:
@@ -30,20 +30,21 @@ def _frontend_base_url() -> str:
 
 
 def create_password_reset(db: Session, email: str) -> tuple[bool, str | None]:
-    user = db.query(User).filter(User.email == email).first()
+    user = db.execute(select(User).where(User.email == email)).scalar_one_or_none()
     if not user or not user.is_active:
         return False, None
 
     now = datetime.now(timezone.utc)
-    db.query(PasswordResetToken).filter(
-        PasswordResetToken.user_id == user.id,
-        PasswordResetToken.used_at.is_(None),
-    ).update({"used_at": now})
+    db.execute(
+        update(PasswordResetToken)
+        .where(PasswordResetToken.user_id == user.id, PasswordResetToken.used_at.is_(None))
+        .values(used_at=now)
+    )
 
     raw_token = secrets.token_urlsafe(32)
     reset = PasswordResetToken(
         user_id=user.id,
-        token_hash=_hash_token(raw_token),
+        token_sha256=_hash_token(raw_token),
         expires_at=now + timedelta(minutes=RESET_TOKEN_TTL_MINUTES),
         created_at=now,
     )
@@ -61,10 +62,12 @@ def create_password_reset(db: Session, email: str) -> tuple[bool, str | None]:
 
 def reset_password(db: Session, token: str, password: str) -> bool:
     now = datetime.now(timezone.utc)
-    reset = db.query(PasswordResetToken).filter(
-        PasswordResetToken.token_hash == _hash_token(token),
-        PasswordResetToken.used_at.is_(None),
-    ).first()
+    reset = db.execute(
+        select(PasswordResetToken).where(
+            PasswordResetToken.token_sha256 == _hash_token(token),
+            PasswordResetToken.used_at.is_(None),
+        )
+    ).scalar_one_or_none()
     if not reset:
         return False
     expires_at = reset.expires_at
@@ -75,7 +78,9 @@ def reset_password(db: Session, token: str, password: str) -> bool:
         db.commit()
         return False
 
-    user = db.query(User).filter(User.id == reset.user_id, User.is_active.is_(True)).first()
+    user = db.execute(
+        select(User).where(User.id == reset.user_id, User.is_active.is_(True))
+    ).scalar_one_or_none()
     if not user:
         reset.used_at = now
         db.commit()

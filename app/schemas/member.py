@@ -29,7 +29,6 @@ class MemberPatch(BaseModel):
 
 
 class MemberPublic(BaseModel):
-    id: str
     user_id: str
     user_name: Optional[str] = None
     user_email: Optional[str] = None

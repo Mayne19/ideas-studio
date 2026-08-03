@@ -1,14 +1,12 @@
-import json
 import logging
-import uuid
 from datetime import datetime, timezone, timedelta
 from calendar import monthrange
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from app.models.article import Article
-from app.models.category import Category
+from app.models.content import Category
 from app.services.idea_engine import generate_idea
 from app.services.log_service import log_step
+from app.services.seo.artifacts import save_artifact
 
 logger = logging.getLogger(__name__)
 
@@ -116,16 +114,14 @@ def generate_monthly_plan(
     force: bool = False,
 ) -> dict:
     """Generate ideas for the next month based on category frequencies."""
-    from app.models.project import Project
+    from app.models.core import Project
     project = db.get(Project, project_id)
     if not project:
         return {"error": "Project not found"}
+    profile = project.active_editorial_profile
 
-    # Get categories with their target frequencies
     categories = db.execute(
-        select(Category).where(
-            Category.project_id == project_id,
-        )
+        select(Category).where(Category.project_id == project_id)
     ).scalars().all()
 
     today = datetime.now(timezone.utc).day
@@ -143,7 +139,7 @@ def generate_monthly_plan(
     category_frequencies: dict[str, int] = {}
     total_ideas = 0
     for cat in categories:
-        freq = cat.target_frequency or 1
+        freq = cat.monthly_target or 1
         category_frequencies[cat.id] = freq
         total_ideas += freq
 
@@ -152,9 +148,9 @@ def generate_monthly_plan(
         for cat in categories:
             category_frequencies[cat.id] = 1
 
-    # Build niche map for anti-collision
+    # Build niche map for anti-collision (repose sur overrides.niche, plus de colonne dédiée)
     category_niches: dict[str, str | None] = {
-        cat.id: getattr(cat, "niche", None) for cat in categories
+        cat.id: (cat.overrides or {}).get("niche") for cat in categories
     }
 
     # Distribute dates
@@ -180,33 +176,38 @@ def generate_monthly_plan(
 
     for category_id, freq in sorted(category_frequencies.items(), key=lambda x: -x[1]):
         cat = next((c for c in categories if c.id == category_id), None)
+        cat_dates = date_distribution.get(category_id, [])
         for i in range(freq):
             try:
                 article = generate_idea(
                     db=db,
                     project_id=project_id,
-                    project_audience=project.audience,
-                    project_language=project.language or "fr",
+                    project_audience=profile.audience if profile else None,
+                    project_language=project.locale.split("-")[0] if project.locale else "fr",
                     llm=llm,
                     search=search,
                     category_id=category_id,
                     agent_router=agent_router,
                 )
                 if article:
-                    # Set target dates
-                    if date_index < len(write_dates):
-                        article.target_write_at = write_dates[date_index]
-                    if date_index < len(review_dates):
-                        article.target_review_at = review_dates[date_index]
-                    if date_index < len(cat_dates := date_distribution.get(category_id, [])):
-                        article.scheduled_at = cat_dates[i] if i < len(cat_dates) else None
+                    write_at = write_dates[date_index] if date_index < len(write_dates) else None
+                    review_at = review_dates[date_index] if date_index < len(review_dates) else None
+                    publish_at = cat_dates[i] if i < len(cat_dates) else None
+
+                    if review_at:
+                        article.next_review_at = review_at
+                    save_artifact(db, article.id, "planning_schedule", {
+                        "target_write_at": write_at.isoformat() if write_at else None,
+                        "target_review_at": review_at.isoformat() if review_at else None,
+                        "target_publish_at": publish_at.isoformat() if publish_at else None,
+                    })
 
                     ideas_generated += 1
                     date_index += 1
 
                     log_step(
                         db, project_id,
-                        f"Idée planifiée générée : {article.title} (catégorie : {cat.name if cat else 'aucune'})",
+                        f"Idée planifiée générée : {article.current_revision.title if article.current_revision else ''} (catégorie : {cat.name if cat else 'aucune'})",
                         level="info", step="monthly_planning", article_id=article.id,
                     )
             except Exception as exc:

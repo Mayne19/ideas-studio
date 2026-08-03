@@ -5,12 +5,13 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user, require_project_role
-from app.models.project import Project
-from app.models.article import Article
-from app.models.user import User
+from app.models.core import Project
+from app.models.content import Article
+from app.models.reference import ArticleStatus
+from app.services.article_service import primary_keyword, to_public
 from app.services.idea_engine import generate_idea
 from app.services.seo.seo_generation_orchestrator import generate_full_article
-from app.services.seo.helpers import safe_json_load
+from app.services.seo.artifacts import get_latest_artifact, get_all_latest_artifacts
 from app.services.providers.llm_provider import (
     GenerationFailedError,
     ProviderUnavailableError,
@@ -42,7 +43,7 @@ class GenerateArticleResponse(BaseModel):
     id: str
     title: str
     keyword: str | None
-    status: str
+    status: int
     word_count: int
     provider_name: str | None = None
     model_name: str | None = None
@@ -90,10 +91,11 @@ def generate_article_route(
     project_id: str,
     body: GenerateArticleRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user=Depends(get_current_user),
     _member=Depends(require_project_role("owner", "admin", "editor")),
 ):
     project = _get_project_or_404(project_id, db)
+    profile = project.active_editorial_profile
 
     try:
         llm = get_llm_provider()
@@ -117,7 +119,7 @@ def generate_article_route(
             preferred_title=body.preferred_title,
             keyword=body.keyword,
             category_id=body.category_id,
-            audience=body.audience or project.audience,
+            audience=body.audience or (profile.audience if profile else None),
             angle=body.angle,
             search_intent=body.search_intent,
             context_hint=body.context_hint,
@@ -130,15 +132,16 @@ def generate_article_route(
     db.commit()
     db.refresh(article)
 
+    revision = article.current_revision
     return GenerateArticleResponse(
         id=article.id,
-        title=article.title,
-        keyword=article.keyword,
-        status=article.status,
-        word_count=article.word_count,
+        title=revision.title if revision else "",
+        keyword=primary_keyword(db, article.id),
+        status=article.status_reason_id,
+        word_count=revision.word_count if revision else 0,
         provider_name=llm.provider_name,
         model_name=llm.model_name,
-        has_generation_report=article.generation_report_json is not None,
+        has_generation_report=get_latest_artifact(db, article.id, "generation_report") is not None,
     )
 
 
@@ -147,13 +150,13 @@ def get_generation_report(
     project_id: str,
     article_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user=Depends(get_current_user),
     _member=Depends(require_project_role("owner", "admin", "editor", "designer", "viewer")),
 ):
-    article = db.query(Article).filter(Article.id == article_id, Article.project_id == project_id).first()
-    if not article:
+    article = db.get(Article, article_id)
+    if not article or article.project_id != project_id:
         raise HTTPException(status_code=404, detail="Article not found")
-    return article.generation_report_json or {"error": "No generation report available"}
+    return get_latest_artifact(db, article_id, "generation_report") or {"error": "No generation report available"}
 
 
 @router.get("/projects/{project_id}/articles/{article_id}/seo-workflow")
@@ -161,38 +164,13 @@ def get_seo_workflow(
     project_id: str,
     article_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user=Depends(get_current_user),
     _member=Depends(require_project_role("owner", "admin", "editor", "designer", "viewer")),
 ):
-    article = db.query(Article).filter(Article.id == article_id, Article.project_id == project_id).first()
-    if not article:
+    article = db.get(Article, article_id)
+    if not article or article.project_id != project_id:
         raise HTTPException(status_code=404, detail="Article not found")
-    return {
-        "project_context_json": article.project_context_json,
-        "category_strategy_json": article.category_strategy_json,
-        "idea_discovery_json": article.idea_discovery_json,
-        "intent_analysis_json": article.intent_analysis_json,
-        "research_brief_json": article.research_brief_json,
-        "keyword_brief_json": article.keyword_brief_json,
-        "cannibalization_check_json": article.cannibalization_check_json,
-        "editorial_angle_json": article.editorial_angle_json,
-        "outline_json": safe_json_load(article.outline_json) if article.outline_json else None,
-        "image_plan_json": article.image_plan_json,
-        "image_sources_json": article.image_sources_json,
-        "callout_plan_json": article.callout_plan_json,
-        "faq_json": safe_json_load(article.faq_json) if article.faq_json else None,
-        "internal_links_json": safe_json_load(article.internal_links_json) if article.internal_links_json else None,
-        "external_links_json": safe_json_load(article.external_links_json) if article.external_links_json else None,
-        "language_quality_report_json": article.language_quality_report_json,
-        "originality_report_json": article.originality_report_json,
-        "humanization_report_json": article.humanization_report_json,
-        "eeat_checklist_json": article.eeat_checklist_json,
-        "editorial_quality_report_json": article.editorial_quality_report_json,
-        "seo_final_checklist_json": article.seo_final_checklist_json,
-        "seo_review_json": article.seo_review_json,
-        "generation_report_json": article.generation_report_json,
-        "sources_json": article.sources_json,
-    }
+    return get_all_latest_artifacts(db, article_id)
 
 
 @router.post("/projects/{project_id}/ideas/auto-generate", response_model=AutoGenerateIdeasResponse)
@@ -200,10 +178,11 @@ def auto_generate_ideas_route(
     project_id: str,
     body: AutoGenerateIdeasRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user=Depends(get_current_user),
     _member=Depends(require_project_role("owner", "admin", "editor")),
 ):
     project = _get_project_or_404(project_id, db)
+    profile = project.active_editorial_profile
 
     try:
         llm = get_llm_provider()
@@ -227,21 +206,20 @@ def auto_generate_ideas_route(
             article = generate_idea(
                 db=db,
                 project_id=project_id,
-                project_audience=project.audience,
-                project_language=project.language,
+                project_audience=profile.audience if profile else None,
+                project_language=project.locale.split("-")[0] if project.locale else "fr",
                 llm=llm,
                 search=search,
                 context_hint=context,
             )
             if article:
+                revision = article.current_revision
                 generated.append({
                     "id": article.id,
-                    "title": article.title,
-                    "keyword": article.keyword,
-                    "angle": article.angle,
+                    "title": revision.title if revision else "",
+                    "keyword": primary_keyword(db, article.id),
                     "search_intent": article.search_intent,
-                    "audience": article.audience,
-                    "opportunity_score": article.opportunity_score,
+                    "opportunity_score": float(article.opportunity_score) if article.opportunity_score is not None else None,
                 })
         except (ProviderUnavailableError, GenerationFailedError) as exc:
             errors.append(str(exc))
@@ -262,10 +240,11 @@ def discover_ideas_route(
     project_id: str,
     body: IdeaDiscoverRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user=Depends(get_current_user),
     _member=Depends(require_project_role("owner", "admin", "editor")),
 ):
     project = _get_project_or_404(project_id, db)
+    profile = project.active_editorial_profile
 
     try:
         llm = get_llm_provider()
@@ -281,8 +260,8 @@ def discover_ideas_route(
         search=search,
         count=body.count,
         context_hint=body.context_hint,
-        project_audience=project.audience,
-        project_language=project.language,
+        project_audience=profile.audience if profile else None,
+        project_language=project.locale.split("-")[0] if project.locale else "fr",
         category_strategy=strategy,
     )
 
@@ -303,7 +282,7 @@ def generate_monthly_plan_route(
     project_id: str,
     body: MonthlyPlanRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user=Depends(get_current_user),
     _member=Depends(require_project_role("owner", "admin")),
 ):
     from app.services.monthly_planning import generate_monthly_plan

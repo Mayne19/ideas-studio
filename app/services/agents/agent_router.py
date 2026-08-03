@@ -75,43 +75,26 @@ class AgentRouter:
 
     def _resolve_provider(self, agent_id: str, project_id: str | None = None) -> LLMProvider | None:
         canonical_id = resolve_agent_id(agent_id)
-        # 1. DB assignment
+        # 1. DB assignment (ai.agent_bindings, résolu ligne projet sinon globale)
         if self._db is not None:
             try:
-                from app.models.agent_assignment import AgentAssignment
-                from app.models.ai_provider_config import AIProviderConfig
-
-                candidate_ids = agent_id_variants(agent_id)
-                ass = (
-                    self._db.query(AgentAssignment)
-                    .filter(
-                        AgentAssignment.project_id == project_id,
-                        AgentAssignment.agent_id.in_(candidate_ids),
-                        AgentAssignment.enabled == True,
-                    )
-                    # priorité à l'ID canonique si des lignes legacy coexistent
-                    .order_by((AgentAssignment.agent_id != canonical_id).asc())
-                    .first()
+                from sqlalchemy import select
+                from app.models.ai import Agent
+                from app.services.providers.provider_config import (
+                    resolve_binding_for_agent,
+                    resolve_default_provider,
                 )
-                if ass is not None:
-                    config = (
-                        self._db.query(AIProviderConfig)
-                        .filter(AIProviderConfig.id == ass.provider_id, AIProviderConfig.enabled == True)
-                        .first()
-                    )
+
+                agent_row = self._db.execute(
+                    select(Agent).where(Agent.key == canonical_id)
+                ).scalar_one_or_none()
+                if agent_row is not None:
+                    config = resolve_binding_for_agent(self._db, agent_row.id, project_id)
                     if config is not None:
                         return self._build_provider(config)
 
                 if project_id is not None:
-                    default_config = (
-                        self._db.query(AIProviderConfig)
-                        .filter(
-                            AIProviderConfig.project_id == project_id,
-                            AIProviderConfig.is_default == True,
-                            AIProviderConfig.enabled == True,
-                        )
-                        .first()
-                    )
+                    default_config = resolve_default_provider(self._db, project_id)
                     if default_config is not None:
                         return self._build_provider(default_config)
             except Exception:
@@ -263,22 +246,22 @@ def call_agent(
 
     if db is not None:
         try:
-            from app.models.ai_usage_log import AiUsageLog
-            log_entry = AiUsageLog(
-                agent_id=agent_id,
-                provider_name=provider.provider_name,
-                model_name=provider.model_name,
+            from app.models.ai import UsageEvent
+            from app.models.reference import StepStatus, set_step_status
+            log_entry = UsageEvent(
+                agent_key=resolve_agent_id(agent_id),
+                provider_code=provider.provider_name,
+                model=provider.model_name,
                 project_id=project_id,
                 article_id=article_id,
                 prompt_tokens=input_tokens,
                 completion_tokens=output_tokens,
-                total_tokens=input_tokens + output_tokens,
                 duration_ms=duration_ms,
                 estimated_cost=estimated_cost,
                 actual_cost=actual_cost,
-                status=status,
                 error_message=error if status != "success" else None,
             )
+            set_step_status(log_entry, StepStatus.SUCCEEDED if status == "success" else StepStatus.FAILED)
             db.add(log_entry)
             db.commit()
         except Exception:

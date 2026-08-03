@@ -2,13 +2,13 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.dependencies.auth import get_current_user, get_project_member, require_project_role, get_member_for_project
-from app.models.user import User
-from app.models.project_member import ProjectMember
-from app.models.article import Article
-from app.models.project import Project
+from app.dependencies.auth import MemberView, get_current_user, get_project_member, require_project_role, get_member_for_project
+from app.models.core import Project, User
+from app.models.content import Article
+from app.models.reference import ArticleStatus, set_article_status
 from app.schemas.article import ArticleCreate, ArticleUpdate, ArticlePublic, ArticleScheduleRequest, PromoteResponse, BulkValidateRequest, BulkValidateResponse, BulkValidateByScoreRequest, BulkValidateByScoreResponse
 
 logger = logging.getLogger(__name__)
@@ -17,13 +17,16 @@ from app.services.article_service import (
     delete_article,
     get_article_by_id,
     list_articles,
-    update_article,
-    publish_article,
     promote_article,
-    rollback_article,
-    schedule_article,
-    unschedule_article,
+    to_public,
+    update_article,
+)
+from app.services.article_lifecycle_service import (
+    publish_article,
+    schedule_article_with_validation,
     unpublish_article,
+    unschedule_article,
+    rollback_article,
 )
 from app.services.seo.seo_review_service import (
     build_review_error_report,
@@ -36,14 +39,17 @@ router = APIRouter(tags=["articles"])
 _MANAGE_ROLES = ("owner", "admin", "editor")
 
 # Statuts autorisés pour la publication en lot (exclut idées, publiés et archivés)
-PUBLISHABLE_STATUSES = {"draft", "draft_ready", "ready_to_publish", "scheduled", "review_needed"}
+PUBLISHABLE_STATUSES = {
+    ArticleStatus.DRAFT, ArticleStatus.DRAFT_READY, ArticleStatus.READY_TO_PUBLISH,
+    ArticleStatus.SCHEDULED, ArticleStatus.REVIEW_NEEDED,
+}
 _ALL_WRITE_ROLES = ("owner", "admin", "editor", "designer")
 
 
 @router.get("/projects/{project_id}/articles", response_model=list[ArticlePublic])
 def list_articles_route(
     project_id: str,
-    status: Optional[str] = None,
+    status: Optional[int] = None,
     statuses: Optional[str] = None,
     category_id: Optional[str] = None,
     search: Optional[str] = None,
@@ -53,26 +59,27 @@ def list_articles_route(
     skip: Optional[int] = None,
     limit: int = 20,
     offset: int = 0,
-    member: ProjectMember = Depends(get_project_member),
+    member: MemberView = Depends(get_project_member),
     db: Session = Depends(get_db),
 ):
     effective_offset = skip if skip is not None else offset
-    statuses_list = [s.strip() for s in statuses.split(",") if s.strip()] if statuses else None
-    return list_articles(db, project_id, status=status, statuses=statuses_list,
+    statuses_list = [int(s.strip()) for s in statuses.split(",") if s.strip()] if statuses else None
+    articles = list_articles(db, project_id, status=status, statuses=statuses_list,
                          category_id=category_id, search=search,
                          published_only=published_only, archived=archived,
                          blocked_cost_limit=blocked_cost_limit,
                          limit=limit, offset=effective_offset)
+    return [to_public(db, a) for a in articles]
 
 
 @router.post("/projects/{project_id}/articles", response_model=ArticlePublic, status_code=201)
 def create_article_route(
     project_id: str,
     data: ArticleCreate,
-    member: ProjectMember = Depends(require_project_role(*_ALL_WRITE_ROLES)),
+    member: MemberView = Depends(require_project_role(*_ALL_WRITE_ROLES)),
     db: Session = Depends(get_db),
 ):
-    return create_article(db, data, project_id)
+    return to_public(db, create_article(db, data, project_id))
 
 
 @router.get("/articles/{article_id}", response_model=ArticlePublic)
@@ -87,7 +94,7 @@ def get_article_route(
     member = get_member_for_project(db, current_user.id, article.project_id)
     if not member:
         raise HTTPException(status_code=403, detail="Access denied")
-    return article
+    return to_public(db, article)
 
 
 @router.patch("/articles/{article_id}", response_model=ArticlePublic)
@@ -105,7 +112,7 @@ def patch_article_route(
         raise HTTPException(status_code=403, detail="Access denied")
     if member.role == "viewer":
         raise HTTPException(status_code=403, detail="Viewers cannot edit articles")
-    return update_article(db, article, data)
+    return to_public(db, update_article(db, article, data))
 
 
 @router.post("/projects/{project_id}/articles/{article_id}/seo-expert-review")
@@ -125,14 +132,14 @@ def seo_expert_review_route(
         raise HTTPException(status_code=403, detail="Viewers cannot run SEO expert review")
 
     try:
-        review = run_and_store_seo_review(article)
+        review = run_and_store_seo_review(db, article)
     except Exception as exc:
         review = build_review_error_report(f"L'audit SEO Expert a echoue: {exc}")
-        article.seo_review_json = review
+        from app.services.seo.artifacts import save_artifact
+        save_artifact(db, article.id, "seo_review", review)
         logger.warning("SEO expert review failed for article %s: %s", article.id, exc)
 
     db.commit()
-    db.refresh(article)
     return review
 
 
@@ -148,44 +155,14 @@ def promote_article_route(
     member = get_member_for_project(db, current_user.id, article.project_id)
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions to promote")
-    if article.status != "published":
+    if article.status_reason_id != ArticleStatus.PUBLISHED:
         raise HTTPException(status_code=400, detail="Only published articles can be promoted")
     article = promote_article(db, article)
 
-    project = db.query(Project).filter(Project.id == article.project_id).first()
+    project = db.get(Project, article.project_id)
     revalidation = trigger_project_revalidation(db, project, article=article, event_type="article.updated") if project else {"revalidated": False}
-    revalidated = bool(revalidation.get("revalidated"))
 
-    return PromoteResponse(
-        id=article.id,
-        project_id=article.project_id,
-        category_id=article.category_id,
-        sub_niche=article.sub_niche,
-        title=article.title,
-        slug=article.slug,
-        content=article.content,
-        excerpt=article.excerpt,
-        status=article.status,
-        keyword=article.keyword,
-        meta_title=article.meta_title,
-        meta_description=article.meta_description,
-        cover_image_url=article.cover_image_url,
-        word_count=article.word_count,
-        priority=article.priority,
-        featured=bool(article.featured),
-        seo_score=article.seo_score,
-        readability_score=article.readability_score,
-        quality_score=article.quality_score,
-        eeat_score=article.eeat_score,
-        readiness_status=article.readiness_status,
-        published_at=article.published_at,
-        scheduled_at=article.scheduled_at,
-        created_at=article.created_at,
-        author_name=article.author_name,
-        reading_time_minutes=article.reading_time_minutes,
-        updated_at=article.updated_at,
-        revalidated=revalidated,
-    )
+    return to_public(db, article)
 
 
 @router.post("/articles/{article_id}/publish", response_model=PromoteResponse)
@@ -203,64 +180,11 @@ def publish_article_route(
 
     article = publish_article(db, article)
 
-    project = db.query(Project).filter(Project.id == article.project_id).first()
-    revalidation = trigger_project_revalidation(db, project, article=article, event_type="article.published") if project else {"revalidated": False}
-    revalidated = bool(revalidation.get("revalidated"))
+    project = db.get(Project, article.project_id)
+    if project:
+        trigger_project_revalidation(db, project, article=article, event_type="article.published")
 
-    return PromoteResponse(
-        id=article.id,
-        project_id=article.project_id,
-        category_id=article.category_id,
-        sub_niche=article.sub_niche,
-        title=article.title,
-        slug=article.slug,
-        content=article.content,
-        excerpt=article.excerpt,
-        status=article.status,
-        keyword=article.keyword,
-        meta_title=article.meta_title,
-        meta_description=article.meta_description,
-        cover_image_url=article.cover_image_url,
-        word_count=article.word_count,
-        priority=article.priority,
-        featured=bool(article.featured),
-        seo_score=article.seo_score,
-        readability_score=article.readability_score,
-        quality_score=article.quality_score,
-        eeat_score=article.eeat_score,
-        readiness_status=article.readiness_status,
-        global_score=article.global_score,
-        global_score_valid=bool(article.global_score_valid) if article.global_score_valid is not None else None,
-        published_at=article.published_at,
-        scheduled_at=article.scheduled_at,
-        created_at=article.created_at,
-        author_name=article.author_name,
-        reading_time_minutes=article.reading_time_minutes,
-        updated_at=article.updated_at,
-        revalidated=revalidated,
-    )
-
-
-@router.post("/articles/{article_id}/schedule-update", response_model=ArticlePublic)
-def schedule_update_route(
-    article_id: str,
-    data: ArticleScheduleRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    article = get_article_by_id(db, article_id)
-    if not article:
-        raise HTTPException(status_code=404, detail="Article not found")
-    member = get_member_for_project(db, current_user.id, article.project_id)
-    if not member or member.role not in _MANAGE_ROLES:
-        raise HTTPException(status_code=403, detail="Insufficient permissions to schedule update")
-    if article.status != "published":
-        raise HTTPException(status_code=400, detail="Only published articles can have scheduled updates")
-    article.scheduled_update_at = data.scheduled_at
-    article.updated_at = __import__("datetime").datetime.now(__import__("datetime").timezone.utc)
-    db.commit()
-    db.refresh(article)
-    return article
+    return to_public(db, article)
 
 
 @router.post("/articles/{article_id}/unschedule", response_model=ArticlePublic)
@@ -275,9 +199,9 @@ def unschedule_article_route(
     member = get_member_for_project(db, current_user.id, article.project_id)
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions to unschedule")
-    if article.status != "scheduled":
+    if article.status_reason_id != ArticleStatus.SCHEDULED:
         raise HTTPException(status_code=400, detail="Seuls les articles programmés peuvent être déprogrammés.")
-    return unschedule_article(db, article)
+    return to_public(db, unschedule_article(db, article))
 
 
 @router.post("/articles/{article_id}/schedule", response_model=ArticlePublic)
@@ -293,7 +217,7 @@ def schedule_article_route(
     member = get_member_for_project(db, current_user.id, article.project_id)
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions to schedule")
-    return schedule_article(db, article, data.scheduled_at)
+    return to_public(db, schedule_article_with_validation(db, article, data.scheduled_at))
 
 
 @router.post("/articles/{article_id}/mark-ready", response_model=ArticlePublic)
@@ -308,24 +232,27 @@ def mark_ready_route(
     member = get_member_for_project(db, current_user.id, article.project_id)
     if not member:
         raise HTTPException(status_code=403, detail="Access denied")
-    if member.role == "viewer":
-        raise HTTPException(status_code=403, detail="Viewers cannot change article status")
-    if member.role == "designer":
-        raise HTTPException(status_code=403, detail="Designers cannot change article status")
+    if member.role in ("viewer", "designer"):
+        raise HTTPException(status_code=403, detail="Insufficient permissions to change article status")
 
-    # Compute and store global score
     from app.services.scoring_service import compute_global_score
-    scoring = compute_global_score(article)
-    article.global_score = scoring["global_score"]
-    article.global_score_valid = bool(scoring["global_score_valid"])
-    from datetime import datetime, timezone
-    article.human_validated_at = datetime.now(timezone.utc)
+    from app.models.content import ArticleScore
+    scoring = compute_global_score(db, article.id, article=article)
+    db.add(ArticleScore(
+        article_id=article.id,
+        revision_id=article.current_revision_id,
+        global_score=scoring["global_score"],
+        seo_score=scoring["seo_contrib"],
+        eeat_score=scoring["eeat_contrib"],
+        readability_score=scoring["readability_contrib"],
+        geo_score=scoring["geo_contrib"],
+    ))
 
-    article.status = "ready_to_publish"
+    set_article_status(article, ArticleStatus.READY_TO_PUBLISH)
     article.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(article)
-    return article
+    return to_public(db, article)
 
 
 @router.post("/articles/{article_id}/archive", response_model=ArticlePublic)
@@ -340,12 +267,12 @@ def archive_article_route(
     member = get_member_for_project(db, current_user.id, article.project_id)
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions to archive")
-    article.status = "archived"
-    from datetime import datetime, timezone
+    set_article_status(article, ArticleStatus.ARCHIVED)
+    article.archived_at = datetime.now(timezone.utc)
     article.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(article)
-    return article
+    return to_public(db, article)
 
 
 @router.post("/articles/{article_id}/unarchive", response_model=ArticlePublic)
@@ -360,14 +287,15 @@ def unarchive_article_route(
     member = get_member_for_project(db, current_user.id, article.project_id)
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions to restore")
-    if article.status != "archived":
+    if article.status_reason_id != ArticleStatus.ARCHIVED:
         raise HTTPException(status_code=400, detail="Seuls les articles archivés peuvent être restaurés.")
-    article.status = "draft"
-    article.scheduled_at = None
+    set_article_status(article, ArticleStatus.DRAFT)
+    article.archived_at = None
+    article.scheduled_for = None
     article.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(article)
-    return article
+    return to_public(db, article)
 
 
 @router.post("/articles/{article_id}/rollback", response_model=ArticlePublic)
@@ -382,9 +310,9 @@ def rollback_article_route(
     member = get_member_for_project(db, current_user.id, article.project_id)
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions to rollback")
-    if article.status != "published":
+    if article.status_reason_id != ArticleStatus.PUBLISHED:
         raise HTTPException(status_code=400, detail="Seuls les articles publiés peuvent être restaurés.")
-    return rollback_article(db, article)
+    return to_public(db, rollback_article(db, article))
 
 
 @router.post("/articles/{article_id}/unpublish", response_model=ArticlePublic)
@@ -399,14 +327,14 @@ def unpublish_article_route(
     member = get_member_for_project(db, current_user.id, article.project_id)
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions to unpublish")
-    return unpublish_article(db, article)
+    return to_public(db, unpublish_article(db, article))
 
 
 @router.post("/projects/{project_id}/articles/bulk/validate", response_model=BulkValidateResponse)
 def bulk_validate_articles_route(
     project_id: str,
     data: BulkValidateRequest,
-    member: ProjectMember = Depends(require_project_role(*_MANAGE_ROLES)),
+    member: MemberView = Depends(require_project_role(*_MANAGE_ROLES)),
     db: Session = Depends(get_db),
 ):
     from app.services.validation_service import validate_bulk_articles
@@ -417,15 +345,21 @@ def bulk_validate_articles_route(
 def bulk_validate_by_score_route(
     project_id: str,
     data: BulkValidateByScoreRequest,
-    member: ProjectMember = Depends(require_project_role(*_MANAGE_ROLES)),
+    member: MemberView = Depends(require_project_role(*_MANAGE_ROLES)),
     db: Session = Depends(get_db),
 ):
     from app.services.validation_service import validate_bulk_articles
-    eligible_articles = db.query(Article).filter(
-        Article.project_id == project_id,
-        Article.status.in_(data.statuses),
-        Article.global_score >= data.min_score,
-    ).all()
+    from app.models.content import ArticleScore
+
+    eligible_articles = db.execute(
+        select(Article)
+        .join(ArticleScore, ArticleScore.article_id == Article.id)
+        .where(
+            Article.project_id == project_id,
+            Article.status_reason_id.in_(data.statuses),
+            ArticleScore.global_score >= data.min_score,
+        )
+    ).scalars().unique().all()
     total_eligible = len(eligible_articles)
     eligible_ids = [a.id for a in eligible_articles]
     result = validate_bulk_articles(db, project_id, eligible_ids)
@@ -440,26 +374,25 @@ def bulk_validate_by_score_route(
 def bulk_publish_articles_route(
     project_id: str,
     data: BulkValidateRequest,
-    member: ProjectMember = Depends(require_project_role(*_MANAGE_ROLES)),
+    member: MemberView = Depends(require_project_role(*_MANAGE_ROLES)),
     db: Session = Depends(get_db),
 ):
-    articles = db.query(Article).filter(
-        Article.id.in_(data.article_ids),
-        Article.project_id == project_id,
-    ).all()
+    articles = db.execute(
+        select(Article).where(Article.id.in_(data.article_ids), Article.project_id == project_id)
+    ).scalars().all()
 
     found_ids = {article.id for article in articles}
     not_found = [article_id for article_id in data.article_ids if article_id not in found_ids]
 
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = db.get(Project, project_id)
     published_count = 0
     blocked = []
     for article in articles:
-        if article.status not in PUBLISHABLE_STATUSES:
+        if article.status_reason_id not in PUBLISHABLE_STATUSES:
             blocked.append({
                 "article_id": article.id,
-                "title": article.title,
-                "reasons": [f"Statut non publiable: {article.status}"],
+                "title": article.current_revision.title if article.current_revision else "",
+                "reasons": [f"Statut non publiable: {article.status_reason_id}"],
             })
             continue
         published = publish_article(db, article)

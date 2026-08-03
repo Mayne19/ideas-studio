@@ -1,7 +1,15 @@
-from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
-from app.models.notification import Notification
+from app.models.ops import Notification
+from app.models.reference import LogLevel
+
+_LEVEL_BY_NAME = {
+    "debug": LogLevel.DEBUG,
+    "info": LogLevel.INFO,
+    "success": LogLevel.INFO,
+    "warning": LogLevel.WARNING,
+    "error": LogLevel.ERROR,
+}
 
 
 def create_notification(
@@ -19,8 +27,8 @@ def create_notification(
         user_id=user_id,
         type=type,
         title=title,
-        message=message,
-        level=level,
+        body=message,
+        level_id=_LEVEL_BY_NAME.get(level, LogLevel.INFO),
         link=link,
     )
     db.add(notif)

@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.dependencies.auth import get_current_user, get_member_for_project, get_project_member, require_project_role
-from app.models.user import User
-from app.models.project_member import ProjectMember
-from app.models.kanban_column import KanbanColumn
+from app.dependencies.auth import MemberView, get_current_user, get_member_for_project, get_project_member, require_project_role
+from app.models.core import User
+from app.models.content import BoardColumn
 from app.schemas.kanban_column import KanbanColumnCreate, KanbanColumnUpdate, KanbanColumnPublic
 
 router = APIRouter(tags=["kanban_columns"])
@@ -12,31 +12,28 @@ router = APIRouter(tags=["kanban_columns"])
 _MANAGE_ROLES = ("owner", "admin", "editor")
 
 
-def _column_to_public(column: KanbanColumn) -> KanbanColumnPublic:
+def _column_to_public(column: BoardColumn) -> KanbanColumnPublic:
     return KanbanColumnPublic(
         id=column.id,
         project_id=column.project_id,
-        label=column.label,
-        status=column.status,
+        label=column.label or "",
+        status=column.custom_key or str(column.status_reason_id),
         color=column.color,
         sort_order=column.sort_order,
-        created_at=column.created_at,
-        updated_at=column.updated_at,
     )
 
 
 @router.get("/projects/{project_id}/kanban-columns", response_model=list[KanbanColumnPublic])
 def list_kanban_columns(
     project_id: str,
-    member: ProjectMember = Depends(get_project_member),
+    member: MemberView = Depends(get_project_member),
     db: Session = Depends(get_db),
 ):
-    columns = (
-        db.query(KanbanColumn)
-        .filter(KanbanColumn.project_id == project_id)
-        .order_by(KanbanColumn.sort_order, KanbanColumn.created_at)
-        .all()
-    )
+    columns = db.execute(
+        select(BoardColumn)
+        .where(BoardColumn.project_id == project_id)
+        .order_by(BoardColumn.sort_order, BoardColumn.id)
+    ).scalars().all()
     return [_column_to_public(c) for c in columns]
 
 
@@ -44,21 +41,19 @@ def list_kanban_columns(
 def create_kanban_column(
     project_id: str,
     data: KanbanColumnCreate,
-    member: ProjectMember = Depends(require_project_role(*_MANAGE_ROLES)),
+    member: MemberView = Depends(require_project_role(*_MANAGE_ROLES)),
     db: Session = Depends(get_db),
 ):
-    status = data.status or f"custom_{data.label.lower().replace(' ', '_')}"
-    existing = (
-        db.query(KanbanColumn)
-        .filter(KanbanColumn.project_id == project_id, KanbanColumn.label == data.label)
-        .first()
-    )
+    custom_key = data.status or f"custom_{data.label.lower().replace(' ', '_')}"
+    existing = db.execute(
+        select(BoardColumn).where(BoardColumn.project_id == project_id, BoardColumn.label == data.label)
+    ).scalar_one_or_none()
     if existing:
         raise HTTPException(status_code=409, detail="Une colonne avec ce nom existe déjà.")
-    column = KanbanColumn(
+    column = BoardColumn(
         project_id=project_id,
+        custom_key=custom_key,
         label=data.label,
-        status=status,
         color=data.color,
         sort_order=data.sort_order,
     )
@@ -75,7 +70,7 @@ def update_kanban_column(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    column = db.query(KanbanColumn).filter(KanbanColumn.id == column_id).first()
+    column = db.get(BoardColumn, column_id)
     if not column:
         raise HTTPException(status_code=404, detail="Colonne introuvable.")
     member = get_member_for_project(db, current_user.id, column.project_id)
@@ -100,7 +95,7 @@ def delete_kanban_column(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    column = db.query(KanbanColumn).filter(KanbanColumn.id == column_id).first()
+    column = db.get(BoardColumn, column_id)
     if not column:
         raise HTTPException(status_code=404, detail="Colonne introuvable.")
     member = get_member_for_project(db, current_user.id, column.project_id)

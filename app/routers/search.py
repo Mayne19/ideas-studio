@@ -1,14 +1,11 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, select
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user
-from app.models.user import User
-from app.models.project import Project
-from app.models.project_member import ProjectMember
-from app.models.article import Article
-from app.models.category import Category
-from app.models.media_asset import MediaAsset
+from app.models.core import Project, ProjectMember, User
+from app.models.content import Article, ArticleKeyword, ArticleRevision, Category, Keyword, MediaAsset
+from app.models.reference import KeywordRole, MembershipStatus
 
 router = APIRouter(tags=["search"])
 
@@ -24,11 +21,12 @@ def global_search(
         return []
 
     query = q.strip()
-    member_project_ids = [
-        m.project_id for m in db.query(ProjectMember)
-        .filter(ProjectMember.user_id == current_user.id, ProjectMember.status == "active")
-        .all()
-    ]
+    member_project_ids = db.execute(
+        select(ProjectMember.project_id).where(
+            ProjectMember.user_id == current_user.id,
+            ProjectMember.status_reason_id == MembershipStatus.ACTIVE,
+        )
+    ).scalars().all()
 
     if not member_project_ids:
         return []
@@ -63,103 +61,101 @@ def global_search(
                     "project_id": project_id,
                 })
 
-    # Search articles
-    articles = (
-        db.query(Article)
-        .filter(
+    project_names = {
+        p.id: p.name
+        for p in db.execute(select(Project).where(Project.id.in_(member_project_ids))).scalars().all()
+    }
+
+    # Search articles (join revision pour titre/contenu, join keyword pour mot-clé)
+    article_rows = db.execute(
+        select(Article, ArticleRevision, Keyword.term)
+        .join(ArticleRevision, ArticleRevision.id == Article.current_revision_id)
+        .outerjoin(
+            ArticleKeyword,
+            (ArticleKeyword.article_id == Article.id) & (ArticleKeyword.role == KeywordRole.PRIMARY),
+        )
+        .outerjoin(Keyword, Keyword.id == ArticleKeyword.keyword_id)
+        .where(
             Article.project_id.in_(member_project_ids),
             or_(
-                Article.title.ilike(f"%{query}%"),
+                ArticleRevision.title.ilike(f"%{query}%"),
                 Article.slug.ilike(f"%{query}%"),
-                Article.content.ilike(f"%{query}%"),
-                Article.keyword.ilike(f"%{query}%"),
-                Article.excerpt.ilike(f"%{query}%"),
+                ArticleRevision.body.ilike(f"%{query}%"),
+                Keyword.term.ilike(f"%{query}%"),
+                ArticleRevision.excerpt.ilike(f"%{query}%"),
             ),
         )
         .limit(limit)
-        .all()
-    )
-    for a in articles:
-        project = db.query(Project).filter(Project.id == a.project_id).first()
+    ).all()
+    for article, revision, keyword_term in article_rows:
         results.append({
             "type": "article",
-            "id": a.id,
-            "title": a.title,
-            "subtitle": project.name if project else a.status,
-            "slug": a.slug,
-            "excerpt": a.excerpt,
-            "url": f"/projects/{a.project_id}/articles/{a.id}/edit",
-            "project_id": a.project_id,
-            "project_name": project.name if project else None,
-            "status": a.status,
-            "updated_at": a.updated_at.isoformat() if a.updated_at else None,
+            "id": article.id,
+            "title": revision.title,
+            "subtitle": project_names.get(article.project_id, str(article.status_reason_id)),
+            "slug": article.slug,
+            "excerpt": revision.excerpt,
+            "url": f"/projects/{article.project_id}/articles/{article.id}/edit",
+            "project_id": article.project_id,
+            "project_name": project_names.get(article.project_id),
+            "status": article.status_reason_id,
+            "updated_at": article.updated_at.isoformat() if article.updated_at else None,
         })
 
     # Search categories
-    categories = (
-        db.query(Category)
-        .filter(
+    categories = db.execute(
+        select(Category).where(
             Category.project_id.in_(member_project_ids),
             or_(
                 Category.name.ilike(f"%{query}%"),
                 Category.description.ilike(f"%{query}%"),
             ),
-        )
-        .limit(limit)
-        .all()
-    )
+        ).limit(limit)
+    ).scalars().all()
     for c in categories:
-        project = db.query(Project).filter(Project.id == c.project_id).first()
         results.append({
             "type": "category",
             "id": c.id,
             "title": c.name,
-            "subtitle": project.name if project else "Catégorie",
+            "subtitle": project_names.get(c.project_id, "Catégorie"),
             "slug": c.slug,
             "excerpt": c.description,
             "url": f"/projects/{c.project_id}/categories",
             "project_id": c.project_id,
-            "project_name": project.name if project else None,
+            "project_name": project_names.get(c.project_id),
             "updated_at": c.updated_at.isoformat() if c.updated_at else None,
         })
 
-    media_items = (
-        db.query(MediaAsset)
-        .filter(
+    media_items = db.execute(
+        select(MediaAsset).where(
             MediaAsset.project_id.in_(member_project_ids),
             or_(
                 MediaAsset.filename.ilike(f"%{query}%"),
                 MediaAsset.alt_text.ilike(f"%{query}%"),
                 MediaAsset.caption.ilike(f"%{query}%"),
             ),
-        )
-        .limit(limit)
-        .all()
-    )
+        ).limit(limit)
+    ).scalars().all()
     for media in media_items:
-        project = db.query(Project).filter(Project.id == media.project_id).first()
         results.append({
             "type": "media",
             "id": media.id,
             "title": media.filename or media.url,
-            "subtitle": project.name if project else "Média",
+            "subtitle": project_names.get(media.project_id, "Média"),
             "url": f"/projects/{media.project_id}/media",
             "project_id": media.project_id,
-            "project_name": project.name if project else None,
-            "updated_at": media.updated_at.isoformat() if media.updated_at else None,
+            "project_name": project_names.get(media.project_id),
+            "updated_at": media.created_at.isoformat() if media.created_at else None,
         })
 
     # Search projects
-    projects = (
-        db.query(Project)
-        .filter(
+    matched_projects = db.execute(
+        select(Project).where(
             Project.id.in_(member_project_ids),
             Project.name.ilike(f"%{query}%"),
-        )
-        .limit(limit)
-        .all()
-    )
-    for p in projects:
+        ).limit(limit)
+    ).scalars().all()
+    for p in matched_projects:
         results.append({
             "type": "project",
             "id": p.id,

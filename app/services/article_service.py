@@ -1,17 +1,13 @@
 from datetime import datetime, timezone
-import json
-import re
+
 from fastapi import HTTPException
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
-from app.models.article import Article
-from app.models.article_log import ArticleLog
-from app.models.article_version import ArticleVersion
-from app.models.category import Category
-from app.models.media_asset import MediaAsset
-from app.models.optimization_recommendation import OptimizationRecommendation
-from app.models.seo_analysis import SeoAnalysis
-from app.schemas.article import ArticleCreate, ArticleUpdate, ArticlePublicApiResponse, CategoryBrief
-from app.core.utils import slugify, generate_unique_slug, calculate_word_count
+
+from app.core.utils import slugify, generate_unique_slug, calculate_word_count, calculate_reading_time_minutes
+from app.models.content import Article, ArticleKeyword, ArticleRevision, ArticleSeo, Category, Keyword, KeywordRole
+from app.models.reference import ArticleStatus, RevisionSource, set_article_status
+from app.schemas.article import ArticleCreate, ArticleUpdate, ArticlePublic, ArticlePublicApiResponse, CategoryBrief
 from app.services.callout_template_service import extract_callouts_from_content
 
 _EMPTY_CONTENT_MESSAGE = "Protection : contenu vide non sauvegardé pour éviter d'écraser un article existant."
@@ -20,6 +16,7 @@ _EMPTY_CONTENT_MESSAGE = "Protection : contenu vide non sauvegardé pour éviter
 def _is_effectively_empty_content(value: str | None) -> bool:
     if value is None:
         return True
+    import re
     text = re.sub(r"<[^>]+>", " ", value)
     text = text.replace("&nbsp;", " ").replace("\xa0", " ")
     text = re.sub(r"\s+", " ", text).strip()
@@ -28,24 +25,38 @@ def _is_effectively_empty_content(value: str | None) -> bool:
 
 def _unique_slug(db: Session, project_id: str, title: str, exclude_id: str | None = None) -> str:
     base = slugify(title)
-    q = db.query(Article.slug).filter(
+    query = select(Article.slug).where(
         Article.project_id == project_id,
         Article.slug.like(f"{base}%"),
     )
     if exclude_id:
-        q = q.filter(Article.id != exclude_id)
-    existing = {row[0] for row in q.all()}
+        query = query.where(Article.id != exclude_id)
+    existing = {row[0] for row in db.execute(query).all()}
     return generate_unique_slug(base, existing)
 
 
-def _snapshot_published_fields(article: Article) -> None:
-    article.published_content = article.content
-    article.published_title = article.title
-    article.published_excerpt = article.excerpt
-    article.published_meta_description = article.meta_description
-    article.published_cover_image_url = article.cover_image_url
-    article.published_faq_json = article.faq_json
-    article.published_callouts_json = article.callouts_json
+def set_primary_keyword(db: Session, project_id: str, article_id: str, term: str | None) -> None:
+    db.execute(
+        ArticleKeyword.__table__.delete().where(
+            ArticleKeyword.article_id == article_id, ArticleKeyword.role == KeywordRole.PRIMARY
+        )
+    )
+    if not term:
+        return
+    keyword = db.execute(select(Keyword).where(Keyword.project_id == project_id, Keyword.term == term)).scalar_one_or_none()
+    if keyword is None:
+        keyword = Keyword(project_id=project_id, term=term)
+        db.add(keyword)
+        db.flush()
+    db.add(ArticleKeyword(article_id=article_id, keyword_id=keyword.id, role=KeywordRole.PRIMARY))
+
+
+def primary_keyword(db: Session, article_id: str) -> str | None:
+    return db.execute(
+        select(Keyword.term)
+        .join(ArticleKeyword, ArticleKeyword.keyword_id == Keyword.id)
+        .where(ArticleKeyword.article_id == article_id, ArticleKeyword.role == KeywordRole.PRIMARY)
+    ).scalar_one_or_none()
 
 
 def create_article(db: Session, data: ArticleCreate, project_id: str) -> Article:
@@ -54,58 +65,119 @@ def create_article(db: Session, data: ArticleCreate, project_id: str) -> Article
         project_id=project_id,
         category_id=data.category_id,
         sub_niche=data.sub_niche,
-        title=data.title,
         slug=slug,
-        content=data.content,
-        excerpt=data.excerpt,
-        status="draft",
-        keyword=data.keyword,
-        secondary_keywords_json=data.secondary_keywords_json,
-        audience=data.audience,
-        angle=data.angle,
         search_intent=data.search_intent,
-        meta_title=data.meta_title,
-        meta_description=data.meta_description,
-        cover_image_url=data.cover_image_url,
-        word_count=calculate_word_count(data.content),
         priority=data.priority,
-        featured=data.featured,
+        is_featured=data.is_featured,
         author_name=data.author_name,
     )
+    set_article_status(article, ArticleStatus.DRAFT)
     db.add(article)
+    db.flush()
+
+    revision = ArticleRevision(
+        article_id=article.id,
+        revision_no=1,
+        source=RevisionSource.HUMAN,
+        title=data.title,
+        excerpt=data.excerpt,
+        body=data.content,
+        word_count=calculate_word_count(data.content or ""),
+    )
+    db.add(revision)
+    db.flush()
+    article.current_revision_id = revision.id
+
+    if data.meta_title or data.meta_description:
+        db.add(ArticleSeo(article_id=article.id, meta_title=data.meta_title, meta_description=data.meta_description))
+
+    set_primary_keyword(db, project_id, article.id, data.keyword)
+
     db.commit()
     db.refresh(article)
     return article
 
 
 def get_article_by_id(db: Session, article_id: str) -> Article | None:
-    article = db.query(Article).filter(Article.id == article_id).first()
-    if article:
-        _attach_validation_summary(article)
-    return article
+    return db.get(Article, article_id)
 
 
-def _attach_validation_summary(article: Article) -> Article:
+def to_public(db: Session, article: Article) -> ArticlePublic:
+    from app.services.validation_service import check_validation_thresholds
+
+    revision = article.current_revision
+    seo = db.get(ArticleSeo, article.id)
+    keyword = primary_keyword(db, article.id)
+
+    from app.models.content import ArticleScore
+    latest_score = db.execute(
+        select(ArticleScore)
+        .where(ArticleScore.article_id == article.id)
+        .order_by(ArticleScore.evaluated_at.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+
     try:
-        from app.services.validation_service import check_validation_thresholds
-        result = check_validation_thresholds(article)
-        article.global_score = result["global_score"]
-        article.global_score_valid = bool(result["global_score_valid"])
-        article.is_validable = result["valid"]
-        article.validation_reasons = result["reasons"]
-        article.critical_warnings = result["critical_warnings"]
+        validation = check_validation_thresholds(db, article)
+        is_validable = validation["valid"]
+        reasons = validation["reasons"]
+        warnings = validation["critical_warnings"]
+        global_score = validation["global_score"]
+        global_score_valid = validation["global_score_valid"]
     except Exception:
-        article.is_validable = None
-        article.validation_reasons = []
-        article.critical_warnings = []
-    return article
+        is_validable, reasons, warnings = None, [], []
+        global_score = float(latest_score.global_score) if latest_score and latest_score.global_score is not None else None
+        global_score_valid = None
+
+    return ArticlePublic(
+        id=article.id,
+        project_id=article.project_id,
+        category_id=article.category_id,
+        sub_niche=article.sub_niche,
+        title=revision.title if revision else "",
+        slug=article.slug,
+        content=revision.body if revision else None,
+        excerpt=revision.excerpt if revision else None,
+        status=article.status_reason_id,
+        keyword=keyword,
+        meta_title=seo.meta_title if seo else None,
+        meta_description=seo.meta_description if seo else None,
+        word_count=revision.word_count if revision else 0,
+        priority=article.priority,
+        is_featured=article.is_featured,
+        seo_score=float(latest_score.seo_score) if latest_score and latest_score.seo_score is not None else None,
+        readability_score=float(latest_score.readability_score) if latest_score and latest_score.readability_score is not None else None,
+        quality_score=float(latest_score.quality_score) if latest_score and latest_score.quality_score is not None else None,
+        eeat_score=float(latest_score.eeat_score) if latest_score and latest_score.eeat_score is not None else None,
+        geo_score=float(latest_score.geo_score) if latest_score and latest_score.geo_score is not None else None,
+        global_score=global_score,
+        global_score_valid=global_score_valid,
+        is_validable=is_validable,
+        validation_reasons=reasons,
+        critical_warnings=warnings,
+        published_at=article.published_at,
+        scheduled_for=article.scheduled_for,
+        created_at=article.created_at,
+        updated_at=article.updated_at,
+        author_name=article.author_name,
+        reading_time_minutes=revision.reading_time_minutes if revision else None,
+        target_word_count=article.target_word_count,
+        content_format=article.content_format,
+        angle=None,
+        search_intent=article.search_intent,
+        opportunity_score=float(article.opportunity_score) if article.opportunity_score is not None else None,
+        audience=None,
+        rejection_reason=article.rejection_reason,
+        rejection_note=article.rejection_note,
+        has_draft_changes=article.current_revision_id != article.published_revision_id,
+    )
 
 
 def list_articles(
     db: Session,
     project_id: str,
-    status: str | None = None,
-    statuses: list[str] | None = None,
+    status: int | None = None,
+    statuses: list[int] | None = None,
     category_id: str | None = None,
     search: str | None = None,
     published_only: bool = False,
@@ -114,213 +186,124 @@ def list_articles(
     limit: int = 20,
     offset: int = 0,
 ) -> list[Article]:
-    q = db.query(Article).filter(Article.project_id == project_id)
+    query = select(Article).where(Article.project_id == project_id)
     if published_only:
-        q = q.filter(Article.status == "published")
+        query = query.where(Article.status_reason_id == ArticleStatus.PUBLISHED)
     elif archived:
-        q = q.filter(Article.status == "archived")
-    elif status:
-        q = q.filter(Article.status == status)
+        query = query.where(Article.status_reason_id == ArticleStatus.ARCHIVED)
+    elif status is not None:
+        query = query.where(Article.status_reason_id == status)
     elif statuses:
-        q = q.filter(Article.status.in_(statuses))
+        query = query.where(Article.status_reason_id.in_(statuses))
     if category_id:
-        q = q.filter(Article.category_id == category_id)
+        query = query.where(Article.category_id == category_id)
     if search:
-        term = f"%{search}%"
-        q = q.filter(Article.title.ilike(term))
+        query = query.join(ArticleRevision, ArticleRevision.id == Article.current_revision_id).where(
+            ArticleRevision.title.ilike(f"%{search}%")
+        )
+
+    query = query.order_by(Article.created_at.desc())
+    rows = db.execute(query).scalars().all()
+
     if blocked_cost_limit is not None:
-        rows = q.order_by(Article.created_at.desc()).all()
-        filtered: list[Article] = []
+        from app.services.seo.artifacts import get_latest_artifact
+        filtered = []
         for article in rows:
-            cost_data = article.estimated_cost_json if isinstance(article.estimated_cost_json, dict) else None
+            cost_data = get_latest_artifact(db, article.id, "estimated_cost")
             try:
                 cost = float(cost_data.get("estimated_cost_eur")) if cost_data else None
             except (TypeError, ValueError):
                 cost = None
             if cost is not None and cost > blocked_cost_limit:
                 filtered.append(article)
-        return [_attach_validation_summary(a) for a in filtered[offset:offset + limit]]
-    return [_attach_validation_summary(a) for a in q.order_by(Article.created_at.desc()).limit(limit).offset(offset).all()]
+        rows = filtered
+
+    return rows[offset:offset + limit]
 
 
 def update_article(db: Session, article: Article, data: ArticleUpdate) -> Article:
     update_dict = data.model_dump(exclude_unset=True)
+
     if (
-        article.status == "published"
+        article.status_reason_id == ArticleStatus.PUBLISHED
         and "content" in update_dict
         and _is_effectively_empty_content(update_dict.get("content"))
-        and not _is_effectively_empty_content(article.content)
+        and article.current_revision
+        and not _is_effectively_empty_content(article.current_revision.body)
     ):
         raise HTTPException(status_code=409, detail=_EMPTY_CONTENT_MESSAGE)
-    for field, value in update_dict.items():
-        if field.startswith("published_"):
-            continue
-        setattr(article, field, value)
-    if "content" in update_dict:
-        article.word_count = calculate_word_count(article.content)
-        article.callouts_json = extract_callouts_from_content(article.content)
-    db.commit()
-    db.refresh(article)
-    return article
 
+    revision_fields = {"title", "content", "excerpt", "faq", "callouts"}
+    seo_fields = {"meta_title", "meta_description"}
+    article_fields = {
+        "category_id", "sub_niche", "slug", "search_intent",
+        "rejection_reason", "rejection_note", "priority", "is_featured", "author_name",
+        "target_word_count", "content_format",
+    }
 
-def publish_article(db: Session, article: Article) -> Article:
-    from app.services.scoring_service import compute_global_score
-    # Create a publication snapshot before publishing
-    from app.services.version_service import create_version
-    create_version(db, article, "publish_snapshot")
-    _snapshot_published_fields(article)
-    article.status = "published"
-    now = datetime.now(timezone.utc)
-    if article.published_at is None:
-        article.published_at = now
-    article.updated_at = now
-    article.human_validated_at = now
-    # Compute and store global score
-    scoring = compute_global_score(article)
-    article.global_score = scoring["global_score"]
-    article.global_score_valid = bool(scoring["global_score_valid"])
-    db.commit()
-    db.refresh(article)
-    return article
-
-
-def schedule_article_with_validation(db: Session, article: Article, scheduled_at: datetime) -> Article:
-    from app.services.validation_service import check_validation_thresholds
-    from app.services.scoring_service import compute_global_score
-
-    result = check_validation_thresholds(article, planned_publish_at=scheduled_at)
-    if not result["valid"]:
-        reasons = "; ".join(result["reasons"])
-        raise HTTPException(
-            status_code=400,
-            detail=f"Article non validable pour la programmation : {reasons}",
+    if revision_fields & update_dict.keys():
+        current = article.current_revision
+        last_no = db.execute(
+            select(ArticleRevision.revision_no)
+            .where(ArticleRevision.article_id == article.id)
+            .order_by(ArticleRevision.revision_no.desc())
+            .limit(1)
+        ).scalar_one_or_none() or 0
+        body = update_dict.get("content", current.body if current else None)
+        revision = ArticleRevision(
+            article_id=article.id,
+            revision_no=last_no + 1,
+            source=RevisionSource.HUMAN,
+            title=update_dict.get("title", current.title if current else ""),
+            excerpt=update_dict.get("excerpt", current.excerpt if current else None),
+            body=body,
+            faq=update_dict.get("faq", current.faq if current else []),
+            callouts=update_dict.get("callouts", extract_callouts_from_content(body) or (current.callouts if current else [])),
+            word_count=calculate_word_count(body or ""),
+            reading_time_minutes=calculate_reading_time_minutes(calculate_word_count(body or "")),
         )
+        db.add(revision)
+        db.flush()
+        article.current_revision_id = revision.id
 
-    # Compute and store global score
-    scoring = compute_global_score(article)
-    article.global_score = scoring["global_score"]
-    article.global_score_valid = bool(scoring["global_score_valid"])
+    if seo_fields & update_dict.keys():
+        seo = db.get(ArticleSeo, article.id)
+        if seo is None:
+            seo = ArticleSeo(article_id=article.id)
+            db.add(seo)
+        if "meta_title" in update_dict:
+            seo.meta_title = update_dict["meta_title"]
+        if "meta_description" in update_dict:
+            seo.meta_description = update_dict["meta_description"]
 
-    article.status = "scheduled"
-    article.scheduled_at = scheduled_at
-    article.human_validated_at = datetime.now(timezone.utc)
-    db.commit()
-    db.refresh(article)
-    return article
+    if "keyword" in update_dict:
+        set_primary_keyword(db, article.project_id, article.id, update_dict["keyword"])
 
+    for field in article_fields:
+        if field in update_dict:
+            setattr(article, field, update_dict[field])
 
-def rollback_article(db: Session, article: Article) -> Article:
-    """Rollback to the last publish_snapshot version."""
-    from app.models.article_version import ArticleVersion
-    last_snapshot = (
-        db.query(ArticleVersion)
-        .filter(
-            ArticleVersion.article_id == article.id,
-            ArticleVersion.version_type == "publish_snapshot",
-        )
-        .order_by(ArticleVersion.created_at.desc())
-        .first()
-    )
-    if not last_snapshot:
-        raise HTTPException(status_code=404, detail="Aucun snapshot de publication disponible pour le rollback.")
-
-    # Save current state before rolling back
-    from app.services.version_service import create_version
-    create_version(db, article, "restore", article.author_name)
-
-    article.title = last_snapshot.title
-    article.slug = last_snapshot.slug
-    article.content = last_snapshot.content
-    article.excerpt = last_snapshot.excerpt
-    article.meta_title = last_snapshot.meta_title
-    article.meta_description = last_snapshot.meta_description
-    article.cover_image_url = last_snapshot.cover_image_url
-    article.faq_json = last_snapshot.faq_json
-    article.callouts_json = last_snapshot.callouts_json
-    article.internal_links_json = last_snapshot.internal_links_json
-    article.external_links_json = last_snapshot.external_links_json
-    if last_snapshot.content:
-        article.word_count = calculate_word_count(last_snapshot.content)
-    article.status = "published"
     article.updated_at = datetime.now(timezone.utc)
-
-    # Restore published fields too
-    _snapshot_published_fields(article)
-
     db.commit()
     db.refresh(article)
     return article
 
 
 def promote_article(db: Session, article: Article) -> Article:
-    _snapshot_published_fields(article)
+    """Historiquement : recopiait content -> published_*. En v3, published_revision_id
+    EST le snapshot — rien à recopier hors de publish_article. Conservé comme no-op
+    pour compatibilité de route, voir REPRENDRE-LA-MAIN.md §6 étape 5."""
     article.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(article)
     return article
-
-
-def schedule_article(db: Session, article: Article, scheduled_at: datetime) -> Article:
-    return schedule_article_with_validation(db, article, scheduled_at)
-
-
-def unpublish_article(db: Session, article: Article) -> Article:
-    article.status = "draft"
-    db.commit()
-    db.refresh(article)
-    try:
-        from app.models.project import Project
-        from app.services.publication_revalidation_service import trigger_project_revalidation
-        project = db.query(Project).filter(Project.id == article.project_id).first()
-        if project:
-            trigger_project_revalidation(db, project, article=article, event_type="article.unpublished")
-    except Exception as exc:
-        import logging
-        logging.getLogger(__name__).warning("Revalidation after unpublish failed: %s", exc)
-    return article
-
-
-def unschedule_article(db: Session, article: Article) -> Article:
-    article.status = "draft"
-    article.scheduled_at = None
-    article.updated_at = datetime.now(timezone.utc)
-    db.commit()
-    db.refresh(article)
-    return article
-
-
-def prepare_article_delete(db: Session, article: Article) -> None:
-    from app.models.article_comment import ArticleComment
-
-    db.query(SeoAnalysis).filter(SeoAnalysis.article_id == article.id).delete(synchronize_session=False)
-    db.query(ArticleVersion).filter(ArticleVersion.article_id == article.id).delete(synchronize_session=False)
-    db.query(ArticleComment).filter(ArticleComment.article_id == article.id).delete(synchronize_session=False)
-    db.query(ArticleLog).filter(ArticleLog.article_id == article.id).update(
-        {ArticleLog.article_id: None},
-        synchronize_session=False,
-    )
-    db.query(MediaAsset).filter(MediaAsset.article_id == article.id).update(
-        {MediaAsset.article_id: None},
-        synchronize_session=False,
-    )
-    db.query(OptimizationRecommendation).filter(OptimizationRecommendation.article_id == article.id).update(
-        {OptimizationRecommendation.article_id: None},
-        synchronize_session=False,
-    )
-    db.query(Article).filter(Article.original_article_id == article.id).update(
-        {Article.original_article_id: None},
-        synchronize_session=False,
-    )
-    db.query(Article).filter(Article.revision_of_article_id == article.id).update(
-        {Article.revision_of_article_id: None},
-        synchronize_session=False,
-    )
-    db.delete(article)
 
 
 def delete_article(db: Session, article: Article) -> None:
-    prepare_article_delete(db, article)
+    """content.articles cascade sur article_revisions/article_seo/article_scores/
+    article_comments/article_keywords/article_links/artifacts/workflow_runs —
+    voir ON DELETE CASCADE dans 01-schema.sql."""
+    db.delete(article)
     db.commit()
 
 
@@ -333,59 +316,50 @@ def get_public_articles(
     sub_niche: str | None = None,
     featured: bool | None = None,
 ) -> list[ArticlePublicApiResponse]:
-    q = (
-        db.query(Article)
-        .filter(Article.project_id == project_id, Article.status == "published")
-    )
+    query = select(Article).where(Article.project_id == project_id, Article.status_reason_id == ArticleStatus.PUBLISHED)
 
     if category_slug:
-        q = q.join(Category, Article.category_id == Category.id).filter(Category.slug == category_slug)
+        query = query.join(Category, Article.category_id == Category.id).where(Category.slug == category_slug)
     if sub_niche:
-        q = q.filter(Article.sub_niche == sub_niche)
+        query = query.where(Article.sub_niche == sub_niche)
     if featured is not None:
-        q = q.filter(Article.featured == featured)
+        query = query.where(Article.is_featured == featured)
 
-    articles = q.order_by(Article.published_at.desc()).limit(limit).offset(offset).all()
+    articles = db.execute(
+        query.order_by(Article.published_at.desc()).limit(limit).offset(offset)
+    ).scalars().all()
+
     category_ids = {a.category_id for a in articles if a.category_id}
     category_map: dict[str, Category] = {}
     if category_ids:
-        for cat in db.query(Category).filter(Category.id.in_(category_ids)).all():
+        for cat in db.execute(select(Category).where(Category.id.in_(category_ids))).scalars().all():
             category_map[cat.id] = cat
 
-    return [_to_public_response(a, category_map.get(a.category_id) if a.category_id else None) for a in articles]
+    return [_to_public_response(db, a, category_map.get(a.category_id) if a.category_id else None) for a in articles]
 
 
 def get_public_article_by_slug(db: Session, project_id: str, slug: str) -> ArticlePublicApiResponse | None:
-    article = (
-        db.query(Article)
-        .filter(Article.project_id == project_id, Article.slug == slug, Article.status == "published")
-        .first()
-    )
+    article = db.execute(
+        select(Article).where(
+            Article.project_id == project_id, Article.slug == slug, Article.status_reason_id == ArticleStatus.PUBLISHED
+        )
+    ).scalar_one_or_none()
     if not article:
         return None
-    category = db.query(Category).filter(Category.id == article.category_id).first() if article.category_id else None
-    return _to_public_response(article, category)
+    category = db.get(Category, article.category_id) if article.category_id else None
+    return _to_public_response(db, article, category)
 
 
-def _has_draft_changes(article: Article) -> bool:
-    return (
-        article.content != article.published_content
-        or article.title != article.published_title
-        or article.excerpt != article.published_excerpt
-        or article.meta_description != article.published_meta_description
-        or article.cover_image_url != article.published_cover_image_url
-        or article.faq_json != article.published_faq_json
-        or article.callouts_json != article.published_callouts_json
-    )
-
-
-def _to_public_response(article: Article, category: Category | None) -> ArticlePublicApiResponse:
+def _to_public_response(db: Session, article: Article, category: Category | None) -> ArticlePublicApiResponse:
+    revision = article.published_revision or article.current_revision
+    seo = db.get(ArticleSeo, article.id)
+    keyword = primary_keyword(db, article.id)
     return ArticlePublicApiResponse(
         id=article.id,
-        title=article.published_title or article.title,
+        title=revision.title if revision else "",
         slug=article.slug,
-        excerpt=article.published_excerpt or article.excerpt,
-        content=article.published_content or article.content,
+        excerpt=revision.excerpt if revision else None,
+        content=revision.body if revision else None,
         category=CategoryBrief(
             id=category.id,
             name=category.name,
@@ -395,16 +369,15 @@ def _to_public_response(article: Article, category: Category | None) -> ArticleP
         category_slug=category.slug if category else None,
         category_color=category.color if category else None,
         sub_niche=article.sub_niche,
-        featured=bool(article.featured),
-        main_keyword=article.keyword,
-        meta_title=article.meta_title,
-        meta_description=article.published_meta_description or article.meta_description,
-        cover_image_url=article.published_cover_image_url or article.cover_image_url,
+        is_featured=article.is_featured,
+        main_keyword=keyword,
+        meta_title=seo.meta_title if seo else None,
+        meta_description=seo.meta_description if seo else None,
         author_name=article.author_name,
-        reading_time_minutes=article.reading_time_minutes,
-        faq_json=article.published_faq_json or article.faq_json,
-        callouts_json=article.published_callouts_json or article.callouts_json,
+        reading_time_minutes=revision.reading_time_minutes if revision else None,
+        faq=revision.faq if revision else [],
+        callouts=revision.callouts if revision else [],
         published_at=article.published_at,
         updated_at=article.updated_at,
-        has_draft_changes=_has_draft_changes(article) if article.status == "published" else None,
+        has_draft_changes=article.current_revision_id != article.published_revision_id,
     )

@@ -9,26 +9,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from app.core.config import settings
 from app.core.database import Base
 
-# Import models so their tables are registered in Base.metadata
-from app.models import user, project, project_member  # noqa: F401
-from app.models import category, article, traffic_event  # noqa: F401
-from app.models import article_log  # noqa: F401
-from app.models import seo_analysis  # noqa: F401
-from app.models import optimization_recommendation, notification  # noqa: F401
-from app.models import invitation  # noqa: F401
-from app.models import project_callout_template  # noqa: F401
-from app.models import pipeline  # noqa: F401
-from app.models import pipeline_log  # noqa: F401
-from app.models import article_version  # noqa: F401
-from app.models import media_asset  # noqa: F401
-from app.models import webhook  # noqa: F401
-from app.models import activity_log  # noqa: F401
-from app.models import ai_provider_config  # noqa: F401
-from app.models import article_comment  # noqa: F401
-from app.models import kanban_column  # noqa: F401
-from app.models import agent_assignment  # noqa: F401
-from app.models import ai_usage_log  # noqa: F401
-from app.models import password_reset_token  # noqa: F401
+# Import models so their tables are registered in Base.metadata — schéma v3
+# (ref/core/content/ai/analytics/ops), voir db/migration-v3/01-schema.sql.
+from app.models import reference  # noqa: F401
+from app.models import core  # noqa: F401
+from app.models import content  # noqa: F401
+from app.models import ai  # noqa: F401
+from app.models import analytics  # noqa: F401
+from app.models import ops  # noqa: F401
 
 config = context.config
 database_url = settings.database_url.replace("%", "%%")
@@ -44,6 +32,21 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
+# Tous les modèles v3 vivent dans des schémas non-default (ref/core/content/
+# ai/analytics/ops) — sans include_schemas=True, l'autogenerate d'Alembic ne
+# regarde que le schéma par défaut de la connexion et propose de recréer
+# toutes les tables existantes à chaque diff. Confirmé en pratique : un diff
+# sans ce réglage listait les ~29 tables v3 comme "added" alors qu'elles
+# existent déjà.
+_SCHEMAS = {"ref", "core", "content", "ai", "analytics", "ops"}
+
+
+def _include_name(name, type_, parent_names):
+    if type_ == "schema":
+        return name in _SCHEMAS or name is None
+    return True
+
+
 def run_migrations_offline() -> None:
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
@@ -51,6 +54,9 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_schemas=True,
+        include_name=_include_name,
+        version_table_schema="public",
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -63,7 +69,13 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            include_schemas=True,
+            include_name=_include_name,
+            version_table_schema="public",
+        )
         with context.begin_transaction():
             context.run_migrations()
 

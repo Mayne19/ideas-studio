@@ -1,6 +1,6 @@
 from datetime import datetime
-from typing import Any, Optional
-from pydantic import BaseModel, ConfigDict
+from typing import Optional
+from pydantic import BaseModel
 
 
 class ArticleCreate(BaseModel):
@@ -11,15 +11,11 @@ class ArticleCreate(BaseModel):
     content: Optional[str] = None
     excerpt: Optional[str] = None
     keyword: Optional[str] = None
-    secondary_keywords_json: Optional[str] = None
-    audience: Optional[str] = None
-    angle: Optional[str] = None
     search_intent: Optional[str] = None
     meta_title: Optional[str] = None
     meta_description: Optional[str] = None
-    cover_image_url: Optional[str] = None
     priority: int = 0
-    featured: bool = False
+    is_featured: bool = False
     author_name: Optional[str] = None
 
 
@@ -31,24 +27,16 @@ class ArticleUpdate(BaseModel):
     content: Optional[str] = None
     excerpt: Optional[str] = None
     keyword: Optional[str] = None
-    secondary_keywords_json: Optional[str] = None
-    audience: Optional[str] = None
-    angle: Optional[str] = None
     search_intent: Optional[str] = None
-    outline_json: Optional[str] = None
     meta_title: Optional[str] = None
     meta_description: Optional[str] = None
-    cover_image_url: Optional[str] = None
-    faq_json: Optional[str] = None
-    callouts_json: Optional[str] = None
-    internal_links_json: Optional[str] = None
-    external_links_json: Optional[str] = None
+    faq: Optional[list] = None
+    callouts: Optional[list] = None
     rejection_reason: Optional[str] = None
     rejection_note: Optional[str] = None
     priority: Optional[int] = None
-    featured: Optional[bool] = None
+    is_featured: Optional[bool] = None
     author_name: Optional[str] = None
-    reading_time_minutes: Optional[int] = None
     target_word_count: Optional[int] = None
     content_format: Optional[str] = None  # short|medium|long|pillar
 
@@ -57,85 +45,41 @@ class ArticleScheduleRequest(BaseModel):
     scheduled_at: datetime
 
 
-class PromoteResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str
-    project_id: str
-    category_id: Optional[str]
-    sub_niche: Optional[str] = None
-    title: str
-    slug: str
-    content: Optional[str]
-    excerpt: Optional[str]
-    status: str
-    keyword: Optional[str]
-    meta_title: Optional[str]
-    meta_description: Optional[str]
-    cover_image_url: Optional[str]
-    word_count: int
-    priority: int
-    featured: bool = False
-    seo_score: Optional[float]
-    readability_score: Optional[float]
-    quality_score: Optional[float]
-    eeat_score: Optional[float]
-    readiness_status: Optional[str]
-    global_score: Optional[float] = None
-    global_score_valid: Optional[bool] = None
-    published_at: Optional[datetime]
-    scheduled_at: Optional[datetime]
-    created_at: datetime
-    author_name: Optional[str] = None
-    reading_time_minutes: Optional[int] = None
-    target_word_count: Optional[int] = None
-    content_format: Optional[str] = None
-    updated_at: datetime
-    revalidated: bool = False
-
-
 class ArticlePublic(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: str
     project_id: str
-    category_id: Optional[str]
+    category_id: Optional[str] = None
     sub_niche: Optional[str] = None
     title: str
     slug: str
-    content: Optional[str]
-    excerpt: Optional[str]
-    status: str
-    keyword: Optional[str]
-    meta_title: Optional[str]
-    meta_description: Optional[str]
-    cover_image_url: Optional[str]
-    word_count: int
-    priority: int
-    featured: bool = False
-    seo_score: Optional[float]
-    readability_score: Optional[float]
-    quality_score: Optional[float]
-    eeat_score: Optional[float]
-    readiness_status: Optional[str]
-    seo_review_json: Optional[dict] = None
-    generation_report_json: Optional[dict] = None
-    originality_report_json: Optional[dict] = None
+    content: Optional[str] = None
+    excerpt: Optional[str] = None
+    status: int
+    keyword: Optional[str] = None
+    meta_title: Optional[str] = None
+    meta_description: Optional[str] = None
+    word_count: int = 0
+    priority: int = 0
+    is_featured: bool = False
+    seo_score: Optional[float] = None
+    readability_score: Optional[float] = None
+    quality_score: Optional[float] = None
+    eeat_score: Optional[float] = None
+    geo_score: Optional[float] = None
     global_score: Optional[float] = None
     global_score_valid: Optional[bool] = None
     is_validable: Optional[bool] = None
     validation_reasons: list[str] = []
     critical_warnings: list[dict] = []
-    published_at: Optional[datetime]
-    scheduled_at: Optional[datetime]
+    published_at: Optional[datetime] = None
+    scheduled_for: Optional[datetime] = None
     created_at: datetime
+    updated_at: datetime
     author_name: Optional[str] = None
     reading_time_minutes: Optional[int] = None
     target_word_count: Optional[int] = None
     content_format: Optional[str] = None
-    updated_at: datetime
 
-    # Idea-specific fields
     angle: Optional[str] = None
     search_intent: Optional[str] = None
     opportunity_score: Optional[float] = None
@@ -143,46 +87,10 @@ class ArticlePublic(BaseModel):
     rejection_reason: Optional[str] = None
     rejection_note: Optional[str] = None
 
-    # Workflow tracking
-    workflow_run_id: Optional[str] = None
-    completed_agent_keys: Optional[str] = None
-    next_agent_key: Optional[str] = None
-    agent_outputs_json: Optional[Any] = None
-    planning_brief_json: Optional[Any] = None
-    production_brief_json: Optional[Any] = None
-    workflow_status: Optional[str] = None
-    writing_error: Optional[str] = None
-    writing_cancel_requested: Optional[bool] = None
+    has_draft_changes: bool = False
 
-    # Editorial dates
-    target_write_at: Optional[datetime] = None
-    target_review_at: Optional[datetime] = None
-    idea_generated_at: Optional[datetime] = None
-    idea_validated_at: Optional[datetime] = None
-    human_validated_at: Optional[datetime] = None
 
-    # Extended fields
-    estimated_cost_json: Optional[dict] = None
-    actual_cost_json: Optional[dict] = None
-    geo_optimization_json: Optional[dict] = None
-    main_answer_summary: Optional[str] = None
-    opportunity_justification: Optional[str] = None
-    recommended_format: Optional[str] = None
-    needs_faq: Optional[bool] = None
-    needs_images: Optional[bool] = None
-    suggested_internal_links: Optional[str] = None
-    suggested_external_links: Optional[str] = None
-    estimated_difficulty: Optional[str] = None
-    proposal_source: Optional[str] = None
-    secondary_keywords_json: Optional[str] = None
-    improvement_proposal_json: Optional[Any] = None
-    performance_diagnosis_json: Optional[Any] = None
-    original_article_id: Optional[str] = None
-    revision_of_article_id: Optional[str] = None
-    proposed_changes_json: Optional[Any] = None
-    improvement_reason: Optional[str] = None
-    monitoring_status: Optional[str] = None
-    next_review_at: Optional[datetime] = None
+PromoteResponse = ArticlePublic
 
 
 class BulkValidateRequest(BaseModel):
@@ -191,7 +99,7 @@ class BulkValidateRequest(BaseModel):
 
 class BulkValidateByScoreRequest(BaseModel):
     min_score: int
-    statuses: list[str] = ["idea_proposed", "idea_priority"]
+    statuses: list[int] = [20, 30]
 
 
 class BlockedArticleInfo(BaseModel):
@@ -226,21 +134,20 @@ class ArticlePublicApiResponse(BaseModel):
     id: str
     title: str
     slug: str
-    excerpt: Optional[str]
-    content: Optional[str]
-    category: Optional[CategoryBrief]
+    excerpt: Optional[str] = None
+    content: Optional[str] = None
+    category: Optional[CategoryBrief] = None
     category_slug: Optional[str] = None
     category_color: Optional[str] = None
     sub_niche: Optional[str] = None
-    featured: bool = False
+    is_featured: bool = False
     main_keyword: Optional[str] = None
-    meta_title: Optional[str]
-    meta_description: Optional[str]
-    cover_image_url: Optional[str]
+    meta_title: Optional[str] = None
+    meta_description: Optional[str] = None
     author_name: Optional[str] = None
     reading_time_minutes: Optional[int] = None
-    faq_json: Optional[str] = None
-    callouts_json: Optional[str] = None
-    published_at: Optional[datetime]
+    faq: list = []
+    callouts: list = []
+    published_at: Optional[datetime] = None
     updated_at: datetime
     has_draft_changes: Optional[bool] = None

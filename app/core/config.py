@@ -131,6 +131,26 @@ class Settings(BaseSettings):
             return secrets.token_urlsafe(48)
         return v
 
+    @field_validator("DATABASE_URL")
+    @classmethod
+    def database_url_must_be_postgres(cls, v: str, info) -> str:
+        # Schéma v3 (schémas nommés, RLS, jsonb, ENUM natifs, partitionnement) : n'a de
+        # sens que sur PostgreSQL. SQLite silencieusement toléré est justement ce qui a
+        # permis à l'app de tourner (et de sembler fonctionner) contre un schéma que le
+        # code ne décrit plus — voir REPRENDRE-LA-MAIN.md §1.
+        # Exception "test" : tests/conftest.py utilise encore SQLite en attendant sa
+        # propre migration vers Postgres (non encore faite à ce stade de la refonte).
+        app_env = info.data.get("APP_ENV") or os.getenv("APP_ENV", "development")
+        if app_env == "test":
+            return v
+        normalized = v.replace("postgres://", "postgresql://", 1)
+        if not normalized.startswith("postgresql"):
+            raise ValueError(
+                f"DATABASE_URL doit pointer vers PostgreSQL (schéma v3 : RLS, jsonb, "
+                f"ENUM natifs, partitionnement). Reçu : {normalized.split('://')[0]}://..."
+            )
+        return v
+
     @property
     def database_url(self) -> str:
         if self.DATABASE_URL.startswith("postgres://"):

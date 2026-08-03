@@ -1,10 +1,12 @@
 from collections import Counter, defaultdict
 from datetime import date, datetime, time, timedelta, timezone
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.article import Article
-from app.models.project import Project
-from app.models.traffic_event import TrafficEvent
+from app.models.content import Article, ArticleRevision
+from app.models.core import Project
+from app.models.analytics import TrafficEvent
+from app.models.reference import ArticleStatus
 
 
 def _period_window(period: str) -> tuple[datetime, datetime, str]:
@@ -103,8 +105,8 @@ def _empty_buckets(start: datetime, end: datetime, granularity: str) -> list[str
     return keys
 
 
-def _source_channel(referrer: str | None) -> str:
-    value = (referrer or "").lower()
+def _source_channel(referrer_host: str | None) -> str:
+    value = (referrer_host or "").lower()
     if not value:
         return "direct"
     if "google." in value:
@@ -123,20 +125,18 @@ def get_project_traffic_summary(
     end_date: date | None = None,
 ) -> dict:
     since, until, granularity = _explicit_period_window(period, period_type, start_date, end_date)
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = db.get(Project, project_id)
 
-    events = (
-        db.query(TrafficEvent)
-        .filter(
+    events = db.execute(
+        select(TrafficEvent).where(
             TrafficEvent.project_id == project_id,
-            TrafficEvent.created_at >= since,
-            TrafficEvent.created_at < until,
+            TrafficEvent.occurred_at >= since,
+            TrafficEvent.occurred_at < until,
         )
-        .all()
-    )
+    ).scalars().all()
 
     _LOCALHOST_PATTERNS = ("localhost", "127.0.0.1", "0.0.0.0", "::1")
-    events = [e for e in events if not any(p in (e.url or "").lower() for p in _LOCALHOST_PATTERNS)]
+    events = [e for e in events if not any(p in (e.path or "").lower() for p in _LOCALHOST_PATTERNS)]
 
     total_views = len(events)
     if not project or not project.domain:
@@ -146,12 +146,12 @@ def get_project_traffic_summary(
     else:
         tracking_status = "configured_no_data"
 
-    unique_pages = len({e.path or e.url for e in events})
+    unique_pages = len({e.path for e in events})
 
-    path_counts = Counter(e.path or e.url for e in events)
+    path_counts = Counter(e.path for e in events)
     top_pages = [{"path": p, "views": c} for p, c in path_counts.most_common(10)]
 
-    referrer_counts = Counter(e.referrer or "" for e in events)
+    referrer_counts = Counter(e.referrer_host or "" for e in events)
     referrers = [{"referrer": r, "views": c} for r, c in referrer_counts.most_common(10)]
 
     country_counts = Counter(e.country for e in events if e.country)
@@ -171,9 +171,9 @@ def get_project_traffic_summary(
     for key in bucket_keys:
         channel_trend[key]
     for e in events:
-        bucket = _bucket_key(e.created_at, granularity)
+        bucket = _bucket_key(e.occurred_at, granularity)
         trend[bucket] = trend.get(bucket, 0) + 1
-        channel_trend[bucket][_source_channel(e.referrer)] += 1
+        channel_trend[bucket][_source_channel(e.referrer_host)] += 1
     trend_by_day = [{"date": d, "views": v} for d, v in sorted(trend.items())]
     channel_trend_by_day = [
         {
@@ -201,28 +201,26 @@ def get_project_traffic_summary(
 
 
 def get_article_performance(db: Session, article_id: str, period: str = "30d") -> dict:
-    article = db.query(Article).filter(Article.id == article_id).first()
+    article = db.get(Article, article_id)
     if not article:
         return {"views": 0, "referrers": [], "countries": [], "daily_views": [], "last_seen_at": None}
 
     since, until, granularity = _period_window(period)
 
-    events = (
-        db.query(TrafficEvent)
-        .filter(
+    events = db.execute(
+        select(TrafficEvent).where(
             TrafficEvent.project_id == article.project_id,
-            TrafficEvent.created_at >= since,
-            TrafficEvent.created_at < until,
+            TrafficEvent.occurred_at >= since,
+            TrafficEvent.occurred_at < until,
         )
-        .all()
-    )
+    ).scalars().all()
 
     article_slug = article.slug or ""
-    matching = [e for e in events if article_slug and (article_slug in (e.path or e.url))]
+    matching = [e for e in events if article_slug and article_slug in e.path]
 
     views = len(matching)
 
-    referrer_counts = Counter(e.referrer or "" for e in matching)
+    referrer_counts = Counter(e.referrer_host or "" for e in matching)
     referrers = [{"referrer": r, "views": c} for r, c in referrer_counts.most_common(10)]
 
     country_counts = Counter(e.country for e in matching if e.country)
@@ -230,11 +228,11 @@ def get_article_performance(db: Session, article_id: str, period: str = "30d") -
 
     daily: dict[str, int] = {key: 0 for key in _empty_buckets(since, until, granularity)} if matching else {}
     for e in matching:
-        day = _bucket_key(e.created_at, granularity)
+        day = _bucket_key(e.occurred_at, granularity)
         daily[day] = daily.get(day, 0) + 1
     daily_views = [{"date": d, "views": v} for d, v in sorted(daily.items())]
 
-    last_event = max((e.created_at for e in matching), default=None)
+    last_event = max((e.occurred_at for e in matching), default=None)
 
     return {
         "article_id": article_id,
@@ -256,7 +254,6 @@ def get_all_articles_performance(
     end_date: date | None = None,
 ) -> list[dict]:
     since, until, _granularity = _explicit_period_window(period, period_type, start_date, end_date)
-    # Previous period for variation calculation
     if start_date and end_date:
         period_days = max(1, (until.date() - since.date()).days)
     elif period in {"today", "yesterday", "1d"}:
@@ -265,27 +262,36 @@ def get_all_articles_performance(
         period_days = int(period.replace("d", "")) if period.endswith("d") else 30
     prev_since = since - timedelta(days=period_days)
 
-    articles = (
-        db.query(Article)
-        .filter(Article.project_id == project_id, Article.status == "published")
-        .all()
-    )
+    articles = db.execute(
+        select(Article).where(Article.project_id == project_id, Article.status_reason_id == ArticleStatus.PUBLISHED)
+    ).scalars().all()
 
-    all_events = (
-        db.query(TrafficEvent)
-        .filter(
+    all_events = db.execute(
+        select(TrafficEvent).where(
             TrafficEvent.project_id == project_id,
-            TrafficEvent.created_at >= prev_since,
-            TrafficEvent.created_at < until,
+            TrafficEvent.occurred_at >= prev_since,
+            TrafficEvent.occurred_at < until,
         )
-        .all()
-    )
+    ).scalars().all()
+
+    article_ids = [a.id for a in articles]
+    latest_scores: dict[str, float | None] = {}
+    if article_ids:
+        from app.models.content import ArticleScore
+        rows = db.execute(
+            select(ArticleScore)
+            .where(ArticleScore.article_id.in_(article_ids))
+            .order_by(ArticleScore.article_id, ArticleScore.evaluated_at.desc())
+        ).scalars().all()
+        for row in rows:
+            latest_scores.setdefault(row.article_id, float(row.seo_score) if row.seo_score is not None else None)
 
     results = []
     for article in articles:
         slug = article.slug or ""
-        current_matching = [e for e in all_events if slug and (slug in (e.path or e.url)) and since <= e.created_at < until]
-        prev_matching = [e for e in all_events if slug and (slug in (e.path or e.url)) and e.created_at < since]
+        revision = article.current_revision
+        current_matching = [e for e in all_events if slug and slug in e.path and since <= e.occurred_at < until]
+        prev_matching = [e for e in all_events if slug and slug in e.path and e.occurred_at < since]
         current_views = len(current_matching)
         prev_views = len(prev_matching)
         variation = None
@@ -295,11 +301,11 @@ def get_all_articles_performance(
             variation = 100.0
         results.append({
             "article_id": article.id,
-            "title": article.title,
+            "title": revision.title if revision else "",
             "slug": article.slug,
             "views": current_views,
             "variation": variation,
-            "seo_score": article.seo_score,
+            "seo_score": latest_scores.get(article.id),
             "published_at": article.published_at.isoformat() if article.published_at else None,
         })
 

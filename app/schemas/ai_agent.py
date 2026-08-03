@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional
 
@@ -21,27 +22,27 @@ class AgentInfo(BaseModel):
 class AgentAssignmentCreate(BaseModel):
     project_id: Optional[str] = None
     agent_id: str
-    provider_id: str
+    provider_code: str
+    model: str
     enabled: bool = True
     priority: int = 0
 
 
 class AgentAssignmentUpdate(BaseModel):
-    provider_id: Optional[str] = None
+    provider_code: Optional[str] = None
+    model: Optional[str] = None
     enabled: Optional[bool] = None
     priority: Optional[int] = None
 
 
 class AgentAssignmentPublic(BaseModel):
-    model_config = {"from_attributes": True}
     id: str
     project_id: Optional[str] = None
     agent_id: str
-    provider_id: str
+    provider_code: str
+    model: str
     enabled: bool
     priority: int
-    created_at: str
-    updated_at: str
 
 
 class AgentAssignmentWithDetails(AgentAssignmentPublic):

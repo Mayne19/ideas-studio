@@ -16,7 +16,7 @@ from app.schemas.user import UserPublic, UserUpdate, UsernameCheck, UsernameAvai
 from app.services.auth_service import create_user, authenticate_user, get_user_by_email, get_user_by_username, update_user
 from app.services.password_reset_service import create_password_reset, reset_password
 from app.dependencies.auth import get_current_user
-from app.models.user import User
+from app.models.core import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

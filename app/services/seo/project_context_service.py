@@ -1,68 +1,96 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+
+from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.models.article import Article
-from app.models.project import Project
-from app.models.pipeline import ProjectPipeline
-from app.models.category import Category
+
+from app.models.ai import Pipeline
+from app.models.content import Article, ArticleKeyword, ArticleRevision, Category, Keyword, KeywordRole
+from app.models.core import Project
+from app.models.reference import ArticleStatus
 from app.schemas.seo_workflow import ProjectContext, asdict
-from app.services.seo.helpers import safe_json_load
+
+_PUBLISHED = (ArticleStatus.PUBLISHED,)
+_DRAFTS = (ArticleStatus.DRAFT, ArticleStatus.DRAFT_READY, ArticleStatus.WRITING_IN_PROGRESS)
+_IDEAS = (ArticleStatus.IDEA_PROPOSED, ArticleStatus.IDEA_PRIORITY)
 
 
 def build_project_context(db: Session, project_id: str) -> ProjectContext:
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = db.get(Project, project_id)
     if not project:
         return ProjectContext(limitations=["Project not found"])
 
-    categories = db.query(Category).filter(Category.project_id == project_id).all()
-    articles = db.query(Article).filter(Article.project_id == project_id).all()
+    profile = project.active_editorial_profile
+    rules = profile.rules if profile else {}
+    constraints = profile.constraints if profile else {}
 
-    published = [a for a in articles if a.status == "published"]
-    drafts = [a for a in articles if a.status in ("draft", "draft_ready", "writing_in_progress")]
-    ideas = [a for a in articles if a.status in ("idea_proposed", "idea_priority")]
+    categories = db.execute(select(Category).where(Category.project_id == project_id)).scalars().all()
+
+    articles = db.execute(select(Article).where(Article.project_id == project_id)).scalars().all()
+    published = [a for a in articles if a.status_reason_id in _PUBLISHED]
+    drafts = [a for a in articles if a.status_reason_id in _DRAFTS]
+    ideas = [a for a in articles if a.status_reason_id in _IDEAS]
+
+    article_ids = [a.id for a in articles]
+    revisions_by_article: dict[str, ArticleRevision] = {}
+    if article_ids:
+        current_ids = [a.current_revision_id for a in articles if a.current_revision_id]
+        if current_ids:
+            for rev in db.execute(select(ArticleRevision).where(ArticleRevision.id.in_(current_ids))).scalars().all():
+                revisions_by_article[rev.article_id] = rev
+
+    primary_keyword_by_article: dict[str, str] = {}
+    if article_ids:
+        rows = db.execute(
+            select(ArticleKeyword.article_id, Keyword.term)
+            .join(Keyword, Keyword.id == ArticleKeyword.keyword_id)
+            .where(ArticleKeyword.article_id.in_(article_ids), ArticleKeyword.role == KeywordRole.PRIMARY)
+        ).all()
+        primary_keyword_by_article = dict(rows)
 
     recent_topics = []
     known_keywords = []
     for a in sorted(published, key=lambda x: x.published_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)[:20]:
-        if a.title:
-            recent_topics.append(a.title)
-        if a.keyword:
-            known_keywords.append(a.keyword)
+        rev = revisions_by_article.get(a.id)
+        if rev and rev.title:
+            recent_topics.append(rev.title)
+        kw = primary_keyword_by_article.get(a.id)
+        if kw:
+            known_keywords.append(kw)
     for a in drafts + ideas:
-        if a.keyword and a.keyword not in known_keywords:
-            known_keywords.append(a.keyword)
+        kw = primary_keyword_by_article.get(a.id)
+        if kw and kw not in known_keywords:
+            known_keywords.append(kw)
 
-    pipeline = db.query(ProjectPipeline).filter(ProjectPipeline.project_id == project_id).first()
+    pipeline = db.get(Pipeline, project_id)
     pipeline_settings = None
     if pipeline:
         pipeline_settings = {
-            "enabled": pipeline.enabled,
-            "active_days": safe_json_load(pipeline.active_days, []),
-            "launch_hour": pipeline.launch_hour,
+            "enabled": pipeline.is_enabled,
+            "active_days": (pipeline.schedule or {}).get("active_days", []),
+            "launch_hour": (pipeline.schedule or {}).get("launch_hour"),
             "articles_per_week": pipeline.articles_per_week,
         }
 
     strategy_parts = [
-        ("description", project.description),
-        ("industry", project.industry),
-        ("tone", project.tone),
-        ("reader_level", project.reader_level),
-        ("writing_style", project.writing_style),
-        ("editorial_goal", project.editorial_goal),
-        ("value_proposition", project.value_proposition),
-        ("allowed_topics", project.allowed_topics),
-        ("forbidden_topics", project.forbidden_topics),
-        ("words_to_avoid", project.words_to_avoid),
-        ("average_target_length", project.average_target_length),
-        ("preferred_formats", project.preferred_formats),
-        ("technical_level", project.technical_level),
-        ("seo_rules", project.seo_rules),
-        ("geo_rules", project.geo_rules),
-        ("source_guidelines", project.source_guidelines),
-        ("internal_linking_guidelines", project.internal_linking_guidelines),
-        ("external_linking_guidelines", project.external_linking_guidelines),
-        ("style_examples", project.style_examples),
+        ("audience", profile.audience if profile else None),
+        ("tone", profile.tone if profile else None),
+        ("reader_level", profile.reader_level if profile else None),
+        ("writing_style", profile.writing_style if profile else None),
+        ("editorial_goal", rules.get("editorial_goal")),
+        ("value_proposition", rules.get("value_proposition")),
+        ("allowed_topics", rules.get("allowed_topics")),
+        ("forbidden_topics", constraints.get("forbidden_topics")),
+        ("words_to_avoid", constraints.get("words_to_avoid")),
+        ("preferred_formats", rules.get("preferred_formats")),
+        ("technical_level", rules.get("technical_level")),
+        ("seo_rules", rules.get("seo_rules")),
+        ("geo_rules", rules.get("geo_rules")),
+        ("source_guidelines", rules.get("source_guidelines")),
+        ("internal_linking_guidelines", rules.get("internal_linking_guidelines")),
+        ("external_linking_guidelines", rules.get("external_linking_guidelines")),
+        ("style_examples", rules.get("style_examples")),
     ]
     editorial_notes = "\n".join(
         f"{key}: {value}"
@@ -74,14 +102,14 @@ def build_project_context(db: Session, project_id: str) -> ProjectContext:
         project_id=project_id,
         site_url=project.domain or "",
         project_name=project.name or "",
-        categories=[{"id": c.id, "name": c.name, "slug": c.slug, "priority": c.priority} for c in categories],
-        active_categories=[{"id": c.id, "name": c.name, "slug": c.slug, "priority": c.priority} for c in categories if getattr(c, "pipeline_enabled", True)],
+        categories=[{"id": c.id, "name": c.name, "slug": c.slug, "priority": float(c.priority_score) if c.priority_score is not None else None} for c in categories],
+        active_categories=[{"id": c.id, "name": c.name, "slug": c.slug, "priority": float(c.priority_score) if c.priority_score is not None else None} for c in categories if c.is_pipeline_enabled],
         published_articles_count=len(published),
         draft_articles_count=len(drafts),
         recent_topics=recent_topics,
         known_keywords=known_keywords,
         editorial_notes=editorial_notes,
-        target_audience=project.audience,
+        target_audience=profile.audience if profile else None,
         pipeline_settings=pipeline_settings,
         limitations=[],
     )

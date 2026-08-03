@@ -3,10 +3,11 @@ import logging
 from datetime import datetime, timezone
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from sqlalchemy import select
 from app.core.database import SessionLocal
-from app.models.project import Project
-from app.models.pipeline import ProjectPipeline
-from app.models.pipeline_log import PipelineLog
+from app.models.core import Project
+from app.models.ai import Pipeline, PipelineRun
+from app.models.reference import RunStatus
 from app.services.scheduler_service import run_daily_project_tasks
 from app.services.pipeline_service import run_pipeline
 
@@ -16,22 +17,21 @@ scheduler = BackgroundScheduler(daemon=True)
 
 
 def check_scheduled_publications():
-    """Publish articles whose scheduled_at time has passed."""
-    from app.models.article import Article
-    from app.services.article_service import publish_article
+    """Publish articles whose scheduled_for time has passed."""
+    from app.models.content import Article
+    from app.models.reference import ArticleStatus
+    from app.services.article_lifecycle_service import publish_article
 
     db = SessionLocal()
     try:
         now = datetime.now(timezone.utc)
-        articles = (
-            db.query(Article)
-            .filter(
-                Article.scheduled_at.isnot(None),
-                Article.scheduled_at <= now,
-                Article.status == "scheduled",
+        articles = db.execute(
+            select(Article).where(
+                Article.scheduled_for.isnot(None),
+                Article.scheduled_for <= now,
+                Article.status_reason_id == ArticleStatus.SCHEDULED,
             )
-            .all()
-        )
+        ).scalars().all()
         for article in articles:
             try:
                 publish_article(db, article)
@@ -47,7 +47,7 @@ def run_daily_tasks():
     """Run daily tasks for all active projects."""
     db = SessionLocal()
     try:
-        projects = db.query(Project).all()
+        projects = db.execute(select(Project)).scalars().all()
         for project in projects:
             try:
                 run_daily_project_tasks(db, project.id)
@@ -60,15 +60,13 @@ def run_daily_tasks():
 
 def _pipeline_already_ran_today(db, project_id: str) -> bool:
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    return (
-        db.query(PipelineLog)
-        .filter(
-            PipelineLog.project_id == project_id,
-            PipelineLog.started_at >= today_start,
-            PipelineLog.status.in_(["success", "partial_success", "running", "completed", "completed_with_errors"]),
-        )
-        .first()
-    ) is not None
+    return db.execute(
+        select(PipelineRun.id).where(
+            PipelineRun.project_id == project_id,
+            PipelineRun.started_at >= today_start,
+            PipelineRun.status_reason_id.in_((RunStatus.QUEUED, RunStatus.RUNNING, RunStatus.SUCCEEDED)),
+        ).limit(1)
+    ).scalar_one_or_none() is not None
 
 
 def check_monthly_idea_generation():
@@ -76,20 +74,18 @@ def check_monthly_idea_generation():
     db = SessionLocal()
     try:
         now = datetime.now(timezone.utc)
-        pipelines = (
-            db.query(ProjectPipeline)
-            .filter(
-                ProjectPipeline.enabled == True,
-                ProjectPipeline.ideas_day_of_month.isnot(None),
-            )
-            .all()
-        )
+        pipelines = db.execute(
+            select(Pipeline).where(Pipeline.is_enabled.is_(True))
+        ).scalars().all()
         for pipeline in pipelines:
             # run_pipeline committe et expire la session : recharger avant tout accès aux attributs
             db.refresh(pipeline)
-            if pipeline.ideas_day_of_month != now.day:
+            schedule = pipeline.schedule or {}
+            ideas_day_of_month = schedule.get("ideas_day_of_month")
+            launch_hour = schedule.get("launch_hour")
+            if ideas_day_of_month is None or ideas_day_of_month != now.day:
                 continue
-            if pipeline.launch_hour != now.hour:
+            if launch_hour is None or launch_hour != now.hour:
                 continue
             if _pipeline_already_ran_today(db, pipeline.project_id):
                 continue
@@ -111,7 +107,7 @@ def run_pipelines():
     """Run automated pipelines for projects with pipeline enabled."""
     db = SessionLocal()
     try:
-        pipelines = db.query(ProjectPipeline).filter(ProjectPipeline.enabled == True).all()
+        pipelines = db.execute(select(Pipeline).where(Pipeline.is_enabled.is_(True))).scalars().all()
         for pipeline in pipelines:
             # run_pipeline committe et expire la session : recharger avant tout accès aux attributs
             db.refresh(pipeline)
@@ -133,20 +129,17 @@ def run_pipelines():
 
 def process_writing_queues():
     """Drain the article writing queues for all projects with pending work."""
-    from app.models.article import Article
+    from app.models.content import Article
+    from app.models.reference import ArticleStatus
     from app.services.production_queue import process_writing_queue
 
     db = SessionLocal()
     try:
-        project_ids = [
-            row[0]
-            for row in (
-                db.query(Article.project_id)
-                .filter(Article.status.in_(["writing_requested", "writing_in_progress"]))
-                .distinct()
-                .all()
-            )
-        ]
+        project_ids = db.execute(
+            select(Article.project_id)
+            .where(Article.status_reason_id.in_((ArticleStatus.WRITING_REQUESTED, ArticleStatus.WRITING_IN_PROGRESS)))
+            .distinct()
+        ).scalars().all()
         for project_id in project_ids:
             try:
                 outcome = process_writing_queue(db, project_id)

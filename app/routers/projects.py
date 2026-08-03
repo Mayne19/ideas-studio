@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.config import settings
-from app.dependencies.auth import get_current_user, get_project_member, require_project_role
-from app.models.user import User
-from app.models.project import Project
-from app.models.project_member import ProjectMember
+from app.dependencies.auth import get_current_user, get_project_member, require_project_role, MemberView
+from app.models.core import Project, ProjectCredential, User
+from app.models.reference import CredentialKind
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectPublic, ProjectConnectInfo
 from app.services.publication_revalidation_service import trigger_project_revalidation
 from app.services.project_service import (
@@ -13,11 +13,19 @@ from app.services.project_service import (
     delete_project,
     get_user_projects,
     get_project_by_id,
+    serialize_project,
     update_project,
     disconnect_project,
 )
 
 router = APIRouter(prefix="/projects", tags=["projects"])
+
+
+def _get_project_or_404(db: Session, project_id: str) -> Project:
+    project = get_project_by_id(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
 
 
 @router.get("", response_model=list[ProjectPublic])
@@ -40,84 +48,91 @@ def create_project_route(
 @router.get("/{project_id}", response_model=ProjectPublic)
 def get_project(
     project_id: str,
-    member: ProjectMember = Depends(get_project_member),
+    member: MemberView = Depends(get_project_member),
     db: Session = Depends(get_db),
 ):
-    return db.query(Project).filter(Project.id == project_id).first()
+    project = _get_project_or_404(db, project_id)
+    return serialize_project(db, project)
 
 
 @router.patch("/{project_id}", response_model=ProjectPublic)
 def patch_project(
     project_id: str,
     data: ProjectUpdate,
-    member: ProjectMember = Depends(require_project_role("owner", "admin")),
+    member: MemberView = Depends(require_project_role("owner", "admin")),
     db: Session = Depends(get_db),
 ):
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = _get_project_or_404(db, project_id)
     return update_project(db, project, data)
 
 
 @router.get("/{project_id}/connect", response_model=ProjectConnectInfo)
 def connect_info(
     project_id: str,
-    member: ProjectMember = Depends(get_project_member),
+    member: MemberView = Depends(get_project_member),
     db: Session = Depends(get_db),
 ):
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = _get_project_or_404(db, project_id)
+    info = serialize_project(db, project)
 
-    masked = project.secret_api_key[:8] + "..." + project.secret_api_key[-4:]
+    tracking_masked = f"{info['public_tracking_key_prefix']}..." if info["public_tracking_key_prefix"] else None
+    api_cred = db.execute(
+        select(ProjectCredential).where(
+            ProjectCredential.project_id == project.id,
+            ProjectCredential.kind == CredentialKind.API,
+            ProjectCredential.revoked_at.is_(None),
+        )
+    ).scalars().first()
+    api_masked = f"{api_cred.token_prefix}..." if api_cred else None
+
     snippet = (
         f'<script\n'
         f'  src="{settings.APP_URL}/traffic.js"\n'
         f'  data-project-id="{project.id}"\n'
-        f'  data-tracking-key="{project.public_tracking_key}"\n'
+        f'  data-tracking-key="{tracking_masked or ""}"\n'
         f'  async>\n'
         f'</script>'
     )
 
     return ProjectConnectInfo(
         project_id=project.id,
-        domain=project.domain,
-        status=project.status,
-        public_tracking_key=project.public_tracking_key,
-        secret_api_key_masked=masked,
-        connected_at=project.connected_at,
-        last_seen_at=project.last_seen_at,
+        domain=info["domain"],
+        status=info["status"],
+        public_tracking_key=tracking_masked,
+        secret_api_key_masked=api_masked,
+        connected_at=info["connected_at"],
+        last_seen_at=info["last_seen_at"],
         snippet=snippet,
         public_api_endpoints={
             "articles": f"{settings.APP_URL}/api/public/projects/{project.id}/articles",
             "article_by_slug": f"{settings.APP_URL}/api/public/projects/{project.id}/articles/{{slug}}",
         },
-        public_site_url=project.public_site_url,
-        revalidate_url=project.revalidate_url,
-        revalidate_secret_configured=bool(project.revalidate_secret_encrypted),
-        last_revalidated_at=project.last_revalidated_at,
-        last_revalidate_status=project.last_revalidate_status,
-        last_revalidate_error=project.last_revalidate_error,
+        public_site_url=info["public_site_url"],
+        revalidate_url=info["revalidate_url"],
+        revalidate_configured=info["revalidate_configured"],
+        last_revalidated_at=info["last_revalidated_at"],
+        last_revalidate_status=info["last_revalidate_status"],
+        last_revalidate_error=info["last_revalidate_error"],
     )
 
 
 @router.post("/{project_id}/revalidate")
 def revalidate_project(
     project_id: str,
-    member: ProjectMember = Depends(require_project_role("owner", "admin")),
+    member: MemberView = Depends(require_project_role("owner", "admin")),
     db: Session = Depends(get_db),
 ):
-    project = db.query(Project).filter(Project.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    project = _get_project_or_404(db, project_id)
     return trigger_project_revalidation(db, project, event_type="manual")
 
 
 @router.delete("/{project_id}", status_code=204)
 def delete_project_route(
     project_id: str,
-    member: ProjectMember = Depends(require_project_role("owner", "admin")),
+    member: MemberView = Depends(require_project_role("owner", "admin")),
     db: Session = Depends(get_db),
 ):
-    project = db.query(Project).filter(Project.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    project = _get_project_or_404(db, project_id)
     delete_project(db, project)
     return None
 
@@ -125,8 +140,8 @@ def delete_project_route(
 @router.post("/{project_id}/disconnect", response_model=ProjectPublic)
 def disconnect_route(
     project_id: str,
-    member: ProjectMember = Depends(require_project_role("owner", "admin")),
+    member: MemberView = Depends(require_project_role("owner", "admin")),
     db: Session = Depends(get_db),
 ):
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = _get_project_or_404(db, project_id)
     return disconnect_project(db, project)

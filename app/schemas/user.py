@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr, ConfigDict, field_validator
+from pydantic import BaseModel, EmailStr, ConfigDict, computed_field, field_validator
 
 
 USERNAME_RE = re.compile(r"^[a-zA-Z0-9_]+$")
@@ -39,12 +39,21 @@ class UserPublic(BaseModel):
 
     id: str
     username: Optional[str] = None
-    name: str
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     email: EmailStr
     avatar_url: Optional[str] = None
     is_active: bool
-    is_platform_admin: bool
+    is_staff: bool
     created_at: datetime
     updated_at: datetime
+
+    @computed_field
+    @property
+    def name(self) -> str:
+        return f"{self.first_name or ''} {self.last_name or ''}".strip()
+
+    @computed_field
+    @property
+    def is_platform_admin(self) -> bool:
+        return self.is_staff

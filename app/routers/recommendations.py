@@ -1,31 +1,28 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import or_
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.dependencies.auth import get_current_user, get_project_member
-from app.models.article import Article
-from app.models.notification import Notification
-from app.models.optimization_recommendation import OptimizationRecommendation
-from app.models.project_member import ProjectMember
-from app.models.user import User
+from app.dependencies.auth import MemberView, get_current_user, get_project_member
+from app.models.content import Article
+from app.models.analytics import OptimizationRecommendation
+from app.models.ops import Notification
+from app.models.core import User
 from app.schemas.recommendation import RecommendationPublic
-from app.services.optimization_engine import review_published_articles
+from app.services.optimization_engine import review_published_articles, set_recommendation_status, status_code, to_public
 
 router = APIRouter(tags=["recommendations"])
 
 
 def _get_rec_or_404(db: Session, recommendation_id: str) -> OptimizationRecommendation:
-    rec = db.query(OptimizationRecommendation).filter(
-        OptimizationRecommendation.id == recommendation_id
-    ).first()
+    rec = db.get(OptimizationRecommendation, recommendation_id)
     if not rec:
         raise HTTPException(status_code=404, detail="Recommendation not found")
     return rec
 
 
-def _check_member(db: Session, user_id: str, project_id: str) -> ProjectMember:
+def _check_member(db: Session, user_id: str, project_id: str) -> MemberView:
     from app.dependencies.auth import get_member_for_project
     member = get_member_for_project(db, user_id, project_id)
     if not member:
@@ -37,19 +34,21 @@ def _delete_optimization_notifications(db: Session, rec: OptimizationRecommendat
     if not rec.article_id:
         return
 
-    query = db.query(Notification).filter(
+    query = select(Notification).where(
         Notification.project_id == rec.project_id,
         Notification.type == "optimization",
     )
 
-    article = db.query(Article).filter(Article.id == rec.article_id).first()
+    article = db.get(Article, rec.article_id)
+    revision = article.current_revision if article else None
+    title = revision.title if revision else None
     article_link = f"/projects/{rec.project_id}/articles/{rec.article_id}/edit"
     filters = [Notification.link == article_link]
-    if article and article.title:
-        filters.append(Notification.title.ilike(f"%{article.title[:60]}%"))
-    query = query.filter(or_(*filters))
+    if title:
+        filters.append(Notification.title.ilike(f"%{title[:60]}%"))
+    query = query.where(or_(*filters))
 
-    for notification in query.all():
+    for notification in db.execute(query).scalars().all():
         db.delete(notification)
 
 
@@ -57,24 +56,24 @@ def _delete_optimization_notifications(db: Session, rec: OptimizationRecommendat
 def list_recommendations(
     project_id: str,
     db: Session = Depends(get_db),
-    member: ProjectMember = Depends(get_project_member),
+    member: MemberView = Depends(get_project_member),
 ):
-    return (
-        db.query(OptimizationRecommendation)
-        .filter(OptimizationRecommendation.project_id == project_id)
+    recs = db.execute(
+        select(OptimizationRecommendation)
+        .where(OptimizationRecommendation.project_id == project_id)
         .order_by(
             OptimizationRecommendation.priority.desc(),
             OptimizationRecommendation.created_at.desc(),
         )
-        .all()
-    )
+    ).scalars().all()
+    return [to_public(r) for r in recs]
 
 
 @router.post("/projects/{project_id}/recommendations/review", response_model=dict)
 def trigger_review(
     project_id: str,
     db: Session = Depends(get_db),
-    member: ProjectMember = Depends(get_project_member),
+    member: MemberView = Depends(get_project_member),
 ):
     if member.role not in {"owner", "admin", "editor"}:
         raise HTTPException(status_code=403, detail="Insufficient role")
@@ -92,14 +91,13 @@ def accept_recommendation(
     rec = _get_rec_or_404(db, recommendation_id)
     _check_member(db, current_user.id, rec.project_id)
 
-    if rec.status not in {"pending"}:
-        raise HTTPException(status_code=400, detail=f"Cannot accept a recommendation with status '{rec.status}'")
+    if status_code(rec.status_reason_id) != "pending":
+        raise HTTPException(status_code=400, detail=f"Cannot accept a recommendation with status '{status_code(rec.status_reason_id)}'")
 
-    rec.status = "accepted"
-    rec.updated_at = datetime.now(timezone.utc)
+    set_recommendation_status(rec, "accepted")
     db.commit()
     db.refresh(rec)
-    return rec
+    return to_public(rec)
 
 
 @router.post("/recommendations/{recommendation_id}/reject", response_model=RecommendationPublic)
@@ -111,15 +109,15 @@ def reject_recommendation(
     rec = _get_rec_or_404(db, recommendation_id)
     _check_member(db, current_user.id, rec.project_id)
 
-    if rec.status not in {"pending", "accepted"}:
-        raise HTTPException(status_code=400, detail=f"Cannot reject a recommendation with status '{rec.status}'")
+    if status_code(rec.status_reason_id) not in {"pending", "accepted"}:
+        raise HTTPException(status_code=400, detail=f"Cannot reject a recommendation with status '{status_code(rec.status_reason_id)}'")
 
-    rec.status = "rejected"
-    rec.updated_at = datetime.now(timezone.utc)
+    set_recommendation_status(rec, "rejected")
+    rec.resolved_at = datetime.now(timezone.utc)
     _delete_optimization_notifications(db, rec)
     db.commit()
     db.refresh(rec)
-    return rec
+    return to_public(rec)
 
 
 @router.post("/recommendations/{recommendation_id}/apply", response_model=RecommendationPublic)
@@ -134,8 +132,8 @@ def apply_recommendation(
     if member.role not in {"owner", "admin", "editor"}:
         raise HTTPException(status_code=403, detail="Insufficient role")
 
-    rec.status = "applied"
-    rec.updated_at = datetime.now(timezone.utc)
+    set_recommendation_status(rec, "applied")
+    rec.resolved_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(rec)
-    return rec
+    return to_public(rec)

@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 
 class WebhookCreate(BaseModel):
@@ -17,8 +17,6 @@ class WebhookUpdate(BaseModel):
 
 
 class WebhookPublic(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: str
     project_id: str
     name: str
@@ -28,4 +26,3 @@ class WebhookPublic(BaseModel):
     last_triggered_at: Optional[datetime] = None
     last_status: Optional[str] = None
     created_at: datetime
-    updated_at: datetime

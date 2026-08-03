@@ -5,7 +5,8 @@ import re
 from html import unescape
 from typing import Any
 
-from app.models.article import Article
+from sqlalchemy.orm import Session
+
 from app.services.seo.helpers import safe_json_load
 
 from app.services.seo.seo_knowledge_pack_service import (
@@ -383,7 +384,9 @@ def build_aggregated_seo_review(
     }
 
 
-def run_and_store_seo_review(article: Article) -> dict:
+def run_and_store_seo_review(db: Session, article: Any) -> dict:
+    from app.services.seo.artifacts import save_artifact
+
     review = review_article_with_knowledge_pack(article)
-    article.seo_review_json = review
+    save_artifact(db, article.id, "seo_review", review)
     return review

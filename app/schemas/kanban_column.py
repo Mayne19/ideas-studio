@@ -1,6 +1,5 @@
-from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 
 class KanbanColumnCreate(BaseModel):
@@ -17,13 +16,9 @@ class KanbanColumnUpdate(BaseModel):
 
 
 class KanbanColumnPublic(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: str
     project_id: str
     label: str
     status: str
-    color: str
+    color: Optional[str] = None
     sort_order: int
-    created_at: datetime
-    updated_at: datetime

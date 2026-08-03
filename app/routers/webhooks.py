@@ -1,21 +1,28 @@
+import hashlib
+import hmac
 import ipaddress
-import json
 import logging
+import secrets
 from typing import Optional
 from urllib.parse import urlparse
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.dependencies.auth import get_project_member, require_project_role
-from app.models.project import Project
-from app.models.project_member import ProjectMember
-from app.models.webhook import Webhook
+from app.core.security import decrypt_secret, encrypt_secret
+from app.dependencies.auth import MemberView, get_project_member, require_project_role
+from app.models.ops import Webhook, WebhookDelivery
 from app.schemas.webhook import WebhookCreate, WebhookUpdate, WebhookPublic
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["webhooks"])
+
+
+def _sign_payload(hook: Webhook, payload: str) -> str:
+    secret = decrypt_secret(hook.secret_ref) or ""
+    return hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
 
 
 def _validate_webhook_url(url: str) -> None:
@@ -41,21 +48,48 @@ def _validate_webhook_url(url: str) -> None:
         raise HTTPException(status_code=400, detail="URL webhook non autorisée")
 
 
+def _latest_delivery(db: Session, webhook_id: str) -> WebhookDelivery | None:
+    return db.execute(
+        select(WebhookDelivery)
+        .where(WebhookDelivery.webhook_id == webhook_id)
+        .order_by(WebhookDelivery.delivered_at.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+
+
+def _webhook_to_public(db: Session, hook: Webhook) -> WebhookPublic:
+    last = _latest_delivery(db, hook.id)
+    last_status = None
+    if last:
+        last_status = "success" if last.status_code and 200 <= last.status_code < 300 else (f"HTTP {last.status_code}" if last.status_code else "error")
+    return WebhookPublic(
+        id=hook.id,
+        project_id=hook.project_id,
+        name=hook.name,
+        url=hook.url,
+        events=hook.events or [],
+        enabled=hook.is_enabled,
+        last_triggered_at=last.delivered_at if last else None,
+        last_status=last_status,
+        created_at=hook.created_at,
+    )
+
+
 @router.get("/projects/{project_id}/webhooks", response_model=list[WebhookPublic])
 def list_webhooks(
     project_id: str,
-    member: ProjectMember = Depends(get_project_member),
+    member: MemberView = Depends(get_project_member),
     db: Session = Depends(get_db),
 ):
-    hooks = db.query(Webhook).filter(Webhook.project_id == project_id).all()
-    return [_webhook_to_public(h) for h in hooks]
+    hooks = db.execute(select(Webhook).where(Webhook.project_id == project_id)).scalars().all()
+    return [_webhook_to_public(db, h) for h in hooks]
 
 
 @router.post("/projects/{project_id}/webhooks", response_model=WebhookPublic, status_code=201)
 def create_webhook(
     project_id: str,
     data: WebhookCreate,
-    member: ProjectMember = Depends(require_project_role("owner", "admin")),
+    member: MemberView = Depends(require_project_role("owner", "admin")),
     db: Session = Depends(get_db),
 ):
     _validate_webhook_url(data.url)
@@ -63,12 +97,13 @@ def create_webhook(
         project_id=project_id,
         name=data.name,
         url=data.url,
-        events=json.dumps(data.events),
+        events=data.events,
+        secret_ref=encrypt_secret(secrets.token_hex(32)) or "",
     )
     db.add(hook)
     db.commit()
     db.refresh(hook)
-    return _webhook_to_public(hook)
+    return _webhook_to_public(db, hook)
 
 
 @router.patch("/projects/{project_id}/webhooks/{webhook_id}", response_model=WebhookPublic)
@@ -76,10 +111,12 @@ def update_webhook(
     project_id: str,
     webhook_id: str,
     data: WebhookUpdate,
-    member: ProjectMember = Depends(require_project_role("owner", "admin")),
+    member: MemberView = Depends(require_project_role("owner", "admin")),
     db: Session = Depends(get_db),
 ):
-    hook = db.query(Webhook).filter(Webhook.id == webhook_id, Webhook.project_id == project_id).first()
+    hook = db.execute(
+        select(Webhook).where(Webhook.id == webhook_id, Webhook.project_id == project_id)
+    ).scalar_one_or_none()
     if not hook:
         raise HTTPException(status_code=404, detail="Webhook not found")
     if data.name is not None:
@@ -88,23 +125,24 @@ def update_webhook(
         _validate_webhook_url(data.url)
         hook.url = data.url
     if data.events is not None:
-        hook.events = json.dumps(data.events)
+        hook.events = data.events
     if data.enabled is not None:
-        hook.enabled = data.enabled
-    hook.updated_at = datetime.now(timezone.utc)
+        hook.is_enabled = data.enabled
     db.commit()
     db.refresh(hook)
-    return _webhook_to_public(hook)
+    return _webhook_to_public(db, hook)
 
 
 @router.delete("/projects/{project_id}/webhooks/{webhook_id}", status_code=204)
 def delete_webhook(
     project_id: str,
     webhook_id: str,
-    member: ProjectMember = Depends(require_project_role("owner", "admin")),
+    member: MemberView = Depends(require_project_role("owner", "admin")),
     db: Session = Depends(get_db),
 ):
-    hook = db.query(Webhook).filter(Webhook.id == webhook_id, Webhook.project_id == project_id).first()
+    hook = db.execute(
+        select(Webhook).where(Webhook.id == webhook_id, Webhook.project_id == project_id)
+    ).scalar_one_or_none()
     if not hook:
         raise HTTPException(status_code=404, detail="Webhook not found")
     db.delete(hook)
@@ -116,10 +154,14 @@ def delete_webhook(
 def test_webhook(
     project_id: str,
     webhook_id: str,
-    member: ProjectMember = Depends(require_project_role("owner", "admin")),
+    member: MemberView = Depends(require_project_role("owner", "admin")),
     db: Session = Depends(get_db),
 ):
-    hook = db.query(Webhook).filter(Webhook.id == webhook_id, Webhook.project_id == project_id).first()
+    import json
+
+    hook = db.execute(
+        select(Webhook).where(Webhook.id == webhook_id, Webhook.project_id == project_id)
+    ).scalar_one_or_none()
     if not hook:
         raise HTTPException(status_code=404, detail="Webhook not found")
 
@@ -129,6 +171,7 @@ def test_webhook(
         "message": "Ceci est un test de votre webhook Ideas Studio.",
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+    payload_json = json.dumps(payload)
 
     try:
         with httpx.Client(timeout=15) as client:
@@ -137,51 +180,29 @@ def test_webhook(
                 json=payload,
                 headers={
                     "Content-Type": "application/json",
-                    "X-IdeasStudio-Signature": hook.sign_payload(json.dumps(payload)),
+                    "X-IdeasStudio-Signature": _sign_payload(hook, payload_json),
                     "X-IdeasStudio-Event": "test",
                 },
             )
-            hook.last_status = "success" if resp.is_success else f"HTTP {resp.status_code}"
-            hook.last_triggered_at = datetime.now(timezone.utc)
+            db.add(WebhookDelivery(webhook_id=hook.id, event="test", status_code=resp.status_code))
             db.commit()
             return {"status": "ok" if resp.is_success else "error", "status_code": resp.status_code}
     except Exception as exc:
-        hook.last_status = "error"
-        hook.last_error = str(exc)
-        hook.last_triggered_at = datetime.now(timezone.utc)
+        db.add(WebhookDelivery(webhook_id=hook.id, event="test", error=str(exc)))
         db.commit()
         raise HTTPException(status_code=502, detail=f"Webhook test failed: {exc}")
-
-
-def _webhook_to_public(hook: Webhook) -> dict:
-    return {
-        "id": hook.id,
-        "project_id": hook.project_id,
-        "name": hook.name,
-        "url": hook.url,
-        "events": json.loads(hook.events) if hook.events else [],
-        "enabled": hook.enabled,
-        "last_triggered_at": hook.last_triggered_at,
-        "last_status": hook.last_status,
-        "created_at": hook.created_at,
-        "updated_at": hook.updated_at,
-    }
 
 
 def trigger_webhooks(db: Session, project_id: str, event: str, data: dict):
     """Trigger all webhooks subscribed to a given event."""
     import json
-    import httpx
-    from datetime import datetime, timezone
 
-    hooks = db.query(Webhook).filter(
-        Webhook.project_id == project_id,
-        Webhook.enabled == True,
-    ).all()
+    hooks = db.execute(
+        select(Webhook).where(Webhook.project_id == project_id, Webhook.is_enabled.is_(True))
+    ).scalars().all()
 
     for hook in hooks:
-        subscribed_events = json.loads(hook.events) if hook.events else []
-        if event not in subscribed_events:
+        if event not in (hook.events or []):
             continue
 
         payload = {
@@ -190,6 +211,7 @@ def trigger_webhooks(db: Session, project_id: str, event: str, data: dict):
             "data": data,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
+        payload_json = json.dumps(payload)
 
         try:
             with httpx.Client(timeout=15) as client:
@@ -198,16 +220,13 @@ def trigger_webhooks(db: Session, project_id: str, event: str, data: dict):
                     json=payload,
                     headers={
                         "Content-Type": "application/json",
-                        "X-IdeasStudio-Signature": hook.sign_payload(json.dumps(payload)),
+                        "X-IdeasStudio-Signature": _sign_payload(hook, payload_json),
                         "X-IdeasStudio-Event": event,
                     },
                 )
-                hook.last_status = "success" if resp.is_success else f"HTTP {resp.status_code}"
-                hook.last_triggered_at = datetime.now(timezone.utc)
+                db.add(WebhookDelivery(webhook_id=hook.id, event=event, status_code=resp.status_code))
         except Exception as exc:
-            hook.last_status = "error"
-            hook.last_error = str(exc)
-            hook.last_triggered_at = datetime.now(timezone.utc)
+            db.add(WebhookDelivery(webhook_id=hook.id, event=event, error=str(exc)))
             logger.warning("Webhook %s failed for event %s: %s", hook.id, event, exc)
 
     db.commit()

@@ -1,11 +1,11 @@
-import json
 from math import ceil
 
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
-from app.models.project import Project
-from app.models.pipeline import ProjectPipeline
+from app.models.core import Project
+from app.models.ai import Pipeline
+from app.models.reference import ProjectStatus
 from app.services.optimization_engine import review_published_articles
 from app.services.notification_service import create_notification
 from app.services.log_service import log_step
@@ -20,19 +20,20 @@ def generate_daily_ideas(db: Session) -> dict:
     llm = get_llm_provider()
     search = get_search_provider()
 
-    projects = db.execute(select(Project).where(Project.status != "archived")).scalars().all()
+    projects = db.execute(select(Project).where(Project.status_reason_id != ProjectStatus.ARCHIVED)).scalars().all()
 
     total_generated = 0
     total_skipped = 0
 
     for project in projects:
+        profile = project.active_editorial_profile
         project_generated = 0
         for _ in range(settings.IDEAS_PER_DAY):
             idea = generate_idea(
                 db=db,
                 project_id=project.id,
-                project_audience=project.audience,
-                project_language=project.language,
+                project_audience=profile.audience if profile else None,
+                project_language=project.locale.split("-")[0] if project.locale else "fr",
                 llm=llm,
                 search=search,
             )
@@ -87,7 +88,7 @@ def run_daily_project_tasks(db: Session, project_id: str) -> dict:
 
 
 def run_all_projects_daily_tasks(db: Session) -> dict:
-    projects = db.execute(select(Project).where(Project.status != "archived")).scalars().all()
+    projects = db.execute(select(Project).where(Project.status_reason_id != ProjectStatus.ARCHIVED)).scalars().all()
 
     results = []
     for project in projects:
@@ -101,33 +102,24 @@ def run_all_projects_daily_tasks(db: Session) -> dict:
 
 
 def _run_ideas(db: Session, project_id: str) -> dict:
-    from app.services.idea_engine import generate_idea
-    from app.services.providers.llm_provider import get_llm_provider
-    from app.services.providers.search_provider import get_search_provider
-    from app.core.config import settings
-    from app.models.project import Project
-
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = db.get(Project, project_id)
     if not project:
         return {"generated": 0, "skipped": 0}
-    pipeline = db.query(ProjectPipeline).filter(ProjectPipeline.project_id == project_id).first()
+    profile = project.active_editorial_profile
+    pipeline = db.get(Pipeline, project_id)
 
     llm = get_llm_provider()
     search = get_search_provider()
 
-    active_days = []
-    if pipeline and pipeline.active_days:
-        try:
-            active_days = json.loads(pipeline.active_days)
-        except Exception:
-            active_days = []
+    schedule = pipeline.schedule if pipeline else {}
+    active_days = schedule.get("active_days", []) if schedule else []
     active_day_count = len(active_days) or 7
     weekly_target = max(1, pipeline.articles_per_week) if pipeline else settings.IDEAS_PER_DAY
     daily_target = max(1, ceil(weekly_target / active_day_count))
 
     generated = 0
     skipped = 0
-    if pipeline and pipeline.category_priorities and pipeline.category_priorities != "{}":
+    if schedule and schedule.get("category_priorities"):
         log_step(
             db,
             project_id,
@@ -139,8 +131,8 @@ def _run_ideas(db: Session, project_id: str) -> dict:
         idea = generate_idea(
             db=db,
             project_id=project_id,
-            project_audience=project.audience,
-            project_language=project.language,
+            project_audience=profile.audience if profile else None,
+            project_language=project.locale.split("-")[0] if project.locale else "fr",
             llm=llm,
             search=search,
         )

@@ -4,10 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.dependencies.auth import get_current_user, get_project_member
-from app.models.article import Article
-from app.models.project_member import ProjectMember
-from app.models.user import User
+from app.dependencies.auth import MemberView, get_current_user, get_project_member
+from app.models.content import Article
+from app.models.core import User
 from app.schemas.performance import ArticlePerformance, ArticlePerformanceBrief, ProjectTrafficSummary
 from app.services.performance_service import (
     get_all_articles_performance,
@@ -26,7 +25,7 @@ def project_performance_summary(
     start_date: date | None = None,
     end_date: date | None = None,
     db: Session = Depends(get_db),
-    member: ProjectMember = Depends(get_project_member),
+    member: MemberView = Depends(get_project_member),
 ):
     return get_project_traffic_summary(db, project_id, period, period_type=period_type, start_date=start_date, end_date=end_date)
 
@@ -39,7 +38,7 @@ def project_articles_performance(
     start_date: date | None = None,
     end_date: date | None = None,
     db: Session = Depends(get_db),
-    member: ProjectMember = Depends(get_project_member),
+    member: MemberView = Depends(get_project_member),
 ):
     return get_all_articles_performance(db, project_id, period, period_type=period_type, start_date=start_date, end_date=end_date)
 
@@ -51,7 +50,7 @@ def article_performance(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    article = db.query(Article).filter(Article.id == article_id).first()
+    article = db.get(Article, article_id)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
 

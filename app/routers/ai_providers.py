@@ -1,54 +1,51 @@
 import logging
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user, get_member_for_project
-from app.models.user import User
-from app.models.ai_provider_config import AIProviderConfig
+from app.models.core import User
+from app.models.ai import Provider, ProviderCredential
 from app.schemas.ai_provider import AIProviderCreate, AIProviderUpdate, AIProviderPublic, AIProviderTestResult
 from app.core.security import decrypt_secret, encrypt_secret
 from app.core.config import settings
-from app.services.agents.agent_assignment_service import delete_assignments_for_provider
-from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/settings/ai-providers", tags=["ai_providers"])
 
-SUPPORTED_PROVIDERS = {
-    "gemini": {"label": "Google Gemini", "default_model": "gemini-2.5-flash", "default_base_url": "https://generativelanguage.googleapis.com/v1beta/openai/"},
-    "openai": {"label": "OpenAI", "default_model": "gpt-4o-mini", "default_base_url": "https://api.openai.com/v1"},
-    "openrouter": {"label": "OpenRouter", "default_model": "deepseek/deepseek-v4-flash", "default_base_url": "https://openrouter.ai/api/v1"},
-    "anthropic": {"label": "Claude / Anthropic", "default_model": "claude-3-5-sonnet-latest", "default_base_url": "https://api.anthropic.com/v1"},
-    "mistral": {"label": "Mistral", "default_model": "mistral-large-latest", "default_base_url": "https://api.mistral.ai/v1"},
-    "ollama": {"label": "Ollama (local)", "default_model": "qwen3:14b", "default_base_url": "http://127.0.0.1:11434/v1"},
-    "custom": {"label": "Custom OpenAI-compatible", "default_model": "", "default_base_url": ""},
-}
 
-
-def _mask_key(key: str) -> str:
-    if not key:
-        return ""
-    if len(key) <= 8:
-        return "****"
-    return key[:4] + "****" + key[-4:]
-
-
-def _ensure_platform_admin(current_user: User, db: Session) -> None:
-    if current_user.is_platform_admin:
+def _ensure_platform_admin(current_user: User) -> None:
+    if current_user.is_staff:
         return
     raise HTTPException(status_code=403, detail="Admin access required")
 
 
 def _ensure_provider_access(project_id: str | None, current_user: User, db: Session) -> None:
     if not project_id:
-        _ensure_platform_admin(current_user, db)
+        _ensure_platform_admin(current_user)
         return
-    if current_user.is_platform_admin:
+    if current_user.is_staff:
         return
     member = get_member_for_project(db, current_user.id, project_id)
     if not member or member.role not in {"owner", "admin"}:
         raise HTTPException(status_code=403, detail="Project admin access required")
+
+
+def _to_public(credential: ProviderCredential, provider_row: Provider) -> AIProviderPublic:
+    return AIProviderPublic(
+        id=credential.id,
+        project_id=credential.project_id,
+        provider=provider_row.code,
+        label=provider_row.label,
+        api_key_configured=bool(credential.secret_ref),
+        base_url=provider_row.base_url,
+        last_test_status="connected" if credential.last_test_ok else ("error" if credential.last_test_ok is False else None),
+        last_test_error=None,
+        last_tested_at=credential.last_test_at,
+        created_at=credential.created_at,
+    )
 
 
 @router.get("", response_model=list[AIProviderPublic])
@@ -58,17 +55,18 @@ def list_providers(
     project_id: str | None = None,
 ):
     _ensure_provider_access(project_id, current_user, db)
-    query = db.query(AIProviderConfig)
+    query = select(ProviderCredential)
     if project_id:
-        query = query.filter(AIProviderConfig.project_id == project_id)
+        query = query.where(ProviderCredential.project_id == project_id)
     else:
-        query = query.filter(AIProviderConfig.project_id.is_(None))
-    configs = query.order_by(AIProviderConfig.provider).all()
+        query = query.where(ProviderCredential.project_id.is_(None))
+    credentials = db.execute(query).scalars().all()
     result = []
-    for config in configs:
-        public = AIProviderPublic.model_validate(config)
-        public.api_key_configured = bool(config.api_key_encrypted)
-        result.append(public)
+    for credential in credentials:
+        provider_row = db.get(Provider, credential.provider_id)
+        if provider_row:
+            result.append(_to_public(credential, provider_row))
+    result.sort(key=lambda p: p.provider)
     return result
 
 
@@ -79,40 +77,28 @@ def create_provider(
     db: Session = Depends(get_db),
 ):
     _ensure_provider_access(data.project_id, current_user, db)
-    existing = db.query(AIProviderConfig).filter(
-        AIProviderConfig.project_id == data.project_id,
-        AIProviderConfig.provider == data.provider,
-    ).first()
+    provider_row = db.execute(select(Provider).where(Provider.code == data.provider)).scalar_one_or_none()
+    if not provider_row:
+        raise HTTPException(status_code=404, detail=f"Provider '{data.provider}' not found in catalog")
+
+    existing = db.execute(
+        select(ProviderCredential).where(
+            ProviderCredential.project_id == data.project_id,
+            ProviderCredential.provider_id == provider_row.id,
+        )
+    ).scalar_one_or_none()
     if existing:
         raise HTTPException(status_code=409, detail=f"Provider '{data.provider}' already configured for this project")
 
-    config = AIProviderConfig(
-        provider=data.provider,
-        label=data.label,
-        display_name=data.display_name,
+    credential = ProviderCredential(
+        provider_id=provider_row.id,
         project_id=data.project_id,
-        api_key_encrypted=encrypt_secret(data.api_key),
-        model=data.model,
-        base_url=data.base_url,
-        is_default=data.is_default,
-        enabled=data.enabled,
+        secret_ref=encrypt_secret(data.api_key) or "",
     )
-
-    if data.is_default:
-        base_query = db.query(AIProviderConfig).filter(AIProviderConfig.is_default == True)
-        if data.project_id:
-            base_query = base_query.filter(AIProviderConfig.project_id == data.project_id)
-        else:
-            base_query = base_query.filter(AIProviderConfig.project_id.is_(None))
-        base_query.update({"is_default": False})
-
-    db.add(config)
+    db.add(credential)
     db.commit()
-    db.refresh(config)
-
-    public = AIProviderPublic.model_validate(config)
-    public.api_key_configured = bool(config.api_key_encrypted)
-    return public
+    db.refresh(credential)
+    return _to_public(credential, provider_row)
 
 
 @router.patch("/{provider_id}", response_model=AIProviderPublic)
@@ -122,35 +108,18 @@ def update_provider(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    config = db.query(AIProviderConfig).filter(AIProviderConfig.id == provider_id).first()
-    if not config:
+    credential = db.get(ProviderCredential, provider_id)
+    if not credential:
         raise HTTPException(status_code=404, detail="Provider not found")
-    _ensure_provider_access(config.project_id, current_user, db)
+    _ensure_provider_access(credential.project_id, current_user, db)
 
-    update_data = data.model_dump(exclude_unset=True)
-    if "api_key" in update_data:
-        update_data["api_key_encrypted"] = encrypt_secret(update_data.pop("api_key"))
-    if "is_default" in update_data and update_data["is_default"]:
-        base_query = db.query(AIProviderConfig).filter(
-            AIProviderConfig.is_default == True,
-            AIProviderConfig.id != provider_id,
-        )
-        if config.project_id:
-            base_query = base_query.filter(AIProviderConfig.project_id == config.project_id)
-        else:
-            base_query = base_query.filter(AIProviderConfig.project_id.is_(None))
-        base_query.update({"is_default": False})
+    if data.api_key is not None:
+        credential.secret_ref = encrypt_secret(data.api_key) or ""
 
-    for field, value in update_data.items():
-        setattr(config, field, value)
-
-    config.updated_at = datetime.now(timezone.utc)
     db.commit()
-    db.refresh(config)
-
-    public = AIProviderPublic.model_validate(config)
-    public.api_key_configured = bool(config.api_key_encrypted)
-    return public
+    db.refresh(credential)
+    provider_row = db.get(Provider, credential.provider_id)
+    return _to_public(credential, provider_row)
 
 
 @router.delete("/{provider_id}", status_code=204)
@@ -159,12 +128,11 @@ def delete_provider(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    config = db.query(AIProviderConfig).filter(AIProviderConfig.id == provider_id).first()
-    if not config:
+    credential = db.get(ProviderCredential, provider_id)
+    if not credential:
         raise HTTPException(status_code=404, detail="Provider not found")
-    _ensure_provider_access(config.project_id, current_user, db)
-    delete_assignments_for_provider(db, provider_id)
-    db.delete(config)
+    _ensure_provider_access(credential.project_id, current_user, db)
+    db.delete(credential)
     db.commit()
     return None
 
@@ -175,52 +143,47 @@ def test_provider(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    config = db.query(AIProviderConfig).filter(AIProviderConfig.id == provider_id).first()
-    if not config:
+    credential = db.get(ProviderCredential, provider_id)
+    if not credential:
         raise HTTPException(status_code=404, detail="Provider not found")
-    _ensure_provider_access(config.project_id, current_user, db)
+    _ensure_provider_access(credential.project_id, current_user, db)
+    provider_row = db.get(Provider, credential.provider_id)
 
-    api_key = decrypt_secret(config.api_key_encrypted)
-    if not api_key:
-        config.last_test_status = "error"
-        config.last_test_error = "Aucune clé API configurée"
-        config.last_tested_at = datetime.now(timezone.utc)
+    api_key = decrypt_secret(credential.secret_ref)
+    if not api_key and provider_row.code != "ollama":
+        credential.last_test_ok = False
+        credential.last_test_at = datetime.now(timezone.utc)
         db.commit()
-        return AIProviderTestResult(provider=config.provider, status="error", message="Aucune clé API configurée")
+        return AIProviderTestResult(provider=provider_row.code, status="error", message="Aucune clé API configurée")
 
     try:
+        from app.services.providers.provider_config import ResolvedProviderConfig
         from app.services.providers.llm_provider import build_provider_from_config
 
-        # Même résolution que la génération réelle : tester exactement ce qui tournera.
-        test_prov = build_provider_from_config(config)
+        shim = ResolvedProviderConfig(id=credential.id, provider=provider_row.code, model=None, base_url=provider_row.base_url, api_key_encrypted=credential.secret_ref)
+        test_prov = build_provider_from_config(shim)
         if test_prov is None:
-            config.last_test_status = "error"
-            config.last_test_error = f"Provider '{config.provider}' non supporté"
-            config.last_tested_at = datetime.now(timezone.utc)
+            credential.last_test_ok = False
+            credential.last_test_at = datetime.now(timezone.utc)
             db.commit()
-            return AIProviderTestResult(
-                provider=config.provider, status="error",
-                message=config.last_test_error,
-            )
+            return AIProviderTestResult(provider=provider_row.code, status="error", message=f"Provider '{provider_row.code}' non supporté")
         available = test_prov.is_available()
 
-        config.last_test_status = "connected" if available else "error"
-        config.last_test_error = None if available else "API a retourné une erreur (clé invalide ?)"
-        config.last_tested_at = datetime.now(timezone.utc)
+        credential.last_test_ok = available
+        credential.last_test_at = datetime.now(timezone.utc)
         db.commit()
 
         return AIProviderTestResult(
-            provider=config.provider,
+            provider=provider_row.code,
             status="connected" if available else "error",
-            message=None if available else config.last_test_error,
-            model=config.model,
+            message=None if available else "API a retourné une erreur (clé invalide ?)",
+            model=test_prov.model_name,
         )
     except Exception as exc:
-        config.last_test_status = "error"
-        config.last_test_error = str(exc)
-        config.last_tested_at = datetime.now(timezone.utc)
+        credential.last_test_ok = False
+        credential.last_test_at = datetime.now(timezone.utc)
         db.commit()
-        return AIProviderTestResult(provider=config.provider, status="error", message=str(exc))
+        return AIProviderTestResult(provider=provider_row.code, status="error", message=str(exc))
 
 
 @router.get("/default")
@@ -230,23 +193,15 @@ def get_default_provider(
     project_id: str | None = None,
 ):
     _ensure_provider_access(project_id, current_user, db)
-    query = db.query(AIProviderConfig).filter(
-        AIProviderConfig.is_default == True,
-        AIProviderConfig.enabled == True,
-    )
-    if project_id:
-        query = query.filter(
-            (AIProviderConfig.project_id == project_id) | (AIProviderConfig.project_id.is_(None))
-        )
-    else:
-        query = query.filter(AIProviderConfig.project_id.is_(None))
-    config = query.first()
+    from app.services.providers.provider_config import resolve_default_provider
+
+    config = resolve_default_provider(db, project_id)
     if config:
         return {
             "provider": config.provider,
             "model": config.model,
             "configured": bool(config.api_key_encrypted),
-            "enabled": config.enabled,
+            "enabled": True,
         }
     return {
         "provider": settings.DEFAULT_LLM_PROVIDER,
@@ -263,10 +218,9 @@ def get_provider(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    config = db.query(AIProviderConfig).filter(AIProviderConfig.id == provider_id).first()
-    if not config:
+    credential = db.get(ProviderCredential, provider_id)
+    if not credential:
         raise HTTPException(status_code=404, detail="Provider not found")
-    _ensure_provider_access(config.project_id, current_user, db)
-    public = AIProviderPublic.model_validate(config)
-    public.api_key_configured = bool(config.api_key_encrypted)
-    return public
+    _ensure_provider_access(credential.project_id, current_user, db)
+    provider_row = db.get(Provider, credential.provider_id)
+    return _to_public(credential, provider_row)

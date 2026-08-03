@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
+from app.models.content import ArticleScore
+from app.services.seo.artifacts import get_latest_artifacts
 from app.services.seo.eeat_service import compute_eeat_score
 from app.services.seo.format_expectations import get_format
 from app.services.seo.geo_expert_service import compute_geo_score
@@ -9,13 +12,7 @@ from app.services.seo.originality_service import compute_originality_score
 from app.services.seo.readability_service import compute_readability_score
 
 
-def _get(article: Any, field: str, default: Any = None) -> Any:
-    if isinstance(article, dict):
-        return article.get(field, default)
-    return getattr(article, field, default)
-
-
-def _to_float(val: Any) -> float | None:
+def _to_float(val) -> float | None:
     if val is None:
         return None
     try:
@@ -24,51 +21,55 @@ def _to_float(val: Any) -> float | None:
         return None
 
 
-def _get_geo_score(article: Any) -> float | None:
-    geo = _get(article, "geo_optimization_json")
-    if geo and isinstance(geo, dict):
-        return _to_float(geo.get("geo_score"))
-    return None
+def _latest_article_score(db: Session, article_id: str) -> ArticleScore | None:
+    return db.execute(
+        select(ArticleScore)
+        .where(ArticleScore.article_id == article_id)
+        .order_by(ArticleScore.evaluated_at.desc())
+        .limit(1)
+    ).scalar_one_or_none()
 
 
-def _get_originality_score(article: Any) -> float | None:
-    orig = _get(article, "originality_report_json")
-    if orig and isinstance(orig, dict):
-        v2 = orig.get("v2")
-        if v2 and isinstance(v2, dict):
-            return _to_float(v2.get("score"))
-        return _to_float(orig.get("heuristic_score"))
-    return None
-
-
-def _get_eeat_score(article: Any) -> float | None:
-    eeat_json = _get(article, "eeat_checklist_json")
-    if eeat_json and isinstance(eeat_json, dict):
-        v2 = eeat_json.get("v2")
-        if v2 and isinstance(v2, dict):
-            return _to_float(v2.get("score"))
-        return _to_float(eeat_json.get("score"))
-    return _to_float(_get(article, "eeat_score"))
-
-
-def _get_readability_score(article: Any) -> float | None:
-    rdbl = _get(article, "readability_report_json")
-    if rdbl and isinstance(rdbl, dict):
-        return _to_float(rdbl.get("score"))
-    return _to_float(_get(article, "readability_score"))
-
-
-def compute_global_score(article: Any) -> dict:
+def compute_global_score(db: Session, article_id: str, article=None) -> dict:
     """
     Scoring v2.1 — pondération : SEO 35% · EEAT 25% · Lisibilité 20% · Originalité 20%
     Le volume n'est jamais noté directement.
+
+    `article` (optionnel) : objet content.Article, uniquement pour get_format()
+    qui a besoin de content_format/target_word_count — sans dépendance sur les
+    scores eux-mêmes, qui viennent tous de la base (article_scores + artifacts).
     """
-    seo = _to_float(_get(article, "seo_score"))
-    eeat = _get_eeat_score(article)
-    readability = _get_readability_score(article)
-    originality = _get_originality_score(article)
-    geo = _get_geo_score(article)
-    quality = _to_float(_get(article, "quality_score"))
+    latest_score = _latest_article_score(db, article_id)
+    seo = _to_float(latest_score.seo_score) if latest_score else None
+    quality = _to_float(latest_score.quality_score) if latest_score else None
+
+    artifacts = get_latest_artifacts(
+        db, article_id, ["eeat_checklist", "readability_report", "originality_report", "geo_optimization"]
+    )
+    eeat_json = artifacts.get("eeat_checklist")
+    readability_json = artifacts.get("readability_report")
+    originality_report = artifacts.get("originality_report")
+    geo_json = artifacts.get("geo_optimization")
+
+    eeat = None
+    if eeat_json:
+        v2 = eeat_json.get("v2") if isinstance(eeat_json.get("v2"), dict) else None
+        eeat = _to_float(v2.get("score")) if v2 else _to_float(eeat_json.get("score"))
+    if eeat is None:
+        eeat = _to_float(latest_score.eeat_score) if latest_score else None
+
+    readability = None
+    if readability_json:
+        readability = _to_float(readability_json.get("score"))
+    if readability is None:
+        readability = _to_float(latest_score.readability_score) if latest_score else None
+
+    originality = None
+    if originality_report:
+        v2 = originality_report.get("v2") if isinstance(originality_report.get("v2"), dict) else None
+        originality = _to_float(v2.get("score")) if v2 else _to_float(originality_report.get("heuristic_score"))
+
+    geo = _to_float(geo_json.get("geo_score")) if geo_json else None
 
     present: list[float] = []
     weights: list[int] = []
@@ -98,9 +99,8 @@ def compute_global_score(article: Any) -> dict:
         global_score_valid = False
         incomplete_reason = "Aucun score disponible"
 
-    # Blocking rules v2.1
-    originality_report = _get(article, "originality_report_json")
-    if originality_report and isinstance(originality_report, dict):
+    # Règles bloquantes v2.1
+    if originality_report:
         v2 = originality_report.get("v2") or {}
         status = v2.get("status") or ""
         score_v2 = v2.get("score")
@@ -135,27 +135,17 @@ def compute_global_score(article: Any) -> dict:
         "originality_contrib": originality,
         "geo_contrib": geo,
         "quality_contrib": quality,
-        "content_format": get_format(article),
+        "content_format": get_format(article) if article is not None else None,
         "scoring_note": "Scoring v2.1 — SEO×35% · EEAT×25% · Lisibilité×20% · Originalité×20%. Volume non noté.",
     }
 
 
-def run_full_scoring(article: Any, project_articles: list[Any] | None = None) -> dict:
-    """Run all scoring experts and return individual results."""
+def run_full_scoring(article, project_articles: list | None = None) -> dict:
+    """Exécute les experts de scoring heuristiques (ne touchent pas la base ;
+    les résultats doivent être persistés séparément via save_artifact)."""
     return {
         "eeat": compute_eeat_score(article),
         "originality": compute_originality_score(article, project_articles or []),
         "readability": compute_readability_score(article),
         "geo": compute_geo_score(article),
     }
-
-
-# ── Legacy helpers kept for backward compat ──────────────────────────────────
-
-def _get_score(article: Any, field: str) -> float | None:
-    return _to_float(_get(article, field))
-
-
-def _get_json_field(article: Any, field: str) -> dict | None:
-    val = _get(article, field)
-    return val if isinstance(val, dict) else None

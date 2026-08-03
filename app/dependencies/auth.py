@@ -2,14 +2,49 @@ from datetime import datetime, timezone
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import decode_access_token
-from app.models.user import User
-from app.models.project import Project
-from app.models.project_member import ProjectMember
+from app.models.core import Project, ProjectMember, User
+from app.models.reference import MemberRole, MembershipStatus
 
 _bearer = HTTPBearer()
+
+# Rôles textuels (role.name) utilisés côté routers/permissions — l'ordre
+# reflète le rank croissant de ref.member_roles.
+ROLE_CODE_BY_RANK = {
+    MemberRole.VIEWER: "viewer",
+    MemberRole.DESIGNER: "designer",
+    MemberRole.EDITOR: "editor",
+    MemberRole.ADMIN: "admin",
+    MemberRole.OWNER: "owner",
+}
+ROLE_RANK_BY_CODE = {v: k for k, v in ROLE_CODE_BY_RANK.items()}
+# Alias rétrocompatibles (préfixe _ historique) — voir app/routers/members.py
+_ROLE_CODE_BY_RANK = ROLE_CODE_BY_RANK
+_ROLE_RANK_BY_CODE = ROLE_RANK_BY_CODE
+
+
+class MemberView:
+    """Vue de compatibilité exposant `.role` (str) par-dessus
+    ProjectMember.role_id (int) — évite de réécrire chaque comparaison de
+    rôle du routeur en une passe ; les routers migrent vers role_id
+    directement au fur et à mesure (voir REPRENDRE-LA-MAIN.md §6 étape 7)."""
+
+    def __init__(self, member: ProjectMember, role_code: str):
+        self._member = member
+        self.role = role_code
+
+    def __getattr__(self, name):
+        return getattr(self._member, name)
+
+
+def _role_code(role_id: int) -> str:
+    return ROLE_CODE_BY_RANK.get(role_id, "viewer")
+
+
+role_code = _role_code
 
 
 def get_current_user(
@@ -22,78 +57,75 @@ def get_current_user(
     user_id: str | None = payload.get("sub")
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token payload")
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.get(User, user_id)
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or inactive")
     return user
 
 
 def get_project_or_404(project_id: str, db: Session = Depends(get_db)) -> Project:
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = db.get(Project, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return project
 
 
 def user_can_access_project(user_id: str, project_id: str, db: Session) -> bool:
-    return (
-        db.query(ProjectMember)
-        .filter(
+    return db.execute(
+        select(ProjectMember).where(
             ProjectMember.user_id == user_id,
             ProjectMember.project_id == project_id,
-            ProjectMember.status == "active",
+            ProjectMember.status_reason_id == MembershipStatus.ACTIVE,
         )
-        .first()
-        is not None
-    )
+    ).scalar_one_or_none() is not None
 
 
 def get_project_member(
     project_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> ProjectMember:
-    if current_user.is_platform_admin:
-        return ProjectMember(
-            id=f"platform-admin:{current_user.id}:{project_id}",
+) -> MemberView:
+    if current_user.is_staff:
+        virtual = ProjectMember(
             project_id=project_id,
             user_id=current_user.id,
-            role="owner",
-            status="active",
+            role_id=MemberRole.OWNER,
+            state_id=0,
+            status_reason_id=MembershipStatus.ACTIVE,
             created_at=datetime.now(timezone.utc),
         )
-    member = (
-        db.query(ProjectMember)
-        .filter(
+        return MemberView(virtual, "owner")
+    member = db.execute(
+        select(ProjectMember).where(
             ProjectMember.user_id == current_user.id,
             ProjectMember.project_id == project_id,
-            ProjectMember.status == "active",
+            ProjectMember.status_reason_id == MembershipStatus.ACTIVE,
         )
-        .first()
-    )
+    ).scalar_one_or_none()
     if not member:
         raise HTTPException(status_code=403, detail="Access denied: not a project member")
-    return member
+    return MemberView(member, _role_code(member.role_id))
 
 
-def require_project_member(project_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> ProjectMember:
+def require_project_member(project_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> MemberView:
     return get_project_member(project_id, current_user, db)
 
 
-def get_member_for_project(db: Session, user_id: str, project_id: str) -> ProjectMember | None:
-    return (
-        db.query(ProjectMember)
-        .filter(
+def get_member_for_project(db: Session, user_id: str, project_id: str) -> MemberView | None:
+    member = db.execute(
+        select(ProjectMember).where(
             ProjectMember.user_id == user_id,
             ProjectMember.project_id == project_id,
-            ProjectMember.status == "active",
+            ProjectMember.status_reason_id == MembershipStatus.ACTIVE,
         )
-        .first()
-    )
+    ).scalar_one_or_none()
+    if not member:
+        return None
+    return MemberView(member, _role_code(member.role_id))
 
 
 def require_project_role(*allowed_roles: str):
-    def dependency(member: ProjectMember = Depends(get_project_member)) -> ProjectMember:
+    def dependency(member: MemberView = Depends(get_project_member)) -> MemberView:
         if member.role not in allowed_roles:
             raise HTTPException(
                 status_code=403,

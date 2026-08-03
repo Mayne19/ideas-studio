@@ -2,16 +2,43 @@ import json
 import re
 from html import unescape
 from datetime import datetime, timezone
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.article import Article
-from app.models.seo_analysis import SeoAnalysis
+from app.models.content import Article, ArticleScore, ArticleSeo
+from app.services.article_service import primary_keyword
+from app.services.seo.artifacts import get_latest_artifact, save_artifact
 from app.services.seo.eeat_service import compute_eeat_score
 from app.services.seo.geo_expert_service import compute_geo_score
 from app.services.seo.llm_budget import LLMBudgetManager
 from app.services.seo.originality_service import compute_originality_score
 from app.services.seo.readability_service import compute_readability_score
 from app.services.scoring_service import compute_global_score
+
+
+class _ArticleView:
+    """Adaptateur en lecture pour les heuristiques seo_analyzer, qui accèdent
+    à article.content/title/keyword/... — champs désormais éclatés entre
+    content.article_revisions et content.article_seo. Duck-typing, même
+    principe que _DraftArticle dans seo_generation_orchestrator.py."""
+
+    def __init__(self, article: Article, db: Session):
+        self.article = article
+        revision = article.current_revision
+        seo = db.get(ArticleSeo, article.id)
+        self.title = revision.title if revision else ""
+        self.content = revision.body if revision else ""
+        self.excerpt = revision.excerpt if revision else None
+        self.slug = article.slug
+        self.meta_title = seo.meta_title if seo else None
+        self.meta_description = seo.meta_description if seo else None
+        self.cover_image_url = None
+        self.keyword = primary_keyword(db, article.id)
+        self.content_format = article.content_format
+        self.target_word_count = article.target_word_count
+
+    def __getattr__(self, name):
+        return getattr(self.article, name)
 
 
 def _strip_html(value: str) -> str:
@@ -613,18 +640,19 @@ def _generate_suggestions(article: Article, parsed: dict, issues: list[dict]) ->
     return suggestions
 
 
-def analyze_article(db: Session, article_id: str) -> SeoAnalysis:
-    article = db.query(Article).filter(Article.id == article_id).first()
+def analyze_article(db: Session, article_id: str) -> dict:
+    article = db.get(Article, article_id)
     if not article:
         raise ValueError(f"Article {article_id} not found")
 
-    content = article.content or ""
-    parsed = _parse_markdown(content, article.title or "")
+    view = _ArticleView(article, db)
+    content = view.content or ""
+    parsed = _parse_markdown(content, view.title or "")
 
-    seo_issues = _run_seo_checks(article, parsed)
+    seo_issues = _run_seo_checks(view, parsed)
     readability_issues = _run_readability_checks(parsed)
-    quality_issues = _run_quality_checks(article, parsed)
-    eeat_issues = _run_eeat_checks(article, parsed)
+    quality_issues = _run_quality_checks(view, parsed)
+    eeat_issues = _run_eeat_checks(view, parsed)
 
     all_issues = seo_issues + readability_issues + quality_issues + eeat_issues
 
@@ -633,83 +661,70 @@ def analyze_article(db: Session, article_id: str) -> SeoAnalysis:
     quality_score = _compute_score(quality_issues)
     eeat_score = _compute_score(eeat_issues)
     readiness_status = _compute_readiness(all_issues)
-    suggestions = _generate_suggestions(article, parsed, all_issues)
+    suggestions = _generate_suggestions(view, parsed, all_issues)
 
     # Run v2.1 expert scoring with optional LLM enrichment
     budget = LLMBudgetManager(max_calls=2)
-    eeat_v2 = compute_eeat_score(article, budget=budget)
-    readability_v2 = compute_readability_score(article)
-    geo_v2 = compute_geo_score(article)
+    eeat_v2 = compute_eeat_score(view, budget=budget)
+    readability_v2 = compute_readability_score(view)
+    geo_v2 = compute_geo_score(view)
 
     # Originality requires other project articles for internal uniqueness
-    project_articles = (
-        db.query(Article)
-        .filter(Article.project_id == article.project_id, Article.id != article.id)
-        .limit(50)
-        .all()
-    )
-    originality_v2 = compute_originality_score(article, project_articles)
+    project_articles = db.execute(
+        select(Article).where(Article.project_id == article.project_id, Article.id != article.id).limit(50)
+    ).scalars().all()
+    project_views = [_ArticleView(a, db) for a in project_articles]
+    originality_v2 = compute_originality_score(view, project_views)
 
     eeat_score_final = eeat_v2["score"] if eeat_v2["confidence"] != "low" else eeat_score
     readability_score_final = readability_v2["score"] if readability_v2.get("score") is not None else readability_score
 
-    existing_eeat_json = article.eeat_checklist_json or {}
-    if isinstance(existing_eeat_json, str):
-        try:
-            existing_eeat_json = json.loads(existing_eeat_json)
-        except Exception:
-            existing_eeat_json = {}
+    existing_eeat_json = get_latest_artifact(db, article.id, "eeat_checklist") or {}
     existing_eeat_json["v2"] = eeat_v2
+    save_artifact(db, article.id, "eeat_checklist", existing_eeat_json)
 
-    existing_geo_json = article.geo_optimization_json or {}
-    if isinstance(existing_geo_json, str):
-        try:
-            existing_geo_json = json.loads(existing_geo_json)
-        except Exception:
-            existing_geo_json = {}
+    existing_geo_json = get_latest_artifact(db, article.id, "geo_optimization") or {}
     existing_geo_json.update({"geo_score": geo_v2["score"], "v2": geo_v2})
+    save_artifact(db, article.id, "geo_optimization", existing_geo_json)
 
-    analysis = SeoAnalysis(
-        project_id=article.project_id,
+    existing_orig_json = get_latest_artifact(db, article.id, "originality_report") or {}
+    existing_orig_json["v2"] = originality_v2
+    save_artifact(db, article.id, "originality_report", existing_orig_json)
+
+    save_artifact(db, article.id, "seo_analysis_issues", {"issues": all_issues, "suggestions": suggestions})
+
+    score_row = ArticleScore(
         article_id=article.id,
+        revision_id=article.current_revision_id,
         seo_score=seo_score,
         readability_score=readability_score_final,
         quality_score=quality_score,
         eeat_score=eeat_score_final,
+        geo_score=geo_v2.get("score"),
         readiness_status=readiness_status,
-        issues_json=json.dumps(all_issues),
-        suggestions_json=json.dumps(suggestions),
-        created_at=datetime.now(timezone.utc),
+        issues=all_issues,
+        suggestions=suggestions,
     )
-    db.add(analysis)
 
-    article.seo_score = seo_score
-    article.readability_score = readability_score_final
-    article.quality_score = quality_score
-    article.eeat_score = eeat_score_final
-    article.eeat_checklist_json = existing_eeat_json
-    article.geo_optimization_json = existing_geo_json
+    # Compute global score v2.1 now que les 4 experts sont en base
+    global_result = compute_global_score(db, article.id, article=article)
+    if global_result["global_score"] is not None:
+        score_row.global_score = global_result["global_score"]
 
-    # Originality: merge with existing report if any
-    existing_orig_json = article.originality_report_json or {}
-    if isinstance(existing_orig_json, str):
-        try:
-            existing_orig_json = json.loads(existing_orig_json)
-        except Exception:
-            existing_orig_json = {}
-    existing_orig_json["v2"] = originality_v2
-    article.originality_report_json = existing_orig_json
-
-    article.readiness_status = readiness_status
+    db.add(score_row)
     article.updated_at = datetime.now(timezone.utc)
-
-    # Compute global score v2.1 now that all 4 experts are stored on the article
-    global_result = compute_global_score(article)
-    global_score_v2 = global_result["global_score"]
-    if global_score_v2 is not None:
-        article.global_score = global_score_v2
-    if hasattr(article, "global_score_valid"):
-        article.global_score_valid = global_result["global_score_valid"]
-
     db.flush()
-    return analysis
+
+    return {
+        "id": score_row.id,
+        "article_id": article.id,
+        "project_id": article.project_id,
+        "seo_score": seo_score,
+        "readability_score": readability_score_final,
+        "quality_score": quality_score,
+        "eeat_score": eeat_score_final,
+        "readiness_status": readiness_status,
+        "issues": all_issues,
+        "suggestions": suggestions,
+        "created_at": score_row.evaluated_at,
+    }

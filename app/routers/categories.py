@@ -4,12 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.dependencies.auth import get_current_user, get_project_member, require_project_role, get_member_for_project
-from app.models.user import User
-from app.models.article import Article
-from app.models.category import Category
-from app.models.project import Project
-from app.models.project_member import ProjectMember
+from app.dependencies.auth import MemberView, get_current_user, get_project_member, require_project_role, get_member_for_project
+from app.models.core import Project, User
+from app.models.content import Article, Category
 from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryPublic
 from app.services.category_service import (
     get_categories_for_project,
@@ -17,6 +14,7 @@ from app.services.category_service import (
     create_category,
     update_category,
     delete_category,
+    to_public,
 )
 from app.core.utils import slugify
 
@@ -48,20 +46,20 @@ def _build_api_url(raw_domain: str, path: str = "/api/categories") -> str:
 @router.get("/projects/{project_id}/categories", response_model=list[CategoryPublic])
 def list_categories(
     project_id: str,
-    member: ProjectMember = Depends(get_project_member),
+    member: MemberView = Depends(get_project_member),
     db: Session = Depends(get_db),
 ):
-    return get_categories_for_project(db, project_id)
+    return [to_public(c) for c in get_categories_for_project(db, project_id)]
 
 
 @router.post("/projects/{project_id}/categories", response_model=CategoryPublic, status_code=201)
 def create_category_route(
     project_id: str,
     data: CategoryCreate,
-    member: ProjectMember = Depends(require_project_role(*_MANAGE_ROLES)),
+    member: MemberView = Depends(require_project_role(*_MANAGE_ROLES)),
     db: Session = Depends(get_db),
 ):
-    return create_category(db, data, project_id)
+    return to_public(create_category(db, data, project_id))
 
 
 @router.get("/categories/{category_id}", response_model=CategoryPublic)
@@ -76,7 +74,7 @@ def get_category_route(
     member = get_member_for_project(db, current_user.id, category.project_id)
     if not member:
         raise HTTPException(status_code=403, detail="Access denied")
-    return category
+    return to_public(category)
 
 
 @router.patch("/categories/{category_id}", response_model=CategoryPublic)
@@ -92,16 +90,16 @@ def patch_category_route(
     member = get_member_for_project(db, current_user.id, category.project_id)
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions")
-    return update_category(db, category, data)
+    return to_public(update_category(db, category, data))
 
 
 @router.post("/projects/{project_id}/categories/sync", response_model=list[CategoryPublic])
 def sync_categories(
     project_id: str,
-    member: ProjectMember = Depends(require_project_role(*_MANAGE_ROLES)),
+    member: MemberView = Depends(require_project_role(*_MANAGE_ROLES)),
     db: Session = Depends(get_db),
 ):
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = db.get(Project, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Projet introuvable.")
     if not project.domain:
@@ -183,12 +181,12 @@ def sync_categories(
 
     # Step 2 (fallback): extract categories from existing articles if blog fetch failed
     if blog_fetch_error and not existing:
-        articles = db.query(Article).filter(
-            Article.project_id == project_id,
-            Article.category_id.isnot(None),
-        ).all()
+        from sqlalchemy import select
+        articles = db.execute(
+            select(Article).where(Article.project_id == project_id, Article.category_id.isnot(None))
+        ).scalars().all()
         for article in articles:
-            category_obj = db.query(Category).filter(Category.id == article.category_id).first()
+            category_obj = db.get(Category, article.category_id)
             if not category_obj:
                 continue
             name = category_obj.name
@@ -225,7 +223,7 @@ def sync_categories(
         message = "Aucune nouvelle categorie detectee."
 
     return JSONResponse(
-        content=[CategoryPublic.model_validate(c).model_dump(mode="json") for c in categories],
+        content=[to_public(c).model_dump(mode="json") for c in categories],
         headers={"X-Sync-Message": message},
     )
 

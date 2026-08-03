@@ -8,40 +8,36 @@ Usage:
 import argparse
 import sys
 
+from sqlalchemy import select
+
 from app.core.database import SessionLocal
 
 
 def _should_run_pipeline_today(pipeline) -> bool:
     """Check if pipeline is enabled and today is an active day."""
-    if not pipeline or not pipeline.enabled:
+    if not pipeline or not pipeline.is_enabled:
         return False
-    if not pipeline.active_days or pipeline.active_days == "[]":
+    schedule = pipeline.schedule or {}
+    days = schedule.get("active_days") or []
+    if not days:
         return True
-    try:
-        import json
-        days = json.loads(pipeline.active_days) if isinstance(pipeline.active_days, str) else pipeline.active_days
-        if not days:
-            return True
-        from datetime import datetime
-        today_name = datetime.now().strftime("%A").lower()
-        return today_name in [d.lower() for d in days]
-    except (json.JSONDecodeError, TypeError):
-        return True
+    from datetime import datetime
+    today_name = datetime.now().strftime("%A").lower()
+    return today_name in [d.lower() for d in days]
 
 
 def cmd_daily(_args) -> None:
-    from app.models.pipeline import ProjectPipeline
-    from app.models.project import Project
+    from app.models.core import Project
+    from app.models.ai import Pipeline
+    from app.models.reference import ProjectStatus
     from app.services.scheduler_service import run_daily_project_tasks
     db = SessionLocal()
     try:
-        projects = db.query(Project).filter(Project.status != "archived").all()
+        projects = db.execute(select(Project).where(Project.status_reason_id != ProjectStatus.ARCHIVED)).scalars().all()
         processed = 0
         skipped = 0
         for project in projects:
-            pipeline = db.query(ProjectPipeline).filter(
-                ProjectPipeline.project_id == project.id
-            ).first()
+            pipeline = db.get(Pipeline, project.id)
             if _should_run_pipeline_today(pipeline):
                 result = run_daily_project_tasks(db, project.id)
                 processed += 1
@@ -59,27 +55,29 @@ def cmd_generate_ideas(args) -> None:
     from app.services.idea_engine import generate_idea
     from app.services.providers.llm_provider import get_llm_provider
     from app.services.providers.search_provider import get_search_provider
-    from app.models.project import Project
+    from app.models.core import Project
 
     db = SessionLocal()
     try:
-        project = db.query(Project).filter(Project.id == args.project_id).first()
+        project = db.get(Project, args.project_id)
         if not project:
             print(f"Project {args.project_id} not found.")
             sys.exit(1)
+        profile = project.active_editorial_profile
 
         llm = get_llm_provider()
         search = get_search_provider()
         idea = generate_idea(
             db=db,
             project_id=project.id,
-            project_audience=project.audience,
-            project_language=project.language,
+            project_audience=profile.audience if profile else None,
+            project_language=project.locale.split("-")[0] if project.locale else "fr",
             llm=llm,
             search=search,
         )
         if idea:
-            print(f"Idea created: [{idea.id[:8]}] {idea.title}")
+            title = idea.current_revision.title if idea.current_revision else ""
+            print(f"Idea created: [{idea.id[:8]}] {title}")
         else:
             print("No new idea generated (possible duplicate).")
     finally:

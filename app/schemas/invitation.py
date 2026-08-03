@@ -22,8 +22,8 @@ class InvitationPublic(BaseModel):
     project_id: str
     email: str
     role: str
-    token: str
-    invited_by_user_id: str
+    token: Optional[str] = None
+    invited_by_user_id: Optional[str] = None
     target_user_id: Optional[str] = None
     accepted_at: Optional[datetime] = None
     expires_at: datetime
@@ -34,7 +34,6 @@ class InvitationInfo(BaseModel):
     project_name: str
     role: str
     email: str
-    token: str
     expires_at: datetime
     already_accepted: bool = False
     expired: bool = False

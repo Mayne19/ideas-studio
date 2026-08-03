@@ -2,28 +2,29 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.dependencies.auth import get_current_user
-from app.models.invitation import Invitation
-from app.models.project import Project
-from app.models.project_member import ProjectMember
-from app.models.user import User
+from app.dependencies.auth import get_current_user, role_code
+from app.models.core import Project, User
 from app.schemas.invitation import InvitationInfo
+from app.services.invitation_service import accept_invitation, get_invitation_by_token
 from app.services.notification_service import create_notification
 
 router = APIRouter(prefix="/invitations", tags=["invitations"])
 
 
+def _user_display_name(user: User) -> str:
+    return f"{user.first_name or ''} {user.last_name or ''}".strip()
+
+
 @router.get("/{token}", response_model=InvitationInfo)
 def get_invitation(token: str, db: Session = Depends(get_db)):
-    inv = db.query(Invitation).filter(Invitation.token == token).first()
+    inv = get_invitation_by_token(db, token)
     if not inv:
         raise HTTPException(status_code=404, detail="Invitation introuvable ou lien invalide.")
-    project = db.query(Project).filter(Project.id == inv.project_id).first()
+    project = db.get(Project, inv.project_id)
     return InvitationInfo(
         project_name=project.name if project else "Projet",
-        role=inv.role,
+        role=role_code(inv.role_id),
         email=inv.email,
-        token=inv.token,
         expires_at=inv.expires_at,
         already_accepted=inv.accepted_at is not None,
         expired=datetime.now(timezone.utc) > inv.expires_at,
@@ -31,48 +32,25 @@ def get_invitation(token: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{token}/accept", response_model=dict)
-def accept_invitation(
+def accept_invitation_route(
     token: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    inv = db.query(Invitation).filter(Invitation.token == token).first()
+    inv = get_invitation_by_token(db, token)
     if not inv:
         raise HTTPException(status_code=404, detail="Invitation introuvable.")
-    if inv.accepted_at:
-        raise HTTPException(status_code=400, detail="Cette invitation a déjà été acceptée.")
-    if datetime.now(timezone.utc) > inv.expires_at:
-        raise HTTPException(status_code=400, detail="Cette invitation a expiré.")
-    if current_user.email != inv.email:
-        raise HTTPException(status_code=403, detail="Cette invitation ne vous est pas destinée.")
 
-    existing = (
-        db.query(ProjectMember)
-        .filter(
-            ProjectMember.project_id == inv.project_id,
-            ProjectMember.user_id == current_user.id,
-        )
-        .first()
-    )
-    if existing:
-        raise HTTPException(status_code=409, detail="Vous êtes déjà membre de ce projet.")
+    try:
+        accept_invitation(db, inv, current_user)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
-    member = ProjectMember(
-        project_id=inv.project_id,
-        user_id=current_user.id,
-        role=inv.role,
-        status="active",
-    )
-    db.add(member)
-    inv.accepted_at = datetime.now(timezone.utc)
-    if not inv.target_user_id:
-        inv.target_user_id = current_user.id
-
-    project = db.query(Project).filter(Project.id == inv.project_id).first()
+    project = db.get(Project, inv.project_id)
     create_notification(
         db, inv.project_id,
         title="Invitation acceptée",
-        message=f"{current_user.name} a rejoint le projet {project.name if project else ''}.",
+        message=f"{_user_display_name(current_user)} a rejoint le projet {project.name if project else ''}.",
         level="success",
         type="invitation",
     )

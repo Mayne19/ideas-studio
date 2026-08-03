@@ -1,80 +1,82 @@
-from datetime import datetime, timezone
+"""core.invitations.token_sha256 remplace l'ancien token en clair — même
+principe que app/services/password_reset_service.py : le jeton brut n'est
+récupérable qu'à la création, seul son digest est stocké ensuite."""
+from __future__ import annotations
+
+import hashlib
+import secrets
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.models.invitation import Invitation
-from app.models.project import Project
-from app.models.project_member import ProjectMember
-from app.models.user import User
-from app.schemas.member import MemberPublic
+
+from app.models.core import Invitation, ProjectMember, User
+from app.models.reference import MembershipStatus
+
+INVITATION_TTL_DAYS = 14
+
+
+def _hash_token(token: str) -> bytes:
+    return hashlib.sha256(token.encode("utf-8")).digest()
 
 
 def create_invitation(
     db: Session,
     project_id: str,
     email: str,
-    role: str,
+    role_id: int,
     invited_by_user_id: str,
-) -> Invitation:
-    existing_user = db.query(User).filter(User.email == email).first()
+) -> tuple[Invitation, str]:
+    existing_user = db.execute(select(User).where(User.email == email)).scalar_one_or_none()
+    raw_token = secrets.token_urlsafe(32)
     inv = Invitation(
         project_id=project_id,
         email=email,
-        role=role,
-        invited_by_user_id=invited_by_user_id,
-        target_user_id=existing_user.id if existing_user else None,
+        role_id=role_id,
+        token_sha256=_hash_token(raw_token),
+        invited_by=invited_by_user_id,
+        accepted_by=None,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=INVITATION_TTL_DAYS),
     )
     db.add(inv)
     db.flush()
-    return inv
+    return inv, raw_token
 
 
 def get_invitation_by_token(db: Session, token: str) -> Invitation | None:
-    return db.query(Invitation).filter(Invitation.token == token).first()
+    return db.execute(
+        select(Invitation).where(Invitation.token_sha256 == _hash_token(token))
+    ).scalar_one_or_none()
 
 
-def accept_invitation(
-    db: Session,
-    invitation: Invitation,
-    user: User,
-) -> ProjectMember:
+def accept_invitation(db: Session, invitation: Invitation, user: User) -> ProjectMember:
     if invitation.accepted_at:
         raise ValueError("Cette invitation a déjà été acceptée.")
     if datetime.now(timezone.utc) > invitation.expires_at:
         raise ValueError("Cette invitation a expiré.")
+    if user.email != invitation.email:
+        raise ValueError("Cette invitation ne vous est pas destinée.")
 
-    existing = (
-        db.query(ProjectMember)
-        .filter(
+    existing = db.execute(
+        select(ProjectMember).where(
             ProjectMember.project_id == invitation.project_id,
             ProjectMember.user_id == user.id,
         )
-        .first()
-    )
+    ).scalar_one_or_none()
     if existing:
         raise ValueError("Vous êtes déjà membre de ce projet.")
 
     member = ProjectMember(
         project_id=invitation.project_id,
         user_id=user.id,
-        role=invitation.role,
-        status="active",
+        role_id=invitation.role_id,
     )
+    member.status_reason_id = MembershipStatus.ACTIVE
+    member.state_id = 0
     db.add(member)
 
     invitation.accepted_at = datetime.now(timezone.utc)
-    if not invitation.target_user_id:
-        invitation.target_user_id = user.id
+    invitation.accepted_by = user.id
 
     db.flush()
-    return _to_public(member, user)
-
-
-def _to_public(member: ProjectMember, user: User | None) -> MemberPublic:
-    return MemberPublic(
-        id=member.id,
-        user_id=member.user_id,
-        user_name=user.name if user else None,
-        user_email=user.email if user else None,
-        role=member.role,
-        status=member.status,
-        created_at=member.created_at,
-    )
+    return member

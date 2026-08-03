@@ -6,108 +6,60 @@ from pydantic import BaseModel, ConfigDict
 class ProjectCreate(BaseModel):
     name: str
     domain: Optional[str] = None
-    language: Optional[str] = None
-    vertical: Optional[str] = None
-    country_target: Optional[str] = None
+    locale: Optional[str] = None
     timezone: Optional[str] = None
-    description: Optional[str] = None
-    industry: Optional[str] = None
     audience: Optional[str] = None
     tone: Optional[str] = None
     reader_level: Optional[str] = None
     writing_style: Optional[str] = None
-    editorial_goal: Optional[str] = None
-    value_proposition: Optional[str] = None
-    allowed_topics: Optional[str] = None
-    forbidden_topics: Optional[str] = None
-    words_to_avoid: Optional[str] = None
-    average_target_length: Optional[str] = None
+    vertical: Optional[str] = None
     word_count_min: Optional[int] = None
     word_count_max: Optional[int] = None
-    preferred_formats: Optional[str] = None
-    technical_level: Optional[str] = None
-    seo_rules: Optional[str] = None
-    geo_rules: Optional[str] = None
-    source_guidelines: Optional[str] = None
-    internal_linking_guidelines: Optional[str] = None
-    external_linking_guidelines: Optional[str] = None
-    style_examples: Optional[str] = None
+    rules: Optional[dict] = None
+    constraints: Optional[dict] = None
 
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
     domain: Optional[str] = None
-    language: Optional[str] = None
-    vertical: Optional[str] = None
-    country_target: Optional[str] = None
+    locale: Optional[str] = None
     timezone: Optional[str] = None
-    description: Optional[str] = None
-    industry: Optional[str] = None
     audience: Optional[str] = None
     tone: Optional[str] = None
     reader_level: Optional[str] = None
     writing_style: Optional[str] = None
-    editorial_goal: Optional[str] = None
-    value_proposition: Optional[str] = None
-    allowed_topics: Optional[str] = None
-    forbidden_topics: Optional[str] = None
-    words_to_avoid: Optional[str] = None
-    average_target_length: Optional[str] = None
+    vertical: Optional[str] = None
     word_count_min: Optional[int] = None
     word_count_max: Optional[int] = None
-    preferred_formats: Optional[str] = None
-    technical_level: Optional[str] = None
-    seo_rules: Optional[str] = None
-    geo_rules: Optional[str] = None
-    source_guidelines: Optional[str] = None
-    internal_linking_guidelines: Optional[str] = None
-    external_linking_guidelines: Optional[str] = None
-    style_examples: Optional[str] = None
-    public_site_url: Optional[str] = None
+    rules: Optional[dict] = None
+    constraints: Optional[dict] = None
+    site_url: Optional[str] = None
     revalidate_url: Optional[str] = None
-    revalidate_secret: Optional[str] = None
 
 
 class ProjectPublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
-    owner_id: str
+    owner_id: Optional[str] = None
     name: str
-    domain: Optional[str]
-    language: Optional[str]
-    vertical: Optional[str] = None
-    country_target: Optional[str]
-    timezone: Optional[str] = None
-    description: Optional[str] = None
-    industry: Optional[str] = None
-    audience: Optional[str]
-    tone: Optional[str]
+    domain: Optional[str] = None
+    locale: str
+    timezone: str
+    audience: Optional[str] = None
+    tone: Optional[str] = None
     reader_level: Optional[str] = None
     writing_style: Optional[str] = None
-    editorial_goal: Optional[str] = None
-    value_proposition: Optional[str] = None
-    allowed_topics: Optional[str] = None
-    forbidden_topics: Optional[str] = None
-    words_to_avoid: Optional[str] = None
-    average_target_length: Optional[str] = None
+    vertical: Optional[str] = None
     word_count_min: Optional[int] = None
     word_count_max: Optional[int] = None
-    preferred_formats: Optional[str] = None
-    technical_level: Optional[str] = None
-    seo_rules: Optional[str] = None
-    geo_rules: Optional[str] = None
-    source_guidelines: Optional[str] = None
-    internal_linking_guidelines: Optional[str] = None
-    external_linking_guidelines: Optional[str] = None
-    style_examples: Optional[str] = None
-    status: str
-    public_tracking_key: str
-    connected_at: Optional[datetime]
-    last_seen_at: Optional[datetime]
+    status: int
+    public_tracking_key_prefix: Optional[str] = None
+    connected_at: Optional[datetime] = None
+    last_seen_at: Optional[datetime] = None
     public_site_url: Optional[str] = None
     revalidate_url: Optional[str] = None
-    revalidate_secret_configured: bool = False
+    revalidate_configured: bool = False
     last_revalidated_at: Optional[datetime] = None
     last_revalidate_status: Optional[str] = None
     last_revalidate_error: Optional[str] = None
@@ -117,17 +69,17 @@ class ProjectPublic(BaseModel):
 
 class ProjectConnectInfo(BaseModel):
     project_id: str
-    domain: Optional[str]
-    status: str
-    public_tracking_key: str
-    secret_api_key_masked: str
+    domain: Optional[str] = None
+    status: int
+    public_tracking_key: Optional[str] = None
+    secret_api_key_masked: Optional[str] = None
     connected_at: Optional[datetime] = None
     last_seen_at: Optional[datetime] = None
     snippet: str
     public_api_endpoints: dict
     public_site_url: Optional[str] = None
     revalidate_url: Optional[str] = None
-    revalidate_secret_configured: bool = False
+    revalidate_configured: bool = False
     last_revalidated_at: Optional[datetime] = None
     last_revalidate_status: Optional[str] = None
     last_revalidate_error: Optional[str] = None

@@ -1,28 +1,25 @@
-import json
 import logging
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 
 logger = logging.getLogger(__name__)
-from app.core.utils import calculate_word_count
-from app.dependencies.auth import get_current_user, require_project_role
-from app.models.user import User
-from app.models.project import Project
-from app.models.article import Article
-from app.models.project_member import ProjectMember
+from app.dependencies.auth import get_current_user, require_project_role, role_code
+from app.models.core import Project, ProjectMember, User
+from app.models.content import Article
+from app.models.reference import ArticleStatus, MembershipStatus, RunStatus, set_article_status, set_run_status
 from app.schemas.ideas import (
     IdeaGenerateRequest, IdeaGenerateResponse,
     IdeaRejectRequest, IdeaPriorityRequest,
     LaunchRequest, BulkDeleteRequest, BulkDeleteResponse,
 )
 from app.services.idea_engine import generate_idea
-from app.services.writing_engine import start_writing_from_idea, _mock_content_from_outline, _MOCK_OUTLINE
+from app.services.article_service import primary_keyword
 from app.services.log_service import log_step
 from app.services.production_queue import send_to_production, process_queue, get_queue_summary
-from app.services.article_service import prepare_article_delete
 from app.services.providers.llm_provider import (
     GenerationFailedError,
     ProviderUnavailableError,
@@ -32,18 +29,13 @@ from app.services.providers.search_provider import get_search_provider
 
 router = APIRouter(tags=["ideas"])
 
-_IDEA_STATUSES = frozenset({"idea_proposed", "idea_priority"})
-_DELETABLE_IDEA_STATUSES = frozenset({
-    "idea_proposed",
-    "idea_priority",
-    "idea_rejected",
-    "idea_prioritized",
-    "proposed",
-    "rejected",
+_IDEA_STATUSES = frozenset({ArticleStatus.IDEA_PROPOSED, ArticleStatus.IDEA_PRIORITY})
+_DELETABLE_IDEA_STATUSES = frozenset({ArticleStatus.IDEA_PROPOSED, ArticleStatus.IDEA_PRIORITY, ArticleStatus.IDEA_REJECTED})
+_WRITABLE_STATUSES = frozenset({ArticleStatus.IDEA_PROPOSED, ArticleStatus.IDEA_PRIORITY, ArticleStatus.OUTLINE_READY, ArticleStatus.FAILED, ArticleStatus.UPDATE_RECOMMENDED})
+_RERUN_STATUSES = frozenset({
+    ArticleStatus.IDEA_PROPOSED, ArticleStatus.IDEA_PRIORITY, ArticleStatus.OUTLINE_READY, ArticleStatus.FAILED,
+    ArticleStatus.DRAFT_READY, ArticleStatus.CORRECTION_NEEDED, ArticleStatus.UPDATE_RECOMMENDED,
 })
-_PRODUCTION_WORKFLOW_STATUSES = frozenset({"production", "quality", "published"})
-_WRITABLE_STATUSES = frozenset({"idea_proposed", "idea_priority", "outline_ready", "failed", "update_recommended"})
-_RERUN_STATUSES = frozenset({"idea_proposed", "idea_priority", "outline_ready", "failed", "draft_ready", "correction_needed", "update_recommended"})
 
 
 def _get_project_or_404(project_id: str, db: Session) -> Project:
@@ -61,33 +53,30 @@ def _get_article_or_404(article_id: str, db: Session) -> Article:
 
 
 def _check_role(db: Session, user_id: str, project_id: str, allowed_roles: tuple) -> ProjectMember:
-    member = (
-        db.query(ProjectMember)
-        .filter(
+    member = db.execute(
+        select(ProjectMember).where(
             ProjectMember.user_id == user_id,
             ProjectMember.project_id == project_id,
-            ProjectMember.status == "active",
+            ProjectMember.status_reason_id == MembershipStatus.ACTIVE,
         )
-        .first()
-    )
+    ).scalar_one_or_none()
     if not member:
         raise HTTPException(status_code=403, detail="Access denied: not a project member")
-    if member.role not in allowed_roles:
+    if role_code(member.role_id) not in allowed_roles:
         raise HTTPException(status_code=403, detail=f"Required role(s): {', '.join(allowed_roles)}")
     return member
 
 
-def _idea_response(article: Article, provider=None) -> IdeaGenerateResponse:
+def _idea_response(db: Session, article: Article, provider=None) -> IdeaGenerateResponse:
+    revision = article.current_revision
     return IdeaGenerateResponse(
         id=article.id,
-        title=article.title,
-        keyword=article.keyword,
+        title=revision.title if revision else "",
+        keyword=primary_keyword(db, article.id),
         category_id=article.category_id,
-        angle=article.angle,
         search_intent=article.search_intent,
-        audience=article.audience,
-        opportunity_score=article.opportunity_score,
-        status=article.status,
+        opportunity_score=float(article.opportunity_score) if article.opportunity_score is not None else None,
+        status=article.status_reason_id,
         provider_name=getattr(provider, "provider_name", None),
         model_name=getattr(provider, "model_name", None),
     )
@@ -102,17 +91,11 @@ def _generation_http_error(exc: Exception) -> HTTPException:
 
 
 def _idea_delete_refusal(article: Article) -> str | None:
-    if article.status in {"published", "scheduled"} or article.published_at is not None:
+    if article.status_reason_id in (ArticleStatus.PUBLISHED, ArticleStatus.SCHEDULED) or article.published_at is not None:
         return "Cet article est déjà publié ou planifié et ne peut pas être supprimé depuis la page Idées."
-    if article.workflow_status in _PRODUCTION_WORKFLOW_STATUSES:
-        return "Cette idée est déjà en production et ne peut pas être supprimée depuis la page Idées."
-    if article.status not in _DELETABLE_IDEA_STATUSES:
+    if article.status_reason_id not in _DELETABLE_IDEA_STATUSES:
         return "Cette idée est déjà en production et ne peut pas être supprimée depuis la page Idées."
     return None
-
-
-def _delete_idea(db: Session, article: Article) -> None:
-    prepare_article_delete(db, article)
 
 
 @router.post("/projects/{project_id}/ideas/generate", response_model=IdeaGenerateResponse)
@@ -124,6 +107,7 @@ def generate_idea_route(
     _member=Depends(require_project_role("owner", "admin", "editor")),
 ):
     project = _get_project_or_404(project_id, db)
+    profile = project.active_editorial_profile
     try:
         llm = get_llm_provider()
         search = get_search_provider()
@@ -134,8 +118,8 @@ def generate_idea_route(
         article = generate_idea(
             db=db,
             project_id=project_id,
-            project_audience=project.audience,
-            project_language=project.language,
+            project_audience=profile.audience if profile else None,
+            project_language=project.locale.split("-")[0] if project.locale else "fr",
             llm=llm,
             search=search,
             context_hint=body.context_hint,
@@ -152,7 +136,7 @@ def generate_idea_route(
         raise HTTPException(status_code=409, detail="Idea could not be generated (duplicate keyword or LLM failure)")
     db.commit()
     db.refresh(article)
-    return _idea_response(article, llm)
+    return _idea_response(db, article, llm)
 
 
 @router.post("/articles/{article_id}/start-writing", response_model=IdeaGenerateResponse)
@@ -163,10 +147,10 @@ def start_writing_route(
 ):
     article = _get_article_or_404(article_id, db)
     _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor", "writer"))
-    if article.status not in _WRITABLE_STATUSES:
+    if article.status_reason_id not in _WRITABLE_STATUSES:
         raise HTTPException(
             status_code=400,
-            detail=f"Impossible de lancer la rédaction depuis le statut '{article.status}'"
+            detail=f"Impossible de lancer la rédaction depuis le statut '{article.status_reason_id}'"
         )
     try:
         llm = get_llm_provider()
@@ -182,9 +166,10 @@ def start_writing_route(
     try:
         from app.services.seo.seo_generation_orchestrator import generate_full_article
         from app.services.agents.agent_router import get_agent_router
-        from app.models.project import Project
 
-        project = db.query(Project).filter(Project.id == article.project_id).first()
+        project = db.get(Project, article.project_id)
+        profile = project.active_editorial_profile if project else None
+        revision = article.current_revision
 
         article = generate_full_article(
             db=db,
@@ -192,10 +177,10 @@ def start_writing_route(
             llm=llm,
             search=search,
             agent_router=get_agent_router(db=db),
-            preferred_title=article.title,
-            keyword=article.keyword,
+            preferred_title=revision.title if revision else None,
+            keyword=primary_keyword(db, article_id),
             category_id=article.category_id,
-            audience=getattr(project, 'audience', None),
+            audience=profile.audience if profile else None,
             existing_article_id=article_id,
         )
     except (ProviderUnavailableError, GenerationFailedError) as exc:
@@ -203,7 +188,7 @@ def start_writing_route(
 
     db.commit()
     db.refresh(article)
-    return _idea_response(article, llm)
+    return _idea_response(db, article, llm)
 
 
 @router.post("/articles/{article_id}/reject")
@@ -215,45 +200,43 @@ def reject_idea_route(
 ):
     article = _get_article_or_404(article_id, db)
     _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor"))
-    if article.status not in _IDEA_STATUSES:
+    if article.status_reason_id not in _IDEA_STATUSES:
         raise HTTPException(status_code=400, detail="Only ideas can be rejected")
-    article.status = "idea_rejected"
+    title = article.current_revision.title if article.current_revision else ""
+    set_article_status(article, ArticleStatus.IDEA_REJECTED)
     article.rejection_reason = body.rejection_reason
     article.rejection_note = body.rejection_note
     article.updated_at = datetime.now(timezone.utc)
-    log_step(db, article.project_id, f"Idée rejetée : {article.title}", level="info", step="reject", article_id=article.id)
+    log_step(db, article.project_id, f"Idée rejetée : {title}", level="info", step="reject", article_id=article.id)
 
     # Auto-replacement: generate a new idea if this was part of monthly planning
     replacement = None
-    if article.scheduled_at or article.target_write_at:
+    from app.services.seo.artifacts import get_latest_artifact
+    schedule = get_latest_artifact(db, article.id, "planning_schedule")
+    if schedule:
         try:
-            from app.services.providers.llm_provider import get_llm_provider
-            from app.services.providers.search_provider import get_search_provider
-            from app.services.idea_engine import generate_idea
-            from app.models.project import Project
-
             project = db.get(Project, article.project_id)
+            profile = project.active_editorial_profile if project else None
             if project:
                 llm = get_llm_provider()
                 search = get_search_provider()
                 replacement = generate_idea(
                     db=db,
                     project_id=article.project_id,
-                    project_audience=project.audience,
-                    project_language=project.language,
+                    project_audience=profile.audience if profile else None,
+                    project_language=project.locale.split("-")[0] if project.locale else "fr",
                     llm=llm,
                     search=search,
                     category_id=article.category_id,
-                    keyword=article.keyword,
+                    keyword=primary_keyword(db, article.id),
                 )
                 if replacement:
-                    # Carry forward the target dates
-                    replacement.target_write_at = article.target_write_at
-                    replacement.target_review_at = article.target_review_at
-                    replacement.scheduled_at = article.scheduled_at
+                    from app.services.seo.artifacts import save_artifact
+                    save_artifact(db, replacement.id, "planning_schedule", schedule)
+                    replacement_title = replacement.current_revision.title if replacement.current_revision else ""
                     log_step(
                         db, article.project_id,
-                        f"Idée de remplacement générée : {replacement.title}",
+                        f"Idée de remplacement générée : {replacement_title}",
                         level="info", step="auto_replace", article_id=replacement.id,
                     )
         except Exception:
@@ -262,7 +245,7 @@ def reject_idea_route(
     db.commit()
     result = {"status": "rejected"}
     if replacement:
-        result["replacement"] = {"id": replacement.id, "title": replacement.title}
+        result["replacement"] = {"id": replacement.id, "title": replacement.current_revision.title if replacement.current_revision else ""}
     return result
 
 
@@ -276,11 +259,11 @@ def set_priority_route(
     article = _get_article_or_404(article_id, db)
     _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor"))
     article.priority = body.priority
-    if article.status == "idea_proposed":
-        article.status = "idea_priority"
+    if article.status_reason_id == ArticleStatus.IDEA_PROPOSED:
+        set_article_status(article, ArticleStatus.IDEA_PRIORITY)
     article.updated_at = datetime.now(timezone.utc)
     db.commit()
-    return {"priority": article.priority, "status": article.status}
+    return {"priority": article.priority, "status": article.status_reason_id}
 
 
 @router.post("/articles/{article_id}/manual-draft", response_model=IdeaGenerateResponse)
@@ -289,31 +272,54 @@ def manual_draft_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    from app.core.utils import calculate_word_count
+    from app.models.content import ArticleRevision
+    from app.models.reference import RevisionSource
+
     article = _get_article_or_404(article_id, db)
     _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor"))
-    if article.status not in _IDEA_STATUSES:
+    if article.status_reason_id not in _IDEA_STATUSES:
         raise HTTPException(status_code=400, detail="Only ideas can be converted to a manual draft")
 
-    # Build skeleton from outline_json if available, else use default
-    if article.outline_json:
-        try:
-            outline = json.loads(article.outline_json)
-        except Exception:
-            outline = _MOCK_OUTLINE
-    else:
-        outline = _MOCK_OUTLINE
-        article.outline_json = json.dumps(outline)
+    mock_outline = [
+        {"heading": "Introduction", "notes": "Présenter le sujet et son importance"},
+        {"heading": "Développement", "notes": "Expliquer les concepts clés en détail avec des exemples concrets"},
+        {"heading": "Bonnes pratiques", "notes": "Conseils pratiques et recommandations actionnables"},
+        {"heading": "Conclusion", "notes": "Résumé des points clés et perspectives"},
+    ]
+    keyword = primary_keyword(db, article_id) or ""
+    title = article.current_revision.title if article.current_revision else ""
+    parts = [f"<h1>{title}</h1>"]
+    for section in mock_outline:
+        parts.append(f"<h2>{section['heading']}</h2>")
+        parts.append(f"<p>{section['notes']}. Ce contenu est un exemple généré à titre indicatif. Remplacez-le par votre propre texte développé et original.</p>")
+    parts.append(f"<p><em>Article optimisé pour le mot-clé : {keyword}</em></p>")
+    content = "".join(parts)
 
-    content = _mock_content_from_outline(article.title, article.keyword or "", outline)
-    article.content = content
-    article.word_count = calculate_word_count(content)
-    article.status = "draft_ready"
+    last_no = db.execute(
+        select(ArticleRevision.revision_no)
+        .where(ArticleRevision.article_id == article.id)
+        .order_by(ArticleRevision.revision_no.desc())
+        .limit(1)
+    ).scalar_one_or_none() or 0
+    revision = ArticleRevision(
+        article_id=article.id,
+        revision_no=last_no + 1,
+        source=RevisionSource.HUMAN,
+        title=title,
+        body=content,
+        word_count=calculate_word_count(content),
+    )
+    db.add(revision)
+    db.flush()
+    article.current_revision_id = revision.id
+    set_article_status(article, ArticleStatus.DRAFT_READY)
     article.updated_at = datetime.now(timezone.utc)
 
-    log_step(db, article.project_id, f"Brouillon manuel créé : {article.title}", level="info", step="manual_draft", article_id=article.id)
+    log_step(db, article.project_id, f"Brouillon manuel créé : {title}", level="info", step="manual_draft", article_id=article.id)
     db.commit()
     db.refresh(article)
-    return _idea_response(article)
+    return _idea_response(db, article)
 
 
 @router.post("/articles/{article_id}/rerun", response_model=IdeaGenerateResponse)
@@ -324,20 +330,33 @@ def rerun_writing_route(
 ):
     article = _get_article_or_404(article_id, db)
     _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor"))
-    if article.status not in _RERUN_STATUSES:
-        raise HTTPException(status_code=400, detail=f"Cannot rerun from status '{article.status}'")
+    if article.status_reason_id not in _RERUN_STATUSES:
+        raise HTTPException(status_code=400, detail=f"Cannot rerun from status '{article.status_reason_id}'")
     try:
         llm = get_llm_provider()
+        search = get_search_provider()
         logger.info(
             "rerun_writing provider=%s model=%s is_mock=%s article=%s",
             llm.provider_name, llm.model_name, llm.is_mock, article_id,
         )
-        article = start_writing_from_idea(db=db, article=article, llm=llm)
+        from app.services.seo.seo_generation_orchestrator import generate_full_article
+        from app.services.agents.agent_router import get_agent_router
+
+        article = generate_full_article(
+            db=db,
+            project_id=article.project_id,
+            llm=llm,
+            search=search,
+            agent_router=get_agent_router(db=db),
+            keyword=primary_keyword(db, article_id),
+            category_id=article.category_id,
+            existing_article_id=article_id,
+        )
     except (ProviderUnavailableError, GenerationFailedError) as exc:
         raise _generation_http_error(exc) from exc
     db.commit()
     db.refresh(article)
-    return _idea_response(article, llm)
+    return _idea_response(db, article, llm)
 
 
 @router.post("/projects/{project_id}/launch")
@@ -349,9 +368,8 @@ def launch_project_route(
     _member=Depends(require_project_role("owner", "admin")),
 ):
     project = _get_project_or_404(project_id, db)
-    
-    from app.core.config import settings
-    
+    profile = project.active_editorial_profile
+
     if body.dry_run:
         return {
             "dry_run": True,
@@ -369,14 +387,13 @@ def launch_project_route(
         raise _generation_http_error(exc) from exc
 
     generated = []
-    generation_count = 1 if body.mode == "full_article" else 1
-    for _ in range(generation_count):
+    for _ in range(1):
         try:
             article = generate_idea(
                 db=db,
                 project_id=project_id,
-                project_audience=project.audience,
-                project_language=project.language,
+                project_audience=profile.audience if profile else None,
+                project_language=project.locale.split("-")[0] if project.locale else "fr",
                 llm=llm,
                 search=search,
                 context_hint=body.context_hint,
@@ -392,17 +409,21 @@ def launch_project_route(
         if article:
             if body.mode == "full_article":
                 try:
-                    article = start_writing_from_idea(
+                    from app.services.seo.seo_generation_orchestrator import generate_full_article
+                    from app.services.agents.agent_router import get_agent_router
+                    article = generate_full_article(
                         db=db,
-                        article=article,
+                        project_id=project_id,
                         llm=llm,
-                        preferred_title=body.preferred_title,
+                        search=search,
+                        agent_router=get_agent_router(db=db),
                         keyword=body.keyword,
                         audience=body.audience,
                         angle=body.angle,
                         search_intent=body.search_intent,
                         include_faq=body.include_faq,
                         include_callouts=body.include_callouts,
+                        existing_article_id=article.id,
                     )
                 except (ProviderUnavailableError, GenerationFailedError) as exc:
                     raise _generation_http_error(exc) from exc
@@ -437,10 +458,8 @@ def send_to_production_route(
     db.refresh(result)
     return {
         "id": result.id,
-        "title": result.title,
-        "status": result.status,
-        "next_agent_key": result.next_agent_key,
-        "workflow_status": result.workflow_status,
+        "title": result.current_revision.title if result.current_revision else "",
+        "status": result.status_reason_id,
     }
 
 
@@ -451,40 +470,45 @@ def cancel_writing_route(
     current_user: User = Depends(get_current_user),
 ):
     """Annule une rédaction : immédiat si en file/échec, au prochain checkpoint si en cours."""
-    from app.services.log_service import log_step
+    from app.models.ai import WorkflowRun
 
     article = _get_article_or_404(article_id, db)
     _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor"))
+    title = article.current_revision.title if article.current_revision else ""
 
-    if article.status in ("writing_requested", "failed"):
-        article.status = "idea_proposed"
-        article.workflow_status = "planning"
-        article.writing_cancel_requested = False
-        article.writing_error = None
+    if article.status_reason_id in (ArticleStatus.WRITING_REQUESTED, ArticleStatus.FAILED):
+        set_article_status(article, ArticleStatus.IDEA_PROPOSED)
         article.updated_at = datetime.now(timezone.utc)
         log_step(
             db, article.project_id,
-            f"Rédaction annulée (retour en idée) : {article.title}",
+            f"Rédaction annulée (retour en idée) : {title}",
             level="info", step="writing_queue", article_id=article.id,
         )
         db.commit()
         db.refresh(article)
-        return {"id": article.id, "status": article.status, "cancelled": True}
+        return {"id": article.id, "status": article.status_reason_id, "cancelled": True}
 
-    if article.status == "writing_in_progress":
-        article.writing_cancel_requested = True
+    if article.status_reason_id == ArticleStatus.WRITING_IN_PROGRESS:
+        run = db.execute(
+            select(WorkflowRun)
+            .where(WorkflowRun.article_id == article.id)
+            .order_by(WorkflowRun.started_at.desc())
+            .limit(1)
+        ).scalar_one_or_none()
+        if run:
+            run.cancel_requested = True
         article.updated_at = datetime.now(timezone.utc)
         log_step(
             db, article.project_id,
-            f"Annulation demandée pour la rédaction en cours : {article.title}",
+            f"Annulation demandée pour la rédaction en cours : {title}",
             level="info", step="writing_queue", article_id=article.id,
         )
         db.commit()
-        return {"id": article.id, "status": article.status, "cancelled": False, "cancel_requested": True}
+        return {"id": article.id, "status": article.status_reason_id, "cancelled": False, "cancel_requested": True}
 
     raise HTTPException(
         status_code=400,
-        detail=f"Impossible d'annuler depuis le statut '{article.status}'",
+        detail=f"Impossible d'annuler depuis le statut '{article.status_reason_id}'",
     )
 
 
@@ -497,27 +521,25 @@ def requeue_writing_route(
     """Relance la rédaction d'un article en échec ou bloqué (remise en file d'attente)."""
     article = _get_article_or_404(article_id, db)
     _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor"))
-    if article.status not in ("failed", "writing_in_progress", "writing_requested"):
+    if article.status_reason_id not in (ArticleStatus.FAILED, ArticleStatus.WRITING_IN_PROGRESS, ArticleStatus.WRITING_REQUESTED):
         raise HTTPException(
             status_code=400,
-            detail=f"Impossible de relancer la rédaction depuis le statut '{article.status}'",
+            detail=f"Impossible de relancer la rédaction depuis le statut '{article.status_reason_id}'",
         )
-    article.status = "writing_requested"
-    article.workflow_status = "production"
+    title = article.current_revision.title if article.current_revision else ""
+    set_article_status(article, ArticleStatus.WRITING_REQUESTED)
     article.updated_at = datetime.now(timezone.utc)
-    from app.services.log_service import log_step
     log_step(
         db, article.project_id,
-        f"Rédaction relancée manuellement : {article.title}",
+        f"Rédaction relancée manuellement : {title}",
         level="info", step="writing_queue", article_id=article.id,
     )
     db.commit()
     db.refresh(article)
     return {
         "id": article.id,
-        "title": article.title,
-        "status": article.status,
-        "workflow_status": article.workflow_status,
+        "title": title,
+        "status": article.status_reason_id,
     }
 
 
@@ -541,11 +563,11 @@ def process_production_queue_route(
     from app.services.production_queue import process_writing_queue
     outcome = process_writing_queue(db, project_id)
     ids = [r["id"] for r in outcome["results"] if r.get("status") != "not_found"]
-    articles = db.query(Article).filter(Article.id.in_(ids)).all() if ids else []
+    articles = db.execute(select(Article).where(Article.id.in_(ids))).scalars().all() if ids else []
     return {
         "processed": len(articles),
         "requeued_stale": outcome["requeued_stale"],
-        "articles": [{"id": a.id, "title": a.title, "status": a.status, "next_agent_key": a.next_agent_key} for a in articles],
+        "articles": [{"id": a.id, "title": a.current_revision.title if a.current_revision else "", "status": a.status_reason_id} for a in articles],
     }
 
 
@@ -563,7 +585,7 @@ def delete_idea_route(
     refusal = _idea_delete_refusal(article)
     if refusal:
         raise HTTPException(status_code=400, detail=refusal)
-    _delete_idea(db, article)
+    db.delete(article)
     db.commit()
 
 
@@ -579,14 +601,9 @@ def bulk_delete_ideas_route(
     if not requested_ids:
         raise HTTPException(status_code=400, detail="Aucune idée sélectionnée.")
 
-    articles = (
-        db.query(Article)
-        .filter(
-            Article.id.in_(requested_ids),
-            Article.project_id == project_id,
-        )
-        .all()
-    )
+    articles = db.execute(
+        select(Article).where(Article.id.in_(requested_ids), Article.project_id == project_id)
+    ).scalars().all()
     by_id = {article.id: article for article in articles}
     deleted_ids: list[str] = []
     skipped_items: list[dict[str, str]] = []
@@ -600,7 +617,7 @@ def bulk_delete_ideas_route(
         if refusal:
             skipped_items.append({"id": idea_id, "reason": refusal})
             continue
-        _delete_idea(db, article)
+        db.delete(article)
         deleted_ids.append(idea_id)
 
     if not deleted_ids:
@@ -632,12 +649,13 @@ def restore_idea_route(
 ):
     article = _get_article_or_404(article_id, db)
     _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor"))
-    if article.status != "idea_rejected":
+    if article.status_reason_id != ArticleStatus.IDEA_REJECTED:
         raise HTTPException(status_code=400, detail="Only rejected ideas can be restored")
-    article.status = "idea_proposed"
+    title = article.current_revision.title if article.current_revision else ""
+    set_article_status(article, ArticleStatus.IDEA_PROPOSED)
     article.rejection_reason = None
     article.rejection_note = None
     article.updated_at = datetime.now(timezone.utc)
-    log_step(db, article.project_id, f"Idée restaurée : {article.title}", level="info", step="restore", article_id=article.id)
+    log_step(db, article.project_id, f"Idée restaurée : {title}", level="info", step="restore", article_id=article.id)
     db.commit()
-    return {"status": "restored", "id": article.id, "title": article.title}
+    return {"status": "restored", "id": article.id, "title": title}

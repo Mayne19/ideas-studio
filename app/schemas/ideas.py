@@ -19,15 +19,11 @@ class IdeaGenerateResponse(BaseModel):
     title: str
     keyword: str | None
     category_id: str | None = None
-    angle: str | None
     search_intent: str | None
-    audience: str | None
     opportunity_score: float | None
-    status: str
+    status: int
     provider_name: str | None = None
     model_name: str | None = None
-
-    model_config = {"from_attributes": True}
 
 
 class IdeaRejectRequest(BaseModel):

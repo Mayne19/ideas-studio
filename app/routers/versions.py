@@ -1,16 +1,16 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.utils import calculate_word_count
 from app.dependencies.auth import get_current_user, get_member_for_project
-from app.models.article import Article
-from app.models.article_version import ArticleVersion
-from app.models.user import User
+from app.models.content import Article, ArticleRevision
+from app.models.reference import RevisionSource
+from app.models.core import User
 from app.schemas.article import ArticlePublic
 from app.schemas.editor import VersionPublic
-from app.services.version_service import create_version
+from app.services.article_service import to_public
 
 router = APIRouter(tags=["versions"])
 
@@ -18,7 +18,7 @@ _MANAGE_ROLES = frozenset({"owner", "admin", "editor"})
 
 
 def _get_article_or_404(db: Session, article_id: str) -> Article:
-    article = db.query(Article).filter(Article.id == article_id).first()
+    article = db.get(Article, article_id)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
     return article
@@ -40,25 +40,23 @@ def list_versions(
     article = _get_article_or_404(db, article_id)
     _check_member(db, current_user.id, article.project_id)
 
-    versions = (
-        db.query(ArticleVersion)
-        .filter(ArticleVersion.article_id == article_id)
-        .order_by(ArticleVersion.version_number.desc())
-        .all()
-    )
+    revisions = db.execute(
+        select(ArticleRevision)
+        .where(ArticleRevision.article_id == article_id)
+        .order_by(ArticleRevision.revision_no.desc())
+    ).scalars().all()
     return [
         VersionPublic(
-            id=v.id,
-            article_id=v.article_id,
-            project_id=v.project_id,
-            title=v.title,
-            slug=v.slug,
-            version_number=v.version_number,
-            version_type=v.version_type,
-            created_by=v.created_by,
-            created_at=v.created_at,
+            id=r.id,
+            article_id=r.article_id,
+            project_id=article.project_id,
+            title=r.title,
+            revision_no=r.revision_no,
+            source=r.source,
+            created_by=r.created_by,
+            created_at=r.created_at,
         )
-        for v in versions
+        for r in revisions
     ]
 
 
@@ -72,41 +70,44 @@ def restore_version(
     article = _get_article_or_404(db, article_id)
     member = _check_member(db, current_user.id, article.project_id)
 
-    if member.role == "viewer":
-        raise HTTPException(status_code=403, detail="Viewers cannot restore versions")
-    if member.role == "designer":
-        raise HTTPException(status_code=403, detail="Designers cannot restore versions")
+    if member.role in ("viewer", "designer"):
+        raise HTTPException(status_code=403, detail="Insufficient permissions to restore versions")
 
-    version = (
-        db.query(ArticleVersion)
-        .filter(
-            ArticleVersion.id == version_id,
-            ArticleVersion.article_id == article_id,
+    target = db.execute(
+        select(ArticleRevision).where(
+            ArticleRevision.id == version_id,
+            ArticleRevision.article_id == article_id,
         )
-        .first()
-    )
-    if not version:
+    ).scalar_one_or_none()
+    if not target:
         raise HTTPException(status_code=404, detail="Version not found")
 
-    # Save current state before restoring
-    create_version(db, article, "restore", current_user.id)
+    last_no = db.execute(
+        select(ArticleRevision.revision_no)
+        .where(ArticleRevision.article_id == article.id)
+        .order_by(ArticleRevision.revision_no.desc())
+        .limit(1)
+    ).scalar_one_or_none() or 0
 
-    # Apply version content
-    article.title = version.title
-    article.slug = version.slug
-    article.content = version.content
-    article.excerpt = version.excerpt
-    article.meta_title = version.meta_title
-    article.meta_description = version.meta_description
-    article.cover_image_url = version.cover_image_url
-    article.faq_json = version.faq_json
-    article.callouts_json = version.callouts_json
-    article.internal_links_json = version.internal_links_json
-    article.external_links_json = version.external_links_json
-    article.content_blocks_json = version.content_blocks_json
-    article.word_count = calculate_word_count(version.content)
+    restored = ArticleRevision(
+        article_id=article.id,
+        revision_no=last_no + 1,
+        source=RevisionSource.ROLLBACK,
+        title=target.title,
+        excerpt=target.excerpt,
+        body=target.body,
+        blocks=target.blocks,
+        faq=target.faq,
+        callouts=target.callouts,
+        word_count=target.word_count,
+        reading_time_minutes=target.reading_time_minutes,
+        created_by=current_user.id,
+    )
+    db.add(restored)
+    db.flush()
+    article.current_revision_id = restored.id
     article.updated_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(article)
-    return article
+    return to_public(db, article)

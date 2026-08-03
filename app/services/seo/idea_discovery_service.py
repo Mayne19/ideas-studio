@@ -1,13 +1,22 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.models.article import Article
-from app.models.category import Category
+from app.models.content import Article, ArticleKeyword, Category, Keyword
+from app.models.reference import ArticleStatus
 from app.schemas.seo_workflow import IdeaDiscoveryResult, asdict
 from app.services.providers.llm_provider import LLMProvider
 from app.services.providers.search_provider import SearchProvider, MockSearchProvider
 from app.services.seo.adapters.serp_adapter import serp_adapter
+
+_EXISTING_KEYWORD_STATUSES = (
+    ArticleStatus.PUBLISHED,
+    ArticleStatus.DRAFT,
+    ArticleStatus.DRAFT_READY,
+    ArticleStatus.IDEA_PROPOSED,
+    ArticleStatus.IDEA_PRIORITY,
+)
 
 
 def discover_ideas(
@@ -22,17 +31,21 @@ def discover_ideas(
     category_strategy: dict | None = None,
 ) -> list[dict]:
     ideas: list[dict] = []
-    categories = db.query(Category).filter(Category.project_id == project_id).all()
+    categories = db.execute(select(Category).where(Category.project_id == project_id)).scalars().all()
     category_id = None
     if category_strategy and category_strategy.get("chosen_category_id"):
         category_id = category_strategy["chosen_category_id"]
 
     existing_keywords = {
-        a.keyword for a in db.query(Article).filter(
-            Article.project_id == project_id,
-            Article.status.in_(["published", "draft", "draft_ready", "idea_proposed", "idea_priority"]),
+        term for term, in db.execute(
+            select(Keyword.term)
+            .join(ArticleKeyword, ArticleKeyword.keyword_id == Keyword.id)
+            .join(Article, Article.id == ArticleKeyword.article_id)
+            .where(
+                Article.project_id == project_id,
+                Article.status_reason_id.in_(_EXISTING_KEYWORD_STATUSES),
+            )
         ).all()
-        if a.keyword
     }
 
     for i in range(count):

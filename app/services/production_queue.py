@@ -1,179 +1,71 @@
-import json
 import logging
-import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from app.models.article import Article
+from app.models.content import Article
+from app.models.ai import Pipeline, WorkflowRun
+from app.models.reference import ArticleStatus, RunStatus, WorkflowPhase, set_article_status, set_run_status
+from app.services.article_service import primary_keyword
 from app.services.log_service import log_step
 
 logger = logging.getLogger(__name__)
 
-# Agent pipeline order for production
-PRODUCTION_AGENTS = [
-    "intent_analyzer",
-    "research_brief_writer",
-    "keyword_brief_writer",
-    "editorial_angle_planner",
-    "outline_planner",
-    "content_writer",
-    "title_generator",
-    "meta_description_writer",
-    "faq_generator",
-    "callout_planner",
-    "image_selector",
-    "internal_link_builder",
-    "external_link_finder",
-    "language_quality",
-    "originality_check",
-    "humanization",
-    "eeat_check",
-    "editorial_quality_gate",
-    "seo_final_checklist",
-]
-
-PLANNING_AGENTS = [
-    "idea_generator",
-    "intent_analyzer",
-    "research_brief_writer",
-    "keyword_brief_writer",
-    "editorial_angle_planner",
-    "outline_planner",
-]
+WRITING_STALE_MINUTES = 30
 
 
-def _parse_json_list(value: str | None) -> list:
-    if not value:
-        return []
-    try:
-        parsed = json.loads(value)
-        return parsed if isinstance(parsed, list) else []
-    except (json.JSONDecodeError, TypeError):
-        return []
-
-
-def _to_json(value) -> str:
-    return json.dumps(value, ensure_ascii=False)
-
-
-def compute_next_agent(article: Article) -> str | None:
-    """Determine the next agent to run based on completed agents and available JSON fields."""
-    completed = _parse_json_list(article.completed_agent_keys)
-    json_field_map = {
-        "intent_analyzer": article.intent_analysis_json,
-        "research_brief_writer": article.research_brief_json,
-        "keyword_brief_writer": article.keyword_brief_json,
-        "editorial_angle_planner": article.editorial_angle_json,
-        "outline_planner": article.outline_json,
-    }
-
-    for agent_key in PRODUCTION_AGENTS:
-        if agent_key not in completed:
-            # Check if this agent's output already exists (e.g., from orchestrator)
-            if agent_key in json_field_map and json_field_map[agent_key] is not None:
-                completed.append(agent_key)
-                continue
-            return agent_key
-    return None
-
-
-def advance_workflow(db: Session, article: Article) -> Article:
-    """Mark the current agent as complete and set the next agent."""
-    completed = _parse_json_list(article.completed_agent_keys)
-
-    if article.next_agent_key and article.next_agent_key not in completed:
-        completed.append(article.next_agent_key)
-
-    article.completed_agent_keys = _to_json(completed)
-
-    next_agent = compute_next_agent(article)
-    article.next_agent_key = next_agent
-
-    if next_agent is None:
-        article.workflow_status = "completed"
-        if article.status not in ("published", "scheduled"):
-            article.status = "draft_ready"
-    elif next_agent in ("content_writer", "title_generator"):
-        article.workflow_status = "production"
-        if article.status in ("idea_proposed", "idea_priority"):
-            article.status = "writing_in_progress"
-    elif next_agent in ("language_quality", "originality_check", "humanization", "eeat_check",
-                        "editorial_quality_gate", "seo_final_checklist"):
-        article.workflow_status = "quality"
-        if article.status == "writing_in_progress":
-            article.status = "draft_ready"
-
-    article.updated_at = datetime.now(timezone.utc)
-    db.flush()
-    return article
+def _latest_run(db: Session, article_id: str) -> WorkflowRun | None:
+    return db.execute(
+        select(WorkflowRun)
+        .where(WorkflowRun.article_id == article_id)
+        .order_by(WorkflowRun.started_at.desc())
+        .limit(1)
+    ).scalar_one_or_none()
 
 
 def send_to_production(db: Session, article_id: str) -> Article | None:
-    """Move an idea into the production queue and start agent workflow."""
+    """Move an idea into the production queue — le suivi agent par agent est
+    porté par ai.workflow_runs/workflow_steps, plus par des colonnes article."""
     article = db.get(Article, article_id)
     if not article:
         return None
-    if article.status not in ("idea_proposed", "idea_priority"):
-        logger.warning("Article %s has status %s, cannot send to production", article_id, article.status)
+    if article.status_reason_id not in (ArticleStatus.IDEA_PROPOSED, ArticleStatus.IDEA_PRIORITY):
+        logger.warning("Article %s has status %s, cannot send to production", article_id, article.status_reason_id)
         return None
 
-    completed = _parse_json_list(article.completed_agent_keys)
-    if "idea_generator" not in completed:
-        completed.append("idea_generator")
-
-    next_agent = compute_next_agent(article)
-    article.completed_agent_keys = _to_json(completed)
-    article.next_agent_key = next_agent
-    article.workflow_status = "production"
-    article.status = "writing_requested"
-    article.workflow_run_id = article.workflow_run_id or str(uuid.uuid4())
+    set_article_status(article, ArticleStatus.WRITING_REQUESTED)
     article.updated_at = datetime.now(timezone.utc)
 
+    run = WorkflowRun(article_id=article.id, phase_id=WorkflowPhase.PLANNING)
+    set_run_status(run, RunStatus.QUEUED)
+    db.add(run)
+
+    title = article.current_revision.title if article.current_revision else ""
     log_step(
         db, article.project_id,
-        f"Idée envoyée en production : {article.title} (prochain agent : {next_agent})",
+        f"Idée envoyée en production : {title}",
         level="info", step="send_to_production", article_id=article.id,
     )
     db.flush()
     return article
 
 
-_FIELDS_TO_COPY = [
-    "content", "word_count", "reading_time_minutes", "meta_title", "meta_description",
-    "excerpt", "faq_json", "slug", "outline_json", "keyword_brief_json",
-    "intent_analysis_json", "editorial_angle_json", "research_brief_json",
-    "image_plan_json", "callout_plan_json", "internal_links_json", "external_links_json",
-    "language_quality_report_json", "originality_report_json", "humanization_report_json",
-    "eeat_checklist_json", "editorial_quality_report_json", "seo_final_checklist_json",
-    "generation_report_json", "seo_review_json", "fact_check_report_json",
-    "geo_optimization_json", "structured_data_json", "cannibalization_outline_json",
-    "global_score", "seo_score", "quality_score", "eeat_score", "readability_score",
-]
-
-
-WRITING_STALE_MINUTES = 30
-
-
 def requeue_stale_writing(db: Session, project_id: str, minutes: int = WRITING_STALE_MINUTES) -> int:
     """Remet en file les rédactions bloquées (writing_in_progress sans update depuis X minutes)."""
-    from datetime import timedelta
     threshold = datetime.now(timezone.utc) - timedelta(minutes=minutes)
-    stale = (
-        db.query(Article)
-        .filter(
+    stale = db.execute(
+        select(Article).where(
             Article.project_id == project_id,
-            Article.status == "writing_in_progress",
+            Article.status_reason_id == ArticleStatus.WRITING_IN_PROGRESS,
             Article.updated_at < threshold,
         )
-        .all()
-    )
+    ).scalars().all()
     for article in stale:
-        article.status = "writing_requested"
-        article.workflow_status = "production"
+        set_article_status(article, ArticleStatus.WRITING_REQUESTED)
         article.updated_at = datetime.now(timezone.utc)
+        title = article.current_revision.title if article.current_revision else ""
         log_step(
             db, project_id,
-            f"Rédaction bloquée depuis plus de {minutes} min, remise en file : {article.title}",
+            f"Rédaction bloquée depuis plus de {minutes} min, remise en file : {title}",
             level="warning", step="writing_queue", article_id=article.id,
         )
     if stale:
@@ -187,38 +79,29 @@ def claim_for_writing(db: Session, project_id: str, limit: int) -> list[str]:
     Le claim par UPDATE conditionnel garantit qu'aucun article n'est pris
     par deux workers en même temps.
     """
-    candidate_ids = (
-        db.execute(
-            select(Article.id)
-            .where(
-                Article.project_id == project_id,
-                Article.status == "writing_requested",
-                Article.workflow_status == "production",
-            )
-            .order_by(Article.priority.desc().nullslast(), Article.created_at.asc())
-            .limit(limit)
+    candidate_ids = db.execute(
+        select(Article.id)
+        .where(
+            Article.project_id == project_id,
+            Article.status_reason_id == ArticleStatus.WRITING_REQUESTED,
         )
-        .scalars()
-        .all()
-    )
+        .order_by(Article.priority.desc().nullslast(), Article.created_at.asc())
+        .limit(limit)
+    ).scalars().all()
+
     claimed: list[str] = []
     for article_id in candidate_ids:
-        updated = (
-            db.query(Article)
-            .filter(
+        updated = db.execute(
+            Article.__table__.update()
+            .where(
                 Article.id == article_id,
-                Article.status == "writing_requested",
-                Article.writing_cancel_requested.isnot(True),
+                Article.status_reason_id == ArticleStatus.WRITING_REQUESTED,
             )
-            .update(
-                {
-                    "status": "writing_in_progress",
-                    "writing_error": None,
-                    "updated_at": datetime.now(timezone.utc),
-                },
-                synchronize_session=False,
+            .values(
+                status_reason_id=ArticleStatus.WRITING_IN_PROGRESS,
+                updated_at=datetime.now(timezone.utc),
             )
-        )
+        ).rowcount
         if updated:
             claimed.append(article_id)
     db.commit()
@@ -238,7 +121,7 @@ def write_queued_article(article_id: str, project_id: str) -> dict:
         article = db.get(Article, article_id)
         if not article:
             return {"id": article_id, "status": "not_found"}
-        title = article.title
+        title = article.current_revision.title if article.current_revision else ""
         try:
             llm = get_llm_provider(project_id=project_id)
             search = get_search_provider()
@@ -248,40 +131,32 @@ def write_queued_article(article_id: str, project_id: str) -> dict:
                 llm=llm,
                 search=search,
                 agent_router=get_agent_router(db=db),
-                preferred_title=article.title,
-                keyword=article.keyword,
+                preferred_title=title,
+                keyword=primary_keyword(db, article_id),
                 category_id=article.category_id,
-                audience=article.audience,
-                angle=article.angle,
                 search_intent=article.search_intent,
                 existing_article_id=article_id,
             )
             db.commit()
             db.refresh(article)
-            if article.status == "failed":
-                # L'orchestrateur a échoué en interne : remonter la raison dans l'UI
-                report = article.generation_report_json if isinstance(article.generation_report_json, dict) else {}
-                errors = report.get("errors") if isinstance(report.get("errors"), list) else []
-                article.writing_error = "\n".join(str(e) for e in errors[-3:]) or "Échec de rédaction (voir le journal du projet)."
-                article.workflow_status = "error"
             log_step(
                 db, project_id,
-                f"Rédaction terminée ({article.status}) : {title}"
-                + (f" — {article.writing_error}" if article.writing_error else ""),
-                level="info" if article.status != "failed" else "error",
+                f"Rédaction terminée ({article.status_reason_id}) : {title}",
+                level="info" if article.status_reason_id != ArticleStatus.FAILED else "error",
                 step="writing_queue", article_id=article_id,
             )
             db.commit()
-            return {"id": article_id, "status": article.status}
+            return {"id": article_id, "status": article.status_reason_id}
         except WritingCancelledError:
             db.rollback()
             article = db.get(Article, article_id)
             if article:
-                article.status = "idea_proposed"
-                article.workflow_status = "planning"
-                article.writing_cancel_requested = False
-                article.writing_error = None
+                set_article_status(article, ArticleStatus.IDEA_PROPOSED)
                 article.updated_at = datetime.now(timezone.utc)
+                run = _latest_run(db, article_id)
+                if run:
+                    set_run_status(run, RunStatus.CANCELLED)
+                    run.finished_at = datetime.now(timezone.utc)
                 log_step(
                     db, project_id,
                     f"Rédaction annulée à la demande : {title}",
@@ -294,7 +169,7 @@ def write_queued_article(article_id: str, project_id: str) -> dict:
             article = db.get(Article, article_id)
             if article:
                 # Pas d'échec définitif : provider indisponible, on remet en file
-                article.status = "writing_requested"
+                set_article_status(article, ArticleStatus.WRITING_REQUESTED)
                 article.updated_at = datetime.now(timezone.utc)
                 log_step(
                     db, project_id,
@@ -308,10 +183,13 @@ def write_queued_article(article_id: str, project_id: str) -> dict:
             db.rollback()
             article = db.get(Article, article_id)
             if article:
-                article.status = "failed"
-                article.workflow_status = "error"
-                article.writing_error = str(exc)[:2000]
+                set_article_status(article, ArticleStatus.FAILED)
                 article.updated_at = datetime.now(timezone.utc)
+                run = _latest_run(db, article_id)
+                if run:
+                    set_run_status(run, RunStatus.FAILED)
+                    run.error = str(exc)[:2000]
+                    run.finished_at = datetime.now(timezone.utc)
                 log_step(
                     db, project_id,
                     f"Rédaction échouée : {title} — {exc}",
@@ -324,9 +202,8 @@ def write_queued_article(article_id: str, project_id: str) -> dict:
 
 
 def resolve_max_parallel(db: Session, project_id: str) -> int:
-    from app.models.pipeline import ProjectPipeline
-    pipe = db.query(ProjectPipeline).filter(ProjectPipeline.project_id == project_id).first()
-    value = pipe.max_parallel_writing_jobs if pipe and pipe.max_parallel_writing_jobs else 3
+    pipe = db.get(Pipeline, project_id)
+    value = pipe.max_parallel_jobs if pipe and pipe.max_parallel_jobs else 3
     return max(1, min(int(value), 10))
 
 
@@ -366,58 +243,49 @@ def process_queue(db: Session, project_id: str, max_articles: int = 1) -> list[A
     ids = [r["id"] for r in outcome["results"] if r.get("status") != "not_found"]
     if not ids:
         return []
-    return db.query(Article).filter(Article.id.in_(ids)).all()
+    return db.execute(select(Article).where(Article.id.in_(ids))).scalars().all()
 
 
 def get_queue_summary(db: Session, project_id: str) -> dict:
     """Get a summary of the production queue."""
-    queue_statuses = ["writing_requested", "writing_in_progress", "draft_ready", "review_needed", "correction_needed"]
+    queue_statuses = [
+        ArticleStatus.WRITING_REQUESTED, ArticleStatus.WRITING_IN_PROGRESS,
+        ArticleStatus.DRAFT_READY, ArticleStatus.REVIEW_NEEDED, ArticleStatus.CORRECTION_NEEDED,
+    ]
     counts = {}
     total = 0
     for status in queue_statuses:
-        cnt = (
-            db.query(Article)
-            .filter(
+        cnt = db.execute(
+            select(Article.id).where(
                 Article.project_id == project_id,
-                Article.status == status,
-                Article.workflow_status.in_(["production", "quality"]),
+                Article.status_reason_id == status,
             )
-            .count()
-        )
-        counts[status] = cnt
-        total += cnt
+        ).scalars().all()
+        counts[int(status)] = len(cnt)
+        total += len(cnt)
 
-    counts["failed"] = (
-        db.query(Article)
-        .filter(
+    counts[int(ArticleStatus.FAILED)] = len(db.execute(
+        select(Article.id).where(
             Article.project_id == project_id,
-            Article.status == "failed",
-            Article.workflow_status == "error",
+            Article.status_reason_id == ArticleStatus.FAILED,
         )
-        .count()
-    )
+    ).scalars().all())
 
-    next_up = (
-        db.execute(
-            select(Article)
-            .where(
-                Article.project_id == project_id,
-                Article.status.in_(["writing_requested", "writing_in_progress"]),
-                Article.workflow_status == "production",
-            )
-            .order_by(Article.priority.desc().nullslast(), Article.created_at.asc())
-            .limit(1)
+    next_up = db.execute(
+        select(Article)
+        .where(
+            Article.project_id == project_id,
+            Article.status_reason_id.in_([ArticleStatus.WRITING_REQUESTED, ArticleStatus.WRITING_IN_PROGRESS]),
         )
-        .scalars()
-        .first()
-    )
+        .order_by(Article.priority.desc().nullslast(), Article.created_at.asc())
+        .limit(1)
+    ).scalars().first()
 
     return {
         "total_in_queue": total,
         "counts": counts,
         "next_up": {
             "id": next_up.id,
-            "title": next_up.title,
-            "next_agent_key": next_up.next_agent_key,
+            "title": next_up.current_revision.title if next_up.current_revision else "",
         } if next_up else None,
     }

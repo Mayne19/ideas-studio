@@ -1,29 +1,29 @@
+from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.models.user import User
+from app.models.core import User
 from app.schemas.auth import RegisterRequest
 from app.schemas.user import UserUpdate
 from app.core.security import hash_password, verify_password
 
 
 def get_user_by_email(db: Session, email: str) -> User | None:
-    return db.query(User).filter(User.email == email).first()
+    return db.execute(select(User).where(User.email == email)).scalar_one_or_none()
 
 
 def get_user_by_username(db: Session, username: str) -> User | None:
     clean = username.strip().lstrip("@").lower()
-    return db.query(User).filter(User.username == clean).first()
+    return db.execute(select(User).where(User.username == clean)).scalar_one_or_none()
 
 
 def create_user(db: Session, data: RegisterRequest) -> User:
-    is_first_user = db.query(User.id).first() is None
+    is_first_user = db.execute(select(User.id).limit(1)).scalar_one_or_none() is None
     name = data.name or f"{data.first_name or ''} {data.last_name or ''}".strip()
     kwargs = {
-        "name": name,
-        "first_name": data.first_name,
+        "first_name": data.first_name or (name.split(" ")[0] if name else None),
         "last_name": data.last_name,
         "email": data.email,
         "password_hash": hash_password(data.password),
-        "is_platform_admin": is_first_user,
+        "is_staff": is_first_user,
     }
     if data.username:
         clean = data.username.strip().lstrip("@").lower()
@@ -37,15 +37,18 @@ def create_user(db: Session, data: RegisterRequest) -> User:
 
 def update_user(db: Session, user: User, data: UserUpdate) -> User:
     if data.name is not None:
-        user.name = data.name
+        parts = data.name.split(" ", 1)
+        user.first_name = parts[0] or None
+        user.last_name = parts[1] if len(parts) > 1 else None
     if data.first_name is not None:
         user.first_name = data.first_name
     if data.last_name is not None:
         user.last_name = data.last_name
     if data.username is not None:
         clean = data.username.strip().lstrip("@").lower()
-        # Check uniqueness
-        existing = db.query(User).filter(User.username == clean, User.id != user.id).first()
+        existing = db.execute(
+            select(User).where(User.username == clean, User.id != user.id)
+        ).scalar_one_or_none()
         if existing:
             from fastapi import HTTPException
             raise HTTPException(status_code=409, detail="Ce nom d'utilisateur est déjà pris.")

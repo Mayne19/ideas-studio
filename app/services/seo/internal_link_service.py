@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.models.article import Article
-from app.models.category import Category
+from app.models.content import Article, ArticleKeyword, ArticleRevision, Category, Keyword, KeywordRole
+from app.models.reference import ArticleStatus
 from app.schemas.seo_workflow import InternalLinkPlan, asdict
 from app.services.seo.helpers import normalize_text
 
@@ -18,13 +19,22 @@ def build_internal_link_plan(
 ) -> InternalLinkPlan:
     plan = InternalLinkPlan()
 
-    articles = db.query(Article).filter(
-        Article.project_id == project_id,
-        Article.status == "published",
+    rows = db.execute(
+        select(Article, ArticleRevision.title, Keyword.term)
+        .outerjoin(ArticleRevision, ArticleRevision.id == Article.current_revision_id)
+        .outerjoin(
+            ArticleKeyword,
+            (ArticleKeyword.article_id == Article.id) & (ArticleKeyword.role == KeywordRole.PRIMARY),
+        )
+        .outerjoin(Keyword, Keyword.id == ArticleKeyword.keyword_id)
+        .where(
+            Article.project_id == project_id,
+            Article.status_reason_id == ArticleStatus.PUBLISHED,
+        )
     ).all()
 
     if exclude_article_id:
-        articles = [a for a in articles if a.id != exclude_article_id]
+        rows = [r for r in rows if r[0].id != exclude_article_id]
 
     normalized_keyword = normalize_text(keyword)
     scored = []
@@ -47,30 +57,34 @@ def build_internal_link_plan(
                     "category": hint.get("category"),
                 })
 
-    for a in articles:
-        if a.id in hint_ids:
+    category_names: dict[str, str] = {}
+
+    for article, a_title_raw, a_keyword_raw in rows:
+        if article.id in hint_ids:
             continue
         score = 0
-        a_title = normalize_text(a.title or "")
-        a_keyword = normalize_text(a.keyword or "")
+        a_title = normalize_text(a_title_raw or "")
+        a_keyword = normalize_text(a_keyword_raw or "")
 
         if a_keyword and normalized_keyword in a_keyword:
             score += 10
         if a_title and normalized_keyword in a_title:
             score += 5
-        if a.category_id and category_id and a.category_id == category_id:
+        if article.category_id and category_id and article.category_id == category_id:
             score += 3
 
         if score > 0:
             cat_name = None
-            if a.category_id:
-                cat = db.query(Category).filter(Category.id == a.category_id).first()
-                cat_name = cat.name if cat else None
+            if article.category_id:
+                if article.category_id not in category_names:
+                    cat = db.get(Category, article.category_id)
+                    category_names[article.category_id] = cat.name if cat else None
+                cat_name = category_names[article.category_id]
 
             scored.append({
-                "target_article_id": a.id,
-                "target_url": f"/articles/{a.slug}",
-                "anchor_text": a.title or "Article connexe",
+                "target_article_id": article.id,
+                "target_url": f"/articles/{article.slug}",
+                "anchor_text": a_title_raw or "Article connexe",
                 "placement": "auto",
                 "reason": f"Pertinence {score}/10",
                 "relevance_score": score,

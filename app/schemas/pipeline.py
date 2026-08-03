@@ -3,21 +3,6 @@ from typing import Optional
 from pydantic import BaseModel
 
 
-class PipelineSettings(BaseModel):
-    enabled: bool = False
-    active_days: list[str] = []
-    launch_hour: int = 8
-    articles_per_week: int = 5
-    category_priorities: dict[str, int] = {}
-    ideas_per_week: Optional[int] = 5
-    max_pending_drafts: Optional[int] = 10
-    paused_until: Optional[datetime] = None
-    paused_indefinitely: bool = False
-    default_quality_mode: str = "quality"
-    launch_hours: Optional[list[str]] = None
-    cost_limit_per_article_eur: Optional[float] = None
-
-
 class PipelineSettingsUpdate(BaseModel):
     enabled: Optional[bool] = None
     active_days: Optional[list[str]] = None
@@ -42,19 +27,16 @@ class CategoryFrequencyInfo(BaseModel):
     name: str
     monthly_frequency: Optional[int] = None
     pipeline_enabled: Optional[bool] = None
-    priority: int = 0
+    priority: float = 0
 
 
 class PipelineSettingsPublic(BaseModel):
-    model_config = {"from_attributes": True}
-
-    id: str
     project_id: str
     enabled: bool
-    active_days: list[str]
-    launch_hour: int
+    active_days: list[str] = []
+    launch_hour: int = 8
     articles_per_week: int
-    category_priorities: dict[str, int]
+    category_priorities: dict[str, int] = {}
     ideas_per_week: Optional[int] = None
     max_pending_drafts: Optional[int] = None
     max_parallel_writing_jobs: Optional[int] = None
@@ -69,13 +51,10 @@ class PipelineSettingsPublic(BaseModel):
     total_monthly_from_categories: Optional[int] = None
     categories_frequencies: list[CategoryFrequencyInfo] = []
     automation_notes: str = ""
-    created_at: datetime
     updated_at: datetime
 
 
 class PipelineLogPublic(BaseModel):
-    model_config = {"from_attributes": True}
-
     id: str
     project_id: str
     status: str

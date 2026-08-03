@@ -89,9 +89,48 @@ def _database_dialect() -> str:
         return "<unknown>"
 
 
+_MIGRATION_ADVISORY_LOCK_KEY = 727271
+
+
+def _run_locked_upgrade(alembic_cfg: Config) -> None:
+    """Exécute `alembic upgrade head`, protégé par un verrou consultatif Postgres.
+
+    Deux instances/déploiements qui migrent en même temps peuvent se percuter sur
+    la création de la table interne alembic_version elle-même (vu en prod : deux
+    process qui tentent CREATE TABLE alembic_version au même instant lèvent une
+    IntegrityError Postgres sur pg_type_typname_nsp_index, et le déploiement
+    échoue). `pg_advisory_lock` bloque la seconde instance jusqu'à ce que la
+    première ait terminé, au lieu de les laisser courir en parallèle.
+    SQLite n'a pas cette notion (fichier local, un seul process en dev) : le
+    verrou est ignoré pour tout dialecte autre que postgresql.
+    """
+    if _database_dialect() != "postgresql":
+        command.upgrade(alembic_cfg, "head")
+        return
+
+    engine = create_engine(settings.database_url)
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT pg_advisory_lock(:key)"), {"key": _MIGRATION_ADVISORY_LOCK_KEY})
+            try:
+                command.upgrade(alembic_cfg, "head")
+            finally:
+                conn.execute(text("SELECT pg_advisory_unlock(:key)"), {"key": _MIGRATION_ADVISORY_LOCK_KEY})
+    finally:
+        engine.dispose()
+
+
 @app.on_event("startup")
 def run_migrations():
-    if settings.APP_ENV == "test":
+    if settings.APP_ENV in ("test", "maintenance"):
+        # "maintenance" : coupe-circuit d'urgence. À utiliser quand la base est dans
+        # un état intermédiaire (ex. migration de schéma manuelle en cours/incomplète)
+        # où laisser Alembic tourner recréerait ou dupliquerait des tables au mauvais
+        # endroit. Réactiver dès que la base est confirmée dans un état cohérent.
+        logger.warning(
+            "Migrations Alembic ignorées (APP_ENV=%s) — coupe-circuit actif.",
+            settings.APP_ENV,
+        )
         return
     root_dir = Path(__file__).resolve().parents[1]
     alembic_cfg = Config(str(root_dir / "alembic.ini"))
@@ -105,7 +144,7 @@ def run_migrations():
     )
     logger.info("Alembic current revision before startup upgrade: %s", _read_alembic_revision())
     try:
-        command.upgrade(alembic_cfg, "head")
+        _run_locked_upgrade(alembic_cfg)
     except SystemExit as exc:
         logger.exception(
             "Alembic exited during startup. code=%s env=%s database=%s dialect=%s current_revision=%s target_revision=%s",
@@ -132,6 +171,27 @@ def run_migrations():
         sys.stderr.flush()
         raise
     logger.info("Alembic migrations completed successfully. current_revision=%s", _read_alembic_revision())
+
+
+@app.on_event("startup")
+def sync_agents_at_startup():
+    """Synchronise ai.agents depuis le registre Python — voir
+    app/scripts/sync_agent_catalog.py. Même coupe-circuit que run_migrations :
+    ai.agents doit exister (migration appliquée) avant d'y écrire."""
+    if settings.APP_ENV in ("test", "maintenance"):
+        return
+    try:
+        from app.core.database import SessionLocal
+        from app.scripts.sync_agent_catalog import sync_agent_catalog
+
+        db = SessionLocal()
+        try:
+            result = sync_agent_catalog(db)
+            logger.info("Agent catalog synced at startup: %s", result)
+        finally:
+            db.close()
+    except Exception as exc:
+        logger.error("Agent catalog sync failed at startup: %s", exc)
 
 
 @app.on_event("startup")

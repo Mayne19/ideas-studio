@@ -1,18 +1,16 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 
 class NotificationPublic(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: str
     project_id: str
-    user_id: Optional[str]
+    user_id: Optional[str] = None
     type: str
     title: str
     message: str
     level: str
-    link: Optional[str]
-    read_at: Optional[datetime]
+    link: Optional[str] = None
+    read_at: Optional[datetime] = None
     created_at: datetime

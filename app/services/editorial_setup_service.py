@@ -2,7 +2,7 @@ import httpx
 import re
 from urllib.parse import urlparse
 from sqlalchemy.orm import Session
-from app.models.project import Project
+from app.models.core import Project
 from app.schemas.editorial_setup import EditorialSetupSuggestion, EditorialSetupResponse
 from app.services.providers.llm_provider import get_llm_provider
 
@@ -150,6 +150,7 @@ def _build_llm_prompt(
     categories_str = ", ".join(
         c.get("name", "") for c in categories if c.get("name")
     ) or "Aucune catégorie détectée"
+    profile = project.active_editorial_profile
 
     return _LLM_USER_PROMPT.format(
         project_name=project.name,
@@ -157,8 +158,8 @@ def _build_llm_prompt(
         site_title=site_title,
         site_description=site_description,
         categories_str=categories_str,
-        current_audience=project.audience or "Non défini",
-        current_tone=project.tone or "Non défini",
+        current_audience=(profile.audience if profile else None) or "Non défini",
+        current_tone=(profile.tone if profile else None) or "Non défini",
     )
 
 
@@ -204,7 +205,8 @@ def generate_setup_suggestions(
     categories = _fetch_blog_categories(domain) if domain else []
     homepage = _fetch_blog_homepage(domain) if domain else {}
 
-    project_has_data = bool(project.audience or project.tone)
+    profile = project.active_editorial_profile
+    project_has_data = bool(profile and (profile.audience or profile.tone))
 
     llm = get_llm_provider()
 

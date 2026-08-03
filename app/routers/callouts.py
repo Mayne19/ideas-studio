@@ -7,9 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.core.utils import slugify
 from app.core.database import get_db
-from app.dependencies.auth import get_project_member, require_project_role
-from app.models.project import Project
-from app.models.project_member import ProjectMember
+from app.dependencies.auth import MemberView, get_project_member, require_project_role
+from app.models.core import Project
 from app.schemas.callout_template import (
     CalloutTemplateCreate,
     CalloutTemplatePublic,
@@ -20,6 +19,7 @@ from app.services.callout_template_service import (
     delete_callout_template,
     get_callout_template_by_id,
     list_callout_templates,
+    to_public,
     update_callout_template,
 )
 
@@ -61,27 +61,26 @@ def _normalize_site_callout(payload: dict) -> CalloutTemplateCreate:
         class_name=(str(payload.get("className") or payload.get("class_name") or "").strip() or None),
         source="imported",
         external_id=external_id,
-        settings_json=None,
     )
 
 
 @router.get("/projects/{project_id}/callouts", response_model=list[CalloutTemplatePublic])
 def list_project_callouts(
     project_id: str,
-    member: ProjectMember = Depends(get_project_member),
+    member: MemberView = Depends(get_project_member),
     db: Session = Depends(get_db),
 ):
-    return list_callout_templates(db, project_id)
+    return [to_public(t) for t in list_callout_templates(db, project_id)]
 
 
 @router.post("/projects/{project_id}/callouts", response_model=CalloutTemplatePublic, status_code=201)
 def create_project_callout(
     project_id: str,
     data: CalloutTemplateCreate,
-    member: ProjectMember = Depends(require_project_role(*_MANAGE_ROLES)),
+    member: MemberView = Depends(require_project_role(*_MANAGE_ROLES)),
     db: Session = Depends(get_db),
 ):
-    return create_callout_template(db, data, project_id)
+    return to_public(create_callout_template(db, data, project_id))
 
 
 @router.patch("/projects/{project_id}/callouts/{callout_id}", response_model=CalloutTemplatePublic)
@@ -89,20 +88,20 @@ def patch_project_callout(
     project_id: str,
     callout_id: str,
     data: CalloutTemplateUpdate,
-    member: ProjectMember = Depends(require_project_role(*_MANAGE_ROLES)),
+    member: MemberView = Depends(require_project_role(*_MANAGE_ROLES)),
     db: Session = Depends(get_db),
 ):
     template = get_callout_template_by_id(db, project_id, callout_id)
     if not template:
         raise HTTPException(status_code=404, detail="Callout introuvable.")
-    return update_callout_template(db, template, data)
+    return to_public(update_callout_template(db, template, data))
 
 
 @router.delete("/projects/{project_id}/callouts/{callout_id}", status_code=204)
 def delete_project_callout(
     project_id: str,
     callout_id: str,
-    member: ProjectMember = Depends(require_project_role(*_MANAGE_ROLES)),
+    member: MemberView = Depends(require_project_role(*_MANAGE_ROLES)),
     db: Session = Depends(get_db),
 ):
     template = get_callout_template_by_id(db, project_id, callout_id)
@@ -115,10 +114,10 @@ def delete_project_callout(
 @router.post("/projects/{project_id}/callouts/sync", response_model=list[CalloutTemplatePublic])
 def sync_project_callouts(
     project_id: str,
-    member: ProjectMember = Depends(require_project_role(*_MANAGE_ROLES)),
+    member: MemberView = Depends(require_project_role(*_MANAGE_ROLES)),
     db: Session = Depends(get_db),
 ):
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = db.get(Project, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Projet introuvable.")
     if not project.domain:
@@ -201,6 +200,6 @@ def sync_project_callouts(
         else "Aucun nouveau callout detecte."
     )
     return JSONResponse(
-        content=[CalloutTemplatePublic.model_validate(item).model_dump(mode="json") for item in templates],
+        content=[to_public(item).model_dump(mode="json") for item in templates],
         headers={"X-Sync-Message": message},
     )

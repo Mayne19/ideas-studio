@@ -9,17 +9,20 @@ from typing import Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from app.services.agents.agent_router import AgentRouter
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.article import Article
-from app.models.category import Category
-from app.models.project import Project
+from app.models.content import Article, ArticleRevision, ArticleScore, ArticleSeo, Category
+from app.models.core import Project
+from app.models.ai import WorkflowRun
+from app.models.reference import ArticleStatus, RevisionSource, RunStatus, WorkflowPhase, set_article_status, set_run_status
 from app.schemas.seo_workflow import asdict
 from app.services.log_service import log_step
 from app.services.providers.llm_provider import LLMProvider, GenerationFailedError
 from app.services.providers.search_provider import SearchProvider as SearchProviderType
 from app.core.utils import calculate_reading_time_minutes, calculate_word_count, generate_unique_slug, slugify
 
+from app.services.seo.artifacts import save_artifact, get_latest_artifact
 from app.services.seo.helpers import safe_json_dump, safe_json_load
 from app.services.seo.project_context_service import build_project_context_dict
 from app.services.seo.category_strategy_service import compute_category_strategy_dict
@@ -63,6 +66,39 @@ class WritingCancelledError(RuntimeError):
 AUTO_IMPROVE_SCORE_TARGET = 90
 
 
+class _DraftArticle:
+    """Support de rédaction en mémoire — content.articles/article_revisions
+    n'ont plus de colonnes plates (content/title/faq_json/...). Les champs de
+    révision sont accumulés ici pendant tout le pipeline puis matérialisés en
+    une seule ArticleRevision par _persist_revision(), voir REPRENDRE-LA-MAIN.md
+    §6 étape 6 (content.article_revisions = historique, jamais de mutation en
+    place d'une révision existante)."""
+
+    def __init__(self, article: Article):
+        self.article = article
+        self.title: str = ""
+        self.excerpt: str | None = None
+        self.content: str | None = None
+        self.faq: list = []
+        self.callouts: list = []
+        self.word_count: int = 0
+        self.reading_time_minutes: int | None = None
+        self.meta_title: str | None = None
+        self.meta_description: str | None = None
+        self.keyword: str = ""
+        self.audience: str | None = None
+        self.angle: str | None = None
+        self.author_name: str | None = None
+        self.structured_data_json: list | None = None
+
+    @property
+    def faq_json(self):
+        return self.faq
+
+    def __getattr__(self, name):
+        return getattr(self.article, name)
+
+
 class SEOGenerationOrchestrator:
     def __init__(
         self,
@@ -77,7 +113,7 @@ class SEOGenerationOrchestrator:
         self.llm = llm
         self.search = search
         self.agent_router = agent_router
-        self.project = db.query(Project).filter(Project.id == project_id).first()
+        self.project = db.get(Project, project_id)
         self.steps_completed: list[str] = []
         self.errors: list[str] = []
         self.limitations: list[str] = []
@@ -85,6 +121,7 @@ class SEOGenerationOrchestrator:
         self.tools_not_configured: list[str] = []
         self.context: dict = {}
         self.started_at = perf_counter()
+        self.workflow_run: WorkflowRun | None = None
 
     def _log(self, message: str, level: str = "info", step: str | None = None, article_id: str | None = None):
         log_step(self.db, self.project_id, message, level=level, step=step or "orchestrator", article_id=article_id)
@@ -104,16 +141,18 @@ class SEOGenerationOrchestrator:
             self.tools_not_configured.append("serpapi")
             self.limitations.append("SERP provider not configured (SERP_API_KEY missing)")
 
-    def _ensure_slug(self, article: Article):
+    def _ensure_slug(self, article: Article, title: str, keyword: str):
         if article.slug and not article.slug.startswith("idea-"):
             return
-        base = slugify(article.title or article.keyword or "article")
+        base = slugify(title or keyword or "article")
         existing = {
             row[0]
-            for row in self.db.query(Article.slug).filter(
-                Article.project_id == self.project_id,
-                Article.id != article.id,
-                Article.slug.like(f"{base}%"),
+            for row in self.db.execute(
+                select(Article.slug).where(
+                    Article.project_id == self.project_id,
+                    Article.id != article.id,
+                    Article.slug.like(f"{base}%"),
+                )
             ).all()
         }
         article.slug = generate_unique_slug(base, existing)
@@ -121,8 +160,14 @@ class SEOGenerationOrchestrator:
     def _get_category_name(self, category_id: str | None) -> str:
         if not category_id:
             return ""
-        cat = self.db.query(Category).filter(Category.id == category_id).first()
+        cat = self.db.get(Category, category_id)
         return cat.name if cat else ""
+
+    def _save(self, article_id: str, agent_key: str, payload: Any):
+        save_artifact(self.db, article_id, agent_key, payload if isinstance(payload, dict) else {"value": payload})
+
+    def _get(self, article_id: str, agent_key: str) -> dict | None:
+        return get_latest_artifact(self.db, article_id, agent_key)
 
     def generate_full_article(
         self,
@@ -312,14 +357,25 @@ class SEOGenerationOrchestrator:
 
         # Create or reuse article
         if existing_article_id:
-            article = self.db.query(Article).filter(Article.id == existing_article_id).first()
+            article = self.db.get(Article, existing_article_id)
             if article is None:
                 raise GenerationFailedError(f"Article {existing_article_id} non trouvé")
-            if preferred_title and not article.title:
-                article.title = preferred_title
-            if final_keyword and not article.keyword:
-                article.keyword = final_keyword
-            article.status = "writing_in_progress"
+            draft = _DraftArticle(article)
+            if article.current_revision:
+                draft.title = article.current_revision.title
+                draft.excerpt = article.current_revision.excerpt
+                draft.content = article.current_revision.body
+                draft.faq = article.current_revision.faq or []
+                draft.callouts = article.current_revision.callouts or []
+            if preferred_title and not draft.title:
+                draft.title = preferred_title
+            seo = self.db.get(ArticleSeo, article.id)
+            draft.meta_title = seo.meta_title if seo else None
+            draft.meta_description = seo.meta_description if seo else None
+            draft.keyword = final_keyword
+            draft.audience = audience
+            draft.angle = angle
+            set_article_status(article, ArticleStatus.WRITING_IN_PROGRESS)
             article.updated_at = datetime.now(timezone.utc)
             self.db.flush()
         else:
@@ -327,50 +383,63 @@ class SEOGenerationOrchestrator:
                 id=str(uuid.uuid4()),
                 project_id=self.project_id,
                 category_id=chosen_category,
-                title=final_title,
                 slug=f"idea-{uuid.uuid4().hex[:8]}",
-                keyword=final_keyword,
-                audience=audience or project_context.get("target_audience"),
-                angle=angle or editorial_angle.get("main_angle"),
                 search_intent=search_intent or intent_analysis.get("explicit_intent"),
-                status="writing_in_progress",
+                status_reason_id=ArticleStatus.WRITING_IN_PROGRESS,
+                state_id=0,
                 priority=0,
-                word_count=0,
+                opportunity_score=idea_discovery.get("opportunity_score", 0.5),
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
-                opportunity_score=idea_discovery.get("opportunity_score", 0.5),
             )
             self.db.add(article)
             self.db.flush()
+            draft = _DraftArticle(article)
+            draft.title = final_title
+            draft.keyword = final_keyword
+            draft.audience = audience or project_context.get("target_audience")
+            draft.angle = angle or editorial_angle.get("main_angle")
 
-        # Store all context
-        article.project_context_json = project_context
-        article.category_strategy_json = category_strategy
-        article.idea_discovery_json = idea_discovery
-        article.cannibalization_check_json = cannibalization
-        article.cannibalization_outline_json = cannibalization_outline
-        article.intent_analysis_json = intent_analysis
-        article.research_brief_json = research_brief
-        article.keyword_brief_json = keyword_brief
-        article.editorial_angle_json = editorial_angle
-        article.outline_json = safe_json_dump(outline)
-        article.image_plan_json = safe_json_dump(image_plan_result.get("image_plan", {}))
-        article.image_sources_json = safe_json_dump(image_plan_result.get("image_sources", []))
-        article.callout_plan_json = safe_json_dump(callout_plan)
-        article.internal_links_json = safe_json_dump(internal_links)
-        article.external_links_json = safe_json_dump(external_links)
-        article.human_insights_json = self.context.get("human_insights") or {}
+        self.workflow_run = WorkflowRun(
+            article_id=article.id,
+            phase_id=WorkflowPhase.PRODUCTION,
+            status_reason_id=RunStatus.RUNNING,
+            state_id=0,
+        )
+        self.db.add(self.workflow_run)
+        self.db.flush()
 
-        # Plage de mots : catégorie (prioritaire) puis projet
+        # Store all context as artifacts (ai.artifacts, remplace les colonnes *_json)
+        self._save(article.id, "project_context", project_context)
+        self._save(article.id, "category_strategy", category_strategy)
+        self._save(article.id, "idea_discovery", idea_discovery)
+        self._save(article.id, "cannibalization_check", cannibalization)
+        self._save(article.id, "cannibalization_outline", cannibalization_outline)
+        self._save(article.id, "intent_analysis", intent_analysis)
+        self._save(article.id, "research_brief", research_brief)
+        self._save(article.id, "keyword_brief", keyword_brief)
+        self._save(article.id, "editorial_angle", editorial_angle)
+        self._save(article.id, "outline", outline)
+        self._save(article.id, "image_plan", image_plan_result.get("image_plan", {}))
+        self._save(article.id, "image_sources", {"items": image_plan_result.get("image_sources", [])})
+        self._save(article.id, "callout_plan", callout_plan)
+        self._save(article.id, "internal_links", internal_links)
+        self._save(article.id, "external_links", external_links)
+        self._save(article.id, "human_insights", self.context.get("human_insights") or {})
+
+        # Plage de mots : catégorie (prioritaire) puis profil éditorial projet
         wc_min, wc_max = None, None
         if article.category_id:
-            cat = self.db.query(Category).filter(Category.id == article.category_id).first()
+            cat = self.db.get(Category, article.category_id)
             if cat:
-                wc_min = cat.word_count_min
-                wc_max = cat.word_count_max
+                overrides = cat.overrides or {}
+                wc_min = overrides.get("word_count_min")
+                wc_max = overrides.get("word_count_max")
         if not wc_min and not wc_max:
-            wc_min = getattr(self.project, "word_count_min", None)
-            wc_max = getattr(self.project, "word_count_max", None)
+            profile = self.project.active_editorial_profile if self.project else None
+            if profile:
+                wc_min = profile.word_count_min
+                wc_max = profile.word_count_max
 
         # Passer la plage au prompt du writer
         if wc_min or wc_max:
@@ -382,9 +451,9 @@ class SEOGenerationOrchestrator:
             self.context["word_count_range"] = " et ".join(wc_instruction)
 
         # Infer content_format from target_word_count if not already set
-        if not getattr(article, "content_format", None):
+        if not article.content_format:
             from app.services.seo.format_expectations import infer_format
-            target_wc = getattr(article, "target_word_count", None)
+            target_wc = article.target_word_count
             if target_wc is None:
                 # Inférer depuis le milieu de la plage configurée
                 if wc_min and wc_max:
@@ -401,7 +470,7 @@ class SEOGenerationOrchestrator:
         self._step("DraftWriting")
 
         # 14b. Pre-writing context validation
-        ctx_ready, ctx_missing = self._validate_writing_context(article)
+        ctx_ready, ctx_missing = self._validate_writing_context()
         if not ctx_ready:
             self._log(
                 f"Context incomplet avant rédaction — champs manquants : {', '.join(ctx_missing)}",
@@ -411,22 +480,25 @@ class SEOGenerationOrchestrator:
 
         # 15. Writing
         try:
-            self._generate_content(article, outline, keyword_brief, include_callouts, include_faq)
+            self._generate_content(draft, outline, keyword_brief, include_callouts, include_faq)
         except WritingCancelledError:
             raise
         except Exception as exc:
             self._error("Writing", str(exc))
-            article.status = "failed"
+            set_article_status(article, ArticleStatus.FAILED)
             article.updated_at = datetime.now(timezone.utc)
+            set_run_status(self.workflow_run, RunStatus.FAILED)
+            self.workflow_run.error = str(exc)
+            self.workflow_run.finished_at = datetime.now(timezone.utc)
             self.db.flush()
-            self._finalize_report(article, category_name, intent_analysis, research_brief, keyword_brief, outline, faq_plan, callout_plan, image_plan_result)
+            self._finalize_report(article, draft, category_name, intent_analysis, research_brief, keyword_brief, outline, faq_plan, callout_plan, image_plan_result)
             try:
                 from app.services.notification_service import create_notification
                 create_notification(
                     db=self.db,
                     project_id=article.project_id,
                     title="Échec de génération",
-                    message=f'La génération de "{article.title or article.keyword}" a échoué. '
+                    message=f'La génération de "{draft.title or draft.keyword}" a échoué. '
                             f'Vérifiez les logs dans Paramètres → IA.',
                     level="error",
                     type="generation_failed",
@@ -436,10 +508,15 @@ class SEOGenerationOrchestrator:
                 pass
             return article
 
+        sources_list = [
+            s.get("snippet", "") or s.get("text", "") or str(s)
+            for s in research_brief.get("sources_consulted", [])
+        ]
+
         # 16. LanguageQualityPass
         try:
-            language_quality = check_language_quality_dict(article.content)
-            article.language_quality_report_json = language_quality
+            language_quality = check_language_quality_dict(draft.content)
+            self._save(article.id, "language_quality_report", language_quality)
             self.tools_used.append("languagetool" if language_quality.get("external_tool_used") else "language_heuristic")
             self._step("LanguageQualityPass")
         except Exception as exc:
@@ -448,12 +525,8 @@ class SEOGenerationOrchestrator:
 
         # 17. OriginalityPass
         try:
-            sources_list = [
-                s.get("snippet", "") or s.get("text", "") or str(s)
-                for s in research_brief.get("sources_consulted", [])
-            ]
-            originality = check_originality_dict(article.content, sources_list)
-            article.originality_report_json = originality
+            originality = check_originality_dict(draft.content, sources_list)
+            self._save(article.id, "originality_report", originality)
             self.tools_used.append("ngram_heuristic")
             self._step("OriginalityPass")
         except Exception as exc:
@@ -462,8 +535,8 @@ class SEOGenerationOrchestrator:
 
         # 18. HumanizationPass
         try:
-            humanization = check_humanization_dict(article.content)
-            article.humanization_report_json = humanization
+            humanization = check_humanization_dict(draft.content)
+            self._save(article.id, "humanization_report", humanization)
             self._step("HumanizationPass")
         except Exception as exc:
             self._error("HumanizationPass", str(exc))
@@ -472,18 +545,17 @@ class SEOGenerationOrchestrator:
         # 18b. ReadabilityV2
         try:
             from app.services.seo.readability_service import compute_readability_score
-            readability_result = compute_readability_score(article)
-            article.readability_report_json = readability_result
-            if readability_result.get("score") is not None:
-                article.readability_score = float(readability_result["score"])
+            readability_result = compute_readability_score(draft)
+            self._save(article.id, "readability_report", readability_result)
             self._step("ReadabilityV2")
         except Exception as exc:
             self._error("ReadabilityV2", str(exc))
+            readability_result = None
 
         # 19. EEATPass
         try:
-            eeat = check_eeat_dict(article.content, sources_list, article.author_name)
-            article.eeat_checklist_json = eeat
+            eeat = check_eeat_dict(draft.content, sources_list, draft.author_name)
+            self._save(article.id, "eeat_checklist", eeat)
             self._step("EEATPass")
         except Exception as exc:
             self._error("EEATPass", str(exc))
@@ -491,72 +563,65 @@ class SEOGenerationOrchestrator:
 
         # 20. EditorialQualityGate
         try:
-            editorial_quality = check_editorial_quality_dict(article.content)
-            article.editorial_quality_report_json = editorial_quality
+            editorial_quality = check_editorial_quality_dict(draft.content)
+            self._save(article.id, "editorial_quality_report", editorial_quality)
             self._step("EditorialQualityGate")
         except Exception as exc:
             self._error("EditorialQualityGate", str(exc))
             editorial_quality = None
 
+        structured_data = None
         # 21. SEOFinalChecklist
         try:
             try:
                 from app.services.structured_data_builder import build_structured_data
                 structured_data = build_structured_data(
-                    title=article.title,
+                    title=draft.title,
                     slug=article.slug,
-                    meta_title=article.meta_title,
-                    meta_description=article.meta_description,
-                    excerpt=article.excerpt,
-                    author=article.author_name,
+                    meta_title=draft.meta_title,
+                    meta_description=draft.meta_description,
+                    excerpt=draft.excerpt,
+                    author=draft.author_name,
                     published_at=article.published_at,
                     updated_at=article.updated_at,
                     category=category_name,
-                    content=article.content,
-                    faq_json=article.faq_json,
-                    cover_image_url=article.cover_image_url,
+                    content=draft.content,
+                    faq_json=json.dumps(draft.faq) if draft.faq else None,
+                    cover_image_url=None,
                     site_name=self.project.name if self.project else None,
                     organization_name=self.project.name if self.project else None,
                 )
-                article.structured_data_json = structured_data
+                draft.structured_data_json = structured_data
+                self._save(article.id, "structured_data", structured_data)
                 self._step("StructuredDataBuilder")
             except Exception as exc:
                 self._error("StructuredDataBuilder", str(exc))
 
             try:
                 from app.services.seo.geo_expert_service import compute_geo_score
-                article.geo_optimization_json = compute_geo_score(article)
+                geo_result = compute_geo_score(draft)
+                self._save(article.id, "geo_optimization", geo_result)
                 self._step("GEOOptimizer")
             except Exception as exc:
                 self._error("GEOOptimizer", str(exc))
 
-            faq_count = 0
-            if article.faq_json:
-                try:
-                    faq_items = json.loads(article.faq_json) if isinstance(article.faq_json, str) else article.faq_json
-                    faq_count = len(faq_items) if isinstance(faq_items, list) else 0
-                except (json.JSONDecodeError, TypeError):
-                    faq_count = 0
+            faq_count = len(draft.faq) if isinstance(draft.faq, list) else 0
 
-            internal_links_list = safe_json_load(article.internal_links_json, [])
-            external_links_list = safe_json_load(article.external_links_json, [])
-            images_list = safe_json_load(article.image_sources_json, [])
-
-            has_sd = bool(article.structured_data_json)
+            has_sd = bool(structured_data)
             seo_final = check_seo_final_dict(
-                content=article.content,
-                title=article.title,
+                content=draft.content,
+                title=draft.title,
                 slug=article.slug,
-                meta_title=article.meta_title,
-                meta_description=article.meta_description,
-                keyword=article.keyword,
+                meta_title=draft.meta_title,
+                meta_description=draft.meta_description,
+                keyword=draft.keyword,
                 faq_count=faq_count,
-                internal_links=internal_links_list if isinstance(internal_links_list, list) else [],
-                external_links=external_links_list if isinstance(external_links_list, list) else [],
-                images=images_list if isinstance(images_list, list) else [],
+                internal_links=internal_links.get("links", []) if isinstance(internal_links, dict) else [],
+                external_links=external_links.get("links", []) if isinstance(external_links, dict) else [],
+                images=image_plan_result.get("image_sources", []),
                 has_structured_data=has_sd,
             )
-            article.seo_final_checklist_json = seo_final
+            self._save(article.id, "seo_final_checklist", seo_final)
             self._step("SEOFinalChecklist")
         except Exception as exc:
             self._error("SEOFinalChecklist", str(exc))
@@ -572,18 +637,18 @@ class SEOGenerationOrchestrator:
                 editorial_quality=editorial_quality,
                 seo_final=seo_final,
             )
-            article.seo_review_json = seo_review
+            self._save(article.id, "seo_review", seo_review)
             self._step("SEOReview")
         except Exception as exc:
             self._error("SEOReview", str(exc))
-            article.seo_review_json = build_review_error_report(str(exc))
+            self._save(article.id, "seo_review", build_review_error_report(str(exc)))
 
         # 20b. FactCheckPass (LLM-based)
         try:
             if self.agent_router is not None:
                 from app.services.agents.agent_services import fact_check_article
-                fact_check = fact_check_article(article.content or "", article.title, article.keyword, db=self.db, project_id=self.project_id)
-                article.fact_check_report_json = fact_check
+                fact_check = fact_check_article(draft.content or "", draft.title, draft.keyword, db=self.db, project_id=self.project_id)
+                self._save(article.id, "fact_check_report", fact_check)
                 self._step("FactCheckPass")
         except Exception as exc:
             self._error("FactCheckPass", str(exc))
@@ -592,11 +657,10 @@ class SEOGenerationOrchestrator:
         try:
             if self.agent_router is not None:
                 from app.services.agents.agent_services import editorial_review
-                review_data = editorial_review(article.content or "", article.title, article.keyword, db=self.db, project_id=self.project_id)
-                if not article.editorial_quality_report_json or not isinstance(article.editorial_quality_report_json, dict):
-                    article.editorial_quality_report_json = {}
-                if isinstance(article.editorial_quality_report_json, dict):
-                    article.editorial_quality_report_json["llm_review"] = review_data
+                review_data = editorial_review(draft.content or "", draft.title, draft.keyword, db=self.db, project_id=self.project_id)
+                editorial_quality_report = self._get(article.id, "editorial_quality_report") or {}
+                editorial_quality_report["llm_review"] = review_data
+                self._save(article.id, "editorial_quality_report", editorial_quality_report)
                 self._step("EditorialReview")
         except Exception as exc:
             self._error("EditorialReview", str(exc))
@@ -606,15 +670,14 @@ class SEOGenerationOrchestrator:
             if self.agent_router is not None:
                 from app.services.agents.agent_services import seo_optimize_content
                 seo_opt = seo_optimize_content(
-                    article.content or "", article.title, article.keyword,
-                    meta_title=article.meta_title, meta_description=article.meta_description,
+                    draft.content or "", draft.title, draft.keyword,
+                    meta_title=draft.meta_title, meta_description=draft.meta_description,
                     db=self.db,
                     project_id=self.project_id,
                 )
-                if not article.seo_final_checklist_json or not isinstance(article.seo_final_checklist_json, dict):
-                    article.seo_final_checklist_json = {}
-                if isinstance(article.seo_final_checklist_json, dict):
-                    article.seo_final_checklist_json["llm_optimizations"] = seo_opt
+                seo_final_checklist = self._get(article.id, "seo_final_checklist") or {}
+                seo_final_checklist["llm_optimizations"] = seo_opt
+                self._save(article.id, "seo_final_checklist", seo_final_checklist)
                 self._step("SEOOptimizerPass")
         except Exception as exc:
             self._error("SEOOptimizerPass", str(exc))
@@ -623,47 +686,54 @@ class SEOGenerationOrchestrator:
         try:
             if self.agent_router is not None:
                 from app.services.agents.agent_services import quality_rate_article
-                quality = quality_rate_article(article.content or "", article.title, article.keyword, db=self.db, project_id=self.project_id)
-                # Champ déclaré par le registre pour quality_gate (output_json_field)
-                if not isinstance(article.editorial_quality_report_json, dict):
-                    article.editorial_quality_report_json = {}
-                article.editorial_quality_report_json["llm_quality_rating"] = quality
+                quality = quality_rate_article(draft.content or "", draft.title, draft.keyword, db=self.db, project_id=self.project_id)
+                editorial_quality_report = self._get(article.id, "editorial_quality_report") or {}
+                editorial_quality_report["llm_quality_rating"] = quality
+                self._save(article.id, "editorial_quality_report", editorial_quality_report)
                 self._step("QualityRatingPass")
         except Exception as exc:
             self._error("QualityRatingPass", str(exc))
 
         # 23. GenerationReport
-        self._finalize_report(article, category_name, intent_analysis, research_brief, keyword_brief, outline, faq_plan, callout_plan, image_plan_result)
+        self._finalize_report(article, draft, category_name, intent_analysis, research_brief, keyword_brief, outline, faq_plan, callout_plan, image_plan_result)
+
+        set_run_status(self.workflow_run, RunStatus.SUCCEEDED)
+        self.workflow_run.finished_at = datetime.now(timezone.utc)
+        self.db.flush()
 
         self._log(f"Article generation completed in {int((perf_counter() - self.started_at) * 1000)}ms", level="info", step="orchestrator", article_id=article.id)
 
         return article
 
-    def _validate_writing_context(self, article: Article) -> tuple[bool, list[str]]:
-        """Check that critical fields are populated before launching the writer."""
+    def _validate_writing_context(self) -> tuple[bool, list[str]]:
+        """Check that critical context artifacts are populated before launching the writer."""
         required = [
-            ("outline_json", "Plan de l'article"),
-            ("keyword_brief_json", "Brief mots-clés"),
-            ("intent_analysis_json", "Analyse d'intention"),
-            ("editorial_angle_json", "Angle éditorial"),
+            ("outline", "Plan de l'article"),
+            ("keyword_brief", "Brief mots-clés"),
+            ("intent_analysis", "Analyse d'intention"),
+            ("editorial_angle", "Angle éditorial"),
         ]
         missing = []
-        for field, label in required:
-            value = getattr(article, field, None)
-            if not value or value in ({}, "{}"):
+        for key, label in required:
+            value = self.context.get(key)
+            if not value:
                 missing.append(label)
         return len(missing) == 0, missing
 
     def _raise_if_cancelled(self, article: Article) -> None:
         """Vérifie en base (valeur fraîche) si l'annulation a été demandée."""
+        if self.workflow_run is None:
+            return
         try:
-            from sqlalchemy import select as sa_select
             flag = self.db.execute(
-                sa_select(Article.writing_cancel_requested).where(Article.id == article.id)
+                select(WorkflowRun.cancel_requested).where(WorkflowRun.id == self.workflow_run.id)
             ).scalar()
         except Exception:
             return
         if flag:
+            set_run_status(self.workflow_run, RunStatus.CANCELLED)
+            self.workflow_run.finished_at = datetime.now(timezone.utc)
+            self.db.flush()
             raise WritingCancelledError(f"Annulation demandée pour l'article {article.id}")
 
     def _get_agent_provider(self, agent_id: str, fallback: LLMProvider | None = None) -> LLMProvider:
@@ -678,15 +748,17 @@ class SEOGenerationOrchestrator:
         provider = self._get_agent_provider(agent_id)
         return provider.generate_text(prompt, **kwargs)
 
-    def _generate_content(self, article: Article, outline: dict, keyword_brief: dict, include_callouts: bool | None, include_faq: bool | None = None):
+    def _generate_content(self, draft: _DraftArticle, outline: dict, keyword_brief: dict, include_callouts: bool | None, include_faq: bool | None = None):
+        article = draft.article
         self._raise_if_cancelled(article)
         writer_llm = self._get_agent_provider("writer", self.llm)
         if writer_llm.is_mock:
-            article.content = f"<h1>{article.title}</h1><p>Contenu mock pour {article.keyword}</p>"
-            article.word_count = calculate_word_count(article.content)
-            article.reading_time_minutes = calculate_reading_time_minutes(article.word_count)
-            self._ensure_slug(article)
-            article.status = "draft_ready"
+            draft.content = f"<h1>{draft.title}</h1><p>Contenu mock pour {draft.keyword}</p>"
+            draft.word_count = calculate_word_count(draft.content)
+            draft.reading_time_minutes = calculate_reading_time_minutes(draft.word_count)
+            self._ensure_slug(article, draft.title, draft.keyword)
+            self._persist_revision(draft)
+            set_article_status(article, ArticleStatus.DRAFT_READY)
             article.updated_at = datetime.now(timezone.utc)
             self.db.flush()
             return
@@ -695,12 +767,12 @@ class SEOGenerationOrchestrator:
 
         prompt_parts = [
             f"Rédige un article de blog SEO en français, complet et utile.",
-            f"Titre : {article.title}",
-            f"Mot-clé principal : {article.keyword}",
+            f"Titre : {draft.title}",
+            f"Mot-clé principal : {draft.keyword}",
             f"Mot(s)-clé(s) secondaire(s) : {', '.join(keyword_brief.get('secondary_keywords', []))}",
             f"Intention de recherche : {article.search_intent or 'informational'}",
-            f"Angle éditorial : {article.angle or 'Informatif et pratique'}",
-            f"Audience : {article.audience or 'Grand public'}",
+            f"Angle éditorial : {draft.angle or 'Informatif et pratique'}",
+            f"Audience : {draft.audience or 'Grand public'}",
             "",
             "Règles strictes :",
             "- Rédige en HTML compatible TipTap : <h1>, <h2>, <h3>, <p>, <ul>, <ol>, <li>, <blockquote>, <table>, <strong>, <em>",
@@ -774,7 +846,7 @@ class SEOGenerationOrchestrator:
         prompt_parts.append("Sois précis, original et utile.")
 
         # Injecter la matière humaine si disponible
-        insights = getattr(article, "human_insights_json", None) or {}
+        insights = self.context.get("human_insights") or {}
         if insights and insights.get("total_insights", 0) > 0:
             prompt_parts.append("\n=== MATIÈRE HUMAINE RÉELLE (à intégrer naturellement) ===")
             if insights.get("questions"):
@@ -851,13 +923,13 @@ class SEOGenerationOrchestrator:
 
         self._raise_if_cancelled(article)
 
-        article.content = content
-        article.word_count = calculate_word_count(content)
-        article.reading_time_minutes = calculate_reading_time_minutes(article.word_count)
-        self._ensure_slug(article)
+        draft.content = content
+        draft.word_count = calculate_word_count(content)
+        draft.reading_time_minutes = calculate_reading_time_minutes(draft.word_count)
+        self._ensure_slug(article, draft.title, draft.keyword)
 
-        if not article.meta_title:
-            meta_prompt = f"Écris un meta title SEO (max 60 car.) pour : {article.title}. Mot-clé : {article.keyword}"
+        if not draft.meta_title:
+            meta_prompt = f"Écris un meta title SEO (max 60 car.) pour : {draft.title}. Mot-clé : {draft.keyword}"
             if self.agent_router is not None:
                 from app.services.agents.agent_router import call_agent
                 meta_title, result = call_agent(
@@ -869,13 +941,13 @@ class SEOGenerationOrchestrator:
                     article_id=article.id,
                     temperature=0.3,
                 )
-                article.meta_title = ((meta_title if result.status == "success" else article.title) or article.title)[:255]
+                draft.meta_title = ((meta_title if result.status == "success" else draft.title) or draft.title)[:255]
             else:
                 title_llm = self._get_agent_provider("meta_writer", writer_llm)
-                article.meta_title = (title_llm.generate_text(meta_prompt, temperature=0.3) or article.title)[:255]
+                draft.meta_title = (title_llm.generate_text(meta_prompt, temperature=0.3) or draft.title)[:255]
 
-        if not article.meta_description:
-            desc_prompt = f"Écris une meta description SEO (140-160 car.) pour : {article.title}. Mot-clé : {article.keyword}"
+        if not draft.meta_description:
+            desc_prompt = f"Écris une meta description SEO (140-160 car.) pour : {draft.title}. Mot-clé : {draft.keyword}"
             if self.agent_router is not None:
                 from app.services.agents.agent_router import call_agent
                 meta_description, result = call_agent(
@@ -887,29 +959,37 @@ class SEOGenerationOrchestrator:
                     article_id=article.id,
                     temperature=0.3,
                 )
-                article.meta_description = (meta_description if result.status == "success" else "")[:500]
+                draft.meta_description = (meta_description if result.status == "success" else "")[:500]
             else:
                 desc_llm = self._get_agent_provider("meta_writer", writer_llm)
-                article.meta_description = (desc_llm.generate_text(desc_prompt, temperature=0.3) or "")[:500]
+                draft.meta_description = (desc_llm.generate_text(desc_prompt, temperature=0.3) or "")[:500]
 
-        article.excerpt = self._extract_excerpt(content)
+        draft.excerpt = self._extract_excerpt(content)
 
         # FAQ
         if include_faq is not False:
-            self._generate_faq(article)
+            self._generate_faq(draft)
 
-        article.status = "draft_ready"
+        self._persist_revision(draft)
+        set_article_status(article, ArticleStatus.DRAFT_READY)
         article.updated_at = datetime.now(timezone.utc)
         self.db.flush()
 
         # AutoScoring post-génération
         try:
             from app.services.seo.seo_review_service import run_and_store_seo_review
-            run_and_store_seo_review(article)
+            run_and_store_seo_review(self.db, article)
             from app.services.scoring_service import compute_global_score
-            scoring = compute_global_score(article)
-            article.global_score = scoring.get("global_score")
-            article.global_score_valid = bool(scoring.get("global_score_valid", False))
+            scoring = compute_global_score(self.db, article.id, article=article)
+            self.db.add(ArticleScore(
+                article_id=article.id,
+                revision_id=article.current_revision_id,
+                global_score=scoring.get("global_score"),
+                seo_score=scoring.get("seo_contrib"),
+                eeat_score=scoring.get("eeat_contrib"),
+                readability_score=scoring.get("readability_contrib"),
+                geo_score=scoring.get("geo_contrib"),
+            ))
             self.db.flush()
             self._step("AutoScoring")
         except Exception as exc:
@@ -918,11 +998,17 @@ class SEOGenerationOrchestrator:
         # Notifier que l'article est prêt à valider
         try:
             from app.services.notification_service import create_notification
+            latest_score = self.db.execute(
+                select(ArticleScore.global_score)
+                .where(ArticleScore.article_id == article.id)
+                .order_by(ArticleScore.evaluated_at.desc())
+                .limit(1)
+            ).scalar()
             create_notification(
                 db=self.db,
                 project_id=article.project_id,
                 title="Article prêt à valider",
-                message=f'"{article.title}" a été rédigé et scoré. Score global : {article.global_score or "—"}.',
+                message=f'"{draft.title}" a été rédigé et scoré. Score global : {latest_score or "—"}.',
                 level="success",
                 type="article_ready",
                 link=f"/projects/{article.project_id}/production?tab=validate",
@@ -933,16 +1019,56 @@ class SEOGenerationOrchestrator:
         # Cycle d'auto-amélioration si score insuffisant
         self._raise_if_cancelled(article)
         try:
-            if article.global_score is not None and article.global_score < AUTO_IMPROVE_SCORE_TARGET:
-                self._auto_improve_score(article, max_iterations=2)
+            current_score = self.db.execute(
+                select(ArticleScore.global_score)
+                .where(ArticleScore.article_id == article.id)
+                .order_by(ArticleScore.evaluated_at.desc())
+                .limit(1)
+            ).scalar()
+            if current_score is not None and current_score < AUTO_IMPROVE_SCORE_TARGET:
+                self._auto_improve_score(draft, max_iterations=2)
         except Exception as exc:
             self._error("AutoImprove", str(exc))
 
-    def _auto_improve_score(self, article: Article, max_iterations: int = 2):
+    def _persist_revision(self, draft: _DraftArticle) -> ArticleRevision:
+        article = draft.article
+        last_no = self.db.execute(
+            select(ArticleRevision.revision_no)
+            .where(ArticleRevision.article_id == article.id)
+            .order_by(ArticleRevision.revision_no.desc())
+            .limit(1)
+        ).scalar_one_or_none()
+        revision = ArticleRevision(
+            article_id=article.id,
+            revision_no=(last_no or 0) + 1,
+            source=RevisionSource.AI,
+            title=draft.title,
+            excerpt=draft.excerpt,
+            body=draft.content,
+            faq=draft.faq or [],
+            callouts=draft.callouts or [],
+            word_count=draft.word_count,
+            reading_time_minutes=draft.reading_time_minutes,
+        )
+        self.db.add(revision)
+        self.db.flush()
+        article.current_revision_id = revision.id
+
+        seo = self.db.get(ArticleSeo, article.id)
+        if seo is None:
+            seo = ArticleSeo(article_id=article.id)
+            self.db.add(seo)
+        seo.meta_title = draft.meta_title
+        seo.meta_description = draft.meta_description
+        self.db.flush()
+        return revision
+
+    def _auto_improve_score(self, draft: _DraftArticle, max_iterations: int = 2):
         """Tant que global_score < AUTO_IMPROVE_SCORE_TARGET, améliore le signal le plus faible."""
         from app.services.seo.seo_review_service import run_and_store_seo_review
         from app.services.scoring_service import compute_global_score
 
+        article = draft.article
         IMPROVEMENT_INSTRUCTIONS = {
             'EEAT': (
                 "Enrichis cet article avec des données chiffrées sourcées et des exemples concrets. "
@@ -968,16 +1094,22 @@ class SEOGenerationOrchestrator:
 
         for iteration in range(max_iterations):
             self._raise_if_cancelled(article)
-            current_score = getattr(article, 'global_score', None)
+            latest = self.db.execute(
+                select(ArticleScore)
+                .where(ArticleScore.article_id == article.id)
+                .order_by(ArticleScore.evaluated_at.desc())
+                .limit(1)
+            ).scalar_one_or_none()
+            current_score = latest.global_score if latest else None
             if current_score is None or current_score >= AUTO_IMPROVE_SCORE_TARGET:
                 break
 
             signals = {
-                'EEAT': getattr(article, 'eeat_score', None),
-                'SEO': getattr(article, 'seo_score', None),
-                'Lisibilité': getattr(article, 'readability_score', None),
-                'Originalité': getattr(article, 'originality_score', None),
-                'GEO': getattr(article, 'geo_score', None),
+                'EEAT': latest.eeat_score if latest else None,
+                'SEO': latest.seo_score if latest else None,
+                'Lisibilité': latest.readability_score if latest else None,
+                'Originalité': None,
+                'GEO': latest.geo_score if latest else None,
             }
             valid_signals = {k: v for k, v in signals.items() if v is not None}
             if not valid_signals:
@@ -994,7 +1126,7 @@ class SEOGenerationOrchestrator:
                 "- Ne change pas le titre principal (H1)\n"
                 "- Ne modifie pas la longueur totale de plus de 20%\n"
                 "- Retourne uniquement le HTML amélioré, sans explication, sans backticks\n\n"
-                f"Contenu :\n{(article.content or '')[:4000]}"
+                f"Contenu :\n{(draft.content or '')[:4000]}"
             )
 
             try:
@@ -1005,15 +1137,25 @@ class SEOGenerationOrchestrator:
                     break
                 improved = editor_llm.generate_text(improve_prompt)
                 if improved and len(improved) > 200:
-                    article.content = improved
+                    draft.content = improved
+                    draft.word_count = calculate_word_count(improved)
+                    draft.reading_time_minutes = calculate_reading_time_minutes(draft.word_count)
+                    self._persist_revision(draft)
                     article.updated_at = datetime.now(timezone.utc)
                     self.db.flush()
 
                     try:
-                        run_and_store_seo_review(article)
-                        scoring = compute_global_score(article)
-                        article.global_score = scoring.get("global_score")
-                        article.global_score_valid = bool(scoring.get("global_score_valid", False))
+                        run_and_store_seo_review(self.db, article)
+                        scoring = compute_global_score(self.db, article.id, article=article)
+                        self.db.add(ArticleScore(
+                            article_id=article.id,
+                            revision_id=article.current_revision_id,
+                            global_score=scoring.get("global_score"),
+                            seo_score=scoring.get("seo_contrib"),
+                            eeat_score=scoring.get("eeat_contrib"),
+                            readability_score=scoring.get("readability_contrib"),
+                            geo_score=scoring.get("geo_contrib"),
+                        ))
                         self.db.flush()
                     except Exception as score_exc:
                         self._error(f"AutoImprove_rescore_{iteration}", str(score_exc))
@@ -1023,13 +1165,14 @@ class SEOGenerationOrchestrator:
                 self._error(f"AutoImprove_{weakest_signal}_iter{iteration + 1}", str(exc))
                 break
 
-    def _generate_faq(self, article: Article):
+    def _generate_faq(self, draft: _DraftArticle):
+        article = draft.article
         faq_llm = self._get_agent_provider("faq_generator", self.llm)
         if faq_llm.is_mock:
             return
 
         # Enrichir avec les vraies questions humaines si disponibles
-        insights = getattr(article, "human_insights_json", None) or {}
+        insights = self.context.get("human_insights") or {}
         real_questions = insights.get("questions", [])
         real_pains = insights.get("pain_points", [])
         human_context = ""
@@ -1052,9 +1195,9 @@ class SEOGenerationOrchestrator:
 
         faq_prompt = (
             faq_intro
-            + f"Titre : {article.title}\n"
-            f"Mot-clé principal : {article.keyword}\n"
-            f"Extrait du contenu :\n{article.content[:1500]}\n\n"
+            + f"Titre : {draft.title}\n"
+            f"Mot-clé principal : {draft.keyword}\n"
+            f"Extrait du contenu :\n{draft.content[:1500]}\n\n"
             "Règles strictes :\n"
             "- Chaque réponse : 1 à 4 phrases maximum\n"
             "- Les questions ne doivent pas répéter les titres H2 de l'article\n"
@@ -1078,7 +1221,7 @@ class SEOGenerationOrchestrator:
                     if q and a:
                         normalized.append({"question": q, "answer": a})
                 if 2 <= len(normalized) <= 6:
-                    article.faq_json = json.dumps(normalized)
+                    draft.faq = normalized
         except Exception:
             pass
 
@@ -1090,14 +1233,13 @@ class SEOGenerationOrchestrator:
         return text[:max_length]
 
     def _get_article_cost_data(self, article_id: str) -> dict:
-        """Aggregate cost data from AiUsageLog for this article."""
+        """Aggregate cost data from ai.usage_events for this article."""
+        from app.models.ai import UsageEvent
+
         try:
-            from app.models.ai_usage_log import AiUsageLog
-            logs = (
-                self.db.query(AiUsageLog)
-                .filter(AiUsageLog.article_id == article_id)
-                .all()
-            )
+            logs = self.db.execute(
+                select(UsageEvent).where(UsageEvent.article_id == article_id)
+            ).scalars().all()
         except Exception:
             return {
                 "estimated_cost_eur": None,
@@ -1127,18 +1269,18 @@ class SEOGenerationOrchestrator:
             est = log.estimated_cost
             act = log.actual_cost
             if est is not None:
-                total_estimated += est
+                total_estimated += float(est)
             else:
                 has_unknown = True
             if act is not None:
-                total_actual += act
+                total_actual += float(act)
             else:
                 has_unmeasured = True
 
             breakdown.append({
-                "agent_key": log.agent_id,
-                "provider": log.provider_name or "",
-                "model": log.model_name or "",
+                "agent_key": log.agent_key,
+                "provider": log.provider_code or "",
+                "model": log.model or "",
                 "input_tokens": log.prompt_tokens or 0,
                 "output_tokens": log.completion_tokens or 0,
                 "estimated_cost_eur": est,
@@ -1160,14 +1302,10 @@ class SEOGenerationOrchestrator:
 
         cost_limit_eur = None
         try:
-            from app.models.pipeline import ProjectPipeline
-            pipeline = (
-                self.db.query(ProjectPipeline)
-                .filter(ProjectPipeline.project_id == self.project_id)
-                .first()
-            )
-            if pipeline and hasattr(pipeline, "cost_limit_per_article_eur") and pipeline.cost_limit_per_article_eur:
-                cost_limit_eur = float(pipeline.cost_limit_per_article_eur)
+            from app.models.ai import Pipeline
+            pipeline = self.db.get(Pipeline, self.project_id)
+            if pipeline and pipeline.cost_limit_per_article:
+                cost_limit_eur = float(pipeline.cost_limit_per_article)
         except Exception:
             pass
 
@@ -1195,6 +1333,7 @@ class SEOGenerationOrchestrator:
     def _finalize_report(
         self,
         article: Article,
+        draft: _DraftArticle,
         category_name: str,
         intent_analysis: dict,
         research_brief: dict,
@@ -1220,17 +1359,17 @@ class SEOGenerationOrchestrator:
             report = build_generation_report_dict(
                 provider=self.llm.provider_name,
                 model=self.llm.model_name or "",
-                title_requested=article.title,
-                title_final=article.title,
+                title_requested=draft.title,
+                title_final=draft.title,
                 category_id=article.category_id,
                 category_name=category_name,
-                main_keyword=article.keyword or "",
+                main_keyword=draft.keyword or "",
                 secondary_keywords=keyword_brief.get("secondary_keywords", []),
                 detected_intent=intent_analysis.get("explicit_intent", ""),
                 expected_answer=intent_analysis.get("expected_answer", ""),
                 article_type=intent_analysis.get("article_type", "evergreen_information"),
                 outline_used=bool(outline.get("sections")),
-                faq_generated=bool(article.faq_json),
+                faq_generated=bool(draft.faq),
                 callouts_proposed=len(callout_plan.get("callouts", [])),
                 images_proposed=len(image_plan_result.get("image_plan", {}).get("images", [])),
                 internal_links_proposed=len(self.context.get("internal_links", {}).get("links", [])),
@@ -1240,15 +1379,15 @@ class SEOGenerationOrchestrator:
                 tools_used=self.tools_used,
                 tools_not_configured=self.tools_not_configured,
                 adapters_status=adapters_status,
-                word_count=article.word_count,
-                reading_time_minutes=article.reading_time_minutes or 1,
+                word_count=draft.word_count,
+                reading_time_minutes=draft.reading_time_minutes or 1,
                 steps_completed=self.steps_completed,
                 errors=self.errors,
                 limitations=self.limitations,
-                final_status=article.status,
+                final_status=article.status_reason_id,
                 **cost_data,
             )
-            article.generation_report_json = report
+            self._save(article.id, "generation_report", report)
         except Exception as exc:
             self._error("GenerationReport", str(exc))
 

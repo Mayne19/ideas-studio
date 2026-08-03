@@ -1,4 +1,3 @@
-import json
 import re
 import uuid
 from datetime import datetime, timezone
@@ -8,11 +7,13 @@ from sqlalchemy import select
 
 from typing import Any
 from app.core.utils import slugify
-from app.models.article import Article
-from app.models.category import Category
+from app.models.content import Article, ArticleRevision, Category
+from app.models.reference import ArticleStatus, RevisionSource, set_article_status
+from app.services.article_service import set_primary_keyword
 from app.services.providers.llm_provider import LLMProvider, GenerationFailedError
 from app.services.providers.search_provider import SearchProvider
 from app.services.log_service import log_step
+from app.services.seo.artifacts import save_artifact
 
 
 _MOCK_IDEA_TEMPLATES = [
@@ -85,6 +86,13 @@ _INVERSION_RE = re.compile(r"(est|sont|a|ont|peut|doit|faut|va|vont)(-t)?-(il|el
 
 _USEFUL_PREPOSITIONS = {"de", "d", "à"}
 
+_ACTIVE_IDEA_STATUSES = (
+    ArticleStatus.IDEA_PROPOSED, ArticleStatus.IDEA_PRIORITY, ArticleStatus.OUTLINE_READY,
+    ArticleStatus.WRITING_REQUESTED, ArticleStatus.WRITING_IN_PROGRESS, ArticleStatus.DRAFT,
+    ArticleStatus.DRAFT_READY, ArticleStatus.REVIEW_NEEDED, ArticleStatus.CORRECTION_NEEDED,
+    ArticleStatus.SCHEDULED, ArticleStatus.PUBLISHED,
+)
+
 
 def _next_mock_idea(project_audience: str | None) -> dict:
     global _mock_template_index
@@ -115,12 +123,11 @@ def _normalize_match(value: str | None) -> str:
 
 
 def _project_categories(db: Session, project_id: str) -> list[Category]:
-    return (
-        db.query(Category)
-        .filter(Category.project_id == project_id)
-        .order_by(Category.priority.desc(), Category.name.asc())
-        .all()
-    )
+    return db.execute(
+        select(Category)
+        .where(Category.project_id == project_id)
+        .order_by(Category.priority_score.desc().nullslast(), Category.name.asc())
+    ).scalars().all()
 
 
 def _category_prompt(categories: list[Category]) -> str:
@@ -176,13 +183,17 @@ def _resolve_word_count_range(
     project_id: str,
     category: Category | None,
 ) -> tuple[int | None, int | None, str | None]:
-    """Plage de mots applicable : override catégorie, sinon paramètres projet."""
-    if category and (category.word_count_min or category.word_count_max):
-        return category.word_count_min, category.word_count_max, "categorie"
-    from app.models.project import Project
+    """Plage de mots applicable : override catégorie, sinon profil éditorial projet."""
+    if category:
+        overrides = category.overrides or {}
+        wc_min, wc_max = overrides.get("word_count_min"), overrides.get("word_count_max")
+        if wc_min or wc_max:
+            return wc_min, wc_max, "categorie"
+    from app.models.core import Project
     project = db.get(Project, project_id)
-    if project and (project.word_count_min or project.word_count_max):
-        return project.word_count_min, project.word_count_max, "projet"
+    profile = project.active_editorial_profile if project else None
+    if profile and (profile.word_count_min or profile.word_count_max):
+        return profile.word_count_min, profile.word_count_max, "projet"
     return None, None, None
 
 
@@ -273,17 +284,18 @@ def _sanitize_keyword(raw_keyword: str | None, *, title: str | None = None, seco
 
 
 def _keyword_already_active(db: Session, project_id: str, keyword: str) -> bool:
-    active_statuses = {
-        "idea_proposed", "idea_priority", "outline_ready", "writing_requested",
-        "writing_in_progress", "draft", "draft_ready", "review_needed",
-        "correction_needed", "scheduled", "published",
-    }
+    from app.models.content import ArticleKeyword, Keyword
+    from app.models.reference import KeywordRole
+
     stmt = (
-        select(Article)
+        select(Article.id)
+        .join(ArticleKeyword, ArticleKeyword.article_id == Article.id)
+        .join(Keyword, Keyword.id == ArticleKeyword.keyword_id)
         .where(
             Article.project_id == project_id,
-            Article.keyword == keyword,
-            Article.status.in_(active_statuses),
+            Keyword.term == keyword,
+            ArticleKeyword.role == KeywordRole.PRIMARY,
+            Article.status_reason_id.in_(_ACTIVE_IDEA_STATUSES),
         )
         .limit(1)
     )
@@ -337,24 +349,27 @@ def generate_idea(
         search_results = search.search(query, limit=5)
         serp_snippets = "\n".join(f"- {r.title}: {r.snippet}" for r in search_results)
 
-        from app.models.project import Project
+        from app.models.core import Project
         project = db.get(Project, project_id)
+        profile = project.active_editorial_profile if project else None
         imposed_category = next((c for c in categories if c.id == category_id), None) if category_id else None
         wc_min, wc_max, _ = _resolve_word_count_range(db, project_id, imposed_category)
 
         project_lines = []
         if project:
+            for label, value in (("Projet", project.name), ("Domaine", project.domain)):
+                if value:
+                    project_lines.append(f"{label} : {value}")
+        if profile:
+            rules = profile.rules or {}
+            constraints = profile.constraints or {}
             for label, value in (
-                ("Projet", project.name),
-                ("Domaine", project.domain),
-                ("Pays cible", project.country_target),
-                ("Secteur", project.industry),
-                ("Vertical", project.vertical),
-                ("Ton éditorial", project.tone),
-                ("Objectif éditorial", project.editorial_goal),
-                ("Sujets interdits", project.forbidden_topics),
-                ("Contraintes SEO", project.seo_rules),
-                ("Contraintes GEO", project.geo_rules),
+                ("Ton éditorial", profile.tone),
+                ("Vertical", profile.vertical),
+                ("Objectif éditorial", rules.get("editorial_goal")),
+                ("Sujets interdits", constraints.get("forbidden_topics")),
+                ("Contraintes SEO", rules.get("seo_rules")),
+                ("Contraintes GEO", rules.get("geo_rules")),
             ):
                 if value:
                     project_lines.append(f"{label} : {value}")
@@ -432,57 +447,53 @@ def generate_idea(
         id=str(uuid.uuid4()),
         project_id=project_id,
         category_id=final_category_id,
-        title=final_title,
         slug=f"idea-{uuid.uuid4().hex[:8]}",
-        keyword=final_keyword,
-        angle=final_angle,
         search_intent=final_search_intent,
-        audience=final_audience,
         opportunity_score=idea_data.get("opportunity_score", 0.5),
-        serp_summary_json=json.dumps(idea_data.get("serp_summary", {})),
-        status="idea_proposed",
         priority=0,
-        word_count=0,
+        target_word_count=idea_data.get("target_word_count"),
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
-        # Pre-brief fields
-        main_answer_summary=idea_data.get("main_answer_summary"),
-        opportunity_justification=idea_data.get("opportunity_justification"),
-        recommended_format=idea_data.get("recommended_format"),
-        target_word_count=idea_data.get("target_word_count"),
-        needs_faq=bool(idea_data["needs_faq"]) if idea_data.get("needs_faq") is not None else None,
-        needs_images=bool(idea_data["needs_images"]) if idea_data.get("needs_images") is not None else None,
-        estimated_difficulty=idea_data.get("estimated_difficulty"),
-        proposal_source="ia_generation",
-        # Secondary keywords stored as secondary_keywords_json
-        secondary_keywords_json=json.dumps(idea_data.get("secondary_keywords", [])),
-        # Initial workflow tracking
-        workflow_run_id=str(uuid.uuid4()),
-        workflow_status="planning",
-        completed_agent_keys=json.dumps(["idea_generator"]),
-        next_agent_key="intent_analyzer",
-        planning_brief_json=json.dumps({
-            "title": final_title,
-            "keyword": final_keyword,
-            "category_id": final_category_id,
-            "angle": final_angle,
-            "search_intent": final_search_intent,
-            "audience": final_audience,
-            "main_answer_summary": idea_data.get("main_answer_summary"),
-            "opportunity_score": idea_data.get("opportunity_score", 0.5),
-            "opportunity_justification": idea_data.get("opportunity_justification"),
-            "recommended_format": idea_data.get("recommended_format"),
-            "target_word_count": idea_data.get("target_word_count"),
-            "needs_faq": idea_data.get("needs_faq"),
-            "needs_images": idea_data.get("needs_images"),
-            "estimated_difficulty": idea_data.get("estimated_difficulty"),
-            "secondary_keywords": idea_data.get("secondary_keywords", []),
-            "proposal_source": "ia_generation",
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-        }, ensure_ascii=False),
     )
+    set_article_status(article, ArticleStatus.IDEA_PROPOSED)
     db.add(article)
-    log_step(db, project_id, f"Idée générée : {article.title}", level="info", step="generate_idea", article_id=article.id)
+    db.flush()
+
+    revision = ArticleRevision(
+        article_id=article.id,
+        revision_no=1,
+        source=RevisionSource.AI,
+        title=final_title,
+        word_count=0,
+    )
+    db.add(revision)
+    db.flush()
+    article.current_revision_id = revision.id
+
+    set_primary_keyword(db, project_id, article.id, final_keyword)
+
+    save_artifact(db, article.id, "idea_prebrief", {
+        "title": final_title,
+        "keyword": final_keyword,
+        "category_id": final_category_id,
+        "angle": final_angle,
+        "search_intent": final_search_intent,
+        "audience": final_audience,
+        "main_answer_summary": idea_data.get("main_answer_summary"),
+        "opportunity_score": idea_data.get("opportunity_score", 0.5),
+        "opportunity_justification": idea_data.get("opportunity_justification"),
+        "recommended_format": idea_data.get("recommended_format"),
+        "target_word_count": idea_data.get("target_word_count"),
+        "needs_faq": idea_data.get("needs_faq"),
+        "needs_images": idea_data.get("needs_images"),
+        "estimated_difficulty": idea_data.get("estimated_difficulty"),
+        "secondary_keywords": idea_data.get("secondary_keywords", []),
+        "serp_summary": idea_data.get("serp_summary", {}),
+        "proposal_source": "ia_generation",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+    log_step(db, project_id, f"Idée générée : {final_title}", level="info", step="generate_idea", article_id=article.id)
     duration_ms = int((perf_counter() - started_at) * 1000)
     log_step(
         db,

@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 
 class MediaCreate(BaseModel):
@@ -22,18 +22,15 @@ class MediaUpdate(BaseModel):
 
 
 class MediaPublic(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: str
     project_id: str
-    article_id: Optional[str]
+    article_id: Optional[str] = None
     url: str
     public_url: Optional[str] = None
     filename: str
-    mime_type: Optional[str]
-    size: Optional[int]
-    alt_text: Optional[str]
-    caption: Optional[str]
-    source: Optional[str]
+    mime_type: Optional[str] = None
+    size: Optional[int] = None
+    alt_text: Optional[str] = None
+    caption: Optional[str] = None
+    source: Optional[str] = None
     created_at: datetime
-    updated_at: datetime

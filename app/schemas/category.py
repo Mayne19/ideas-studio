@@ -23,16 +23,12 @@ class CategoryCreate(BaseModel):
     slug: Optional[str] = None
     description: Optional[str] = None
     color: Optional[str] = None
-    priority: int = 0
-    target_frequency: Optional[int] = None
     priority_score: Optional[float] = None
-    monthly_frequency: Optional[int] = None
-    pipeline_enabled: bool = True
+    monthly_target: Optional[int] = None
+    is_pipeline_enabled: bool = True
     editorial_goal: Optional[str] = None
     target_audience: Optional[str] = None
     internal_notes: Optional[str] = None
-    vertical: Optional[str] = None
-    niche: Optional[str] = None
     word_count_min: Optional[int] = None
     word_count_max: Optional[int] = None
 
@@ -47,16 +43,12 @@ class CategoryUpdate(BaseModel):
     slug: Optional[str] = None
     description: Optional[str] = None
     color: Optional[str] = None
-    priority: Optional[int] = None
-    target_frequency: Optional[int] = None
     priority_score: Optional[float] = None
-    monthly_frequency: Optional[int] = None
-    pipeline_enabled: Optional[bool] = None
+    monthly_target: Optional[int] = None
+    is_pipeline_enabled: Optional[bool] = None
     editorial_goal: Optional[str] = None
     target_audience: Optional[str] = None
     internal_notes: Optional[str] = None
-    vertical: Optional[str] = None
-    niche: Optional[str] = None
     word_count_min: Optional[int] = None
     word_count_max: Optional[int] = None
 
@@ -67,24 +59,18 @@ class CategoryUpdate(BaseModel):
 
 
 class CategoryPublic(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: str
     project_id: str
     name: str
     slug: str
-    description: Optional[str]
-    color: Optional[str]
-    priority: int
-    target_frequency: Optional[int]
+    description: Optional[str] = None
+    color: Optional[str] = None
     priority_score: Optional[float] = None
-    monthly_frequency: Optional[int] = None
-    pipeline_enabled: Optional[bool] = None
+    monthly_target: Optional[int] = None
+    is_pipeline_enabled: bool = True
     editorial_goal: Optional[str] = None
     target_audience: Optional[str] = None
     internal_notes: Optional[str] = None
-    vertical: Optional[str] = None
-    niche: Optional[str] = None
     word_count_min: Optional[int] = None
     word_count_max: Optional[int] = None
     created_at: datetime

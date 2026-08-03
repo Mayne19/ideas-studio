@@ -291,24 +291,13 @@ def get_llm_provider(project_id: str | None = None) -> LLMProvider:
             return None
         try:
             from app.core.database import SessionLocal
-            from app.models.ai_provider_config import AIProviderConfig
+            from app.services.providers.provider_config import resolve_default_provider
         except Exception:
             return None
 
         db = SessionLocal()
         try:
-            base = db.query(AIProviderConfig).filter(
-                AIProviderConfig.is_default == True,
-                AIProviderConfig.enabled == True,
-            )
-            config = None
-            if project_id is not None:
-                # Provider par défaut du projet d'abord, puis default global (plateforme)
-                config = base.filter(AIProviderConfig.project_id == project_id).first()
-                if config is None:
-                    config = base.filter(AIProviderConfig.project_id.is_(None)).first()
-            if config is None:
-                config = base.first()
+            config = resolve_default_provider(db, project_id)
             if not config:
                 return None
             provider = build_provider_from_config(config)

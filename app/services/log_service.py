@@ -1,7 +1,15 @@
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
-from app.models.article_log import ArticleLog
+from app.models.ops import EventLog
+from app.models.reference import LogLevel
+
+_LEVEL_BY_NAME = {
+    "debug": LogLevel.DEBUG,
+    "info": LogLevel.INFO,
+    "warning": LogLevel.WARNING,
+    "error": LogLevel.ERROR,
+}
 
 
 def log_step(
@@ -11,15 +19,16 @@ def log_step(
     level: str = "info",
     step: str | None = None,
     article_id: str | None = None,
-) -> ArticleLog:
-    entry = ArticleLog(
+) -> EventLog:
+    entry = EventLog(
         id=str(uuid.uuid4()),
+        occurred_at=datetime.now(timezone.utc),
         project_id=project_id,
         article_id=article_id,
-        level=level,
-        step=step,
+        level_id=_LEVEL_BY_NAME.get(level, LogLevel.INFO),
+        scope="generation",
+        action=step or "orchestrator",
         message=message,
-        created_at=datetime.now(timezone.utc),
     )
     db.add(entry)
     db.flush()
