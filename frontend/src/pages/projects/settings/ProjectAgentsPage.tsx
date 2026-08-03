@@ -17,6 +17,22 @@ const CATEGORY_LABELS: Record<string, string> = {
   review: 'Révision',
 }
 
+const STATUS_BADGES: Record<string, { label: string; className: string; title: string }> = {
+  active: { label: 'Actif', className: 'bg-success/8 text-success', title: 'Implémenté et utilisé par le pipeline' },
+  partial: { label: 'Partiel', className: 'bg-warning/12 text-warning', title: 'Implémenté partiellement : dépend d’un service externe à configurer' },
+  heuristic: { label: 'Heuristique', className: 'bg-warning/12 text-warning', title: 'Règles internes, sans appel LLM' },
+  planned: { label: 'Planifié', className: 'bg-tertiary/12 text-tertiary', title: 'Prévu, pas encore implémenté' },
+  not_implemented: { label: 'Non implémenté', className: 'bg-tertiary/12 text-tertiary', title: 'Aucune implémentation : cet agent n’intervient pas dans le pipeline' },
+  disabled: { label: 'Désactivé', className: 'bg-tertiary/12 text-tertiary', title: 'Désactivé' },
+}
+
+function statusBadge(agent: AgentInfo) {
+  return (
+    STATUS_BADGES[agent.status] ??
+    (agent.has_implementation ? STATUS_BADGES.active : STATUS_BADGES.not_implemented)
+  )
+}
+
 function AccessDenied() {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -275,11 +291,12 @@ export default function ProjectAgentsPage() {
                 </div>
                 <div className="flex min-w-0 items-center justify-between gap-3">
                   <div className="min-w-0">
-                    {agent.has_implementation ? (
-                      <span className="rounded-full bg-success/8 px-2 py-0.5 text-[12px] font-medium text-success">Implémenté</span>
-                    ) : (
-                      <span className="rounded-full bg-warning/12 px-2 py-0.5 text-[12px] font-medium text-warning">Heuristique</span>
-                    )}
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[12px] font-medium ${statusBadge(agent).className}`}
+                      title={statusBadge(agent).title}
+                    >
+                      {statusBadge(agent).label}
+                    </span>
                   </div>
                   {ass && (
                     <ToggleSwitch checked={ass.enabled} onChange={() => handleToggle(agent.agent_id, ass.enabled)} disabled={isSaving} />

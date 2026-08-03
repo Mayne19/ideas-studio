@@ -3,7 +3,11 @@ import time
 
 import httpx
 
-from app.services.providers.llm_provider import LLMProvider, ProviderUnavailableError
+from app.services.providers.llm_provider import (
+    LLMProvider,
+    ProviderUnavailableError,
+    parse_openai_usage,
+)
 
 
 class OpenAILLMProvider(LLMProvider):
@@ -24,6 +28,7 @@ class OpenAILLMProvider(LLMProvider):
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
+        self.last_usage: dict[str, int] | None = None
 
     def _headers(self) -> dict[str, str]:
         return {
@@ -43,6 +48,7 @@ class OpenAILLMProvider(LLMProvider):
         }
 
         last_error: Exception | None = None
+        self.last_usage = None
         for attempt in range(self.max_retries + 1):
             try:
                 resp = httpx.post(
@@ -57,6 +63,7 @@ class OpenAILLMProvider(LLMProvider):
                     continue
                 resp.raise_for_status()
                 data = resp.json()
+                self.last_usage = parse_openai_usage(data)
                 content = data["choices"][0]["message"]["content"]
                 if content is None:
                     raise ProviderUnavailableError(

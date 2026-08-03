@@ -14,21 +14,21 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/settings/ai-agents", tags=["ai_agents"])
 
 
-def _ensure_admin(current_user: User, db: Session) -> None:
+def _ensure_platform_admin(current_user: User) -> None:
+    """Vue plateforme (sans project_id) : réservée aux admins.
+
+    Le premier utilisateur inscrit reçoit is_platform_admin dans auth_service ;
+    aucune promotion implicite n'a lieu ici (une lecture ne doit jamais élever
+    les privilèges de l'appelant).
+    """
     if current_user.is_platform_admin:
-        return
-    admin_exists = db.query(User.id).filter(User.is_platform_admin == True).first()
-    if not admin_exists:
-        current_user.is_platform_admin = True
-        db.commit()
-        db.refresh(current_user)
         return
     raise HTTPException(status_code=403, detail="Admin access required")
 
 
 def _ensure_project_admin(project_id: str | None, current_user: User, db: Session) -> None:
     if not project_id:
-        _ensure_admin(current_user, db)
+        _ensure_platform_admin(current_user)
         return
     if current_user.is_platform_admin:
         return

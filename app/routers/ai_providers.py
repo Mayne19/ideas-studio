@@ -8,6 +8,7 @@ from app.models.ai_provider_config import AIProviderConfig
 from app.schemas.ai_provider import AIProviderCreate, AIProviderUpdate, AIProviderPublic, AIProviderTestResult
 from app.core.security import decrypt_secret, encrypt_secret
 from app.core.config import settings
+from app.services.agents.agent_assignment_service import delete_assignments_for_provider
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
@@ -162,6 +163,7 @@ def delete_provider(
     if not config:
         raise HTTPException(status_code=404, detail="Provider not found")
     _ensure_provider_access(config.project_id, current_user, db)
+    delete_assignments_for_provider(db, provider_id)
     db.delete(config)
     db.commit()
     return None
@@ -187,25 +189,19 @@ def test_provider(
         return AIProviderTestResult(provider=config.provider, status="error", message="Aucune clé API configurée")
 
     try:
-        from app.services.providers.openai_provider import OpenAILLMProvider
-        from app.services.providers.gemini_provider import GeminiLLMProvider
+        from app.services.providers.llm_provider import build_provider_from_config
 
-        if config.provider == "gemini":
-            test_prov = GeminiLLMProvider(
-                api_key=api_key,
-                model=config.model or SUPPORTED_PROVIDERS["gemini"]["default_model"],
-                base_url=config.base_url or SUPPORTED_PROVIDERS["gemini"]["default_base_url"],
-                timeout_seconds=30,
+        # Même résolution que la génération réelle : tester exactement ce qui tournera.
+        test_prov = build_provider_from_config(config)
+        if test_prov is None:
+            config.last_test_status = "error"
+            config.last_test_error = f"Provider '{config.provider}' non supporté"
+            config.last_tested_at = datetime.now(timezone.utc)
+            db.commit()
+            return AIProviderTestResult(
+                provider=config.provider, status="error",
+                message=config.last_test_error,
             )
-        else:
-            defaults = SUPPORTED_PROVIDERS.get(config.provider, SUPPORTED_PROVIDERS["openai"])
-            test_prov = OpenAILLMProvider(
-                api_key=api_key,
-                model=config.model or defaults["default_model"],
-                base_url=config.base_url or defaults["default_base_url"],
-                timeout_seconds=30,
-            )
-            test_prov.provider_name = config.provider
         available = test_prov.is_available()
 
         config.last_test_status = "connected" if available else "error"

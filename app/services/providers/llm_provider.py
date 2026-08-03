@@ -19,6 +19,10 @@ class LLMProvider(ABC):
     is_mock: bool = False
     provider_name: str = "unknown"
     model_name: str | None = None
+    # Tokens réellement consommés par le dernier appel, quand le provider les
+    # expose : {"input_tokens": int, "output_tokens": int}. None sinon (le
+    # coût retombe alors sur une estimation).
+    last_usage: dict[str, int] | None = None
 
     @abstractmethod
     def generate_text(self, prompt: str, system: str | None = None, temperature: float = 0.7) -> str:
@@ -35,6 +39,18 @@ class LLMProvider(ABC):
     def describe(self) -> str:
         model_part = f" model={self.model_name}" if self.model_name else ""
         return f"{self.provider_name}{model_part} mock={self.is_mock}"
+
+
+def parse_openai_usage(data: dict) -> dict[str, int] | None:
+    """Extrait les tokens d'une réponse au format OpenAI (openai, gemini, openrouter, mistral)."""
+    usage = data.get("usage") if isinstance(data, dict) else None
+    if not isinstance(usage, dict):
+        return None
+    prompt = usage.get("prompt_tokens")
+    completion = usage.get("completion_tokens")
+    if prompt is None and completion is None:
+        return None
+    return {"input_tokens": int(prompt or 0), "output_tokens": int(completion or 0)}
 
 
 class MockLLMProvider(LLMProvider):
@@ -73,6 +89,7 @@ class OllamaLLMProvider(LLMProvider):
         self.timeout_seconds = timeout_seconds
         self._model_checked = False
         self._model_available = False
+        self.last_usage: dict[str, int] | None = None
 
     def _ensure_model(self):
         if self._model_checked:
@@ -105,6 +122,7 @@ class OllamaLLMProvider(LLMProvider):
         import httpx
         if not self._ensure_model():
             raise ProviderUnavailableError(self._last_error or "Aucun modèle Ollama disponible")
+        self.last_usage = None
         try:
             messages: list[dict[str, str]] = []
             if system:
@@ -123,6 +141,11 @@ class OllamaLLMProvider(LLMProvider):
                 )
             resp.raise_for_status()
             data = resp.json()
+            if data.get("prompt_eval_count") is not None or data.get("eval_count") is not None:
+                self.last_usage = {
+                    "input_tokens": int(data.get("prompt_eval_count") or 0),
+                    "output_tokens": int(data.get("eval_count") or 0),
+                }
             content = data.get("message", {}).get("content", "")
             if not content:
                 raise ProviderUnavailableError("Ollama a retourné une réponse vide")
@@ -182,6 +205,78 @@ class OllamaLLMProvider(LLMProvider):
             return {"provider": "ollama", "model": self.model, "configured": True, "available": False, "error": str(exc)}
 
 
+def build_provider_from_config(config) -> LLMProvider | None:
+    """Construit un LLMProvider depuis une ligne AIProviderConfig (clé déchiffrée).
+
+    Source unique de vérité du mapping provider -> classe, partagée entre le
+    provider par défaut (get_llm_provider) et le routeur d'agents (AgentRouter).
+    Retourne None si le provider n'est pas constructible (clé absente, type inconnu).
+    """
+    from app.core.config import settings
+    from app.core.security import decrypt_secret
+    from app.services.providers.openai_provider import OpenAILLMProvider
+    from app.services.providers.openrouter_provider import OpenRouterLLMProvider
+    from app.services.providers.gemini_provider import GeminiLLMProvider
+    from app.services.providers.anthropic_provider import AnthropicLLMProvider
+
+    api_key = decrypt_secret(config.api_key_encrypted)
+    provider_name = config.provider
+
+    if provider_name == "ollama":
+        base_url = (config.base_url or settings.OLLAMA_BASE_URL or getattr(settings, "OLLAMA_URL", None) or "http://127.0.0.1:11434").rstrip("/")
+        if base_url.endswith("/v1"):
+            base_url = base_url[:-3]
+        return OllamaLLMProvider(
+            base_url=base_url,
+            model=config.model or settings.OLLAMA_MODEL or "qwen3:14b",
+            fallback_model=settings.OLLAMA_FALLBACK_MODEL or "qwen3:8b",
+            timeout_seconds=settings.OLLAMA_TIMEOUT_SECONDS or 180,
+        )
+    if not api_key:
+        return None
+    if provider_name == "gemini":
+        return GeminiLLMProvider(
+            api_key=api_key,
+            model=config.model or settings.GEMINI_MODEL,
+            base_url=config.base_url or settings.GEMINI_BASE_URL,
+            timeout_seconds=settings.GEMINI_TIMEOUT_SECONDS,
+        )
+    if provider_name == "openrouter":
+        return OpenRouterLLMProvider(
+            api_key=api_key,
+            model=config.model or settings.OPENROUTER_MODEL,
+            base_url=config.base_url or settings.OPENROUTER_BASE_URL,
+            writer_model=config.model or settings.OPENROUTER_WRITER_MODEL,
+            planner_model=config.model or settings.OPENROUTER_PLANNER_MODEL,
+            fallback_model=settings.OPENROUTER_FALLBACK_MODEL,
+        )
+    if provider_name == "anthropic":
+        return AnthropicLLMProvider(
+            api_key=api_key,
+            model=config.model or None,
+            base_url=config.base_url or None,
+        )
+    if provider_name == "mistral":
+        # L'API Mistral est compatible OpenAI (https://api.mistral.ai/v1)
+        provider = OpenAILLMProvider(
+            api_key=api_key,
+            model=config.model or "mistral-large-latest",
+            base_url=config.base_url or "https://api.mistral.ai/v1",
+        )
+        provider.provider_name = "mistral"
+        return provider
+    if provider_name in {"openai", "custom"}:
+        provider = OpenAILLMProvider(
+            api_key=api_key,
+            model=config.model or settings.OPENAI_MODEL,
+            base_url=config.base_url or settings.OPENAI_BASE_URL,
+        )
+        provider.provider_name = provider_name
+        return provider
+    logger.warning("Provider '%s' inconnu — impossible de le construire.", provider_name)
+    return None
+
+
 def get_llm_provider(project_id: str | None = None) -> LLMProvider:
     from app.core.config import settings
     from app.services.providers.openai_provider import OpenAILLMProvider
@@ -196,7 +291,6 @@ def get_llm_provider(project_id: str | None = None) -> LLMProvider:
             return None
         try:
             from app.core.database import SessionLocal
-            from app.core.security import decrypt_secret
             from app.models.ai_provider_config import AIProviderConfig
         except Exception:
             return None
@@ -217,63 +311,19 @@ def get_llm_provider(project_id: str | None = None) -> LLMProvider:
                 config = base.first()
             if not config:
                 return None
-            api_key = decrypt_secret(config.api_key_encrypted)
-            provider_name = config.provider
-
-            if provider_name != "ollama" and not api_key:
+            provider = build_provider_from_config(config)
+            if provider is None:
                 logger.warning(
-                    "Provider DB '%s' (config %s) ignoré : clé API absente ou indéchiffrable — repli sur les variables d'environnement.",
-                    provider_name, config.id,
+                    "Provider DB '%s' (config %s) ignoré : clé API absente/indéchiffrable ou type inconnu — repli sur les variables d'environnement.",
+                    config.provider, config.id,
                 )
-                return None
-
-            if provider_name == "ollama":
-                base_url = (config.base_url or settings.OLLAMA_BASE_URL or settings.OLLAMA_URL or "http://127.0.0.1:11434").rstrip("/")
-                if base_url.endswith("/v1"):
-                    base_url = base_url[:-3]
-                provider = OllamaLLMProvider(
-                    base_url=base_url,
-                    model=config.model or settings.OLLAMA_MODEL or "qwen3:14b",
-                    fallback_model=settings.OLLAMA_FALLBACK_MODEL or "qwen3:8b",
-                    timeout_seconds=settings.OLLAMA_TIMEOUT_SECONDS or 180,
-                )
-            elif provider_name == "gemini":
-                if not api_key:
-                    return None
-                provider = GeminiLLMProvider(
-                    api_key=api_key,
-                    model=config.model or settings.GEMINI_MODEL,
-                    base_url=config.base_url or settings.GEMINI_BASE_URL,
-                    timeout_seconds=settings.GEMINI_TIMEOUT_SECONDS,
-                )
-            elif provider_name == "openrouter":
-                if not api_key:
-                    return None
-                provider = OpenRouterLLMProvider(
-                    api_key=api_key,
-                    model=config.model or settings.OPENROUTER_MODEL,
-                    base_url=config.base_url or settings.OPENROUTER_BASE_URL,
-                    writer_model=config.model or settings.OPENROUTER_WRITER_MODEL,
-                    planner_model=config.model or settings.OPENROUTER_PLANNER_MODEL,
-                    fallback_model=settings.OPENROUTER_FALLBACK_MODEL,
-                )
-            elif provider_name in {"openai", "custom"}:
-                if not api_key:
-                    return None
-                provider = OpenAILLMProvider(
-                    api_key=api_key,
-                    model=config.model or settings.OPENAI_MODEL,
-                    base_url=config.base_url or settings.OPENAI_BASE_URL,
-                )
-                provider.provider_name = provider_name
-            else:
                 return None
 
             if provider.is_available():
                 return provider
             logger.warning(
                 "Provider DB '%s' (config %s) trouvé mais indisponible (is_available=false) — repli sur les variables d'environnement.",
-                provider_name, config.id,
+                config.provider, config.id,
             )
             return None
         except SQLAlchemyError:

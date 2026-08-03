@@ -34,6 +34,7 @@ class AgentDef:
     status: AgentStatus = AgentStatus.planned
     output_json_field: str | None = None
     visible_in_frontend: bool = True
+    alias_of: str | None = None  # agent_id canonique pour les alias legacy
 
 
 AGENTS: list[AgentDef] = [
@@ -62,6 +63,18 @@ AGENTS: list[AgentDef] = [
         implementation_ref="idea_discovery_service",
         status=AgentStatus.heuristic,
         output_json_field="idea_discovery_json",
+    ),
+    AgentDef(
+        agent_id="idea_generator",
+        name="Génération d'idées",
+        description="Propose les idées d'articles à partir du contexte projet et des SERP",
+        category=AgentCategory.strategy,
+        phase="discovery",
+        requires_search=True,
+        icon="lightbulb",
+        implementation_ref="idea_engine",
+        status=AgentStatus.active,
+        output_json_field="planning_brief_json",
     ),
     AgentDef(
         agent_id="topic_selector",
@@ -550,6 +563,7 @@ AGENTS: list[AgentDef] = [
         implementation_ref="serp_adapter",
         status=AgentStatus.partial,
         visible_in_frontend=False,
+        alias_of="search_serp",
     ),
     AgentDef(
         agent_id="trend_detector",
@@ -574,6 +588,7 @@ AGENTS: list[AgentDef] = [
         implementation_ref="research_brief_service",
         status=AgentStatus.heuristic,
         visible_in_frontend=False,
+        alias_of="content_gap_analyzer",
     ),
     AgentDef(
         agent_id="researcher",
@@ -585,6 +600,7 @@ AGENTS: list[AgentDef] = [
         implementation_ref="content_extraction_adapter",
         status=AgentStatus.partial,
         visible_in_frontend=False,
+        alias_of="scraper_extractor",
     ),
     AgentDef(
         agent_id="cannibalization_checker",
@@ -596,17 +612,7 @@ AGENTS: list[AgentDef] = [
         implementation_ref="cannibalization_service",
         status=AgentStatus.active,
         visible_in_frontend=False,
-    ),
-    AgentDef(
-        agent_id="idea_generator",
-        name="Génération d'idées (legacy)",
-        description="Propose des idées d'articles",
-        category=AgentCategory.strategy,
-        phase="discovery",
-        icon="lightbulb",
-        implementation_ref="idea_engine",
-        status=AgentStatus.active,
-        visible_in_frontend=False,
+        alias_of="cannibalization_check_initial",
     ),
     AgentDef(
         agent_id="editorial_strategist",
@@ -651,6 +657,7 @@ AGENTS: list[AgentDef] = [
         implementation_ref="writing_engine",
         status=AgentStatus.active,
         visible_in_frontend=False,
+        alias_of="writer",
     ),
     AgentDef(
         agent_id="title_generator",
@@ -662,6 +669,7 @@ AGENTS: list[AgentDef] = [
         implementation_ref="writing_engine",
         status=AgentStatus.active,
         visible_in_frontend=False,
+        alias_of="meta_writer",
     ),
     AgentDef(
         agent_id="meta_description_writer",
@@ -673,6 +681,7 @@ AGENTS: list[AgentDef] = [
         implementation_ref="writing_engine",
         status=AgentStatus.active,
         visible_in_frontend=False,
+        alias_of="meta_writer",
     ),
     AgentDef(
         agent_id="image_selector",
@@ -684,6 +693,7 @@ AGENTS: list[AgentDef] = [
         implementation_ref="image_sourcing_adapter",
         status=AgentStatus.partial,
         visible_in_frontend=False,
+        alias_of="media_planner",
     ),
     AgentDef(
         agent_id="internal_link_builder",
@@ -695,6 +705,7 @@ AGENTS: list[AgentDef] = [
         implementation_ref="internal_link_service",
         status=AgentStatus.active,
         visible_in_frontend=False,
+        alias_of="internal_link_planner",
     ),
     AgentDef(
         agent_id="external_link_finder",
@@ -707,6 +718,7 @@ AGENTS: list[AgentDef] = [
         implementation_ref="external_link_service",
         status=AgentStatus.active,
         visible_in_frontend=False,
+        alias_of="external_link_planner",
     ),
     AgentDef(
         agent_id="readability_analyzer",
@@ -718,6 +730,7 @@ AGENTS: list[AgentDef] = [
         implementation_ref="language_quality_service",
         status=AgentStatus.active,
         visible_in_frontend=False,
+        alias_of="language_quality",
     ),
     AgentDef(
         agent_id="humanization_engine",
@@ -729,6 +742,7 @@ AGENTS: list[AgentDef] = [
         implementation_ref="humanization_service",
         status=AgentStatus.active,
         visible_in_frontend=False,
+        alias_of="humanizer",
     ),
     AgentDef(
         agent_id="eeat_checker",
@@ -740,6 +754,7 @@ AGENTS: list[AgentDef] = [
         implementation_ref="eeat_service",
         status=AgentStatus.active,
         visible_in_frontend=False,
+        alias_of="eeat_reviewer",
     ),
     AgentDef(
         agent_id="quality_rater",
@@ -751,6 +766,7 @@ AGENTS: list[AgentDef] = [
         implementation_ref="editorial_quality_gate",
         status=AgentStatus.active,
         visible_in_frontend=False,
+        alias_of="quality_gate",
     ),
     AgentDef(
         agent_id="editor_revisor",
@@ -762,6 +778,7 @@ AGENTS: list[AgentDef] = [
         implementation_ref="editorial_quality_gate",
         status=AgentStatus.active,
         visible_in_frontend=False,
+        alias_of="editor",
     ),
 ]
 
@@ -773,6 +790,35 @@ for a in AGENTS:
 
 def get_agent(agent_id: str) -> AgentDef | None:
     return AGENTS_BY_ID.get(agent_id)
+
+
+def resolve_agent_id(agent_id: str) -> str:
+    """Retourne l'agent_id canonique (les alias legacy pointent vers lui via alias_of)."""
+    agent = AGENTS_BY_ID.get(agent_id)
+    if agent is not None and agent.alias_of:
+        return agent.alias_of
+    return agent_id
+
+
+ALIASES_BY_CANONICAL: dict[str, list[str]] = {}
+for a in AGENTS:
+    if a.alias_of:
+        ALIASES_BY_CANONICAL.setdefault(a.alias_of, []).append(a.agent_id)
+
+
+def agent_id_variants(agent_id: str) -> list[str]:
+    """Tous les agent_id désignant le même agent, ID canonique en tête.
+
+    Permet de retrouver une assignation quel que soit l'ID sous lequel elle a été
+    enregistrée : l'UI écrit l'ID canonique, mais des assignations plus anciennes
+    portent encore un alias legacy.
+    """
+    canonical = resolve_agent_id(agent_id)
+    variants = [canonical]
+    variants.extend(alias for alias in ALIASES_BY_CANONICAL.get(canonical, []) if alias != canonical)
+    if agent_id not in variants:
+        variants.append(agent_id)
+    return variants
 
 
 def list_agents(category: str | None = None, visible_only: bool = False) -> list[AgentDef]:

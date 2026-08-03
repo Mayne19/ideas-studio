@@ -35,10 +35,11 @@ def fact_check_article(
     title: str,
     keyword: str | None = None,
     db=None,
+    project_id: str | None = None,
 ) -> dict[str, Any]:
     """Check factual claims in article content using the fact_checker agent."""
     router = _get_router(db)
-    provider = router.get_provider("fact_checker")
+    provider = router.get_provider("fact_checker", project_id=project_id)
     if provider.is_mock:
         return {
             "status": "skipped",
@@ -75,10 +76,11 @@ def seo_optimize_content(
     meta_title: str | None = None,
     meta_description: str | None = None,
     db=None,
+    project_id: str | None = None,
 ) -> dict[str, Any]:
     """Optimize content for SEO using the seo_optimizer agent."""
     router = _get_router(db)
-    provider = router.get_provider("seo_optimizer")
+    provider = router.get_provider("seo_optimizer", project_id=project_id)
     if provider.is_mock:
         return {
             "status": "skipped",
@@ -115,10 +117,11 @@ def editorial_review(
     title: str,
     keyword: str | None = None,
     db=None,
+    project_id: str | None = None,
 ) -> dict[str, Any]:
-    """Review content editorially using the editor_revisor agent."""
+    """Review content editorially using the editor agent."""
     router = _get_router(db)
-    provider = router.get_provider("editor_revisor")
+    provider = router.get_provider("editor", project_id=project_id)
     if provider.is_mock:
         return {
             "status": "skipped",
@@ -154,10 +157,11 @@ def quality_rate_article(
     title: str,
     keyword: str | None = None,
     db=None,
+    project_id: str | None = None,
 ) -> dict[str, Any]:
-    """Rate article quality using the quality_rater agent."""
+    """Rate article quality using the quality_gate agent."""
     router = _get_router(db)
-    provider = router.get_provider("quality_rater")
+    provider = router.get_provider("quality_gate", project_id=project_id)
     if provider.is_mock:
         return {
             "status": "skipped",

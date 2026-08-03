@@ -58,6 +58,11 @@ class WritingCancelledError(RuntimeError):
     """Levée quand l'utilisateur demande l'annulation d'une rédaction en cours."""
 
 
+# Score global visé : sert à la fois de seuil de déclenchement et de condition
+# d'arrêt du cycle d'auto-amélioration (les deux doivent rester identiques).
+AUTO_IMPROVE_SCORE_TARGET = 90
+
+
 class SEOGenerationOrchestrator:
     def __init__(
         self,
@@ -577,7 +582,7 @@ class SEOGenerationOrchestrator:
         try:
             if self.agent_router is not None:
                 from app.services.agents.agent_services import fact_check_article
-                fact_check = fact_check_article(article.content or "", article.title, article.keyword, db=self.db)
+                fact_check = fact_check_article(article.content or "", article.title, article.keyword, db=self.db, project_id=self.project_id)
                 article.fact_check_report_json = fact_check
                 self._step("FactCheckPass")
         except Exception as exc:
@@ -587,7 +592,7 @@ class SEOGenerationOrchestrator:
         try:
             if self.agent_router is not None:
                 from app.services.agents.agent_services import editorial_review
-                review_data = editorial_review(article.content or "", article.title, article.keyword, db=self.db)
+                review_data = editorial_review(article.content or "", article.title, article.keyword, db=self.db, project_id=self.project_id)
                 if not article.editorial_quality_report_json or not isinstance(article.editorial_quality_report_json, dict):
                     article.editorial_quality_report_json = {}
                 if isinstance(article.editorial_quality_report_json, dict):
@@ -604,6 +609,7 @@ class SEOGenerationOrchestrator:
                     article.content or "", article.title, article.keyword,
                     meta_title=article.meta_title, meta_description=article.meta_description,
                     db=self.db,
+                    project_id=self.project_id,
                 )
                 if not article.seo_final_checklist_json or not isinstance(article.seo_final_checklist_json, dict):
                     article.seo_final_checklist_json = {}
@@ -617,11 +623,11 @@ class SEOGenerationOrchestrator:
         try:
             if self.agent_router is not None:
                 from app.services.agents.agent_services import quality_rate_article
-                quality = quality_rate_article(article.content or "", article.title, article.keyword, db=self.db)
-                if not article.eeat_checklist_json or not isinstance(article.eeat_checklist_json, dict):
-                    article.eeat_checklist_json = {}
-                if isinstance(article.eeat_checklist_json, dict):
-                    article.eeat_checklist_json["llm_quality_rating"] = quality
+                quality = quality_rate_article(article.content or "", article.title, article.keyword, db=self.db, project_id=self.project_id)
+                # Champ déclaré par le registre pour quality_gate (output_json_field)
+                if not isinstance(article.editorial_quality_report_json, dict):
+                    article.editorial_quality_report_json = {}
+                article.editorial_quality_report_json["llm_quality_rating"] = quality
                 self._step("QualityRatingPass")
         except Exception as exc:
             self._error("QualityRatingPass", str(exc))
@@ -674,7 +680,7 @@ class SEOGenerationOrchestrator:
 
     def _generate_content(self, article: Article, outline: dict, keyword_brief: dict, include_callouts: bool | None, include_faq: bool | None = None):
         self._raise_if_cancelled(article)
-        writer_llm = self._get_agent_provider("content_writer", self.llm)
+        writer_llm = self._get_agent_provider("writer", self.llm)
         if writer_llm.is_mock:
             article.content = f"<h1>{article.title}</h1><p>Contenu mock pour {article.keyword}</p>"
             article.word_count = calculate_word_count(article.content)
@@ -865,7 +871,7 @@ class SEOGenerationOrchestrator:
                 )
                 article.meta_title = ((meta_title if result.status == "success" else article.title) or article.title)[:255]
             else:
-                title_llm = self._get_agent_provider("title_generator", writer_llm)
+                title_llm = self._get_agent_provider("meta_writer", writer_llm)
                 article.meta_title = (title_llm.generate_text(meta_prompt, temperature=0.3) or article.title)[:255]
 
         if not article.meta_description:
@@ -883,7 +889,7 @@ class SEOGenerationOrchestrator:
                 )
                 article.meta_description = (meta_description if result.status == "success" else "")[:500]
             else:
-                desc_llm = self._get_agent_provider("meta_description_writer", writer_llm)
+                desc_llm = self._get_agent_provider("meta_writer", writer_llm)
                 article.meta_description = (desc_llm.generate_text(desc_prompt, temperature=0.3) or "")[:500]
 
         article.excerpt = self._extract_excerpt(content)
@@ -927,13 +933,13 @@ class SEOGenerationOrchestrator:
         # Cycle d'auto-amélioration si score insuffisant
         self._raise_if_cancelled(article)
         try:
-            if article.global_score is not None and article.global_score < 90:
+            if article.global_score is not None and article.global_score < AUTO_IMPROVE_SCORE_TARGET:
                 self._auto_improve_score(article, max_iterations=2)
         except Exception as exc:
             self._error("AutoImprove", str(exc))
 
     def _auto_improve_score(self, article: Article, max_iterations: int = 2):
-        """Si global_score < 80, identifie le signal le plus faible et demande au LLM de l'améliorer."""
+        """Tant que global_score < AUTO_IMPROVE_SCORE_TARGET, améliore le signal le plus faible."""
         from app.services.seo.seo_review_service import run_and_store_seo_review
         from app.services.scoring_service import compute_global_score
 
@@ -961,8 +967,9 @@ class SEOGenerationOrchestrator:
         }
 
         for iteration in range(max_iterations):
+            self._raise_if_cancelled(article)
             current_score = getattr(article, 'global_score', None)
-            if current_score is None or current_score >= 80:
+            if current_score is None or current_score >= AUTO_IMPROVE_SCORE_TARGET:
                 break
 
             signals = {
@@ -991,7 +998,12 @@ class SEOGenerationOrchestrator:
             )
 
             try:
-                improved = self.llm.generate_text(improve_prompt)
+                # Passe par l'agent editor : le provider configuré pour la révision
+                # doit aussi piloter les retouches automatiques.
+                editor_llm = self._get_agent_provider("editor", self.llm)
+                if editor_llm.is_mock:
+                    break
+                improved = editor_llm.generate_text(improve_prompt)
                 if improved and len(improved) > 200:
                     article.content = improved
                     article.updated_at = datetime.now(timezone.utc)
@@ -1106,7 +1118,8 @@ class SEOGenerationOrchestrator:
 
         total_estimated = 0.0
         total_actual = 0.0
-        has_unknown = False
+        has_unknown = False       # prix du modèle inconnu -> total estimé non fiable
+        has_unmeasured = False    # tokens non remontés par le provider -> pas de coût constaté
         breakdown = []
         warnings = []
 
@@ -1120,7 +1133,7 @@ class SEOGenerationOrchestrator:
             if act is not None:
                 total_actual += act
             else:
-                has_unknown = True
+                has_unmeasured = True
 
             breakdown.append({
                 "agent_key": log.agent_id,
@@ -1130,11 +1143,20 @@ class SEOGenerationOrchestrator:
                 "output_tokens": log.completion_tokens or 0,
                 "estimated_cost_eur": est,
                 "actual_cost_eur": act,
-                "cost_status": "tracked" if est is not None else "unknown_price",
+                "cost_status": (
+                    "unknown_price" if est is None
+                    else "tracked" if act is not None
+                    else "estimated"
+                ),
             })
 
         if has_unknown:
             warnings.append("Certains modèles n'ont pas de prix configuré.")
+        if has_unmeasured:
+            warnings.append(
+                "Certains appels n'ont pas remonté leur consommation réelle de tokens : "
+                "le coût affiché reste une estimation."
+            )
 
         cost_limit_eur = None
         try:
@@ -1150,7 +1172,8 @@ class SEOGenerationOrchestrator:
             pass
 
         total_estimated = round(total_estimated, 6) if not has_unknown else None
-        total_actual = round(total_actual, 6) if not has_unknown else None
+        # Le coût constaté n'a de sens que si chaque appel a remonté ses tokens réels.
+        total_actual = round(total_actual, 6) if not (has_unknown or has_unmeasured) else None
 
         if cost_limit_eur is not None and total_estimated is not None and total_estimated > cost_limit_eur:
             cost_status = "over_limit"

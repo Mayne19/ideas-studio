@@ -87,7 +87,7 @@ def _generate_faq_json(article: Article, llm: LLMProvider, agent_router=None) ->
     provider = llm
     if agent_router is not None:
         try:
-            provider = agent_router.get_provider("faq_generator")
+            provider = agent_router.get_provider("faq_generator", project_id=article.project_id)
         except Exception:
             pass
     if provider.is_mock:
@@ -168,7 +168,7 @@ def start_writing_from_idea(
     writer_provider = llm
     if agent_router is not None:
         try:
-            writer_provider = agent_router.get_provider("content_writer")
+            writer_provider = agent_router.get_provider("writer", project_id=article.project_id)
         except Exception:
             pass
 
@@ -296,7 +296,7 @@ def start_writing_from_idea(
         title_provider = writer_provider
         if agent_router is not None:
             try:
-                title_provider = agent_router.get_provider("title_generator")
+                title_provider = agent_router.get_provider("meta_writer", project_id=article.project_id)
             except Exception:
                 pass
         if title_provider.is_mock:
@@ -310,7 +310,7 @@ def start_writing_from_idea(
         desc_provider = writer_provider
         if agent_router is not None:
             try:
-                desc_provider = agent_router.get_provider("meta_description_writer")
+                desc_provider = agent_router.get_provider("meta_writer", project_id=article.project_id)
             except Exception:
                 pass
         if desc_provider.is_mock:

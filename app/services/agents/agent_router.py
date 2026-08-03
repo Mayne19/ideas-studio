@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Protocol
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
@@ -13,7 +12,7 @@ from app.services.providers.llm_provider import (
     MockLLMProvider,
     ProviderUnavailableError,
 )
-from app.services.agents.agent_registry import get_agent
+from app.services.agents.agent_registry import get_agent, resolve_agent_id, agent_id_variants
 
 logger = logging.getLogger(__name__)
 
@@ -34,35 +33,19 @@ class AgentCallResult:
     error: str | None = None
 
 
-class UsageLogger(Protocol):
-    def log_call(
-        self,
-        db: Session,
-        agent_id: str,
-        provider_id: str | None,
-        provider_name: str,
-        model_name: str | None,
-        project_id: str | None,
-        article_id: str | None,
-        duration_ms: int,
-        status: str,
-        error_message: str | None = None,
-    ) -> None:
-        ...
-
-
 class AgentRouter:
     """Routes LLM calls to the appropriate provider for each agent.
 
     Resolution order:
-      1. AgentAssignment in DB (agent -> provider mapping)
+      1. AgentAssignment in DB (agent -> provider mapping), l'agent_id étant
+         canonicalisé via le registre pour que les alias legacy retrouvent
+         les assignations créées depuis l'UI (et inversement)
       2. Env var AGENT_{AGENT_ID}_PROVIDER (e.g. AGENT_CONTENT_WRITER_PROVIDER=openai)
-      3. Global default provider (get_llm_provider fallback)
+      3. Provider par défaut du projet, puis global (get_llm_provider fallback)
     """
 
-    def __init__(self, db: Session | None = None, usage_logger: UsageLogger | None = None):
+    def __init__(self, db: Session | None = None):
         self._db = db
-        self._usage_logger = usage_logger
         self._cache: dict[str, LLMProvider] = {}
 
     def get_provider(self, agent_id: str, project_id: str | None = None) -> LLMProvider:
@@ -91,20 +74,23 @@ class AgentRouter:
         return provider
 
     def _resolve_provider(self, agent_id: str, project_id: str | None = None) -> LLMProvider | None:
+        canonical_id = resolve_agent_id(agent_id)
         # 1. DB assignment
         if self._db is not None:
             try:
                 from app.models.agent_assignment import AgentAssignment
                 from app.models.ai_provider_config import AIProviderConfig
-                from app.core.security import decrypt_secret
 
+                candidate_ids = agent_id_variants(agent_id)
                 ass = (
                     self._db.query(AgentAssignment)
                     .filter(
                         AgentAssignment.project_id == project_id,
-                        AgentAssignment.agent_id == agent_id,
+                        AgentAssignment.agent_id.in_(candidate_ids),
                         AgentAssignment.enabled == True,
                     )
+                    # priorité à l'ID canonique si des lignes legacy coexistent
+                    .order_by((AgentAssignment.agent_id != canonical_id).asc())
                     .first()
                 )
                 if ass is not None:
@@ -140,58 +126,12 @@ class AgentRouter:
         return None
 
     def _build_provider(self, config) -> LLMProvider | None:
-        from app.core.security import decrypt_secret
-        from app.services.providers.openai_provider import OpenAILLMProvider
-        from app.services.providers.openrouter_provider import OpenRouterLLMProvider
-        from app.services.providers.gemini_provider import GeminiLLMProvider
-        from app.services.providers.llm_provider import OllamaLLMProvider
-
-        api_key = decrypt_secret(config.api_key_encrypted)
-        provider_name = config.provider
+        from app.services.providers.llm_provider import build_provider_from_config
 
         try:
-            if provider_name == "ollama":
-                base_url = (config.base_url or settings.OLLAMA_BASE_URL or "http://127.0.0.1:11434").rstrip("/")
-                if base_url.endswith("/v1"):
-                    base_url = base_url[:-3]
-                return OllamaLLMProvider(
-                    base_url=base_url,
-                    model=config.model or settings.OLLAMA_MODEL or "qwen3:14b",
-                    fallback_model=settings.OLLAMA_FALLBACK_MODEL or "qwen3:8b",
-                    timeout_seconds=settings.OLLAMA_TIMEOUT_SECONDS or 180,
-                )
-            elif provider_name == "gemini":
-                if not api_key:
-                    return None
-                return GeminiLLMProvider(
-                    api_key=api_key,
-                    model=config.model or settings.GEMINI_MODEL,
-                    base_url=config.base_url or settings.GEMINI_BASE_URL,
-                    timeout_seconds=settings.GEMINI_TIMEOUT_SECONDS,
-                )
-            elif provider_name == "openrouter":
-                if not api_key:
-                    return None
-                return OpenRouterLLMProvider(
-                    api_key=api_key,
-                    model=config.model or settings.OPENROUTER_MODEL,
-                    base_url=config.base_url or settings.OPENROUTER_BASE_URL,
-                    writer_model=config.model or settings.OPENROUTER_WRITER_MODEL,
-                    planner_model=config.model or settings.OPENROUTER_PLANNER_MODEL,
-                    fallback_model=settings.OPENROUTER_FALLBACK_MODEL,
-                )
-            else:
-                if not api_key:
-                    return None
-                provider = OpenAILLMProvider(
-                    api_key=api_key,
-                    model=config.model or settings.OPENAI_MODEL,
-                    base_url=config.base_url or settings.OPENAI_BASE_URL,
-                )
-                provider.provider_name = provider_name
-                return provider
+            return build_provider_from_config(config)
         except Exception as exc:
-            logger.warning("AgentRouter: could not build provider %s: %s", provider_name, exc)
+            logger.warning("AgentRouter: could not build provider %s: %s", config.provider, exc)
             return None
 
     def _build_from_env(self, provider_name: str, agent_id: str) -> LLMProvider | None:
@@ -272,13 +212,18 @@ def call_agent(
 
     duration_ms = int((time.perf_counter() - start) * 1000)
 
-    # Estimate tokens from prompt/response length
-    input_tokens = _estimate_tokens(prompt)
-    if system:
-        input_tokens += _estimate_tokens(system)
-    output_tokens = _estimate_tokens(response)
+    # Tokens réellement facturés si le provider les expose, sinon estimation (~4 car./token)
+    reported_usage = getattr(provider, "last_usage", None)
+    tokens_measured = isinstance(reported_usage, dict) and bool(reported_usage)
+    if tokens_measured:
+        input_tokens = int(reported_usage.get("input_tokens") or 0)
+        output_tokens = int(reported_usage.get("output_tokens") or 0)
+    else:
+        input_tokens = _estimate_tokens(prompt)
+        if system:
+            input_tokens += _estimate_tokens(system)
+        output_tokens = _estimate_tokens(response)
 
-    # Estimate cost
     estimated_cost: float | None = None
     actual_cost: float | None = None
     cost_status = "not_tracked"
@@ -293,16 +238,20 @@ def call_agent(
         )
         estimated_cost = est["estimated_cost_eur"]
         cost_status = est["cost_status"]
-        actual_cost = estimated_cost  # V1: estimated = actual
         if estimated_cost is not None:
             estimated_cost = round(estimated_cost, 6)
-            actual_cost = round(estimated_cost, 6)
+            # actual_cost n'est renseigné que sur des tokens réellement mesurés :
+            # une estimation ne doit jamais être présentée comme un coût constaté.
+            actual_cost = estimated_cost if tokens_measured else None
+            if not tokens_measured and cost_status == "tracked":
+                cost_status = "estimated"
 
     call_result = AgentCallResult(
         agent_id=agent_id,
         provider_name=provider.provider_name,
         model_name=provider.model_name,
         duration_ms=duration_ms,
+        tokens=input_tokens + output_tokens,
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         estimated_cost=estimated_cost,
