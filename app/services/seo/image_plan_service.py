@@ -7,6 +7,12 @@ from app.services.seo.adapters.image_sourcing_adapter import image_sourcing_adap
 
 
 def build_image_plan(keyword: str, outline: dict | None = None) -> tuple[ImagePlan, list[dict]]:
+    """Une recherche Unsplash sur le seul mot-clé principal (ex: "CMS") renvoie
+    des photos décoratives génériques puisque le mot-clé SEO n'est pas un
+    concept visuel — chaque image est donc cherchée sur le titre H2 de la
+    section où elle sera insérée (insert_images_in_content associe images et
+    sections dans le même ordre), avec repli sur le mot-clé si l'outline est
+    absent ou vide."""
     plan = ImagePlan()
     sources: list[dict] = []
 
@@ -19,10 +25,23 @@ def build_image_plan(keyword: str, outline: dict | None = None) -> tuple[ImagePl
         return plan, sources
 
     plan.provider_configured = True
-    results = image_sourcing_adapter.search(keyword, limit=5)
-    for r in results:
-        plan.images.append(r)
-        sources.append(r)
+
+    section_headings = [
+        s.get("heading") for s in (outline or {}).get("sections", [])
+        if isinstance(s, dict) and s.get("heading") and s.get("level", 2) == 2
+    ]
+    queries = section_headings or [keyword]
+
+    seen_urls: set[str] = set()
+    for query in queries:
+        results = image_sourcing_adapter.search(query, limit=1)
+        for r in results:
+            if r.get("image_url") in seen_urls:
+                continue
+            seen_urls.add(r.get("image_url"))
+            plan.images.append(r)
+            sources.append(r)
+            break
 
     if not plan.images:
         plan.limitations.append("No images found for keyword")
@@ -39,21 +58,15 @@ _H2_RE = re.compile(r"(</h2>)", re.IGNORECASE)
 
 
 def _image_html(source: dict) -> str:
+    # Licence Unsplash : gratuite, aucune attribution requise pour l'usage —
+    # décision produit du 2026-08-04 de ne pas afficher de légende de crédit.
     alt = (source.get("alt_text") or "").replace('"', "&quot;")
-    author = source.get("author") or "Unsplash"
-    source_url = source.get("source_url") or "https://unsplash.com"
-    source_name = source.get("source_name") or "Unsplash"
-    return (
-        f'<img src="{source.get("image_url")}" alt="{alt}">'
-        f'<p><em>Photo par <a href="{source_url}" target="_blank" rel="nofollow noopener">{author}</a>'
-        f" sur {source_name}</em></p>"
-    )
+    return f'<img src="{source.get("image_url")}" alt="{alt}">'
 
 
 def insert_images_in_content(content: str, image_sources: list[dict]) -> str:
     """Insère une image après chaque section H2, dans l'ordre, jusqu'à
-    épuisement des images disponibles — avec attribution obligatoire
-    (licence Unsplash : usage_rights_status == 'free_with_attribution')."""
+    épuisement des images disponibles."""
     usable = [s for s in image_sources if s.get("image_url") and s.get("usage_rights_status") == "free_with_attribution"]
     if not usable or not content:
         return content

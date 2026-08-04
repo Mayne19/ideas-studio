@@ -51,17 +51,26 @@ def compute_global_score(
     """
     if latest_score is _UNSET:
         latest_score = _latest_article_score(db, article_id)
-    seo = _to_float(latest_score.seo_score) if latest_score else None
     quality = _to_float(latest_score.quality_score) if latest_score else None
 
     if artifacts is None:
         artifacts = get_latest_artifacts(
-            db, article_id, ["eeat_checklist", "readability_report", "originality_report", "geo_optimization"]
+            db, article_id,
+            ["eeat_checklist", "readability_report", "originality_report", "geo_optimization", "seo_final_checklist"],
         )
     eeat_json = artifacts.get("eeat_checklist")
     readability_json = artifacts.get("readability_report")
     originality_report = artifacts.get("originality_report")
     geo_json = artifacts.get("geo_optimization")
+    seo_json = artifacts.get("seo_final_checklist")
+
+    # seo_score n'est jamais peuplé directement sur article_scores par un agent
+    # dédié (contrairement à eeat/readability/geo) : il vient toujours de
+    # l'artifact seo_final_checklist, avec la ligne article_scores en repli
+    # pour les scores historiques calculés avant que ce lien n'existe.
+    seo = _to_float(seo_json.get("score")) if seo_json else None
+    if seo is None:
+        seo = _to_float(latest_score.seo_score) if latest_score else None
 
     eeat = None
     if eeat_json:

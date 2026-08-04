@@ -491,6 +491,8 @@ class SEOGenerationOrchestrator:
             if wc_max:
                 wc_instruction.append(f"maximum {wc_max} mots")
             self.context["word_count_range"] = " et ".join(wc_instruction)
+            self.context["word_count_min"] = wc_min
+            self.context["word_count_max"] = wc_max
 
         # Infer content_format from target_word_count if not already set
         if not article.content_format:
@@ -856,10 +858,13 @@ class SEOGenerationOrchestrator:
         prompt_parts += [
             "",
             "Règles strictes :",
-            "- Rédige en HTML compatible TipTap : <h1>, <h2>, <h3>, <p>, <ul>, <ol>, <li>, <blockquote>, <table>, <strong>, <em>",
+            "- Rédige en HTML compatible TipTap : <h2>, <h3>, <p>, <ul>, <ol>, <li>, <blockquote>, <table>, <strong>, <em>",
+            "- N'écris JAMAIS de balise <h1> dans le contenu : le titre existe déjà séparément, "
+            "  le corps de l'article commence directement en <h2>",
             "- Pas de Markdown brut visible, pas de ## visibles, pas de [Mock]",
             "- Pas de H5/H6",
             "- Pas de H2 suivi directement par H3 (mets une phrase entre les deux)",
+            "- Jamais de saut de niveau de titre (ex: H2 suivi directement de H4 sans H3 entre les deux)",
             "- Introduction courte et efficace (2-3 phrases max)",
             "- Après l'introduction, insère un callout résumé (blockquote HTML) récapitulant les 2-3 points clés en 1-2 phrases",
             "- Début qui satisfait rapidement l'intention du lecteur",
@@ -1004,6 +1009,9 @@ class SEOGenerationOrchestrator:
 
         self._raise_if_cancelled(article)
 
+        from app.services.seo.content_structure_guard import apply_structure_guards, check_word_count_compliance
+        content = apply_structure_guards(content, draft.title)
+
         image_sources = self.context.get("image_sources") or []
         if image_sources:
             from app.services.seo.image_plan_service import insert_images_in_content
@@ -1012,6 +1020,17 @@ class SEOGenerationOrchestrator:
         draft.content = content
         draft.word_count = calculate_word_count(content)
         draft.reading_time_minutes = calculate_reading_time_minutes(draft.word_count)
+
+        word_count_check = check_word_count_compliance(
+            draft.word_count, self.context.get("word_count_min"), self.context.get("word_count_max"),
+        )
+        self._save(article.id, "word_count_check", word_count_check)
+        if word_count_check["status"] in ("under_minimum", "over_maximum"):
+            self._log(
+                f"Volume hors plage : {draft.word_count} mots ({word_count_check['status']}, "
+                f"cible {word_count_check.get('target_min')}-{word_count_check.get('target_max')})",
+                level="warning", step="word_count_check",
+            )
         self._ensure_slug(article, draft.title, draft.keyword)
 
         if not draft.meta_title:

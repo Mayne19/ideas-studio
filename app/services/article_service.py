@@ -152,7 +152,8 @@ def to_public_batch(db: Session, articles: list[Article]) -> list[ArticlePublic]
         latest_score_by_article.setdefault(score.article_id, score)
 
     scoring_artifacts_by_article = get_latest_artifacts_bulk(
-        db, article_ids, ["eeat_checklist", "readability_report", "originality_report", "geo_optimization"],
+        db, article_ids,
+        ["eeat_checklist", "readability_report", "originality_report", "geo_optimization", "seo_final_checklist"],
     )
     validation_artifacts_by_article = get_latest_artifacts_bulk(
         db, article_ids, ["originality_report", "sources", "estimated_cost", "fact_check_report"],
