@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     UNSPLASH_ACCESS_KEY: str = ""
     SEARXNG_FORMAT: str = "json"
     SEARCH_TIMEOUT_SECONDS: int = 30
+    GOOGLE_SEARCH_API_KEY: str = ""
+    GOOGLE_SEARCH_CX: str = ""
 
     PIPELINE_MODE: str = "ideas_only"
 

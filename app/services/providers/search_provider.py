@@ -88,10 +88,67 @@ class SearXNGSearchProvider(SearchProvider):
             return False
 
 
+class GoogleCustomSearchProvider(SearchProvider):
+    """Google Custom Search JSON API — nécessite une clé API + un moteur de
+    recherche personnalisé (cx) configuré sur https://programmablesearchengine.google.com/.
+    Limite gratuite : 100 requêtes/jour, 10 résultats max par appel."""
+    is_mock: bool = False
+    provider_name: str = "google_custom_search"
+
+    def __init__(self, api_key: str, cx: str):
+        self.api_key = api_key
+        self.cx = cx
+
+    def search(self, query: str, limit: int = 10) -> list[SearchResult]:
+        try:
+            import httpx
+            from app.core.config import settings
+            resp = httpx.get(
+                "https://www.googleapis.com/customsearch/v1",
+                params={"key": self.api_key, "cx": self.cx, "q": query, "num": min(limit, 10)},
+                timeout=settings.SEARCH_TIMEOUT_SECONDS or 30,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            return [
+                SearchResult(
+                    title=item.get("title", ""),
+                    url=item.get("link", ""),
+                    snippet=item.get("snippet", ""),
+                )
+                for item in data.get("items", [])[:limit]
+            ]
+        except Exception:
+            return []
+
+    def is_available(self) -> bool:
+        return bool(self.api_key and self.cx)
+
+
 def get_search_provider() -> SearchProvider:
     from app.core.config import settings
+
     if settings.DEFAULT_SEARCH_PROVIDER == "searxng" and settings.SEARXNG_URL:
         provider = SearXNGSearchProvider(settings.SEARXNG_URL)
         if provider.is_available():
             return provider
+
+    if settings.DEFAULT_SEARCH_PROVIDER == "google" and settings.GOOGLE_SEARCH_API_KEY and settings.GOOGLE_SEARCH_CX:
+        provider = GoogleCustomSearchProvider(settings.GOOGLE_SEARCH_API_KEY, settings.GOOGLE_SEARCH_CX)
+        if provider.is_available():
+            return provider
+
+    # "auto" et repli : utiliser le premier provider réel réellement configuré,
+    # peu importe DEFAULT_SEARCH_PROVIDER — évite de tourner sur des données
+    # inventées (MockSearchProvider) simplement parce que la variable
+    # d'environnement n'a pas été mise à jour après l'ajout d'une clé.
+    if settings.GOOGLE_SEARCH_API_KEY and settings.GOOGLE_SEARCH_CX:
+        provider = GoogleCustomSearchProvider(settings.GOOGLE_SEARCH_API_KEY, settings.GOOGLE_SEARCH_CX)
+        if provider.is_available():
+            return provider
+    if settings.SEARXNG_URL:
+        provider = SearXNGSearchProvider(settings.SEARXNG_URL)
+        if provider.is_available():
+            return provider
+
     return MockSearchProvider()
