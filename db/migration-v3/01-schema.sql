@@ -656,7 +656,8 @@ INSERT INTO ai.providers (code, label, is_enabled) VALUES
   ('openai','OpenAI',true),
   ('gemini','Gemini',true),
   ('mistral','Mistral',true),
-  ('mock','Mock (tests)',true)
+  ('anthropic','Anthropic (Claude)',true),
+  ('mock','Mock (tests)',false)
 ON CONFLICT (code) DO NOTHING;
 
 CREATE TABLE ai.provider_credentials (

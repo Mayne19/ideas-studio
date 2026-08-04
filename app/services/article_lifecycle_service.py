@@ -6,7 +6,7 @@ par l'étape 5 : publish pose published_revision_id, schedule ne le fait pas.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -16,6 +16,28 @@ from app.models.content import Article, ArticleRevision, ArticleScore
 from app.models.reference import ArticleStatus, RevisionSource, set_article_status
 from app.services.scoring_service import compute_global_score
 from app.services.validation_service import check_validation_thresholds
+
+
+def _clamp_to_publish_window(db: Session, project_id: str, scheduled_at: datetime) -> datetime:
+    """Recale l'heure choisie dans la plage publish_hour_start/end du pipeline,
+    en gardant le même jour — voir Pipeline.schedule (ai.pipelines)."""
+    from app.models.ai import Pipeline
+
+    pipeline = db.get(Pipeline, project_id)
+    if pipeline is None:
+        return scheduled_at
+    schedule = pipeline.schedule or {}
+    start_hour = schedule.get("publish_hour_start")
+    end_hour = schedule.get("publish_hour_end")
+    if start_hour is None or end_hour is None or start_hour >= end_hour:
+        return scheduled_at
+
+    local_hour = scheduled_at.hour
+    if start_hour <= local_hour < end_hour:
+        return scheduled_at
+    if local_hour < start_hour:
+        return scheduled_at.replace(hour=start_hour, minute=0, second=0, microsecond=0)
+    return scheduled_at.replace(hour=start_hour, minute=0, second=0, microsecond=0) + timedelta(days=1)
 
 
 def _next_revision_no(db: Session, article_id: str) -> int:
@@ -82,6 +104,7 @@ def publish_article(db: Session, article: Article) -> Article:
 
 
 def schedule_article_with_validation(db: Session, article: Article, scheduled_at: datetime) -> Article:
+    scheduled_at = _clamp_to_publish_window(db, article.project_id, scheduled_at)
     result = check_validation_thresholds(db, article, planned_publish_at=scheduled_at)
     if not result["valid"]:
         reasons = "; ".join(result["reasons"])

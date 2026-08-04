@@ -525,8 +525,9 @@ export default function ProjectProvidersPage() {
               </div>
             </div>
             {form.provider === 'ollama' && (
-              <div className="rounded-[12px] bg-warning/8 px-3 py-2 text-[12px] text-secondary">
-                Ollama local fonctionne sur votre machine. Sur Render, utilisez un endpoint public sécurisé ou un provider cloud.
+              <div className="rounded-[12px] bg-accent/8 px-3 py-2 text-[12px] text-secondary">
+                Sans clé API : connexion à une instance Ollama locale (http://127.0.0.1:11434). Avec une clé API :
+                connexion automatique à Ollama Cloud (ollama.com).
               </div>
             )}
             <div className="flex items-center gap-2 pt-2">

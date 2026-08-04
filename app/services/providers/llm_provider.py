@@ -81,15 +81,21 @@ class OllamaLLMProvider(LLMProvider):
         model: str = "qwen3:14b",
         fallback_model: str | None = None,
         timeout_seconds: int = 180,
+        api_key: str | None = None,
     ):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.model_name = model
         self.fallback_model = fallback_model
         self.timeout_seconds = timeout_seconds
+        self.api_key = api_key
         self._model_checked = False
         self._model_available = False
         self.last_usage: dict[str, int] | None = None
+
+    @property
+    def _auth_headers(self) -> dict[str, str]:
+        return {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
 
     def _ensure_model(self):
         if self._model_checked:
@@ -97,7 +103,7 @@ class OllamaLLMProvider(LLMProvider):
         self._model_checked = True
         try:
             import httpx
-            resp = httpx.get(f"{self.base_url}/api/tags", timeout=10)
+            resp = httpx.get(f"{self.base_url}/api/tags", timeout=10, headers=self._auth_headers)
             resp.raise_for_status()
             models = resp.json().get("models", [])
             available = [m["name"] for m in models]
@@ -134,7 +140,7 @@ class OllamaLLMProvider(LLMProvider):
                 "stream": False,
                 "options": {"temperature": temperature},
             }
-            resp = httpx.post(f"{self.base_url}/api/chat", json=payload, timeout=self.timeout_seconds)
+            resp = httpx.post(f"{self.base_url}/api/chat", json=payload, timeout=self.timeout_seconds, headers=self._auth_headers)
             if resp.status_code == 404:
                 raise ProviderUnavailableError(
                     f"Modèle Ollama '{self.model}' non trouvé. Lancez: ollama pull {self.model}"
@@ -186,7 +192,7 @@ class OllamaLLMProvider(LLMProvider):
         """Return structured health status (does NOT raise)."""
         try:
             import httpx
-            tags_resp = httpx.get(f"{self.base_url}/api/tags", timeout=10)
+            tags_resp = httpx.get(f"{self.base_url}/api/tags", timeout=10, headers=self._auth_headers)
             if tags_resp.status_code != 200:
                 return {"provider": "ollama", "model": self.model, "configured": True, "available": False, "error": f"Ollama API erreur HTTP {tags_resp.status_code}"}
             models = tags_resp.json().get("models", [])
@@ -223,7 +229,10 @@ def build_provider_from_config(config) -> LLMProvider | None:
     provider_name = config.provider
 
     if provider_name == "ollama":
-        base_url = (config.base_url or settings.OLLAMA_BASE_URL or getattr(settings, "OLLAMA_URL", None) or "http://127.0.0.1:11434").rstrip("/")
+        # Clé API présente = Ollama Cloud (ollama.com) sauf si une base_url
+        # explicite pointe déjà ailleurs ; sinon Ollama local sans clé.
+        default_base_url = "https://ollama.com" if api_key else "http://127.0.0.1:11434"
+        base_url = (config.base_url or settings.OLLAMA_BASE_URL or getattr(settings, "OLLAMA_URL", None) or default_base_url).rstrip("/")
         if base_url.endswith("/v1"):
             base_url = base_url[:-3]
         return OllamaLLMProvider(
@@ -231,6 +240,7 @@ def build_provider_from_config(config) -> LLMProvider | None:
             model=config.model or settings.OLLAMA_MODEL or "qwen3:14b",
             fallback_model=settings.OLLAMA_FALLBACK_MODEL or "qwen3:8b",
             timeout_seconds=settings.OLLAMA_TIMEOUT_SECONDS or 180,
+            api_key=api_key,
         )
     if not api_key:
         return None

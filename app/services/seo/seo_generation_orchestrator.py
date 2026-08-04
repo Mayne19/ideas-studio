@@ -429,6 +429,7 @@ class SEOGenerationOrchestrator:
 
         # Plage de mots : catégorie (prioritaire) puis profil éditorial projet
         wc_min, wc_max = None, None
+        editorial_profile = self.project.active_editorial_profile if self.project else None
         if article.category_id:
             cat = self.db.get(Category, article.category_id)
             if cat:
@@ -436,10 +437,17 @@ class SEOGenerationOrchestrator:
                 wc_min = overrides.get("word_count_min")
                 wc_max = overrides.get("word_count_max")
         if not wc_min and not wc_max:
-            profile = self.project.active_editorial_profile if self.project else None
-            if profile:
-                wc_min = profile.word_count_min
-                wc_max = profile.word_count_max
+            if editorial_profile:
+                wc_min = editorial_profile.word_count_min
+                wc_max = editorial_profile.word_count_max
+
+        if editorial_profile:
+            if editorial_profile.reader_level:
+                self.context["reader_level"] = editorial_profile.reader_level
+            if editorial_profile.writing_style:
+                self.context["writing_style"] = editorial_profile.writing_style
+            if editorial_profile.tone:
+                self.context["tone"] = editorial_profile.tone
 
         # Passer la plage au prompt du writer
         if wc_min or wc_max:
@@ -773,6 +781,14 @@ class SEOGenerationOrchestrator:
             f"Intention de recherche : {article.search_intent or 'informational'}",
             f"Angle éditorial : {draft.angle or 'Informatif et pratique'}",
             f"Audience : {draft.audience or 'Grand public'}",
+        ]
+        if self.context.get("tone"):
+            prompt_parts.append(f"Ton éditorial : {self.context['tone']}")
+        if self.context.get("reader_level"):
+            prompt_parts.append(f"Niveau du lecteur : {self.context['reader_level']}")
+        if self.context.get("writing_style"):
+            prompt_parts.append(f"Style d'écriture : {self.context['writing_style']}")
+        prompt_parts += [
             "",
             "Règles strictes :",
             "- Rédige en HTML compatible TipTap : <h1>, <h2>, <h3>, <p>, <ul>, <ol>, <li>, <blockquote>, <table>, <strong>, <em>",
