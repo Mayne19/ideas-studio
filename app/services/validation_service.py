@@ -164,10 +164,15 @@ def compute_critical_warnings(ctx: dict[str, Any]) -> list[dict]:
         })
 
     fact_check = ctx["fact_check"]
-    if fact_check and fact_check.get("status") == "failed":
+    if not fact_check:
+        warnings.append({
+            "type": "fact_check_missing", "severity": "critical",
+            "message": "Aucune vérification des faits n'a été effectuée pour cet article.",
+        })
+    elif fact_check.get("status") in ("failed", "skipped", "error"):
         warnings.append({
             "type": "fact_check_failed", "severity": "critical",
-            "message": "Le fact-check a echoue.",
+            "message": fact_check.get("message") or "Le fact-check a échoué ou n'a pas pu s'exécuter.",
         })
 
     if ctx["scheduled_for"] is None:

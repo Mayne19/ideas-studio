@@ -393,7 +393,7 @@ AGENTS: list[AgentDef] = [
         requires_llm=False,
         icon="globe",
         implementation_ref="geo_expert_service",
-        status=AgentStatus.active,
+        status=AgentStatus.heuristic,
         output_json_field="geo_optimization_json",
     ),
     AgentDef(
@@ -482,7 +482,7 @@ AGENTS: list[AgentDef] = [
         phase="quality",
         icon="smile",
         implementation_ref="humanization_service",
-        status=AgentStatus.active,
+        status=AgentStatus.heuristic,
         output_json_field="humanization_report_json",
     ),
     AgentDef(
@@ -534,7 +534,7 @@ AGENTS: list[AgentDef] = [
         phase="final",
         requires_llm=False,
         icon="alert-circle",
-        status=AgentStatus.heuristic,
+        status=AgentStatus.not_implemented,
         output_json_field=None,
     ),
     AgentDef(
