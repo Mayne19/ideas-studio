@@ -481,7 +481,7 @@ export default function ProjectDashboardPage() {
   const geoScore = scoreOnHundred(data?.avgGeoScore) ?? 0
   const totalViews = formatCompact(data?.totalViews)
 
-  const enabledProviders = providers.filter((provider) => provider.enabled)
+  const enabledProviders = providers.filter((provider) => provider.api_key_configured)
   const pipelineActive = Boolean(pipeline?.enabled)
   const lastRunLabel = pipelineLogs[0] ? formatDate(pipelineLogs[0].started_at) : '—'
 

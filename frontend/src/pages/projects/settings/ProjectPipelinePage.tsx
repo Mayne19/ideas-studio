@@ -395,9 +395,14 @@ export default function ProjectPipelinePage() {
                     {log.generated_ideas}/{log.expected_ideas} idée(s) · {log.articles_created} article(s)
                   </p>
                   {log.failed_categories.length > 0 && (
-                    <p className="mt-0.5 max-w-md truncate text-[11px] text-warning">
-                      {log.failed_categories.map((category) => category.category_name || 'Catégorie').join(', ')}
-                    </p>
+                    <div className="mt-0.5 max-w-md text-[11px] text-warning">
+                      {log.failed_categories.map((category, idx) => (
+                        <p key={category.category_id ?? idx} className="truncate">
+                          <span className="font-medium">{category.category_name || 'Catégorie'}</span>
+                          {category.errors[0] && <span className="text-tertiary"> — {category.errors[0]}</span>}
+                        </p>
+                      ))}
+                    </div>
                   )}
                 </div>
                 <span className={`text-[12px] font-medium ${

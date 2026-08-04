@@ -94,7 +94,7 @@ export default function GeneratePage() {
     return () => { cancelled = true }
   }, [projectId, tick])
 
-  const activeProviders = providers.filter((provider) => provider.enabled && provider.api_key_configured)
+  const activeProviders = providers.filter((provider) => provider.api_key_configured)
   const assignedAgentIds = new Set(assignments.filter((item) => item.enabled).map((item) => item.agent_id))
   const workflowArticles = useMemo(
     () => articles.filter((article) => WORKFLOW_STATUSES.includes(article.status)),
