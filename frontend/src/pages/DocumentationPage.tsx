@@ -34,7 +34,7 @@ const CHAPTERS: Chapter[] = [
     content: `
       <h2 id="quest-ce-que-ideas-studio">Qu'est-ce que Ideas Studio</h2>
       <p class="mt-3 text-[15px] leading-relaxed text-secondary">Ideas Studio est un espace de production éditoriale assistée par IA. Il aide votre équipe à passer de la stratégie aux articles publiables, avec contrôle humain à chaque étape. La plateforme combine un moteur de génération piloté par des agents IA spécialisés, des dashboards de performance et de trafic, un pipeline de publication automatisé, et des outils de collaboration éditoriale.</p>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Contrairement aux générateurs d'articles basiques qui produisent du contenu générique, Ideas Studio orchestre 27 agents IA répartis en quatre catégories (recherche, stratégie, création, révision) pour produire des articles contextualisés, optimisés pour le SEO et adaptés à votre audience.</p>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Contrairement aux générateurs d'articles basiques qui produisent du contenu générique, Ideas Studio orchestre 62 agents IA répartis en quatre catégories (recherche, stratégie, création, révision) pour produire des articles contextualisés, optimisés pour le SEO et adaptés à votre audience.</p>
 
       <h2 id="a-qui-sadresse-cet-outil" class="mt-12">À qui s'adresse cet outil</h2>
       <p class="mt-3 text-[15px] leading-relaxed text-secondary">Ideas Studio est conçu pour les équipes éditoriales, les rédacteurs solo, les agences de contenu et les services marketing qui produisent du contenu régulier. Il convient aussi bien aux blogs personnels qu'aux sites d'actualité ou aux magazines en ligne.</p>
@@ -80,20 +80,13 @@ const CHAPTERS: Chapter[] = [
       <p class="mt-3 text-[15px] leading-relaxed text-secondary">Un projet regroupe un domaine, des membres, une stratégie éditoriale, des articles, des catégories et des analytics. Chaque projet est indépendant : ses données, sa configuration IA et son équipe lui sont propres. Un utilisateur peut appartenir à plusieurs projets avec des rôles différents.</p>
 
       <h2 id="membres-et-roles" class="mt-12">Membres et rôles</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Chaque projet a son propre système de rôles qui détermine ce que chaque membre peut faire :</p>
-      <ul class="mt-3 space-y-2 text-[15px] leading-relaxed text-secondary list-disc pl-6">
-        <li><strong class="text-primary">Owner</strong> — Accès complet. Peut gérer les providers, les agents, les membres, supprimer le projet.</li>
-        <li><strong class="text-primary">Admin</strong> — Accès complet sauf suppression du projet. Peut gérer providers, agents, membres.</li>
-        <li><strong class="text-primary">Editor</strong> — Peut créer, modifier, générer et publier des articles. Accès aux paramètres limité.</li>
-        <li><strong class="text-primary">Writer</strong> — Peut créer et modifier des articles. Accès aux dashboards de performance.</li>
-        <li><strong class="text-primary">Viewer</strong> — Accès en lecture seule aux articles et dashboards.</li>
-      </ul>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Chaque projet a son propre système de rôles (Owner, Admin, Editor, Designer, Viewer) qui détermine ce que chaque membre peut faire — voir le détail dans le chapitre <em>Accès et permissions</em>.</p>
 
       <h2 id="sites-publics-vs-studio" class="mt-12">Sites publics vs studio</h2>
       <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le studio et le site public sont deux entités distinctes. Le studio gère la production éditoriale, les workflows et les analytics. Le site public affiche les articles et envoie les données de tracking via un snippet JavaScript. Cette séparation permet de travailler sur le contenu sans impacter le site en production.</p>
 
       <h2 id="agents-ia" class="mt-12">Agents IA</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Les agents IA sont des modules spécialisés chacun dans une tâche précise : recherche de mots-clés, génération d'idées, rédaction, relecture, analyse SEO, etc. Le système compte 27 agents répartis en quatre catégories. Chaque agent peut être assigné à un provider IA ou désactivé individuellement.</p>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Les agents IA sont des modules spécialisés chacun dans une tâche précise : recherche de mots-clés, génération d'idées, rédaction, relecture, analyse SEO, etc. Le système compte 62 agents répartis en quatre catégories. Chaque agent peut être assigné à un provider IA ; les agents purement heuristiques (sans appel LLM) ne peuvent pas recevoir de provider.</p>
 
       <h2 id="pipeline-editorial" class="mt-12">Pipeline éditorial</h2>
       <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le pipeline est un flux de production automatisé qui enchaîne les agents IA selon un ordre défini. Il peut être déclenché manuellement ou planifié. Le pipeline ne publie jamais d'article sans validation humaine : il produit des brouillons qui attendent relecture et approbation.</p>
@@ -149,84 +142,50 @@ const CHAPTERS: Chapter[] = [
     label: 'Connecter un site',
     sections: [
       { id: 'pourquoi-connecter', label: 'Pourquoi connecter un site', depth: 2 },
-      { id: 'generer-le-snippet', label: 'Générer le snippet', depth: 2 },
+      { id: 'donnees-collectees', label: 'Le snippet et les données collectées', depth: 2 },
+      { id: 'ou-trouver-le-snippet', label: 'Où trouver le snippet', depth: 2 },
       { id: 'installer-sur-votre-site', label: 'Installer sur votre site', depth: 2 },
-      { id: 'verifier-la-connexion', label: 'Vérifier la connexion', depth: 2 },
+      { id: 'verifier-la-connexion', label: 'Vérifier que ça fonctionne', depth: 2 },
       { id: 'erreurs-frequentes', label: 'Erreurs fréquentes', depth: 2 },
     ],
     content: `
       <h2 id="pourquoi-connecter">Pourquoi connecter un site</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Connecter votre site public à Ideas Studio permet de collecter les données de navigation (pages vues, sources de trafic, appareils) et de les visualiser dans les dashboards Performance et Trafic. Sans connexion, ces dashboards restent vides.</p>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Connecter votre site public à Ideas Studio permet de collecter les données de navigation (pages vues, sources de trafic, appareils) et de les visualiser dans le dashboard Analytics. Sans connexion, ce dashboard reste vide.</p>
 
-      <h2 id="generer-le-snippet" class="mt-12">Générer le snippet</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Dans Paramètres / Intégration de votre projet, un snippet JavaScript est généré automatiquement. Il contient l'URL du studio et un identifiant de projet. Copiez ce snippet pour l'installer sur votre site.</p>
+      <h2 id="donnees-collectees" class="mt-12">Le snippet et les données collectées</h2>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le snippet est un petit script JavaScript, généré automatiquement pour chaque projet, qui collecte les visites de votre site public sans dégrader ses performances. Il envoie uniquement :</p>
+      <ul class="mt-3 space-y-2 text-[15px] leading-relaxed text-secondary list-disc pl-6">
+        <li>L'URL et le chemin de la page visitée.</li>
+        <li>Le referrer (d'où vient le visiteur).</li>
+        <li>Le type d'appareil et le navigateur utilisés.</li>
+        <li>Une empreinte anonyme (hash) pour estimer les visiteurs uniques.</li>
+      </ul>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Aucun cookie n'est déposé et aucune donnée personnelle identifiable (email, nom, IP en clair) n'est stockée.</p>
+
+      <h2 id="ou-trouver-le-snippet" class="mt-12">Où trouver le snippet</h2>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le snippet est disponible dans Paramètres / Intégration de votre projet, avec l'ID du projet, la clé de tracking publique et le statut de connexion. Il est unique par projet et ne doit pas être partagé entre plusieurs sites.</p>
 
       <h2 id="installer-sur-votre-site" class="mt-12">Installer sur votre site</h2>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Copiez le snippet et placez-le dans la balise <code class="text-accent">&lt;head&gt;</code> de votre site. Il fonctionne sur tout site HTML, quel que soit le framework — aucune dépendance supplémentaire n'est requise. Le script se charge de manière asynchrone.</p>
 
-      <h3 id="ou-placer-le-snippet" class="mt-8">Où placer le snippet</h3>
-      <p class="mt-2 text-[15px] leading-relaxed text-secondary">Le snippet doit être placé dans la balise <code class="text-accent">&lt;head&gt;</code> de votre site public. Il fonctionne sur tout site HTML, quel que soit le framework ou le CMS utilisé. Aucune dépendance supplémentaire n'est requise.</p>
+      <h3 id="installation-nextjs" class="mt-8">Next.js</h3>
+      <p class="mt-2 text-[15px] leading-relaxed text-secondary">Intégrez le snippet via un composant <code class="text-accent">Script</code> dans votre layout racine, en veillant à ce qu'il s'exécute côté client.</p>
 
-      <h3 id="installation-nextjs" class="mt-8">Installation sur Next.js</h3>
-      <p class="mt-2 text-[15px] leading-relaxed text-secondary">Si vous utilisez Next.js, vous pouvez intégrer le snippet dans le composant <code class="text-accent">_document.tsx</code> ou via un composant Script dans votre layout racine. Assurez-vous qu'il s'exécute côté client uniquement.</p>
+      <h3 id="installation-wordpress" class="mt-8">WordPress</h3>
+      <p class="mt-2 text-[15px] leading-relaxed text-secondary">Ajoutez le snippet dans <code class="text-accent">header.php</code> de votre thème, ou utilisez un plugin d'injection de code comme Header Footer Code Manager.</p>
 
-      <h3 id="installation-wordpress" class="mt-8">Installation sur WordPress</h3>
-      <p class="mt-2 text-[15px] leading-relaxed text-secondary">Ajoutez le snippet dans le fichier <code class="text-accent">header.php</code> de votre thème, ou utilisez un plugin d'injection de code comme Header Footer Code Manager.</p>
+      <h3 id="installation-gtm" class="mt-8">Google Tag Manager</h3>
+      <p class="mt-2 text-[15px] leading-relaxed text-secondary">Créez un tag HTML personnalisé dans GTM avec le snippet, et déclenchez-le sur toutes les pages.</p>
 
-      <h3 id="installation-generale" class="mt-8">Installation générale</h3>
-      <p class="mt-2 text-[15px] leading-relaxed text-secondary">Pour tout autre site, insérez le snippet dans la balise <code class="text-accent">&lt;head&gt;</code> du template HTML principal. Si votre site utilise un gestionnaire de balises (Google Tag Manager), vous pouvez aussi l'injecter via un tag HTML personnalisé.</p>
-
-      <h2 id="verifier-la-connexion" class="mt-12">Vérifier la connexion</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Après installation, ouvrez une page de votre site, puis rafraîchissez le statut dans le studio. Le statut passe à "Connecté" dès qu'une première visite est reçue. Si le domaine n'est pas défini dans le projet, le statut indique "Snippet non configuré".</p>
+      <h2 id="verifier-la-connexion" class="mt-12">Vérifier que ça fonctionne</h2>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Ouvrez la console développeur (F12) de votre navigateur sur une page du site : aucune erreur JavaScript ne doit apparaître, et l'onglet Réseau doit montrer une requête envoyée au studio à chaque chargement. Rafraîchissez ensuite le statut dans le studio — il passe à "Connecté" dès la première visite reçue. Dans le dashboard Analytics, le message "Snippet connecté, aucune donnée reçue pour cette période" signifie que l'installation est correcte mais qu'aucune visite n'a encore eu lieu sur la période sélectionnée.</p>
 
       <h2 id="erreurs-frequentes" class="mt-12">Erreurs fréquentes</h2>
       <ul class="mt-3 space-y-2 text-[15px] leading-relaxed text-secondary list-disc pl-6">
         <li><strong class="text-primary">Le snippet n'est pas exécuté</strong> — Vérifiez qu'il est bien dans le <code class="text-accent">&lt;head&gt;</code> et qu'aucun bloqueur de scripts ne l'empêche de s'exécuter.</li>
-        <li><strong class="text-primary">Le domaine ne correspond pas</strong> — Le domaine renseigné dans le projet doit correspondre au domaine où le snippet est installé.</li>
+        <li><strong class="text-primary">Le domaine ne correspond pas</strong> — Le domaine renseigné dans le projet doit correspondre au domaine où le snippet est installé, sinon le statut reste "Non connecté".</li>
         <li><strong class="text-primary">Aucune donnée après installation</strong> — Visitez une page après l'installation pour générer un premier événement.</li>
       </ul>
-    `,
-  },
-  {
-    id: 'snippet',
-    label: 'Installer le snippet',
-    sections: [
-      { id: 'quest-ce-que-le-snippet', label: "Qu'est-ce que le snippet", depth: 2 },
-      { id: 'donnees-collectees', label: 'Données collectées', depth: 2 },
-      { id: 'ou-trouver-le-snippet', label: 'Où trouver le snippet', depth: 2 },
-      { id: 'ajouter-le-snippet', label: 'Ajouter le snippet sur votre site', depth: 2 },
-      { id: 'verifier-fonctionnement', label: 'Vérifier que le tracking fonctionne', depth: 2 },
-    ],
-    content: `
-      <h2 id="quest-ce-que-le-snippet">Qu'est-ce que le snippet</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le snippet est un petit script JavaScript qui collecte les visites sur votre site public. Il est généré automatiquement par Ideas Studio pour chaque projet et mesure l'activité sans dégrader les performances de votre site.</p>
-
-      <h2 id="donnees-collectees" class="mt-12">Données collectées</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le snippet collecte uniquement les données nécessaires aux analytics :</p>
-      <ul class="mt-3 space-y-2 text-[15px] leading-relaxed text-secondary list-disc pl-6">
-        <li>L'URL de la page visitée.</li>
-        <li>Le referrer (d'où vient le visiteur).</li>
-        <li>Le type d'appareil (mobile, desktop, tablette).</li>
-        <li>Le navigateur utilisé.</li>
-        <li>Une empreinte anonyme pour estimer les visiteurs uniques.</li>
-      </ul>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Aucune donnée personnelle identifiable (email, nom, IP brute) n'est collectée ou stockée.</p>
-
-      <h2 id="ou-trouver-le-snippet" class="mt-12">Où trouver le snippet</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le snippet est disponible dans Paramètres / Intégration de votre projet. Il est unique pour chaque projet et ne doit pas être partagé entre plusieurs sites.</p>
-
-      <h2 id="ajouter-le-snippet" class="mt-12">Ajouter le snippet sur votre site</h2>
-
-      <h3 id="installation-manuelle" class="mt-8">Installation manuelle</h3>
-      <p class="mt-2 text-[15px] leading-relaxed text-secondary">Copiez le snippet depuis les paramètres du projet et collez-le dans la balise <code class="text-accent">&lt;head&gt;</code> de votre site. Le script se charge de manière asynchrone et n'affecte pas le temps de chargement de vos pages.</p>
-
-      <h3 id="installation-gtm" class="mt-8">Installation via Google Tag Manager</h3>
-      <p class="mt-2 text-[15px] leading-relaxed text-secondary">Créez un tag HTML personnalisé dans GTM, collez le snippet, et déclenchez-le sur toutes les pages. Le snippet s'exécutera via la couche GTM sans modification directe du code du site.</p>
-
-      <h3 id="verification-installation" class="mt-8">Vérifier l'installation</h3>
-      <p class="mt-2 text-[15px] leading-relaxed text-secondary">Après installation, ouvrez la console développeur de votre navigateur (F12) et vérifiez qu'aucune erreur JavaScript n'apparaît. Consultez l'onglet Réseau : une requête vers votre studio doit être envoyée à chaque chargement de page.</p>
-
-      <h2 id="verifier-fonctionnement" class="mt-12">Vérifier que le tracking fonctionne</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Consultez le dashboard Performance ou Trafic dans le studio. Si la période courante contient des données, le snippet fonctionne correctement. Le message "Snippet connecté, aucune donnée reçue pour cette période" signifie que le snippet est bien installé mais qu'aucune visite n'a eu lieu dans la période sélectionnée.</p>
     `,
   },
   {
@@ -472,7 +431,7 @@ const CHAPTERS: Chapter[] = [
       <p class="mt-2 text-[15px] leading-relaxed text-secondary">Ollama permet d'exécuter des modèles en local. Aucune clé API n'est nécessaire. L'URL de base est généralement <code class="text-accent">http://localhost:11434</code>.</p>
 
       <h2 id="securite-cles" class="mt-12">Sécurité des clés</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Les clés API sont chiffrées avec AES (Fernet) avant stockage en base de données. Le frontend ne reçoit jamais la clé en clair, seulement un indicateur booléen indiquant si une clé est configurée. Les clés ne doivent jamais être commitées dans Git, partagées par email, ou exposées dans une documentation publique.</p>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Les clés API sont chiffrées avant stockage et ne sont jamais renvoyées en clair au frontend — seulement un indicateur booléen indiquant si une clé est configurée. Détails du chiffrement dans le chapitre <em>Sécurité</em>.</p>
 
       <h2 id="tester-connexion" class="mt-12">Tester la connexion</h2>
       <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le bouton Tester envoie une requête de validation au provider avec la clé et le modèle configurés. Si la réponse est positive, le provider est marqué comme fonctionnel. En cas d'erreur, le message d'erreur du service s'affiche pour faciliter le diagnostic.</p>
@@ -502,21 +461,23 @@ const CHAPTERS: Chapter[] = [
     ],
     content: `
       <h2 id="quest-ce-quun-agent">Qu'est-ce qu'un agent</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Les agents sont des modules spécialisés qui exécutent une tâche précise dans le flux de production. Chaque agent a un rôle spécifique, un prompt dédié et peut être assigné à un provider IA. Le système compte 27 agents répartis en 4 catégories.</p>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Les agents sont des modules spécialisés qui exécutent une tâche précise dans le flux de production. Chaque agent a un rôle spécifique, un prompt dédié et peut être assigné à un provider IA. Le système compte 62 agents répartis en 4 catégories.</p>
 
       <h2 id="categories-agents" class="mt-12">Catégories d'agents</h2>
 
-      <h3 id="recherche" class="mt-8">Recherche (6 agents)</h3>
+      <h3 id="recherche" class="mt-8">Recherche (14 agents)</h3>
       <p class="mt-2 text-[15px] leading-relaxed text-secondary">Analyse de mots-clés, tendances, concurrence et sources. Ces agents préparent le terrain éditorial en identifiant les sujets porteurs et les opportunités de contenu.</p>
 
-      <h3 id="strategie" class="mt-8">Stratégie (7 agents)</h3>
+      <h3 id="strategie" class="mt-8">Stratégie (16 agents)</h3>
       <p class="mt-2 text-[15px] leading-relaxed text-secondary">Idéation, calibrage, planification et persona. Ces agents transforment les données de recherche en une stratégie de contenu cohérente.</p>
 
-      <h3 id="creation" class="mt-8">Création (8 agents)</h3>
+      <h3 id="creation" class="mt-8">Création (15 agents)</h3>
       <p class="mt-2 text-[15px] leading-relaxed text-secondary">Rédaction, reformulation, FAQ, callouts et images. Ces agents produisent le contenu lui-même à partir des directives stratégiques.</p>
 
-      <h3 id="revision" class="mt-8">Révision (6 agents)</h3>
+      <h3 id="revision" class="mt-8">Révision (17 agents)</h3>
       <p class="mt-2 text-[15px] leading-relaxed text-secondary">Relecture, SEO, qualité, EEAT et vérification. Ces agents contrôlent et améliorent le contenu avant publication.</p>
+
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Chaque agent affiche un statut : <strong class="text-primary">actif</strong> (utilise un provider IA), <strong class="text-primary">heuristique</strong> (règles internes, sans LLM — aucun provider ne lui est applicable) ou <strong class="text-primary">partiel</strong> (dépend d'un service externe complémentaire, ex. recherche web ou tendances).</p>
 
       <h2 id="assignation" class="mt-12">Assignation aux providers</h2>
       <p class="mt-3 text-[15px] leading-relaxed text-secondary">Dans Paramètres / Agents, vous pouvez assigner un provider à chaque agent. Par exemple, utiliser Gemini pour la rédaction et OpenAI pour l'analyse SEO. Chaque agent peut avoir un provider différent selon ses besoins spécifiques.</p>
@@ -554,18 +515,18 @@ const CHAPTERS: Chapter[] = [
       <h2 id="roles-projet">Rôles projet</h2>
       <p class="mt-3 text-[15px] leading-relaxed text-secondary">Chaque projet définit ses propres rôles pour les membres :</p>
       <ul class="mt-3 space-y-2 text-[15px] leading-relaxed text-secondary list-disc pl-6">
-        <li><strong class="text-primary">Owner</strong> — Peut gérer les providers, agents, membres, paramètres. Peut supprimer le projet.</li>
+        <li><strong class="text-primary">Owner</strong> — Peut gérer les providers, agents, membres, paramètres. Peut supprimer le projet. Ne peut ni être réassigné ni retiré.</li>
         <li><strong class="text-primary">Admin</strong> — Peut gérer les providers, agents, membres, paramètres. Ne peut pas supprimer le projet.</li>
-        <li><strong class="text-primary">Editor</strong> — Peut créer, modifier, générer, publier des articles. Accès limité aux paramètres.</li>
-        <li><strong class="text-primary">Writer</strong> — Peut créer et modifier des articles. Accès aux dashboards.</li>
+        <li><strong class="text-primary">Editor</strong> — Peut créer, modifier, générer, publier des articles, et gérer catégories/callouts/pipeline. Accès limité aux paramètres.</li>
+        <li><strong class="text-primary">Designer</strong> — Peut créer et modifier des articles, et gérer la médiathèque.</li>
         <li><strong class="text-primary">Viewer</strong> — Accès en lecture seule.</li>
       </ul>
 
       <h2 id="admin-plateforme" class="mt-12">Administrateur plateforme</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le <strong class="text-primary">platform_admin</strong> est un rôle global qui donne accès à tous les projets et à la configuration système. Ce rôle est attribué automatiquement au premier utilisateur, puis géré manuellement.</p>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le drapeau <strong class="text-primary">is_staff</strong> sur un compte utilisateur donne accès à tous les projets (avec un rôle Owner virtuel) et à la configuration système. Il est attribué automatiquement au tout premier utilisateur créé sur l'instance, puis géré manuellement.</p>
 
       <h2 id="providers-agents-acces" class="mt-12">Providers et agents : qui peut accéder</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">La configuration des providers et agents est réservée au owner du projet, aux admins du projet, et aux platform_admins. Les editors, writers et viewers voient un message "Admin access required" s'ils tentent d'accéder à ces pages.</p>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">La configuration des providers et agents est réservée au owner du projet, aux admins du projet, et aux comptes <code class="text-accent">is_staff</code>. Les editors, designers et viewers voient un message "Admin access required" s'ils tentent d'accéder à ces pages.</p>
       <p class="mt-3 text-[15px] leading-relaxed text-secondary">Cette restriction garantit que les clés API et la configuration IA restent sous le contrôle des responsables du projet.</p>
 
       <h2 id="bonnes-pratiques" class="mt-12">Bonnes pratiques</h2>
@@ -583,7 +544,7 @@ const CHAPTERS: Chapter[] = [
     sections: [
       { id: 'travail-equipe', label: 'Travail en équipe', depth: 2 },
       { id: 'commentaires', label: 'Commentaires', depth: 2 },
-      { id: 'kanban', label: 'Kanban', depth: 2 },
+      { id: 'kanban', label: 'Suivi du workflow', depth: 2 },
       { id: 'notifications', label: 'Notifications', depth: 2 },
       { id: 'calendrier-editorial', label: 'Calendrier éditorial', depth: 2 },
       { id: 'bonnes-pratiques-co', label: 'Bonnes pratiques', depth: 2 },
@@ -595,8 +556,8 @@ const CHAPTERS: Chapter[] = [
       <h2 id="commentaires" class="mt-12">Commentaires</h2>
       <p class="mt-3 text-[15px] leading-relaxed text-secondary">Chaque article dispose d'un système de commentaires pour faciliter les échanges entre éditeurs, relecteurs et validateurs. Les commentaires sont horodatés et associés à leur auteur.</p>
 
-      <h2 id="kanban" class="mt-12">Kanban</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le kanban offre une vue visuelle de l'avancement des articles, avec des colonnes personnalisables qui correspondent aux étapes de votre workflow éditorial. Glissez-déposez les articles pour changer leur statut.</p>
+      <h2 id="kanban" class="mt-12">Suivi du workflow</h2>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">La page Production offre une vue d'ensemble de l'avancement des articles à travers leurs statuts (idée, en rédaction, brouillon prêt, prêt, programmé, publié…). Un tableau kanban à colonnes personnalisables et glisser-déposer est prévu dans l'API mais n'est pas encore branché à l'interface.</p>
 
       <h2 id="notifications" class="mt-12">Notifications</h2>
       <p class="mt-3 text-[15px] leading-relaxed text-secondary">Les notifications informent l'équipe des changements de statut, des commentaires, des résultats de génération et des actions requises. Chaque membre reçoit les notifications pertinentes selon son rôle.</p>
@@ -611,33 +572,6 @@ const CHAPTERS: Chapter[] = [
         <li>Consultez le calendrier pour éviter les publications groupées.</li>
         <li>Définissez des relecteurs attitrés pour chaque article.</li>
       </ul>
-    `,
-  },
-  {
-    id: 'integrations',
-    label: 'Intégrations',
-    sections: [
-      { id: 'integrations-disponibles', label: 'Intégrations disponibles', depth: 2 },
-      { id: 'google-search-console', label: 'Google Search Console', depth: 2 },
-      { id: 'snippet-tracking', label: 'Snippet de tracking', depth: 2 },
-      { id: 'webhooks', label: 'Webhooks', depth: 2 },
-      { id: 'configuration', label: 'Configuration', depth: 2 },
-    ],
-    content: `
-      <h2 id="integrations-disponibles">Intégrations disponibles</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Les intégrations relient le studio à des services externes pour enrichir les données et automatiser les flux.</p>
-
-      <h2 id="google-search-console" class="mt-12">Google Search Console</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">L'intégration Google Search Console permet de visualiser les mots-clés organiques et les positions dans les résultats de recherche. Connectez votre propriété Search Console pour enrichir vos dashboards SEO avec des données de recherche réelles.</p>
-
-      <h2 id="snippet-tracking" class="mt-12">Snippet de tracking</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le snippet collecte les données de navigation pour les dashboards Performance et Trafic. C'est l'intégration de base qui alimente tous les analytics du projet.</p>
-
-      <h2 id="webhooks" class="mt-12">Webhooks</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Les webhooks permettent d'envoyer des notifications à des URLs externes lors d'événements : création d'article, publication, génération terminée. Ils sont configurables dans les paramètres du projet.</p>
-
-      <h2 id="configuration" class="mt-12">Configuration</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Chaque intégration se configure dans Paramètres / Intégration du projet. Les statuts de connexion sont visibles et les intégrations peuvent être activées ou désactivées individuellement.</p>
     `,
   },
   {
@@ -668,51 +602,41 @@ const CHAPTERS: Chapter[] = [
       <p class="mt-2 text-[15px] leading-relaxed text-secondary"><code class="text-accent">GET /api/public/projects/{id}/articles/{'{slug}'}</code> — Récupère le détail d'un article par son slug.</p>
 
       <h2 id="webhooks-evenements" class="mt-12">Webhooks et événements</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Les webhooks peuvent déclencher des appels HTTP vers vos services lors d'événements spécifiques :</p>
-      <ul class="mt-3 space-y-2 text-[15px] leading-relaxed text-secondary list-disc pl-6">
-        <li>Article créé ou publié.</li>
-        <li>Génération d'article terminée.</li>
-        <li>Pipeline exécuté.</li>
-        <li>Changement de statut d'article.</li>
-      </ul>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Les webhooks sont conçus pour déclencher des appels HTTP vers vos services lors d'événements comme la création ou la publication d'un article, la fin d'une génération, ou l'exécution du pipeline. <strong class="text-primary">Le déclenchement automatique n'est pas encore implémenté</strong> : seul l'appel de test manuel envoie effectivement une requête aujourd'hui. La création, la modification et la suppression d'un webhook fonctionnent via l'API ; il n'y a pas encore de page dédiée dans l'interface.</p>
 
       <h2 id="securite-webhooks" class="mt-12">Sécurité des webhooks</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Chaque webhook peut être configuré avec un secret partagé qui signe les requêtes sortantes. Votre service peut vérifier cette signature pour s'assurer que la requête provient bien du studio.</p>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Chaque webhook est configuré avec un secret qui signe les requêtes sortantes (header <code class="text-accent">X-IdeasStudio-Signature</code>, HMAC-SHA256). Votre service peut vérifier cette signature pour s'assurer que la requête provient bien du studio. L'URL du webhook doit être en HTTPS ; les IP privées/locales sont refusées.</p>
 
-      <h2 id="exemples-utilisation" class="mt-12">Exemples d'utilisation</h2>
-      <ul class="mt-3 space-y-2 text-[15px] leading-relaxed text-secondary list-disc pl-6">
-        <li>Notifier Slack ou Discord quand un article est publié.</li>
-        <li>Déclencher un rebuild de site statique après une publication.</li>
-        <li>Synchroniser les métadonnées avec un CMS externe.</li>
-      </ul>
+      <h2 id="exemples-utilisation" class="mt-12">Exemples d'utilisation prévus</h2>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Une fois le déclenchement automatique branché, les webhooks permettront par exemple de notifier Slack ou Discord à la publication d'un article, de déclencher un rebuild de site statique, ou de synchroniser les métadonnées avec un CMS externe.</p>
     `,
   },
   {
     id: 'tracking',
-    label: 'Observabilité et tracking',
+    label: 'Analytics et tracking',
     sections: [
       { id: 'systeme-tracking', label: 'Le système de tracking', depth: 2 },
-      { id: 'dashboard-performance', label: 'Dashboard Performance', depth: 2 },
-      { id: 'dashboard-trafic', label: 'Dashboard Trafic', depth: 2 },
+      { id: 'dashboard-performance', label: 'Dashboard Analytics', depth: 2 },
+      { id: 'google-search-console', label: 'Google Search Console', depth: 2 },
       { id: 'periodes', label: 'Périodes disponibles', depth: 2 },
       { id: 'diagnostic-donnees', label: 'Diagnostic des données absentes', depth: 2 },
       { id: 'limites', label: 'Limites du tracking', depth: 2 },
     ],
     content: `
       <h2 id="systeme-tracking">Le système de tracking</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le système de tracking collecte et agrège les visites du site public pour fournir des analytics exploitables. Il repose sur un snippet JavaScript installé sur le site qui envoie les événements au studio.</p>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le système de tracking collecte et agrège les visites du site public pour fournir des analytics exploitables. Il repose sur le snippet JavaScript installé sur le site (voir <em>Connecter un site</em>), qui envoie les événements au studio.</p>
 
-      <h2 id="dashboard-performance" class="mt-12">Dashboard Performance</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">La page Performance affiche les vues totales, le temps de lecture estimé, les articles publiés, le score éditorial moyen et les articles à optimiser. Un graphique d'évolution des vues dans le temps permet de suivre les tendances.</p>
+      <h2 id="dashboard-performance" class="mt-12">Dashboard Analytics</h2>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Une page Analytics unique regroupe les statistiques internes (vues totales, tendance par canal — direct, organique, referral, social —, sources, pays, appareils, score SEO moyen, top articles) et, si un compte Google Analytics 4 est connecté au projet, un second bloc de données GA4 (sessions, durée moyenne, taux de rebond, pages les plus vues). Export des données disponible en JSON ou PDF.</p>
 
-      <h2 id="dashboard-trafic" class="mt-12">Dashboard Trafic</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">La page Trafic détaille les sources de trafic : canaux (Google, Direct, Social, Referral), appareils, pays, pages d'entrée et référents. Le graphique d'évolution par canal permet de visualiser la répartition du trafic dans le temps.</p>
+      <h2 id="google-search-console" class="mt-12">Google Search Console</h2>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">L'intégration Google Search Console visualisera les mots-clés organiques et les positions dans les résultats de recherche. <strong class="text-primary">Statut actuel : non disponible</strong> — la configuration OAuth Google n'est pas encore implémentée, les endpoints renvoient systématiquement un statut "non connecté".</p>
 
       <h2 id="periodes" class="mt-12">Périodes disponibles</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Les dashboards proposent les périodes de consultation suivantes : 1 jour, 7 jours, 30 jours, 90 jours, 6 mois, 1 an. Par défaut, les données des 30 derniers jours sont affichées.</p>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le dashboard accepte un nombre de jours au choix, une période prédéfinie (jour, semaine, mois, trimestre, semestre, année) ou une plage de dates personnalisée. Par défaut, les 30 derniers jours sont affichés.</p>
 
       <h2 id="diagnostic-donnees" class="mt-12">Diagnostic des données absentes</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Si les dashboards n'affichent pas de données :</p>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Si le dashboard n'affiche pas de données :</p>
       <ol class="mt-3 space-y-2 text-[15px] leading-relaxed text-secondary list-decimal pl-6">
         <li>Vérifiez que le domaine du projet est correctement renseigné dans Paramètres / Général.</li>
         <li>Vérifiez que le snippet est installé sur le site public.</li>
@@ -726,7 +650,6 @@ const CHAPTERS: Chapter[] = [
         <li>Le tracking ne fonctionne que si le snippet est correctement installé.</li>
         <li>Les bloqueurs de publicité peuvent empêcher le snippet de s'exécuter.</li>
         <li>Les données de navigation ne sont pas disponibles en temps réel (latence de quelques minutes).</li>
-        <li>Le volume de données de tracking n'est pas limité.</li>
       </ul>
     `,
   },
@@ -770,78 +693,6 @@ const CHAPTERS: Chapter[] = [
     `,
   },
   {
-    id: 'pricing',
-    label: 'Tarifs et plans',
-    sections: [
-      { id: 'modele', label: 'Modèle économique', depth: 2 },
-      { id: 'auto-hebergement', label: 'Auto-hébergement', depth: 2 },
-      { id: 'cout-ia', label: 'Coûts liés à l\'IA', depth: 2 },
-      { id: 'limites', label: 'Limites', depth: 2 },
-      { id: 'version-hebergee', label: 'Version hébergée', depth: 2 },
-    ],
-    content: `
-      <h2 id="modele">Modèle économique</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Ideas Studio est un logiciel open-source que vous pouvez auto-héberger. Les coûts sont liés aux services d'IA utilisés (API Gemini, OpenAI, etc.) et à l'hébergement.</p>
-
-      <h2 id="auto-hebergement" class="mt-12">Auto-hébergement</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le code source est disponible et libre d'utilisation. Vous déployez le studio sur votre propre infrastructure et gérez vous-même la maintenance, les mises à jour et les sauvegardes.</p>
-
-      <h2 id="cout-ia" class="mt-12">Coûts liés à l'IA</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Les coûts de génération dépendent du provider IA que vous choisissez :</p>
-      <ul class="mt-3 space-y-2 text-[15px] leading-relaxed text-secondary list-disc pl-6">
-        <li><strong class="text-primary">Gemini</strong> — Gratuit dans les limites du quota gratuit Google.</li>
-        <li><strong class="text-primary">OpenAI</strong> — Payant selon le modèle utilisé.</li>
-        <li><strong class="text-primary">Ollama</strong> — Gratuit (modèles en local, aucun coût d'API).</li>
-        <li><strong class="text-primary">OpenRouter</strong> — Payant selon les modèles choisis.</li>
-      </ul>
-
-      <h2 id="limites" class="mt-12">Limites</h2>
-      <ul class="mt-3 space-y-2 text-[15px] leading-relaxed text-secondary list-disc pl-6">
-        <li>Le nombre de projets est illimité en auto-hébergement.</li>
-        <li>Les limites de génération dépendent du provider IA configuré.</li>
-        <li>Le nombre de membres par projet n'est pas limité.</li>
-        <li>Le volume de données de tracking n'est pas limité.</li>
-      </ul>
-
-      <h2 id="version-hebergee" class="mt-12">Version hébergée</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Pour les équipes qui souhaitent une version hébergée sans gestion d'infrastructure, contactez l'équipe Ideas Studio. La version hébergée inclut la maintenance, les sauvegardes et le support.</p>
-    `,
-  },
-  {
-    id: 'statut-actuel',
-    label: 'Statut actuel',
-    sections: [
-      { id: 'phase-test', label: 'Phase de test', depth: 2 },
-      { id: 'fonctionnel', label: 'Fonctionnel', depth: 2 },
-      { id: 'partiel', label: 'Partiel ou à connecter', depth: 2 },
-      { id: 'avant-production', label: 'Avant production complète', depth: 2 },
-    ],
-    content: `
-      <h2 id="phase-test">Phase de test</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Ideas Studio est lançable avec réserves pour une phase de test réelle. Le CMS, les routes principales, le workflow éditorial, les providers IA configurables et les pages projet sont en place. La qualité des contenus générés doit toutefois être validée avec un provider réel connecté.</p>
-
-      <h2 id="fonctionnel" class="mt-12">Fonctionnel</h2>
-      <ul class="mt-3 space-y-2 text-[15px] leading-relaxed text-secondary list-disc pl-6">
-        <li>Gestion projets, articles, archives, catégories, idées, production et validation.</li>
-        <li>Éditeur TipTap, médias, commentaires, versions et publication/dépublication.</li>
-        <li>Permissions projet, invitations, profil utilisateur et notifications.</li>
-        <li>Providers IA, agents IA, pipeline éditorial et rapports de génération.</li>
-        <li>API publique, snippet de tracking, dashboards performance et trafic.</li>
-      </ul>
-
-      <h2 id="partiel" class="mt-12">Partiel ou à connecter</h2>
-      <ul class="mt-3 space-y-2 text-[15px] leading-relaxed text-secondary list-disc pl-6">
-        <li>Les providers réels doivent être configurés projet par projet ou via les variables backend.</li>
-        <li>Search Console dépend de la configuration Google et peut rester partielle sans credentials.</li>
-        <li>Les emails transactionnels et certains workers dépendent de l'environnement de déploiement.</li>
-        <li>Les scores Originalité et GEO peuvent être heuristiques selon les données disponibles.</li>
-      </ul>
-
-      <h2 id="avant-production" class="mt-12">Avant production complète</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Avant exploitation complète, configurez une <code class="text-accent">SECRET_KEY</code> stable, une base PostgreSQL, les URLs publiques, les origines CORS, au moins un provider IA réel et un test léger de génération. Ne placez jamais de clé IA dans le frontend.</p>
-    `,
-  },
-  {
     id: 'faq',
     label: 'FAQ',
     sections: [
@@ -852,14 +703,8 @@ const CHAPTERS: Chapter[] = [
     content: `
       <h2 id="generale">Générale</h2>
 
-      <h3 id="documentation-cms" class="mt-8">La documentation fait-elle partie du CMS ?</h3>
-      <p class="mt-2 text-[15px] leading-relaxed text-secondary">Non. La documentation est accessible via <code class="text-accent">/documentation</code> et est indépendante du layout projet. Elle ne fait pas partie de la sidebar du studio et reste consultable sans authentification.</p>
-
       <h3 id="quels-sont-les-pre-requis" class="mt-8">Quels sont les prérequis techniques ?</h3>
       <p class="mt-2 text-[15px] leading-relaxed text-secondary">Un site public, une clé API d'un service d'IA et un compte Ideas Studio. Aucune compétence technique avancée n'est nécessaire pour l'installation de base.</p>
-
-      <h3 id="open-source" class="mt-8">Ideas Studio est-il vraiment open-source ?</h3>
-      <p class="mt-2 text-[15px] leading-relaxed text-secondary">Oui, le code source est disponible et libre d'utilisation. Vous pouvez l'inspecter, le modifier et contribuer au projet.</p>
 
       <h2 id="technique" class="mt-12">Technique</h2>
 
@@ -873,7 +718,7 @@ const CHAPTERS: Chapter[] = [
       <p class="mt-2 text-[15px] leading-relaxed text-secondary">Créez une clé API sur <a href="https://aistudio.google.com/apikey" class="text-accent hover:underline" target="_blank" rel="noopener noreferrer">Google AI Studio</a>, ajoutez un provider Gemini dans Paramètres / Providers, collez la clé, et cliquez sur Tester. Si la connexion est réussie, le provider est prêt pour la génération.</p>
 
       <h3 id="acces-providers-agents" class="mt-8">Qui peut gérer les providers et agents ?</h3>
-      <p class="mt-2 text-[15px] leading-relaxed text-secondary">Le owner du projet, les admins projet et les platform admins. Les editors, writers et viewers n'ont pas accès à ces pages de configuration.</p>
+      <p class="mt-2 text-[15px] leading-relaxed text-secondary">Le owner du projet, les admins projet et les comptes <code class="text-accent">is_staff</code>. Les editors, designers et viewers n'ont pas accès à ces pages de configuration.</p>
 
       <h3 id="diagnostic-donnees" class="mt-8">Comment diagnostiquer des données absentes dans les dashboards ?</h3>
       <p class="mt-2 text-[15px] leading-relaxed text-secondary">Vérifiez que le domaine est renseigné (Paramètres / Général), que le snippet est installé, et qu'il y a eu des visites dans la période sélectionnée. Utilisez le bouton Rafraîchir pour recharger les données.</p>
