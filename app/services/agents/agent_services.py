@@ -416,3 +416,37 @@ def improve_engagement(
     except Exception as exc:
         logger.warning("Engagement editor agent failed: %s", exc)
         return {"status": "error", "message": str(exc), "suggestions": []}
+
+
+def extract_main_keyword(title: str, db=None, project_id: str | None = None) -> dict[str, Any]:
+    """Extrait un mot-clé SEO court (2-5 mots) depuis un titre — utilisé quand
+    un article est créé manuellement sans mot-clé explicite. Le repli naïf
+    (slugifier le titre entier) pollue tout le pipeline en aval : recherche
+    d'images, brief SEO, densité de mot-clé cherchée dans le contenu (observé
+    en production : "au-dela-de-lesthetique-comment-le-web-design-impacte..."
+    utilisé comme mot-clé au lieu de "web design vitesse SEO")."""
+    router = _get_router(db)
+    try:
+        provider = router.get_provider("keyword_research", project_id=project_id)
+    except Exception as exc:
+        logger.warning("Keyword extraction provider resolution failed: %s", exc)
+        return {"status": "skipped", "message": f"Provider indisponible : {exc}", "keyword": None}
+    if provider.is_mock:
+        return {"status": "skipped", "message": "Keyword extraction not configured (mock provider)", "keyword": None}
+
+    prompt = (
+        f"Titre d'article : {title}\n\n"
+        "Extrait le mot-clé SEO principal de ce titre : 2 à 5 mots maximum, "
+        "sans ponctuation, celui qu'un internaute taperait réellement dans un moteur de recherche.\n"
+        "Réponds UNIQUEMENT avec un JSON valide :\n"
+        '{"keyword": "..."}'
+    )
+    try:
+        result = provider.generate_json(prompt, schema_hint="json keyword object")
+        keyword = result.get("keyword") if isinstance(result, dict) else None
+        if isinstance(keyword, str) and keyword.strip():
+            return {"status": "success", "keyword": keyword.strip()}
+        return {"status": "error", "message": "Invalid response format", "keyword": None}
+    except Exception as exc:
+        logger.warning("Keyword extraction agent failed: %s", exc)
+        return {"status": "error", "message": str(exc), "keyword": None}

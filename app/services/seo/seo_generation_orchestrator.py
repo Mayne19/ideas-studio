@@ -218,7 +218,15 @@ class SEOGenerationOrchestrator:
         final_keyword = keyword or idea_discovery.get("main_keyword", "")
 
         if not final_keyword:
-            final_keyword = slugify(final_title)
+            # Repli slugify(titre) pollue tout le pipeline en aval (recherche
+            # d'images, brief SEO, densité de mot-clé) avec une chaîne de
+            # 100+ caractères au lieu d'un vrai mot-clé — on tente d'abord
+            # une extraction LLM courte, le slug du titre reste le tout
+            # dernier recours si le provider est indisponible.
+            from app.services.agents.agent_services import extract_main_keyword
+            keyword_extraction = extract_main_keyword(final_title, db=self.db, project_id=self.project_id)
+            extracted = keyword_extraction.get("keyword")
+            final_keyword = extracted if extracted else slugify(final_title)
 
         # 4. CannibalizationCheck
         cannibalization = check_cannibalization_dict(

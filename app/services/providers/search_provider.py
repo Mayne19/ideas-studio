@@ -88,6 +88,45 @@ class SearXNGSearchProvider(SearchProvider):
             return False
 
 
+class BraveSearchProvider(SearchProvider):
+    """Brave Search API — indépendant de l'index Google, ne nécessite ni
+    projet Google Cloud ni moteur de recherche personnalisé. Facturation à
+    l'usage (~0.003-0.005$/requête), crédit mensuel offert à l'inscription.
+    Voir https://api-dashboard.search.brave.com/."""
+    is_mock: bool = False
+    provider_name: str = "brave_search"
+
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+
+    def search(self, query: str, limit: int = 10) -> list[SearchResult]:
+        try:
+            import httpx
+            from app.core.config import settings
+            resp = httpx.get(
+                "https://api.search.brave.com/res/v1/web/search",
+                params={"q": query, "count": min(limit, 20)},
+                headers={"X-Subscription-Token": self.api_key, "Accept": "application/json"},
+                timeout=settings.SEARCH_TIMEOUT_SECONDS or 30,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            results = (data.get("web") or {}).get("results", [])
+            return [
+                SearchResult(
+                    title=item.get("title", ""),
+                    url=item.get("url", ""),
+                    snippet=item.get("description", ""),
+                )
+                for item in results[:limit]
+            ]
+        except Exception:
+            return []
+
+    def is_available(self) -> bool:
+        return bool(self.api_key)
+
+
 class GoogleCustomSearchProvider(SearchProvider):
     """Google Custom Search JSON API — nécessite une clé API + un moteur de
     recherche personnalisé (cx) configuré sur https://programmablesearchengine.google.com/.
@@ -133,6 +172,11 @@ def get_search_provider() -> SearchProvider:
         if provider.is_available():
             return provider
 
+    if settings.DEFAULT_SEARCH_PROVIDER == "brave" and settings.BRAVE_SEARCH_API_KEY:
+        provider = BraveSearchProvider(settings.BRAVE_SEARCH_API_KEY)
+        if provider.is_available():
+            return provider
+
     if settings.DEFAULT_SEARCH_PROVIDER == "google" and settings.GOOGLE_SEARCH_API_KEY and settings.GOOGLE_SEARCH_CX:
         provider = GoogleCustomSearchProvider(settings.GOOGLE_SEARCH_API_KEY, settings.GOOGLE_SEARCH_CX)
         if provider.is_available():
@@ -141,7 +185,15 @@ def get_search_provider() -> SearchProvider:
     # "auto" et repli : utiliser le premier provider réel réellement configuré,
     # peu importe DEFAULT_SEARCH_PROVIDER — évite de tourner sur des données
     # inventées (MockSearchProvider) simplement parce que la variable
-    # d'environnement n'a pas été mise à jour après l'ajout d'une clé.
+    # d'environnement n'a pas été mise à jour après l'ajout d'une clé. Brave
+    # est essayé avant Google : les nouveaux moteurs de recherche personnalisés
+    # Google (cx) ne peuvent plus interroger le web entier (fonctionnalité
+    # dépréciée côté Google, cause d'un 403 permanent quoi que la config
+    # fasse), Brave n'a pas cette limitation.
+    if settings.BRAVE_SEARCH_API_KEY:
+        provider = BraveSearchProvider(settings.BRAVE_SEARCH_API_KEY)
+        if provider.is_available():
+            return provider
     if settings.GOOGLE_SEARCH_API_KEY and settings.GOOGLE_SEARCH_CX:
         provider = GoogleCustomSearchProvider(settings.GOOGLE_SEARCH_API_KEY, settings.GOOGLE_SEARCH_CX)
         if provider.is_available():

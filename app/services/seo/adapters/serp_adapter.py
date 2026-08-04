@@ -3,9 +3,12 @@ from __future__ import annotations
 
 class SerpAdapter:
     """Analyse concurrentielle SERP — SerpAPI (SERP_API_KEY) en priorité si
-    configurée, sinon repli sur Google Custom Search (GOOGLE_SEARCH_API_KEY/
-    GOOGLE_SEARCH_CX, déjà utilisé pour la génération d'idées) plutôt que de
-    rester inactif faute d'une deuxième clé séparée."""
+    configurée, sinon Brave Search (BRAVE_SEARCH_API_KEY), sinon repli sur
+    Google Custom Search (GOOGLE_SEARCH_API_KEY/GOOGLE_SEARCH_CX). Google est
+    en dernier recours : les nouveaux moteurs de recherche personnalisés (cx)
+    ne peuvent plus interroger le web entier (fonctionnalité dépréciée côté
+    Google), donc un cx créé après cette dépréciation renvoie un 403
+    permanent quelle que soit la config du projet Google Cloud."""
     provider_name = "serp"
     enabled = False
     configured = False
@@ -22,6 +25,11 @@ class SerpAdapter:
             self.enabled = True
             self.real_data_available = True
             self.fallback_mode = "serpapi"
+        elif settings.BRAVE_SEARCH_API_KEY:
+            self.configured = True
+            self.enabled = True
+            self.real_data_available = True
+            self.fallback_mode = "brave_search"
         elif settings.GOOGLE_SEARCH_API_KEY and settings.GOOGLE_SEARCH_CX:
             self.configured = True
             self.enabled = True
@@ -35,11 +43,32 @@ class SerpAdapter:
         try:
             if settings.SERP_API_KEY:
                 return self._search_serpapi(query, limit)
+            if settings.BRAVE_SEARCH_API_KEY:
+                return self._search_brave(query, limit)
             return self._search_google(query, limit)
         except Exception as exc:
             self.last_error = str(exc)
             self.real_data_available = False
             return []
+
+    def _search_brave(self, query: str, limit: int) -> list[dict]:
+        import httpx
+        from app.core.config import settings
+        resp = httpx.get(
+            "https://api.search.brave.com/res/v1/web/search",
+            params={"q": query, "count": min(limit, 20)},
+            headers={"X-Subscription-Token": settings.BRAVE_SEARCH_API_KEY, "Accept": "application/json"},
+            timeout=settings.SEARCH_TIMEOUT_SECONDS or 30,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        results = [
+            {"title": item.get("title", ""), "url": item.get("url", ""), "snippet": item.get("description", "")}
+            for item in (data.get("web") or {}).get("results", [])[:limit]
+        ]
+        if results:
+            self.real_data_available = True
+        return results
 
     def _search_serpapi(self, query: str, limit: int) -> list[dict]:
         import httpx

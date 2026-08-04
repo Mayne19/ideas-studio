@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     SEARCH_TIMEOUT_SECONDS: int = 30
     GOOGLE_SEARCH_API_KEY: str = ""
     GOOGLE_SEARCH_CX: str = ""
+    BRAVE_SEARCH_API_KEY: str = ""
 
     PIPELINE_MODE: str = "ideas_only"
 
