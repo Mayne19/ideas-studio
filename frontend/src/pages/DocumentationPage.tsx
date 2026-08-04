@@ -1,7 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { ComponentType, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Download, Search, Menu, X } from '@/components/ui/hugeIcons'
+import {
+  ArrowRight, Download, Search, Menu, X,
+  Zap, BookOpen, FolderOpen, Globe, ClipboardList, FileText, TrendingUp,
+  RefreshCw, Cpu, Bot, ShieldCheck, Users, Code, BarChart2, Lock, HelpCircle,
+  ChevronLeft, ChevronRight,
+} from '@/components/ui/hugeIcons'
 import { Card } from '@/components/ui/Card'
+
+type IconType = ComponentType<{ size?: number; className?: string }>
 
 const configuredApiUrl = (import.meta.env['VITE_API_URL'] as string | undefined)?.trim().replace(/\/$/, '')
 const documentationApiUrl = configuredApiUrl || 'http://localhost:8000'
@@ -16,6 +24,7 @@ const NAV_ITEMS = [
 interface Chapter {
   id: string
   label: string
+  icon: IconType
   sections: { id: string; label: string; depth: number }[]
   content: string
 }
@@ -24,6 +33,7 @@ const CHAPTERS: Chapter[] = [
   {
     id: 'prise-en-main',
     label: 'Prise en main',
+    icon: Zap,
     sections: [
       { id: 'quest-ce-que-ideas-studio', label: "Qu'est-ce que Ideas Studio", depth: 2 },
       { id: 'a-qui-sadresse-cet-outil', label: 'À qui sadresse cet outil', depth: 2 },
@@ -66,6 +76,7 @@ const CHAPTERS: Chapter[] = [
   {
     id: 'concepts',
     label: 'Concepts fondamentaux',
+    icon: BookOpen,
     sections: [
       { id: 'projet', label: 'Projet', depth: 2 },
       { id: 'membres-et-roles', label: 'Membres et rôles', depth: 2 },
@@ -101,6 +112,7 @@ const CHAPTERS: Chapter[] = [
   {
     id: 'creer-projet',
     label: 'Créer un projet',
+    icon: FolderOpen,
     sections: [
       { id: 'configuration-initiale', label: 'Configuration initiale', depth: 2 },
       { id: 'champs-obligatoires', label: 'Champs obligatoires', depth: 2 },
@@ -140,6 +152,7 @@ const CHAPTERS: Chapter[] = [
   {
     id: 'connecter-site',
     label: 'Connecter un site',
+    icon: Globe,
     sections: [
       { id: 'pourquoi-connecter', label: 'Pourquoi connecter un site', depth: 2 },
       { id: 'donnees-collectees', label: 'Le snippet et les données collectées', depth: 2 },
@@ -191,6 +204,7 @@ const CHAPTERS: Chapter[] = [
   {
     id: 'checklist',
     label: 'Checklist de production',
+    icon: ClipboardList,
     sections: [
       { id: 'avant-le-lancement', label: 'Avant le lancement', depth: 2 },
       { id: 'configuration-ia', label: 'Configuration IA', depth: 2 },
@@ -239,6 +253,7 @@ const CHAPTERS: Chapter[] = [
   {
     id: 'articles',
     label: 'Articles et éditeur',
+    icon: FileText,
     sections: [
       { id: 'vue-ensemble', label: "Vue d'ensemble", depth: 2 },
       { id: 'flux-travail-editorial', label: 'Flux de travail éditorial', depth: 2 },
@@ -294,6 +309,7 @@ const CHAPTERS: Chapter[] = [
   {
     id: 'seo',
     label: 'SEO et rapports',
+    icon: TrendingUp,
     sections: [
       { id: 'seo-integre', label: 'SEO intégré', depth: 2 },
       { id: 'scores-editoriaux', label: 'Scores éditoriaux', depth: 2 },
@@ -345,6 +361,7 @@ const CHAPTERS: Chapter[] = [
   {
     id: 'pipeline',
     label: 'Pipeline automatique',
+    icon: RefreshCw,
     sections: [
       { id: 'a-quoi-sert-le-pipeline', label: 'À quoi sert le pipeline', depth: 2 },
       { id: 'configuration', label: 'Configuration', depth: 2 },
@@ -399,6 +416,7 @@ const CHAPTERS: Chapter[] = [
   {
     id: 'providers',
     label: 'Providers IA',
+    icon: Cpu,
     sections: [
       { id: 'quest-ce-quun-provider', label: "Qu'est-ce qu'un provider", depth: 2 },
       { id: 'ajouter-un-provider', label: 'Ajouter un provider', depth: 2 },
@@ -451,6 +469,7 @@ const CHAPTERS: Chapter[] = [
   {
     id: 'agents',
     label: 'Agents IA',
+    icon: Bot,
     sections: [
       { id: 'quest-ce-quun-agent', label: "Qu'est-ce qu'un agent", depth: 2 },
       { id: 'categories-agents', label: 'Catégories d\'agents', depth: 2 },
@@ -505,6 +524,7 @@ const CHAPTERS: Chapter[] = [
   {
     id: 'permissions',
     label: 'Accès et permissions',
+    icon: ShieldCheck,
     sections: [
       { id: 'roles-projet', label: 'Rôles projet', depth: 2 },
       { id: 'admin-plateforme', label: 'Administrateur plateforme', depth: 2 },
@@ -541,6 +561,7 @@ const CHAPTERS: Chapter[] = [
   {
     id: 'collaboration',
     label: 'Collaboration',
+    icon: Users,
     sections: [
       { id: 'travail-equipe', label: 'Travail en équipe', depth: 2 },
       { id: 'commentaires', label: 'Commentaires', depth: 2 },
@@ -577,6 +598,7 @@ const CHAPTERS: Chapter[] = [
   {
     id: 'api',
     label: 'API et Webhooks',
+    icon: Code,
     sections: [
       { id: 'api-publique', label: 'API publique', depth: 2 },
       { id: 'swagger-openapi', label: 'Swagger et OpenAPI', depth: 2 },
@@ -614,6 +636,7 @@ const CHAPTERS: Chapter[] = [
   {
     id: 'tracking',
     label: 'Analytics et tracking',
+    icon: BarChart2,
     sections: [
       { id: 'systeme-tracking', label: 'Le système de tracking', depth: 2 },
       { id: 'dashboard-performance', label: 'Dashboard Analytics', depth: 2 },
@@ -656,6 +679,7 @@ const CHAPTERS: Chapter[] = [
   {
     id: 'security',
     label: 'Sécurité',
+    icon: Lock,
     sections: [
       { id: 'cles-api', label: 'Clés API', depth: 2 },
       { id: 'authentification', label: 'Authentification', depth: 2 },
@@ -695,6 +719,7 @@ const CHAPTERS: Chapter[] = [
   {
     id: 'faq',
     label: 'FAQ',
+    icon: HelpCircle,
     sections: [
       { id: 'generale', label: 'Générale', depth: 2 },
       { id: 'technique', label: 'Technique', depth: 2 },
@@ -824,12 +849,32 @@ function downloadMarkdown(filename: string, markdown: string) {
   URL.revokeObjectURL(url)
 }
 
+interface PaletteItem {
+  chapterId: string
+  chapterLabel: string
+  icon: IconType
+  id: string
+  label: string
+  isChapterRoot?: boolean
+}
+
 export default function DocumentationPage() {
   const [query, setQuery] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeChapterId, setActiveChapterId] = useState(CHAPTERS[0]?.id ?? '')
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
+  const [pendingScrollId, setPendingScrollId] = useState<string | null>(null)
+  const [scrollProgress, setScrollProgress] = useState(0)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const [paletteQuery, setPaletteQuery] = useState('')
+  const [paletteIndex, setPaletteIndex] = useState(0)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const paletteInputRef = useRef<HTMLInputElement>(null)
 
   const activeChapter = CHAPTERS.find((c) => c.id === activeChapterId) ?? CHAPTERS[0]
+  const activeChapterIndex = CHAPTERS.findIndex((c) => c.id === activeChapterId)
+  const prevChapter = activeChapterIndex > 0 ? CHAPTERS[activeChapterIndex - 1] : null
+  const nextChapter = activeChapterIndex >= 0 && activeChapterIndex < CHAPTERS.length - 1 ? CHAPTERS[activeChapterIndex + 1] : null
 
   const filteredChapters = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -842,12 +887,142 @@ export default function DocumentationPage() {
   const redocUrl = `${documentationApiUrl}/redoc`
   const openApiUrl = `${documentationApiUrl}/openapi.json`
 
+  function openPalette() {
+    setPaletteQuery('')
+    setPaletteIndex(0)
+    setPaletteOpen(true)
+  }
+
+  // Global ⌘K / Ctrl+K shortcut to open the search palette.
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setPaletteOpen((v) => {
+          if (v) return false
+          setPaletteQuery('')
+          setPaletteIndex(0)
+          return true
+        })
+      }
+      if (e.key === 'Escape') setPaletteOpen(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  // Focus the palette input once it mounts (imperative DOM action, no state update).
+  useEffect(() => {
+    if (paletteOpen) requestAnimationFrame(() => paletteInputRef.current?.focus())
+  }, [paletteOpen])
+
+  // Thin reading-progress bar tied to page scroll.
+  useEffect(() => {
+    function onScroll() {
+      const h = document.documentElement
+      const scrollable = h.scrollHeight - h.clientHeight
+      setScrollProgress(scrollable > 0 ? (h.scrollTop / scrollable) * 100 : 0)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Highlight the section currently in view in the right-hand outline.
+  useEffect(() => {
+    const container = contentRef.current
+    if (!container) return
+    const headings = Array.from(container.querySelectorAll('h2[id], h3[id]'))
+    if (headings.length === 0) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActiveSectionId(entry.target.id)
+        })
+      },
+      { rootMargin: '-96px 0px -70% 0px', threshold: 0 },
+    )
+    headings.forEach((h) => observer.observe(h))
+    return () => observer.disconnect()
+  }, [activeChapterId])
+
+  // Scroll to a specific heading once its chapter has rendered.
+  useEffect(() => {
+    if (!pendingScrollId) return
+    const targetId = pendingScrollId
+    const raf = requestAnimationFrame(() => {
+      document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      setPendingScrollId(null)
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [activeChapterId, pendingScrollId])
+
+  function goToChapter(id: string) {
+    setActiveChapterId(id)
+    setQuery('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const searchIndex = useMemo<PaletteItem[]>(
+    () =>
+      CHAPTERS.flatMap((ch) =>
+        ch.sections.map((s) => ({
+          chapterId: ch.id,
+          chapterLabel: ch.label,
+          icon: ch.icon,
+          id: s.id,
+          label: s.label,
+        })),
+      ),
+    [],
+  )
+
+  const paletteResults = useMemo<PaletteItem[]>(() => {
+    const q = paletteQuery.trim().toLowerCase()
+    if (!q) {
+      return CHAPTERS.map((ch) => ({
+        chapterId: ch.id,
+        chapterLabel: ch.label,
+        icon: ch.icon,
+        id: ch.sections[0]?.id ?? '',
+        label: ch.label,
+        isChapterRoot: true,
+      }))
+    }
+    return searchIndex
+      .filter((item) => item.label.toLowerCase().includes(q) || item.chapterLabel.toLowerCase().includes(q))
+      .slice(0, 20)
+  }, [paletteQuery, searchIndex])
+
+  function selectPaletteItem(item: PaletteItem) {
+    setPaletteOpen(false)
+    setActiveChapterId(item.chapterId)
+    setPendingScrollId(item.id)
+  }
+
+  function handlePaletteKeyDown(e: ReactKeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setPaletteIndex((i) => Math.min(i + 1, paletteResults.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setPaletteIndex((i) => Math.max(i - 1, 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      const item = paletteResults[paletteIndex]
+      if (item) selectPaletteItem(item)
+    }
+  }
+
   function handleDownloadMarkdown() {
     downloadMarkdown('ideas-studio-documentation-complete.md', buildDocumentationMarkdown())
   }
 
   return (
     <div className="min-h-screen bg-bg text-primary">
+      {/* Reading progress */}
+      <div className="fixed left-0 top-0 z-50 h-[2.5px] bg-accent transition-[width] duration-150" style={{ width: `${scrollProgress}%` }} />
+
       {/* Topbar */}
       <header className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/80">
           <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-5">
@@ -865,6 +1040,15 @@ export default function DocumentationPage() {
           </nav>
 
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={openPalette}
+              className="hidden sm:flex items-center gap-2 rounded-[8px] border border-border bg-surface-soft px-3 py-1.5 text-[13px] text-tertiary hover:border-border-strong hover:text-secondary transition-colors"
+            >
+              <Search size={13} />
+              Rechercher
+              <kbd className="ml-1 rounded-[4px] border border-border bg-surface px-1.5 py-0.5 text-[11px] font-medium text-tertiary">⌘K</kbd>
+            </button>
             <Link to="/login" className="hidden sm:inline-flex rounded-[8px] px-3 py-1.5 text-[14px] font-medium text-secondary hover:bg-surface-soft hover:text-primary transition-colors">
               Connexion
             </Link>
@@ -908,19 +1092,23 @@ export default function DocumentationPage() {
               />
             </div>
             <nav className="flex flex-col gap-0.5">
-              {filteredChapters.map((ch) => (
-                <button
-                  key={ch.id}
-                  onClick={() => { setActiveChapterId(ch.id); setQuery('') }}
-                  className={`w-full text-left rounded-[8px] px-3 py-2 text-[14px] transition-colors ${
-                    activeChapterId === ch.id
-                      ? 'bg-accent/10 font-medium text-accent'
-                      : 'text-secondary hover:bg-surface-soft hover:text-primary'
-                  }`}
-                >
-                  {ch.label}
-                </button>
-              ))}
+              {filteredChapters.map((ch) => {
+                const ChapterIcon = ch.icon
+                return (
+                  <button
+                    key={ch.id}
+                    onClick={() => goToChapter(ch.id)}
+                    className={`flex w-full items-center gap-2.5 text-left rounded-[8px] px-3 py-2 text-[14px] transition-colors ${
+                      activeChapterId === ch.id
+                        ? 'bg-accent/10 font-medium text-accent'
+                        : 'text-secondary hover:bg-surface-soft hover:text-primary'
+                    }`}
+                  >
+                    <ChapterIcon size={15} className={activeChapterId === ch.id ? 'text-accent' : 'text-tertiary'} />
+                    {ch.label}
+                  </button>
+                )
+              })}
             </nav>
           </div>
         </aside>
@@ -962,7 +1150,38 @@ export default function DocumentationPage() {
               </p>
             )}
           </Card>
-          <div className="doc-content" dangerouslySetInnerHTML={{ __html: activeChapter.content }} />
+          <div ref={contentRef} className="doc-content" dangerouslySetInnerHTML={{ __html: activeChapter.content }} />
+
+          <div className="mt-14 grid grid-cols-1 gap-3 border-t border-border pt-8 sm:grid-cols-2">
+            {prevChapter ? (
+              <button
+                type="button"
+                onClick={() => goToChapter(prevChapter.id)}
+                className="group flex items-center gap-3 rounded-[10px] border border-border px-4 py-3 text-left hover:border-border-strong hover:bg-surface-soft transition-colors"
+              >
+                <ChevronLeft size={16} className="shrink-0 text-tertiary group-hover:text-primary transition-colors" />
+                <span className="min-w-0">
+                  <span className="block text-[11px] font-medium uppercase tracking-wider text-tertiary">Précédent</span>
+                  <span className="block truncate text-[14px] font-medium text-primary">{prevChapter.label}</span>
+                </span>
+              </button>
+            ) : (
+              <span />
+            )}
+            {nextChapter && (
+              <button
+                type="button"
+                onClick={() => goToChapter(nextChapter.id)}
+                className="group flex items-center justify-end gap-3 rounded-[10px] border border-border px-4 py-3 text-right hover:border-border-strong hover:bg-surface-soft transition-colors sm:col-start-2"
+              >
+                <span className="min-w-0">
+                  <span className="block text-[11px] font-medium uppercase tracking-wider text-tertiary">Suivant</span>
+                  <span className="block truncate text-[14px] font-medium text-primary">{nextChapter.label}</span>
+                </span>
+                <ChevronRight size={16} className="shrink-0 text-tertiary group-hover:text-primary transition-colors" />
+              </button>
+            )}
+          </div>
         </main>
 
         {/* Right sidebar - outline of active chapter only */}
@@ -970,17 +1189,20 @@ export default function DocumentationPage() {
           <div className="sticky top-14 py-6 pl-4">
             <p className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-tertiary">Sur cette page</p>
             <nav className="flex flex-col gap-0.5 border-l border-border pl-4">
-              {outline.map((item) => (
-                <a
-                  key={item.id}
-                  href={`#${item.id}`}
-                  className={`py-1 text-[14px] transition-colors ${
-                    item.depth === 3 ? 'pl-3 text-tertiary' : 'text-secondary'
-                  } hover:text-primary`}
-                >
-                  {item.label}
-                </a>
-              ))}
+              {outline.map((item) => {
+                const isActive = activeSectionId === item.id
+                return (
+                  <a
+                    key={item.id}
+                    href={`#${item.id}`}
+                    className={`py-1 text-[14px] transition-colors ${item.depth === 3 ? 'pl-3' : ''} ${
+                      isActive ? 'font-medium text-accent' : item.depth === 3 ? 'text-tertiary' : 'text-secondary'
+                    } hover:text-primary`}
+                  >
+                    {item.label}
+                  </a>
+                )
+              })}
             </nav>
           </div>
         </aside>
@@ -997,6 +1219,61 @@ export default function DocumentationPage() {
           </div>
         </div>
       </footer>
+
+      {/* ⌘K search palette */}
+      {paletteOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 px-4 pt-[12vh] backdrop-blur-sm"
+          onClick={() => setPaletteOpen(false)}
+        >
+          <div
+            className="w-full max-w-xl overflow-hidden rounded-[14px] border border-border bg-surface shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+              <Search size={16} className="shrink-0 text-tertiary" />
+              <input
+                ref={paletteInputRef}
+                value={paletteQuery}
+                onChange={(e) => { setPaletteQuery(e.target.value); setPaletteIndex(0) }}
+                onKeyDown={handlePaletteKeyDown}
+                placeholder="Rechercher une page, un chapitre…"
+                className="w-full bg-transparent text-[15px] text-primary outline-none placeholder:text-tertiary"
+              />
+              <kbd className="shrink-0 rounded-[4px] border border-border px-1.5 py-0.5 text-[11px] text-tertiary">Esc</kbd>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto p-2">
+              {paletteResults.length === 0 && (
+                <p className="px-3 py-6 text-center text-[14px] text-tertiary">Aucun résultat pour « {paletteQuery} »</p>
+              )}
+              {paletteResults.map((item, index) => {
+                const ItemIcon = item.icon
+                return (
+                  <button
+                    key={`${item.chapterId}-${item.id}`}
+                    type="button"
+                    onClick={() => selectPaletteItem(item)}
+                    onMouseEnter={() => setPaletteIndex(index)}
+                    className={`flex w-full items-center gap-3 rounded-[8px] px-3 py-2.5 text-left transition-colors ${
+                      index === paletteIndex ? 'bg-accent/10' : 'hover:bg-surface-soft'
+                    }`}
+                  >
+                    <ItemIcon size={15} className={index === paletteIndex ? 'text-accent' : 'text-tertiary'} />
+                    <span className="min-w-0 flex-1">
+                      <span className={`block truncate text-[14px] ${index === paletteIndex ? 'font-medium text-accent' : 'text-primary'}`}>
+                        {item.label}
+                      </span>
+                      {!item.isChapterRoot && (
+                        <span className="block truncate text-[12px] text-tertiary">{item.chapterLabel}</span>
+                      )}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
