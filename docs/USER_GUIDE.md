@@ -1,115 +1,116 @@
 # Guide utilisateur — Ideas Studio
 
-Ideas Studio est une plateforme SaaS de création de contenu SEO assistée par IA. Ce guide vous accompagne dans l'utilisation de toutes les fonctionnalités.
+> Ideas Studio est une plateforme SaaS de création de contenu SEO assistée par IA. Ce guide couvre toutes les fonctionnalités réellement disponibles dans l'interface, vérifiées contre le code au 2026-08-04 (branche `main`, commit `febbae1e`).
+>
+> Les fonctionnalités qui existent côté API mais ne sont pas encore branchées à une page de l'interface sont signalées par ⚠️ et regroupées en annexe (§24) plutôt que présentées comme utilisables aujourd'hui.
 
 ---
 
 ## Table des matières
 
-1. [Créer un compte](#créer-un-compte)
-2. [Gérer son profil](#gérer-son-profil)
-3. [Créer et configurer un projet](#créer-et-configurer-un-projet)
-4. [Connecter un blog](#connecter-un-blog)
-5. [Gérer les catégories](#gérer-les-catégories)
-6. [Configurer les callouts](#configurer-les-callouts)
-7. [Générer des idées](#générer-des-idées)
-8. [Rédiger des articles](#rédiger-des-articles)
-9. [L'orchestrateur SEO](#lorchestrateur-seo)
+1. [Vue d'ensemble & navigation](#vue-densemble--navigation)
+2. [Compte & profil](#compte--profil)
+3. [Projets](#projets)
+4. [Équipe, rôles & invitations](#équipe-rôles--invitations)
+5. [Catégories](#catégories)
+6. [Callouts](#callouts)
+7. [Assistant de configuration éditoriale](#assistant-de-configuration-éditoriale)
+8. [Générer des idées](#générer-des-idées)
+9. [Générer des articles — l'orchestrateur SEO](#générer-des-articles--lorchestrateur-seo)
 10. [Analyser le SEO](#analyser-le-seo)
-11. [Éditer et réviser](#éditer-et-réviser)
-12. [Publier et programmer](#publier-et-programmer)
-13. [Pipeline automatisé](#pipeline-automatisé)
-14. [API Publique](#api-publique)
-15. [Tracking de trafic](#tracking-de-trafic)
-16. [Performance et analytics](#performance-et-analytics)
-17. [Recommendations d'optimisation](#recommendations-doptimisation)
-18. [Notifications](#notifications)
-19. [Gestion d'équipe](#gestion-déquipe)
-20. [Invitations](#invitations)
-21. [Search Console](#search-console)
-22. [Webhooks](#webhooks)
-23. [Paramètres du compte](#paramètres-du-compte)
+11. [Éditeur, versions & commentaires](#éditeur-versions--commentaires)
+12. [Médiathèque](#médiathèque)
+13. [Publier, programmer & calendrier éditorial](#publier-programmer--calendrier-éditorial)
+14. [Configuration IA — Providers & Agents](#configuration-ia--providers--agents)
+15. [Pipeline automatisé](#pipeline-automatisé)
+16. [API publique du blog](#api-publique-du-blog)
+17. [Analytics](#analytics)
+18. [Recommandations d'optimisation](#recommandations-doptimisation)
+19. [Notifications](#notifications)
+20. [Search Console](#search-console)
+21. [Webhooks](#webhooks)
+22. [Sécurité du compte](#sécurité-du-compte)
+23. [Glossaire](#glossaire)
+24. [Annexe — fonctionnalités backend pas encore exposées](#annexe--fonctionnalités-backend-pas-encore-exposées)
 
 ---
 
-## Créer un compte
+## Vue d'ensemble & navigation
 
-1. Rendez-vous sur la page d'inscription
-2. Renseignez votre email, nom et mot de passe
-3. Validez votre inscription
+Un **projet** représente un blog ou site web pour lequel vous produisez du contenu. Toutes les fonctionnalités décrites ci-dessous (catégories, idées, articles, pipeline, analytics…) sont rattachées à un projet précis — vous naviguez d'un projet à l'autre depuis la liste des projets.
+
+À l'intérieur d'un projet, la barre de recherche globale (icône loupe) interroge en une fois :
+- les pages de réglages du projet (paramètres, stratégie, providers, agents, pipeline, intégration, médias…),
+- les articles et idées (titre, mot-clé, extrait, contenu),
+- les catégories,
+- les médias (nom de fichier, texte alternatif, légende),
+- les autres projets auxquels vous avez accès.
+
+C'est un raccourci pratique pour retrouver un article ou sauter directement à un écran de configuration sans naviguer dans les menus.
+
+---
+
+## Compte & profil
+
+### Créer un compte
+
+1. Rendez-vous sur la page d'inscription.
+2. Renseignez votre email, votre nom et un mot de passe.
+3. Validez.
+
+Aucune règle de complexité n'est imposée sur le mot de passe à l'inscription (au-delà du hash bcrypt appliqué en base).
 
 ### Connexion
 
-Utilisez votre email et mot de passe pour vous connecter. Un token JWT est généré et conservé pour toute la session (durée configurable, 24h par défaut).
-
-### Profil utilisateur
-
-Accédez à votre profil depuis le menu utilisateur. Vous pouvez y voir :
-- Votre nom et email
-- Votre avatar
-- La date de création de votre compte
-
----
-
-## Gérer son profil
+Un token JWT est généré à la connexion et conservé pour la session. Il expire après **24h** (configurable côté serveur).
 
 ### Modifier son mot de passe
 
-1. Allez dans **Profil → Changer le mot de passe**
-2. Saisissez votre mot de passe actuel
-3. Saisissez le nouveau mot de passe (minimum 6 caractères)
-4. Confirmez
+Il existe deux flux distincts, avec deux règles de longueur minimale différentes — à connaître pour éviter la confusion :
+
+| Flux | Où | Longueur minimale |
+|---|---|---|
+| Changer son mot de passe depuis le compte connecté | **Compte → Changer le mot de passe** | 6 caractères |
+| Réinitialiser après un « mot de passe oublié » (lien reçu par email) | Page de réinitialisation | 8 caractères |
 
 ### Avatar
 
-1. Allez dans **Profil → Avatar**
-2. Téléchargez une image (JPEG, PNG, GIF ou WebP)
-3. L'avatar est automatiquement recadré et sauvegardé
+1. Allez dans **Compte → Avatar**.
+2. Téléchargez une image (JPEG, PNG, GIF ou WebP).
+3. L'image est affichée en cercle dans l'interface, **mais elle n'est pas recadrée automatiquement** avant l'enregistrement — préférez une image déjà carrée pour un rendu propre.
 
 ---
 
-## Créer et configurer un projet
-
-Un projet représente un blog ou site web pour lequel vous produisez du contenu.
+## Projets
 
 ### Création
 
-1. Cliquez sur **Nouveau projet**
+1. Cliquez sur **Nouveau projet**.
 2. Renseignez les champs :
 
 | Champ | Obligatoire | Description |
 |---|---|---|
-| Nom | Oui | Nom du projet (ex: "Blog Tech") |
-| Domaine | Non | URL du blog connecté (ex: `blog.example.com`) |
-| Langue | Non | Langue du contenu (ex: `fr`, `en`, `es`) |
+| Nom | Oui | Nom du projet (ex. « Blog Tech ») |
+| Domaine | Non | URL du blog connecté |
+| Langue (`locale`) | Non | Langue du contenu (ex. `fr`, `en`) |
+| Fuseau horaire | Non | Utilisé pour la programmation des publications |
 | Audience | Non | Description de l'audience cible |
 | Ton | Non | Ton éditorial souhaité |
+| Niveau de lecteur | Non | Niveau de lecture visé |
+| Style rédactionnel | Non | Style d'écriture souhaité |
+| Vertical | Non | Secteur/thématique du blog |
+| Longueur d'article min/max | Non | Bornes de mots visées par défaut |
+| Règles / contraintes | Non | Consignes éditoriales libres à respecter |
 
 ### Configuration
 
-Une fois le projet créé, vous pouvez modifier ses paramètres à tout moment :
-- Le nom et le domaine
-- La langue et le pays cible
-- L'audience et le ton éditorial
-- La configuration IA
+Ces mêmes champs sont modifiables à tout moment depuis les paramètres du projet, ainsi que la configuration IA (voir [§14](#configuration-ia--providers--agents)).
 
-### Supprimer un projet
+### Connecter un blog
 
-La suppression est définitive. Tous les articles, catégories et données associées sont supprimés.
-
-### Déconnecter un blog
-
-Si vous souhaitez déconnecter le blog sans supprimer le projet, utilisez l'option **Déconnecter**.
-
----
-
-## Connecter un blog
-
-### Snippet de tracking
-
-1. Allez dans **Projet → Connecter**
-2. Copiez le snippet JavaScript fourni
-3. Ajoutez-le dans le `<head>` de votre blog
+1. Allez dans **Projet → Intégration**.
+2. Copiez le snippet JavaScript fourni.
+3. Ajoutez-le dans le `<head>` de votre blog :
 
 ```html
 <script
@@ -120,64 +121,86 @@ Si vous souhaitez déconnecter le blog sans supprimer le projet, utilisez l'opti
 </script>
 ```
 
-### Statuts de connexion
+Le script collecte automatiquement l'URL visitée, le chemin, le referrer et le user-agent ; l'IP est utilisée côté serveur uniquement pour hasher le visiteur (jamais stockée en clair) et **aucun cookie n'est déposé**.
 
-| Statut | Description |
-|---|---|
-| `not_connected` | Blog pas encore connecté |
-| `connected` | Blog connecté et tracking actif |
-| `disconnected` | Blog déconnecté |
+La page d'intégration affiche également l'ID du projet, la clé de tracking publique, la clé API secrète (masquée) et les endpoints de l'[API publique](#api-publique-du-blog).
 
-### Informations de connexion
+**Statuts** : un projet est soit **non connecté** soit **connecté** (deux états seulement — il n'existe pas de troisième statut « déconnecté » distinct : l'action **Déconnecter** ramène simplement le projet à l'état non connecté, sans rien supprimer).
 
-La page de connexion affiche :
-- L'ID du projet
-- La clé de tracking publique
-- La clé API secrète (masquée)
-- Les endpoints de l'API publique
-- Le statut de connexion
+### Supprimer un projet
+
+Réservé aux rôles Owner et Admin. La suppression est **définitive** : articles, catégories, médias et toutes les données associées sont supprimés en cascade.
 
 ---
 
-## Gérer les catégories
+## Équipe, rôles & invitations
 
-Les catégories organisent vos articles et permettent à l'orchestrateur SEO de prioriser la production.
+### Les 5 rôles
+
+| Rôle | Écrire/éditer des articles | Gérer la médiathèque | Gérer catégories, callouts, pipeline | Gérer les membres | Paramètres & suppression du projet |
+|---|:---:|:---:|:---:|:---:|:---:|
+| **Owner** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Admin** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Editor** | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Designer** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Viewer** | ❌ (lecture seule) | ❌ (lecture seule) | ❌ | ❌ | ❌ |
+
+Le rôle **Designer** est pensé spécifiquement pour la gestion des images et de la médiathèque, en plus de la rédaction. Le rôle **Owner ne peut jamais être réassigné ni retiré** — ni depuis l'interface, ni via l'API.
+
+### Ajouter un membre
+
+1. Allez dans **Projet → Membres → Ajouter un membre**.
+2. Recherchez la personne par ID utilisateur ou par **@nom d'utilisateur** (elle doit déjà avoir un compte Ideas Studio).
+3. Choisissez le rôle (Admin, Editor, Designer ou Viewer — le rôle Owner n'est pas proposé).
+4. Validez.
+
+Modifier un rôle ou retirer un membre suit le même principe, réservé aux rôles Owner et Admin. Chaque changement génère une notification dans le projet.
+
+### Invitations par email
+
+1. Allez dans **Projet → Membres → Inviter**.
+2. Saisissez l'email et choisissez le rôle.
+3. Un lien d'invitation est généré, valable **14 jours**. S'il n'y a pas d'envoi d'email transactionnel configuré, copiez le lien manuellement pour le transmettre.
+4. La personne invitée ouvre le lien, se connecte ou crée un compte, puis accepte l'invitation.
+
+Statuts affichés : **En attente**, **Acceptée**, **Expirée**. Une invitation en attente peut être **révoquée** à tout moment.
+
+---
+
+## Catégories
+
+Les catégories organisent vos articles et pilotent la priorisation automatique de l'orchestrateur SEO et du pipeline.
 
 ### Créer une catégorie
 
-1. Allez dans **Projet → Catégories**
-2. Cliquez sur **Nouvelle catégorie**
-3. Renseignez :
-
 | Champ | Description |
 |---|---|
-| Nom | Le nom visible de la catégorie |
-| Slug | Version URL-friendly (générée automatiquement) |
+| Nom | Nom visible de la catégorie |
+| Slug | Version URL-friendly, générée automatiquement |
 | Description | Description de la catégorie |
-| Couleur | Code hexadécimal pour identifier la catégorie |
-| Priorité | Ordre d'affichage (0 = le plus haut) |
+| Couleur | Code hexadécimal pour l'identifier visuellement |
+| Score de priorité | Un poids : **plus la valeur est élevée, plus la catégorie est favorisée** dans le choix automatique de sujet (ce n'est pas un simple ordre d'affichage) |
 | Objectif éditorial | But stratégique de la catégorie |
-| Audience cible | Sous-groupe d'audience pour cette catégorie |
+| Audience cible | Sous-groupe d'audience visé |
 | Fréquence mensuelle | Nombre d'articles visé par mois |
-| Pipeline activé | Inclure dans le pipeline automatisé |
+| Longueur min/max | Bornes de mots imposées pour les articles de cette catégorie |
+| Notes internes | Notes libres, non visibles publiquement |
+| Pipeline activé | Inclure cette catégorie dans les cycles du pipeline automatisé |
 
-### Pipeline et catégories
-
-Les catégories avec `pipeline_enabled=true` sont automatiquement incluses dans les cycles de génération du pipeline.
+Les catégories avec le pipeline activé sont automatiquement prises en compte dans les cycles de génération automatique (voir [§15](#pipeline-automatisé)).
 
 ---
 
-## Configurer les callouts
+## Callouts
 
-Les callouts sont des encadrés visuels (info, warning, tip, etc.) qui enrichissent les articles.
+Les callouts sont des encadrés visuels (info, astuce, avertissement…) qui enrichissent le contenu d'un article.
 
 ### Créer un callout
 
 ```json
 {
-  "slug": "info",
-  "label": "Information",
-  "style": "info",
+  "slug": "conseil",
+  "label": "Conseil",
   "default_title": "À savoir",
   "color_background": "#e8f4f8",
   "color_border": "#2196F3",
@@ -185,173 +208,104 @@ Les callouts sont des encadrés visuels (info, warning, tip, etc.) qui enrichiss
 }
 ```
 
-### Styles disponibles
-
-- `info` — Information générale
-- `warning` — Attention
-- `tip` — Conseil
-- `danger` — Important / danger
-- `success` — Succès
+Il n'existe **pas de liste fermée de styles imposés** : `label` est un texte libre, et le slug se génère automatiquement à partir de celui-ci. Un jeu de couleurs par défaut est appliqué si vous ne précisez pas vos propres couleurs, pour quelques mots-clés reconnus par l'éditeur (`conseil`, `attention`, `erreur`, `succes`) — pour tout autre libellé, définissez vos couleurs manuellement afin d'obtenir un rendu cohérent.
 
 ### Synchronisation depuis le blog
 
-Si votre blog expose une configuration callouts via `/api/ideas-studio/config`, vous pouvez synchroniser automatiquement les callouts :
+Si votre blog expose sa configuration de callouts via `/api/ideas-studio/config`, vous pouvez les importer ou les mettre à jour automatiquement :
 
 ```
 POST /projects/{project_id}/callouts/sync
 ```
 
-Cette opération importe ou met à jour les callouts depuis le site connecté.
+---
+
+## Assistant de configuration éditoriale
+
+Pour démarrer rapidement un nouveau projet, un assistant peut pré-remplir la stratégie éditoriale à partir du domaine déjà connecté :
+
+1. Depuis la page **Stratégie** du projet, lancez la suggestion.
+2. L'assistant récupère les catégories existantes de votre blog et analyse la page d'accueil (titre, meta-description).
+3. Si un provider IA est configuré (non-mock), il propose : une description, une audience, un ton, un positionnement, 5 à 8 mots-clés principaux, 5 à 10 catégories recommandées et des consignes de rédaction SEO.
+4. Sans provider IA configuré, une suggestion générique par défaut est proposée à la place.
+
+Vous restez libre d'ajuster chaque champ suggéré avant de l'enregistrer.
 
 ---
 
 ## Générer des idées
 
-Le moteur d'idées utilise l'IA pour proposer des sujets d'articles SEO optimisés.
+Le moteur d'idées utilise l'IA — enrichie par une recherche web réelle — pour proposer des sujets d'articles SEO optimisés.
 
 ### Génération simple
 
-1. Allez dans **Intelligence → Générer une idée**
-2. Vous pouvez préciser (optionnel) :
-   - **Titre préféré** — Suggérer un titre
-   - **Mot-clé** — Forcer un mot-clé spécifique
-   - **Catégorie** — Associer à une catégorie
-   - **Angle** — Angle éditorial souhaité
-   - **Intention de recherche** — `informational`, `commercial`, `transactional`, `navigational`
-   - **Audience** — Audience cible spécifique
-   - **Contexte** — Contexte additionnel
-3. L'idée générée contient :
-   - Un titre
-   - Un mot-clé principal
-   - Un angle éditorial
-   - Une intention de recherche détectée
-   - Une audience cible
-   - Un score d'opportunité (0.0 - 1.0)
-   - Un résumé SERP (si provider de recherche configuré)
+1. Allez dans **Intelligence → Générer une idée**.
+2. Précisez, en option : titre préféré, mot-clé, catégorie, angle éditorial, intention de recherche (`informational`, `commercial`, `transactional`, `navigational`), audience, contexte additionnel, et si la FAQ/les callouts doivent être préparés dès cette étape.
+3. L'idée générée contient un titre, un mot-clé principal, un angle, une intention détectée, une audience et un score d'opportunité (0.0–1.0).
 
-### Génération multiple
+Le pré-brief détaillé de l'idée (sources trouvées lors de la recherche web, justification de l'opportunité, format recommandé, difficulté estimée) est consultable séparément dans l'espace de travail de l'article — il n'apparaît pas directement dans la réponse de génération, et n'est produit que lorsqu'un vrai provider IA est configuré (pas en mode démo).
 
-Générez plusieurs idées d'un coup :
+### Génération multiple & découverte
 
 ```
-POST /projects/{project_id}/ideas/auto-generate
-```
-
-**Body :**
-```json
-{
-  "count": 3,
-  "context_hint": "Contexte"
-}
-```
-
-### Découverte d'idées
-
-La découverte utilise la stratégie de catégorie pour choisir intelligemment les sujets :
-
-```
-POST /projects/{project_id}/ideas/discover
+POST /projects/{project_id}/ideas/auto-generate     # génère N idées d'un coup
+POST /projects/{project_id}/ideas/discover           # laisse la stratégie de catégorie choisir les sujets
 ```
 
 ### Gérer les idées
 
-Après génération, les idées apparaissent avec le statut `idea_proposed`. Vous pouvez :
-
-- **Définir la priorité** — Marquer une idée comme prioritaire (`idea_priority`)
-- **Rejeter** — Avec une raison et une note optionnelle
-- **Convertir en brouillon manuel** — Créer un squelette d'article
-- **Démarrer la rédaction** — Lancer la génération IA complète
+Une idée générée apparaît avec le statut « proposée ». Vous pouvez la marquer prioritaire, la rejeter (avec raison et note), la convertir en brouillon manuel, ou démarrer directement sa rédaction complète.
 
 ### Prévention des doublons
 
-Le système vérifie automatiquement si le mot-clé est déjà utilisé dans un article actif (de `idea_proposed` à `published`). Si c'est le cas, l'idée n'est pas générée.
+Avant de générer une idée, le système vérifie que le mot-clé n'est pas déjà utilisé par un article actif (de l'idée à la publication). Si c'est le cas, l'idée n'est pas générée.
+
+### Le provider de recherche web
+
+Pour enrichir les idées avec de vrais résultats de recherche (plutôt que des données inventées), Ideas Studio interroge un moteur de recherche configuré **au niveau serveur** (pas par projet) :
+
+| Provider | Description |
+|---|---|
+| **Google Custom Search** | API Google officielle, nécessite une clé API + un moteur de recherche personnalisé (« cx »). Limite gratuite : 100 requêtes/jour. |
+| **SearXNG** | Instance de métamoteur auto-hébergée. |
+| **Mode démo (mock)** | Résultats fictifs, utilisé par défaut si rien n'est configuré. |
+
+⚠️ Sans configuration explicite, la génération d'idées tourne silencieusement en mode démo (résultats inventés). Si une clé Google est renseignée, elle est utilisée en priorité automatiquement.
+
+**À ne pas confondre** : ce provider sert à *trouver des sujets*. Un second système de recherche, indépendant, sert à l'**analyse concurrentielle** pendant la génération d'article complet (voir [§9](#générer-des-articles--lorchestrateur-seo)) — les deux se configurent séparément.
 
 ---
 
-## Rédiger des articles
+## Générer des articles — l'orchestrateur SEO
 
-### Rédaction automatique
+Depuis une idée, cliquez sur **Démarrer la rédaction**. Un seul mode de génération existe aujourd'hui : l'**orchestrateur**, un pipeline complet qui exécute une quarantaine d'étapes automatiques, organisées en phases.
 
-1. Depuis une idée, cliquez sur **Démarrer la rédaction**
-2. Le système :
-   1. Génère un plan détaillé (H2/H3 avec notes)
-   2. Rédige l'article complet en HTML
-   3. Calcule le temps de lecture
-   4. Génère le meta title et la meta description
-   5. Extrait l'excerpt
-   6. Génère la FAQ (3-5 questions)
-   7. Extrait les callouts du contenu
-   8. Exécute l'audit SEO Expert intégré
+### Les phases de l'orchestrateur
 
-### Options de rédaction
+| Phase | Ce qui s'y passe |
+|---|---|
+| **1. Analyse & stratégie** | Contexte du projet, stratégie de catégorie, découverte de l'idée, vérification de cannibalisation SEO, analyse d'intention, brief de recherche (avec évaluation de la qualité des sources et extraction d'enseignements si des sources ont été trouvées) |
+| **2. Brief éditorial** | Sélection des faits/preuves les plus fiables, brief de mots-clés, angle éditorial, plan de l'article, nouvelle vérification de cannibalisation sur le plan, plan d'images, plan de callouts, plan de FAQ, plan de liens internes et externes |
+| **3. Rédaction** | Génération du contenu HTML complet de l'article |
+| **4. Contrôle qualité linguistique & SEO** | Qualité de la langue, originalité, humanisation, lisibilité, EEAT, qualité éditoriale, données structurées, optimisation GEO (moteurs de réponse IA), checklist SEO finale, revue SEO agrégée |
+| **5. Révision par agents IA** *(si des agents sont configurés — [§14](#configuration-ia--providers--agents))* | Extraction des affirmations vérifiables, fact-checking, revue éditoriale, vérification de la rétention lecteur, revue d'engagement, optimisation SEO, notation qualité |
+| **6. Score & amélioration automatique** | Notation globale de l'article, puis jusqu'à 2 cycles d'amélioration ciblés automatiquement sur les points faibles détectés (EEAT, SEO, lisibilité, originalité, GEO) |
+| **7. Clôture** | Analyse des éventuelles erreurs rencontrées, rapport de génération final |
 
-- **Mode simple** — Idée → rédaction (legacy)
-- **Mode orchestrateur** — 23 étapes complètes (recommandé)
-- **Relancer** — Régénérer le contenu d'un article existant
-- **Brouillon manuel** — Créer un squelette à partir du plan
+Certaines étapes sont conditionnelles (dépendent de la disponibilité de sources de recherche ou d'agents IA configurés) — le nombre exact d'étapes exécutées varie donc légèrement d'un article à l'autre. C'est normal.
 
 ### Contenu généré
 
-L'article contient :
-- Contenu HTML (compatible TipTap)
-- Plan structuré (outline_json)
-- FAQ (faq_json)
-- Callouts extraits (callouts_json)
-- Métadonnées SEO (meta_title, meta_description)
-- Excerpt
-- Temps de lecture
-- Rapport de génération complet
+- Contenu HTML de l'article (compatible avec l'éditeur riche)
+- Plan structuré, FAQ, callouts extraits
+- Métadonnées SEO (meta title, meta description)
+- Extrait, temps de lecture
+- Rapport de génération complet : provider et modèle utilisés, outils disponibles/configurés, étapes complétées, erreurs éventuelles, coûts estimés et réels
 
----
+### Autres options
 
-## L'orchestrateur SEO
-
-L'orchestrateur est le moteur de génération avancé qui exécute 23 étapes pour produire un article professionnel.
-
-### Étapes de l'orchestrateur
-
-| Phase | Étape | Description |
-|---|---|---|
-| **1** | ProjectContext | Analyse du projet (nom, domaine, audience, ton) |
-| **2** | CategoryStrategy | Stratégie de catégorie (priorités, objectifs) |
-| **3** | IdeaDiscovery | Découverte d'idée (titre, mot-clé, intention) |
-| **4** | CannibalizationCheck | Vérification de cannibalisation SEO |
-| **5** | IntentAnalysis | Analyse d'intention de recherche |
-| **6** | ResearchBrief | Brief de recherche (sources, questions) |
-| **7** | KeywordBrief | Brief mot-clé (principal + secondaires) |
-| **8** | EditorialAngle | Angle éditorial (promesse, ton, EEAT) |
-| **9** | ArticleOutline | Plan structuré (sections, rôles) |
-| **10** | ImagePlan | Plan d'images (sourcing, alt texts) |
-| **11** | CalloutPlan | Plan de callouts (placement, style) |
-| **12** | FAQPlan | Plan de FAQ (questions pertinentes) |
-| **13** | InternalLinkPlan | Plan de liens internes |
-| **14** | ExternalLinkPlan | Plan de liens externes |
-| **15** | Writing | Rédaction complète de l'article |
-| **16** | LanguageQuality | Contrôle qualité linguistique |
-| **17** | Originality | Vérification d'originalité |
-| **18** | Humanization | Passage d'humanisation |
-| **19** | EEAT | Checklist EEAT (Expertise, Authorité, Confiance) |
-| **20** | EditorialQuality | Gateau qualité éditoriale |
-| **21** | SEOFinalChecklist | Checklist SEO finale |
-| **22** | SEOReview | Review SEO agrégée |
-| **23** | GenerationReport | Rapport de génération complet |
-
-### Utilisation
-
-```
-POST /projects/{project_id}/articles/generate
-```
-
-Avec `use_orchestrator: true` pour utiliser le mode complet.
-
-### Rapport de génération
-
-Consultez le rapport complet après génération pour voir :
-- Le provider et modèle utilisés
-- Les outils disponibles et configurés
-- Les étapes complétées
-- Les éventuelles erreurs ou limitations
-- Les scores et métriques
+- **Relancer** — régénère le contenu d'un article existant.
+- **Brouillon manuel** — crée un squelette d'article à partir du plan, sans passer par la génération complète.
 
 ---
 
@@ -359,9 +313,7 @@ Consultez le rapport complet après génération pour voir :
 
 ### Analyse manuelle
 
-1. Ouvrez un article
-2. Cliquez sur **Analyser SEO**
-3. Les résultats sont immédiats
+Ouvrez un article puis cliquez sur **Analyser SEO** — les résultats s'affichent immédiatement.
 
 ### Scores
 
@@ -369,10 +321,10 @@ Consultez le rapport complet après génération pour voir :
 |---|---|---|
 | **SEO** | 0-100 | Positionnement mot-clé, meta, slug, structure |
 | **Lisibilité** | 0-100 | Longueur phrases/paragraphes, intro, sous-titres |
-| **Qualité** | 0-100 | Longueur article, conclusion, image couverture |
+| **Qualité** | 0-100 | Longueur article, conclusion, image de couverture |
 | **EEAT** | 0-100 | Liens externes, exemples/statistiques, actionnabilité |
 
-### Statut Readiness
+### Statut de préparation (Readiness)
 
 | Statut | Signification |
 |---|---|
@@ -380,169 +332,149 @@ Consultez le rapport complet après génération pour voir :
 | `needs_improvement` | Améliorations suggérées |
 | `blocked` | Problèmes bloquants à corriger |
 
-### Vérification avant publication (Ready Check)
+### Ready Check
 
-Lancez un **Ready Check** pour obtenir une synthèse :
-- Scores SEO, lisibilité, qualité, EEAT
-- Liste des issues bloquantes (critical)
-- Indication publiable ou non
+Avant de publier, lancez un **Ready Check** pour obtenir une synthèse : les 4 scores, la liste des problèmes bloquants, et une indication claire « publiable ou non ».
 
-### Issues détectées
-
-| Catégorie | Exemples |
-|---|---|
-| **SEO** | Mot-clé absent du titre, pas de H1, meta title trop long, slug sans mot-clé |
-| **Lisibilité** | Phrases > 25 mots, paragraphes > 150 mots, intro trop courte |
-| **Qualité** | Contenu mock, article trop court (< 300 mots), pas de conclusion |
-| **EEAT** | Pas de liens externes, pas d'exemples, pas de données chiffrées |
+Catégories d'issues détectées : SEO (mot-clé absent du titre, pas de H1, meta title trop long…), Lisibilité (phrases trop longues, paragraphes trop denses…), Qualité (contenu de démonstration, article trop court, pas de conclusion…), EEAT (pas de liens externes, pas d'exemples ni de données chiffrées…).
 
 ---
 
-## Éditer et réviser
+## Éditeur, versions & commentaires
 
 ### Éditeur riche
 
-L'éditeur TipTap offre :
-- Formatage riche (gras, italique, listes, tableaux, blockquotes)
-- Gestion des titres (H1, H2, H3)
-- Insertion d'images
-- Sauvegarde automatique
-- Compteur de mots
+L'éditeur (TipTap) offre le formatage riche (gras, italique, listes, tableaux, citations), la gestion des titres H1/H2/H3, l'insertion d'images depuis la médiathèque, la sauvegarde automatique et un compteur de mots.
 
-### Autosave
+### Autosave & versions
 
-L'éditeur sauvegarde automatiquement toutes les 30 secondes. Chaque autosave crée une version.
-
-### Versions
-
-L'historique des versions conserve :
-- Les versions manuelles (sauvegardes explicites)
-- Les versions autosave (sauvegardes automatiques)
-- Les versions de restauration
+L'éditeur sauvegarde automatiquement **2 secondes après votre dernière modification** (pas sur un intervalle fixe). Chaque sauvegarde distincte crée une nouvelle version dans l'historique — aux côtés des sauvegardes manuelles explicites et des versions issues d'une restauration.
 
 **Restaurer une version :**
-1. Ouvrez l'historique des versions
-2. Sélectionnez la version à restaurer
-3. Confirmez la restauration
-4. L'état courant est sauvegardé puis la version est appliquée
+1. Ouvrez l'historique des versions.
+2. Sélectionnez la version voulue.
+3. Confirmez — l'état courant est d'abord sauvegardé, puis la version choisie est appliquée comme nouvelle version courante (rien n'est écrasé, l'historique reste complet).
 
 ### Commentaires inline
 
-Les commentaires permettent la révision collaborative :
-1. Sélectionnez du texte dans l'article
-2. Cliquez sur l'icône commentaire
-3. Rédigez votre commentaire
-4. Les commentaires peuvent être marqués comme résolus
+1. Sélectionnez du texte dans l'article.
+2. Cliquez sur l'icône commentaire et rédigez votre remarque.
+3. Un commentaire peut être marqué comme résolu une fois traité.
 
 ### Preview
 
-Utilisez l'aperçu pour voir l'article tel qu'il apparaîtra sur le blog (accessible même pour les brouillons).
+L'aperçu montre l'article tel qu'il apparaîtra sur le blog, même pour un brouillon non publié.
 
 ---
 
-## Publier et programmer
+## Médiathèque
+
+Chaque projet dispose d'une bibliothèque d'images dédiée.
+
+- **Formats acceptés** : JPEG, PNG, WebP, GIF, SVG (uniquement des images).
+- **Taille maximale** : 10 Mo par fichier.
+- **Import** : sélection multi-fichiers, glisser-déposer possible depuis la page Médiathèque.
+- **Stockage** : sur disque par défaut, ou vers un service de stockage externe si celui-ci est configuré pour le projet.
+- **Utilisation** : copiez l'URL d'un média pour l'insérer manuellement dans le corps d'un article via l'éditeur. Il n'existe pas encore de champ dédié « image de couverture » séparé du contenu.
+- **Permissions** : upload et suppression réservés aux rôles Owner, Admin, Editor et Designer. Le rôle Viewer est en lecture seule.
+
+---
+
+## Publier, programmer & calendrier éditorial
 
 ### Publication immédiate
 
-1. Assurez-vous que l'article est en statut `draft_ready` ou `ready_to_publish`
-2. Lancez le **Ready Check** pour vérifier l'absence d'issues bloquantes
-3. Cliquez sur **Publier**
-4. L'article passe en statut `published`
-5. Les métadonnées de publication sont sauvegardées
-6. Si configuré, le cache du blog est revalidé
-
-### Que se passe-t-il à la publication ?
-
-- Le statut passe à `published`
-- Le contenu, titre, excerpt, meta_description, cover_image, FAQ et callouts sont figés dans les champs `published_*`
-- La date de publication est enregistrée
-- Un webhook `article.published` est déclenché
-- Le blog est revalidé si configuré
+1. Vérifiez que l'article est prêt à publier (statut brouillon prêt ou similaire).
+2. Lancez un **Ready Check** pour écarter les problèmes bloquants.
+3. Cliquez sur **Publier**.
+4. Le contenu, le titre, l'extrait, la meta description, l'image de couverture, la FAQ et les callouts sont figés dans la version publiée, et la date de publication est enregistrée.
+5. Si une URL de revalidation est configurée pour le blog, le cache est invalidé automatiquement.
 
 ### Programmation
 
-1. Cliquez sur **Programmer**
-2. Choisissez la date et l'heure de publication
-3. L'article reçoit le statut `scheduled`
-4. Le worker publie automatiquement à l'heure prévue
+1. Cliquez sur **Programmer**, choisissez la date et l'heure.
+2. L'article passe au statut « programmé ».
+3. Le worker publie automatiquement l'article à l'échéance (vérification toutes les 5 minutes).
 
 ### Mettre à jour un article publié
 
-1. Modifiez l'article (le brouillon est séparé de la version publiée)
-2. Utilisez **Promouvoir** pour remplacer la version publiée par le brouillon
-3. Les modifications sont visibles immédiatement après promotion
+Modifiez librement le brouillon (il est distinct de la version publiée), puis utilisez **Promouvoir** pour remplacer la version publiée par le brouillon. Les changements sont visibles immédiatement après promotion.
 
-### Dépublier
+### Dépublier / archiver
 
-1. Cliquez sur **Dépublier**
-2. L'article repasse en brouillon
-3. La version publiée est conservée dans `published_*`
+**Dépublier** repasse l'article en brouillon tout en conservant la dernière version publiée en mémoire. **Archiver** retire l'article des listes actives sans le supprimer.
 
-### Archiver
+### Calendrier éditorial
 
-Les articles archivés ne sont plus visibles dans les listes actives.
+La page **Calendrier** propose deux vues :
+- **Vue Liste**, groupée par mois.
+- **Vue Mois**, en grille, avec un code couleur par statut (idée, en rédaction, programmé, publié) — cliquer sur un article ouvre directement son éditeur.
 
-### Planifier une mise à jour
+Une **heatmap annuelle** façon « contributions GitHub » visualise votre rythme de publication sur l'année, sélectionnable année par année.
 
-Pour les articles publiés, vous pouvez planifier une future mise à jour :
-- Le statut reste `published`
-- À la date planifiée, le système notifie qu'une mise à jour est recommandée
+---
+
+## Configuration IA — Providers & Agents
+
+La configuration IA d'un projet se fait en deux étapes, réservées aux rôles Owner et Admin.
+
+### 1. Providers — connecter une clé API
+
+Un **provider** est une clé API pour une plateforme IA (Ollama, OpenRouter, OpenAI, Gemini, Mistral et autres selon le catalogue disponible) rattachée à votre projet. Pour Ollama, l'absence de clé pointe vers une instance locale (`127.0.0.1:11434`), tandis qu'une clé renseignée bascule sur Ollama Cloud.
+
+Pour chaque provider configuré : un libellé, la clé API (masquée, révélable via l'icône œil), le modèle par défaut, un statut de connexion, et un bouton **Tester** qui vérifie réellement l'accès au provider. Les clés API sont chiffrées en base — jamais renvoyées en clair par l'API.
+
+### 2. Agents — assigner un provider à chaque étape
+
+Un **agent** correspond à une étape précise du pipeline de génération (rédacteur, recherche de mots-clés, optimisation SEO, fact-checking…). Il en existe 62 dans le registre, regroupés par catégorie (Recherche, Stratégie, Création, Révision).
+
+Pour chaque agent, vous choisissez un provider dans une liste déroulante (ou utilisez **Tout assigner** pour tout affecter au même provider en une fois). Un agent sans assignation utilise le provider par défaut du projet. Le modèle utilisé n'est pas choisi ici — il provient de la configuration du provider.
+
+Chaque agent affiche un statut :
+
+| Statut | Signification |
+|---|---|
+| **Actif** | Fonctionne pleinement, utilise un provider IA assigné (47 agents actuellement) |
+| **Heuristique** (« Sans LLM ») | Fonctionne par règles internes, sans appel à un modèle IA — aucun provider ne peut lui être assigné (7 agents) |
+| **Partiel** | Dépend d'un service externe complémentaire (recherche web, tendances…) (8 agents) |
 
 ---
 
 ## Pipeline automatisé
 
-Le pipeline permet d'automatiser la production quotidienne de contenu.
+Le pipeline automatise la production régulière de contenu.
 
 ### Configuration
 
-1. Allez dans **Projet → Pipeline**
-2. Activez le pipeline
-3. Configurez les paramètres :
-
 | Paramètre | Défaut | Description |
 |---|---|---|
-| Activé | false | Activer/désactiver le pipeline |
-| Jours actifs | [] | Jours de la semaine (ex: `["monday", "wednesday", "friday"]`) |
-| Heure de lancement | 8 | Heure de début (0-23) |
-| Articles par semaine | 5 | Objectif hebdomadaire |
-| Idées par semaine | 5 | Nombre d'idées à générer |
-| Priorités catégories | {} | Répartition par catégorie (en pourcentage) |
-| Max brouillons en attente | 10 | Limite de brouillons non publiés |
-| Mode qualité | `quality` | Mode de génération |
-| Pause | - | Mettre en pause temporairement |
+| Activé | `false` | Active/désactive le pipeline |
+| Jours actifs | `[]` | Jours de la semaine concernés |
+| Heure de lancement | `8` | Heure de déclenchement visée (0-23) |
+| Articles par semaine | `5` | Objectif hebdomadaire |
+| Idées par semaine | `5` | Nombre d'idées à générer |
+| Priorités par catégorie | `{}` | Répartition en pourcentage |
+| Max brouillons en attente | `10` | Limite de brouillons non publiés avant pause automatique |
+| Plafond de coût par article | — | Au-delà, l'article passe au statut « Bloqué (coût) » |
+| Pause | — | Temporaire (jusqu'à une date) ou indéfinie |
 
-### Fonctionnement
+### Fonctionnement réel
 
-Le worker exécute le pipeline chaque heure :
-1. Vérifie que le pipeline est activé et non en pause
-2. Vérifie que le nombre de brouillons en attente est sous la limite
-3. Calcule le nombre d'idées à générer pour la journée
-4. Pour chaque idée :
-   - Utilise le LLM configuré
-   - Utilise le provider de recherche
-   - Génère une idée avec vérification anti-doublon
-5. Sauvegarde le rapport d'exécution
+Trois tâches automatiques tournent en arrière-plan, indépendamment :
+
+- **Publications programmées** — vérifiées toutes les 5 minutes.
+- **Génération d'idées** — une vérification a lieu chaque heure, mais le pipeline ne se déclenche réellement qu'une fois par échéance configurée (le rythme dépend de l'objectif mensuel par catégorie), pas à chaque vérification horaire.
+- **File de rédaction** — traitée toutes les 2 minutes.
 
 ### Logs du pipeline
 
-Consultez les logs pour voir :
-- Le statut de chaque exécution (`completed`, `completed_with_errors`, `skipped`, `failed`)
-- Le nombre d'idées générées
-- Les erreurs éventuelles
-
-### Mise en pause
-
-- **Pause temporaire** — Jusqu'à une date spécifiée
-- **Pause indéfinie** — Jusqu'à réactivation manuelle
+Chaque exécution est journalisée avec un statut : `running`, `success`, `partial_success` ou `failed`, ainsi que le nombre d'idées générées et les erreurs éventuelles.
 
 ---
 
-## API Publique
+## API publique du blog
 
-L'API publique expose vos articles et catégories sans authentification pour le blog connecté.
-
-### Endpoints
+Une fois votre blog connecté ([§3](#projets)), il peut récupérer vos contenus publiés sans authentification :
 
 ```
 GET /api/public/projects/{project_id}/articles
@@ -550,16 +482,9 @@ GET /api/public/projects/{project_id}/articles/{slug}
 GET /api/public/projects/{project_id}/categories
 ```
 
-### Utilisation
-
-1. Connectez votre blog (voir [Connecter un blog](#connecter-un-blog))
-2. Utilisez les endpoints avec l'ID public du projet
-3. Seuls les articles publiés sont retournés
-
-### Exemple d'intégration blog
+Seuls les articles publiés sont retournés, sans cache CDN par défaut (`Cache-Control: no-store`).
 
 ```javascript
-// Récupérer les articles depuis le blog
 const response = await fetch(
   'https://api.ideas-studio.com/api/public/projects/{project_id}/articles'
 );
@@ -568,74 +493,25 @@ const articles = await response.json();
 
 ---
 
-## Tracking de trafic
+## Analytics
 
-### Installation
+Une seule page **Analytics** regroupe désormais les statistiques de trafic interne et les données Google Analytics 4 (les anciens menus « Performance » et « Trafic » redirigent automatiquement ici).
 
-Ajoutez le snippet de tracking dans le `<head>` de votre blog (voir [Connecter un blog](#connecter-un-blog)).
+### Statistiques internes
 
-### Fonctionnement
+Basées sur le script de tracking installé sur votre blog ([§3](#projets)) : vues totales, vues moyennes par jour, tendance par canal (direct/organique/referral/social), sources, pays, appareils, score SEO moyen, top articles, et une section « à auditer maintenant ». Périodes disponibles : nombre de jours au choix, périodes prédéfinies (jour/semaine/mois/trimestre/semestre/année) ou plage de dates personnalisée.
 
-Le script collecte automatiquement :
-- L'URL de la page visitée
-- Le chemin
-- Le referrer (provenance)
-- Le user-agent
-- L'IP (côté serveur)
+Un indicateur `tracking_status` explique pourquoi le résumé peut être vide : blog non connecté, connecté mais sans données encore, ou connecté avec des données.
 
-### Données collectées
+### Google Analytics 4 (optionnel)
 
-Les événements de trafic sont stockés et utilisés pour :
-- Les statistiques de performance
-- Le calcul des vues par article
-- Les métriques de période (7j, 30j, 90j)
-- Les recommandations d'optimisation
+Si un compte GA4 est connecté au projet, un second bloc affiche visiteurs uniques, sessions, pages vues, durée moyenne, taux de rebond, articles les plus vus et sources de trafic côté GA4.
 
-### Vie privée
-
-Le tracking ne collecte pas de données personnelles identifiables. Aucun cookie n'est déposé.
+Export des données disponible en JSON ou PDF.
 
 ---
 
-## Performance et analytics
-
-### Résumé de trafic
-
-```
-GET /projects/{project_id}/performance/summary?period=30d
-```
-
-Retourne :
-- Nombre total de vues
-- Vues par jour (moyenne)
-- Nombre d'articles suivis
-- Statistiques agrégées
-
-### Performance des articles
-
-```
-GET /projects/{project_id}/performance/articles?period=30d
-```
-
-Liste chaque article avec ses métriques de performance.
-
-### Performance d'un article
-
-```
-GET /articles/{article_id}/performance?period=30d
-```
-
-Détail des métriques pour un article spécifique.
-
-### Périodes disponibles
-
-- `7d` — 7 derniers jours
-- `30d` — 30 derniers jours (défaut)
-- `90d` — 90 derniers jours
-
----
-
-## Recommendations d'optimisation
+## Recommandations d'optimisation
 
 Le moteur d'optimisation analyse automatiquement les articles publiés et propose des améliorations.
 
@@ -643,218 +519,51 @@ Le moteur d'optimisation analyse automatiquement les articles publiés et propos
 
 | Type | Déclencheur |
 |---|---|
-| `fix_low_traffic` | Article avec < 5 vues à J+30 ou J+90 |
+| `fix_low_traffic` | Moins de 5 vues à J+30 ou J+90 |
 | `add_faq` | Article sans FAQ |
-| `improve_meta_description` | Meta description < 120 caractères |
+| `improve_meta_description` | Meta description absente ou < 120 caractères |
 | `improve_title` | Score SEO < 50 |
 | `add_internal_links` | Aucun lien interne détecté |
 
-### Lancer une revue
-
-1. Allez dans **Projet → Optimisation**
-2. Cliquez sur **Lancer une revue**
-3. Les recommandations sont générées automatiquement
-
 ### Gérer les recommandations
 
-| Action | Effet |
-|---|---|
-| **Accepter** | Marque la recommandation comme acceptée |
-| **Appliquer** | Marque comme appliquée (réservé admin/editor) |
-| **Rejeter** | Marque comme rejetée |
-
-### Prévention des doublons
-
-Une recommandation `pending` du même type et pour le même article bloque la création d'une nouvelle recommandation identique.
+**Accepter** et **Rejeter** sont ouverts à tout membre du projet. **Appliquer** est réservé aux rôles Owner, Admin et Editor. Une recommandation identique en attente pour le même article bloque toute nouvelle création en doublon.
 
 ---
 
 ## Notifications
 
-Les notifications informent l'équipe des événements importants.
+Les notifications informent l'équipe des événements importants du projet : ajout/modification/retrait de membre, invitation, idées mensuelles prêtes, recommandation d'optimisation, échec de génération, article prêt après génération, ou message système.
 
-### Types de notifications
-
-| Type | Description |
-|---|---|
-| `member` | Ajout/modification/suppression de membre |
-| `invitation` | Invitation envoyée ou acceptée |
-| `article` | Publication, rejet, génération |
-| `pipeline` | Résultat d'exécution du pipeline |
-| `system` | Informations système |
-
-### Actions disponibles
-
-- **Marquer comme lue** — Une notification individuelle
-- **Tout marquer comme lu** — Toutes les notifications du projet
-- **Supprimer** — Effacer une notification
-
-### Niveaux
-
-| Niveau | Couleur | Usage |
-|---|---|---|
-| `info` | Bleu | Information générale |
-| `success` | Vert | Opération réussie |
-| `warning` | Orange | Attention |
-| `error` | Rouge | Erreur |
-
----
-
-## Gestion d'équipe
-
-### Rôles
-
-| Rôle | Créer/éditer contenu | Gérer membres | Publier | Supprimer | Paramètres projet |
-|---|---|---|---|---|---|
-| **Owner** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Admin** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Editor** | ✅ | ❌ | ✅ | ✅ | ❌ |
-| **Writer** | ✅ (brouillons) | ❌ | ❌ | ❌ | ❌ |
-| **Viewer** | ❌ (lecture seule) | ❌ | ❌ | ❌ | ❌ |
-
-### Ajouter un membre
-
-1. Allez dans **Projet → Membres**
-2. Cliquez sur **Ajouter un membre**
-3. Recherchez par ID utilisateur ou par nom d'utilisateur (@username)
-4. Choisissez le rôle
-5. Validez
-
-### Modifier un rôle
-
-1. Sélectionnez le membre concerné
-2. Choisissez le nouveau rôle
-3. Validez
-
-### Retirer un membre
-
-1. Sélectionnez le membre concerné
-2. Confirmez la suppression
-
-**Note :** Le propriétaire (`owner`) ne peut pas être retiré.
-
----
-
-## Invitations
-
-### Envoyer une invitation
-
-1. Allez dans **Projet → Membres → Inviter**
-2. Saisissez l'adresse email
-3. Choisissez le rôle
-4. Une notification est créée dans le projet
-
-### Recevoir une invitation
-
-1. Vous recevez un lien d'invitation
-2. Ouvrez le lien
-3. Connectez-vous ou créez un compte
-4. Acceptez l'invitation
-
-### Statuts d'invitation
-
-| Statut | Description |
-|---|---|
-| En attente | L'invitation n'a pas encore été acceptée |
-| Acceptée | L'utilisateur a rejoint le projet |
-| Expirée | Le délai d'acceptation est dépassé |
+Actions disponibles : marquer une notification comme lue, tout marquer comme lu, supprimer. Chaque notification affiche un niveau — `info`, `warning` ou `error`.
 
 ---
 
 ## Search Console
 
-L'intégration Google Search Console permet de visualiser les données de recherche Google directement dans Ideas Studio.
+L'intégration Google Search Console permettra de visualiser vos données de recherche Google directement dans Ideas Studio.
 
-### Statut actuel
-
-**Note :** L'intégration complète nécessite une configuration OAuth Google qui sera disponible dans une version ultérieure. Les endpoints retournent actuellement un statut de non-connexion.
-
-### Endpoints disponibles
-
-| Endpoint | Données |
-|---|---|
-| `GET .../search-console/status` | Statut de connexion |
-| `GET .../search-console/keywords` | Mots-clés et positions |
-| `GET .../search-console/pages` | Pages indexées et clics |
-| `GET .../search-console/performance` | Impressions, clics, CTR, position |
+**Statut actuel : non disponible.** L'intégration nécessite une configuration OAuth Google prévue pour une version ultérieure — les endpoints (`status`, `keywords`, `pages`, `performance`) renvoient aujourd'hui systématiquement un statut « non connecté ».
 
 ---
 
 ## Webhooks
 
-Les webhooks permettent d'intégrer Ideas Studio avec vos services externes (Slack, Discord, Zapier, etc.).
+Les webhooks permettent, en théorie, de notifier un service externe (Slack, Discord, Zapier…) lors d'événements du projet.
 
-### Créer un webhook
+**Ce qui fonctionne aujourd'hui** : créer, lister, modifier et supprimer un webhook via l'API, avec une signature HMAC-SHA256 (header `X-IdeasStudio-Signature`) et un bouton de **test manuel** qui envoie effectivement une requête au webhook.
 
-1. Allez dans **Projet → Webhooks**
-2. Cliquez sur **Ajouter un webhook**
-3. Renseignez :
-   - **Nom** — Identifiant (ex: "Slack #notifications")
-   - **URL** — URL de destination
-   - **Événements** — Types d'événements à écouter
-
-### Événements disponibles
-
-| Événement | Déclencheur |
-|---|---|
-| `article.created` | Nouvel article créé |
-| `article.published` | Article publié |
-| `article.updated` | Article modifié |
-| `idea.generated` | Nouvelle idée générée |
-| `pipeline.completed` | Pipeline exécuté |
-
-### Signature de sécurité
-
-Chaque webhook reçoit un header `X-IdeasStudio-Signature` contenant une signature HMAC du payload. Vous pouvez vérifier l'intégrité du message côté récepteur.
-
-### Payload type
-
-```json
-{
-  "event": "article.published",
-  "project_id": "uuid",
-  "data": {
-    "article_id": "uuid",
-    "title": "Titre de l'article",
-    "slug": "titre-article"
-  },
-  "timestamp": "2026-01-15T10:00:00Z"
-}
-```
-
-### Tester un webhook
-
-1. Ouvrez le webhook
-2. Cliquez sur **Tester**
-3. Un payload de test est envoyé
-4. Le statut de la réponse est affiché
+⚠️ **Ce qui ne fonctionne pas encore** : le déclenchement automatique lors d'un événement réel (publication d'article, génération d'idée…) n'est pas implémenté — seul le test manuel envoie une requête. Il n'existe pas non plus de page dédiée dans l'interface actuellement ; la configuration se fait via l'API.
 
 ---
 
-## Paramètres du compte
+## Sécurité du compte
 
-### Modifier le mot de passe
-
-Voir [Modifier son mot de passe](#modifier-son-mot-de-passe) dans la section Profil.
-
-### Avatar
-
-Voir [Avatar](#avatar) dans la section Profil.
-
-### Langue de l'interface
-
-L'interface est disponible en français.
-
-### Déconnexion
-
-Cliquez sur **Déconnexion** dans le menu utilisateur pour terminer votre session.
-
-### Sécurité
-
-- Les tokens JWT expirent après 24h (configurable)
-- Les mots de passe sont hashés avec bcrypt
-- Les clés API des providers sont chiffrées en base de données
-- Les sessions sont individuelles
+- Les tokens JWT expirent après 24h.
+- Les mots de passe sont hashés avec **bcrypt**.
+- Les clés API des providers IA et les secrets de webhooks sont chiffrés en base (chiffrement symétrique réversible).
+- Les clés de tracking et d'API publique sont stockées sous forme de hash non réversible (comparaison rapide, jamais déchiffrables).
+- Une couche de sécurité supplémentaire au niveau base de données (Row-Level Security PostgreSQL, en complément des vérifications de rôle applicatives) est en préparation mais **n'est pas encore activée en production** — elle n'a aucun impact visible pour vous à ce stade.
 
 ---
 
@@ -862,19 +571,35 @@ Cliquez sur **Déconnexion** dans le menu utilisateur pour terminer votre sessio
 
 | Terme | Définition |
 |---|---|
+| **Agent** | Étape du pipeline de génération associée à un provider IA (62 au total) |
 | **Article** | Contenu publié ou en cours de rédaction |
 | **Brouillon** | Article non publié |
-| **Callout** | Encadré visuel dans un article (info, warning, tip) |
+| **Callout** | Encadré visuel dans un article |
 | **Catégorie** | Groupe thématique d'articles |
 | **EEAT** | Experience, Expertise, Authoritativeness, Trustworthiness |
-| **Excerpt** | Extrait court de l'article (aperçu) |
+| **Excerpt** | Extrait court de l'article |
+| **GEO** | Optimisation pour les moteurs de réponse IA (Generative Engine Optimization) |
 | **LLM** | Large Language Model (modèle de langage) |
-| **Meta description** | Description SEO affichée dans les résultats de recherche |
-| **Meta title** | Titre SEO affiché dans les résultats de recherche |
-| **Orchestrateur** | Moteur de génération en 23 étapes |
+| **Meta description / Meta title** | Champs SEO affichés dans les résultats de recherche |
+| **Orchestrateur** | Pipeline de génération d'article en une quarantaine d'étapes |
 | **Pipeline** | Automatisation de la production de contenu |
-| **Projet** | Représentation d'un blog/site web |
-| **Provider** | Service IA (Ollama, Gemini, OpenAI...) |
+| **Provider** | Service IA connecté au projet (Ollama, OpenAI, Gemini…) |
+| **Ready Check** | Vérification synthétique avant publication |
 | **Readiness** | Statut de préparation à la publication |
-| **Slug** | Version URL-friendly du titre |
-| **Webhook** | Notification HTTP vers un service externe |
+| **SERP** | Résultats de recherche web utilisés pour enrichir la génération |
+| **Slug** | Version URL-friendly d'un titre |
+| **Version (révision)** | Snapshot du contenu d'un article, conservé dans l'historique |
+
+---
+
+## Annexe — fonctionnalités backend pas encore exposées
+
+Ces éléments existent dans l'API mais ne sont pas (ou pas encore) utilisables depuis l'interface. Ils sont listés ici par souci de transparence plutôt que présentés comme des fonctionnalités actives :
+
+| Fonctionnalité | État |
+|---|---|
+| **Déclenchement automatique des webhooks** | CRUD et test manuel fonctionnent ; aucun événement réel (publication, génération…) ne déclenche encore un webhook automatiquement. Pas de page dédiée dans l'interface. |
+| **Colonnes Kanban personnalisées** | L'API existe (créer/modifier des colonnes), mais la route `/kanban` de l'interface redirige vers la page Production — il n'y a pas de tableau kanban actif à ce jour. |
+| **Journal d'activité projet** | L'endpoint de lecture existe mais rien n'écrit encore d'entrées dans ce journal — il renvoie systématiquement une liste vide. |
+| **Monitoring éditorial (amélioration continue des articles publiés)** | Le scan automatique et la génération de propositions d'amélioration existent côté API, mais aucun bouton ni écran ne les déclenche depuis l'interface actuellement. |
+| **Détail des coûts IA par génération** | Un coût estimé/réel est calculé et stocké pour chaque génération, mais n'est affiché nulle part dans l'interface — seul le plafond de coût par article (§15) a un effet visible (statut « Bloqué (coût) »). |
