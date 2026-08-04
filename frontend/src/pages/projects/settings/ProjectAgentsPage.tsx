@@ -170,15 +170,15 @@ export default function ProjectAgentsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
           <h2 className="text-[18px] font-semibold text-primary">Agents IA</h2>
           <p className="mt-0.5 text-[14px] text-secondary">
             Assignez un provider IA à chaque agent pour ce projet. Le modèle utilisé est celui défini sur le
             provider (Paramètres → Providers). Les agents sans assignation utilisent le provider par défaut du projet.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {successMsg && (
             <span className="flex items-center gap-1 text-[14px] text-success">
               <CheckCircle size={14} /> {successMsg}
