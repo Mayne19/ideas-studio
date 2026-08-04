@@ -17,6 +17,7 @@ from app.services.category_service import (
     to_public,
 )
 from app.core.utils import slugify
+from app.core.ssrf_guard import assert_safe_external_url
 
 logger = logging.getLogger("ideas_studio.categories.sync")
 
@@ -106,6 +107,7 @@ def sync_categories(
         raise HTTPException(status_code=400, detail="Aucun domaine configure pour ce projet. Renseignez d'abord le domaine dans les parametres.")
 
     url = _build_api_url(project.domain)
+    assert_safe_external_url(url)
 
     synced: list[str] = []
     blog_fetch_error: str | None = None

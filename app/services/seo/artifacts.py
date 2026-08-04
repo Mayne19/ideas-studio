@@ -46,6 +46,26 @@ def get_latest_artifacts(db: Session, article_id: str, agent_keys: list[str]) ->
     return result
 
 
+def get_latest_artifacts_bulk(
+    db: Session, article_ids: list[str], agent_keys: list[str]
+) -> dict[str, dict[str, dict[str, Any]]]:
+    """Comme get_latest_artifacts mais pour plusieurs articles à la fois — une
+    seule requête au lieu d'une par article (voir to_public_batch, incident
+    du 2026-08-04 : N+1 sur les pages Production/Catégories/Calendrier)."""
+    if not article_ids:
+        return {}
+    rows = db.execute(
+        select(Artifact)
+        .where(Artifact.article_id.in_(article_ids), Artifact.agent_key.in_(agent_keys))
+        .order_by(Artifact.article_id, Artifact.agent_key, Artifact.created_at.desc())
+    ).scalars().all()
+    result: dict[str, dict[str, dict[str, Any]]] = {}
+    for row in rows:
+        per_article = result.setdefault(row.article_id, {})
+        per_article.setdefault(row.agent_key, row.payload)
+    return result
+
+
 def get_all_latest_artifacts(db: Session, article_id: str) -> dict[str, dict[str, Any]]:
     """Tous les agent_key connus pour cet article, sans liste fixe — utilisé
     par l'éditeur qui affiche tout ce qui existe (voir schemas/editor.py)."""

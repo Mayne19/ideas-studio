@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.utils import slugify
 from app.core.database import get_db
+from app.core.ssrf_guard import assert_safe_external_url
 from app.dependencies.auth import MemberView, get_project_member, require_project_role
 from app.models.core import Project
 from app.schemas.callout_template import (
@@ -124,6 +125,7 @@ def sync_project_callouts(
         raise HTTPException(status_code=400, detail="Aucun site externe configuré pour synchroniser les callouts.")
 
     url = _build_config_url(project.domain)
+    assert_safe_external_url(url)
 
     try:
         resp = httpx.get(url, timeout=10, follow_redirects=True)

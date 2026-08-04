@@ -3,9 +3,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.dependencies.auth import get_current_user
+from app.dependencies.auth import get_current_user, get_member_for_project
 from app.models.content import Article, ArticleScore
-from app.models.core import ProjectMember, User
+from app.models.core import User
 from app.schemas.seo import (
     ArticleEditorUpdate,
     CriticalWarningSchema,
@@ -18,17 +18,15 @@ from app.services.seo_analyzer import analyze_article
 router = APIRouter(tags=["seo"])
 
 
-def _check_role(db: Session, user_id: str, project_id: str, allowed_roles: set) -> ProjectMember:
-    member = db.execute(
-        select(ProjectMember).where(
-            ProjectMember.project_id == project_id,
-            ProjectMember.user_id == user_id,
-        )
-    ).scalar_one_or_none()
+def _check_role(db: Session, user_id: str, project_id: str, allowed_roles: set):
+    # get_member_for_project filtre déjà status_reason_id == ACTIVE — un membre
+    # retiré/suspendu (DELETE /projects/{id}/members/{user_id}) perd l'accès
+    # immédiatement même avec un JWT encore valide. Voir incident du 2026-08-04 :
+    # cette fonction lisait ProjectMember directement sans ce filtre.
+    member = get_member_for_project(db, user_id, project_id)
     if not member:
         raise HTTPException(status_code=403, detail="Not a project member")
-    from app.dependencies.auth import role_code
-    if role_code(member.role_id) not in allowed_roles:
+    if member.role not in allowed_roles:
         raise HTTPException(status_code=403, detail="Insufficient role")
     return member
 

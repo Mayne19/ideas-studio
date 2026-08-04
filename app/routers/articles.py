@@ -19,6 +19,7 @@ from app.services.article_service import (
     list_articles,
     promote_article,
     to_public,
+    to_public_batch,
     update_article,
 )
 from app.services.article_lifecycle_service import (
@@ -69,7 +70,7 @@ def list_articles_route(
                          published_only=published_only, archived=archived,
                          blocked_cost_limit=blocked_cost_limit,
                          limit=limit, offset=effective_offset)
-    return [to_public(db, a) for a in articles]
+    return to_public_batch(db, articles)
 
 
 @router.post("/projects/{project_id}/articles", response_model=ArticlePublic, status_code=201)

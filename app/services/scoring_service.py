@@ -30,7 +30,13 @@ def _latest_article_score(db: Session, article_id: str) -> ArticleScore | None:
     ).scalar_one_or_none()
 
 
-def compute_global_score(db: Session, article_id: str, article=None) -> dict:
+_UNSET = object()
+
+
+def compute_global_score(
+    db: Session, article_id: str, article=None,
+    *, latest_score: "ArticleScore | None" = _UNSET, artifacts: dict | None = None,
+) -> dict:
     """
     Scoring v2.1 — pondération : SEO 35% · EEAT 25% · Lisibilité 20% · Originalité 20%
     Le volume n'est jamais noté directement.
@@ -38,14 +44,20 @@ def compute_global_score(db: Session, article_id: str, article=None) -> dict:
     `article` (optionnel) : objet content.Article, uniquement pour get_format()
     qui a besoin de content_format/target_word_count — sans dépendance sur les
     scores eux-mêmes, qui viennent tous de la base (article_scores + artifacts).
+
+    `latest_score`/`artifacts` (optionnels) : permet d'injecter des données déjà
+    chargées en masse pour plusieurs articles (voir to_public_batch) au lieu de
+    refaire une requête individuelle par article — même calcul, juste sans le N+1.
     """
-    latest_score = _latest_article_score(db, article_id)
+    if latest_score is _UNSET:
+        latest_score = _latest_article_score(db, article_id)
     seo = _to_float(latest_score.seo_score) if latest_score else None
     quality = _to_float(latest_score.quality_score) if latest_score else None
 
-    artifacts = get_latest_artifacts(
-        db, article_id, ["eeat_checklist", "readability_report", "originality_report", "geo_optimization"]
-    )
+    if artifacts is None:
+        artifacts = get_latest_artifacts(
+            db, article_id, ["eeat_checklist", "readability_report", "originality_report", "geo_optimization"]
+        )
     eeat_json = artifacts.get("eeat_checklist")
     readability_json = artifacts.get("readability_report")
     originality_report = artifacts.get("originality_report")

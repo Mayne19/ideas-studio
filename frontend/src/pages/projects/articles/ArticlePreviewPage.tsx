@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import DOMPurify from 'dompurify'
 import { ArrowLeft, Pencil } from '@/components/ui/hugeIcons'
 import { getEditorArticle } from '@/api/editor'
 import type { EditorArticle } from '@/types'
@@ -20,13 +21,25 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;')
 }
 
+const ALLOWED_TAGS = [
+  'h1', 'h2', 'h3', 'h4', 'p', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre',
+  'strong', 'em', 'u', 'a', 'img', 'hr', 'table', 'thead', 'tbody', 'tr', 'td', 'th', 'span', 'br',
+]
+const ALLOWED_ATTR = ['id', 'class', 'href', 'src', 'alt', 'title', 'data-type', 'target', 'rel']
+
 function sanitizeHtml(html: string): string {
-  return html
+  const cosmeticallyCleaned = html
     .replace(/<span([^>]*data-comment-id=["'][^"']+["'][^>]*)>/gi, '<span$1>')
     .replace(/\sclass=["'][^"']*comment-mark[^"']*["']/gi, '')
     .replace(/\sdata-comment-id=["'][^"']+["']/gi, '')
     .replace(/<p>\s*#[^<\s][^<]*<\/p>/gi, '')
     .replace(/<p>\s*(extrait|excerpt)\s*:?\s*[^<]*<\/p>/gi, '')
+
+  return DOMPurify.sanitize(cosmeticallyCleaned, {
+    ALLOWED_TAGS,
+    ALLOWED_ATTR,
+    ALLOW_DATA_ATTR: false,
+  })
 }
 
 function renderContent(content: string): string {

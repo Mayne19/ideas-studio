@@ -2,6 +2,7 @@ import httpx
 import re
 from urllib.parse import urlparse
 from sqlalchemy.orm import Session
+from app.core.ssrf_guard import assert_safe_external_url
 from app.models.core import Project
 from app.schemas.editorial_setup import EditorialSetupSuggestion, EditorialSetupResponse
 from app.services.providers.llm_provider import get_llm_provider
@@ -10,6 +11,7 @@ from app.services.providers.llm_provider import get_llm_provider
 def _fetch_blog_categories(domain: str) -> list[dict]:
     try:
         url = f"https://{domain}/api/categories"
+        assert_safe_external_url(url)
         resp = httpx.get(url, timeout=10)
         resp.raise_for_status()
         data = resp.json()
@@ -23,6 +25,7 @@ def _fetch_blog_categories(domain: str) -> list[dict]:
 def _fetch_blog_homepage(domain: str) -> dict:
     try:
         url = f"https://{domain}"
+        assert_safe_external_url(url)
         resp = httpx.get(url, timeout=10, follow_redirects=True)
         resp.raise_for_status()
         text = resp.text

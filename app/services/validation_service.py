@@ -14,26 +14,43 @@ from app.services.scoring_service import compute_global_score
 from app.services.seo.artifacts import get_latest_artifacts
 
 
-def _load_validation_context(db: Session, article: Article) -> dict[str, Any]:
-    """Rassemble en un seul passage tout ce que compute_critical_warnings et
-    check_validation_thresholds lisaient auparavant sur le modèle plat."""
-    revision = None
-    if article.current_revision_id:
-        revision = db.get(ArticleRevision, article.current_revision_id)
-    seo = db.get(ArticleSeo, article.id)
-    keyword_term = db.execute(
-        select(Keyword.term)
-        .join(ArticleKeyword, ArticleKeyword.keyword_id == Keyword.id)
-        .where(ArticleKeyword.article_id == article.id, ArticleKeyword.role == KeywordRole.PRIMARY)
-    ).scalar_one_or_none()
+_UNSET = object()
 
-    artifacts = get_latest_artifacts(
-        db, article.id, ["originality_report", "sources", "estimated_cost", "fact_check_report"]
-    )
-    latest_run = db.execute(
-        select(WorkflowRun).where(WorkflowRun.article_id == article.id).order_by(WorkflowRun.started_at.desc()).limit(1)
-    ).scalar_one_or_none()
-    pipeline = db.get(Pipeline, article.project_id)
+
+def _load_validation_context(
+    db: Session, article: Article,
+    *, revision: "ArticleRevision | None" = _UNSET, seo: "ArticleSeo | None" = _UNSET,
+    keyword_term: "str | None" = _UNSET, artifacts: dict | None = None,
+    latest_run: "WorkflowRun | None" = _UNSET, pipeline: "Pipeline | None" = _UNSET,
+) -> dict[str, Any]:
+    """Rassemble en un seul passage tout ce que compute_critical_warnings et
+    check_validation_thresholds lisaient auparavant sur le modèle plat.
+
+    Tous les paramètres nommés sont optionnels : ne pas les fournir reproduit
+    le comportement d'origine (une requête par donnée) ; les fournir permet
+    d'injecter des données déjà chargées en masse pour plusieurs articles
+    (voir to_public_batch, incident du 2026-08-04 sur le N+1 de cette fonction)."""
+    if revision is _UNSET:
+        revision = db.get(ArticleRevision, article.current_revision_id) if article.current_revision_id else None
+    if seo is _UNSET:
+        seo = db.get(ArticleSeo, article.id)
+    if keyword_term is _UNSET:
+        keyword_term = db.execute(
+            select(Keyword.term)
+            .join(ArticleKeyword, ArticleKeyword.keyword_id == Keyword.id)
+            .where(ArticleKeyword.article_id == article.id, ArticleKeyword.role == KeywordRole.PRIMARY)
+        ).scalar_one_or_none()
+
+    if artifacts is None:
+        artifacts = get_latest_artifacts(
+            db, article.id, ["originality_report", "sources", "estimated_cost", "fact_check_report"]
+        )
+    if latest_run is _UNSET:
+        latest_run = db.execute(
+            select(WorkflowRun).where(WorkflowRun.article_id == article.id).order_by(WorkflowRun.started_at.desc()).limit(1)
+        ).scalar_one_or_none()
+    if pipeline is _UNSET:
+        pipeline = db.get(Pipeline, article.project_id)
 
     return {
         "content": revision.body if revision else "",
@@ -168,8 +185,11 @@ def compute_critical_warnings(ctx: dict[str, Any]) -> list[dict]:
     return warnings
 
 
-def check_validation_thresholds(db: Session, article: Article, planned_publish_at=None) -> dict:
-    scoring = compute_global_score(db, article.id, article=article)
+def check_validation_thresholds(
+    db: Session, article: Article, planned_publish_at=None,
+    *, precomputed_scoring: dict | None = None, precomputed_context: dict | None = None,
+) -> dict:
+    scoring = precomputed_scoring if precomputed_scoring is not None else compute_global_score(db, article.id, article=article)
     global_score = scoring["global_score"]
     global_score_valid = scoring["global_score_valid"]
     seo_contrib = scoring["seo_contrib"]
@@ -177,7 +197,7 @@ def check_validation_thresholds(db: Session, article: Article, planned_publish_a
     geo = scoring["geo_contrib"]
     originality = scoring["originality_contrib"]
 
-    ctx = _load_validation_context(db, article)
+    ctx = dict(precomputed_context) if precomputed_context is not None else _load_validation_context(db, article)
     if planned_publish_at is not None:
         ctx["scheduled_for"] = planned_publish_at
     warnings = compute_critical_warnings(ctx)

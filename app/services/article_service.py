@@ -102,6 +102,163 @@ def get_article_by_id(db: Session, article_id: str) -> Article | None:
     return db.get(Article, article_id)
 
 
+def to_public_batch(db: Session, articles: list[Article]) -> list[ArticlePublic]:
+    """Équivalent de [to_public(db, a) for a in articles] mais avec une seule
+    requête groupée par type de donnée au lieu d'une boucle de ~8 requêtes par
+    article (revision, seo, keyword, score, artifacts, workflow_run, pipeline).
+    Voir incident du 2026-08-04 : Production/Catégories/Calendrier chargeaient
+    30 articles en 16s+ à cause de ce N+1, jusqu'à dépasser le timeout HTTP.
+
+    Réutilise compute_global_score/check_validation_thresholds (même calcul
+    exact que to_public) en leur injectant les données préchargées en masse,
+    au lieu de dupliquer leur logique métier ici."""
+    from app.models.ai import Pipeline, WorkflowRun
+    from app.models.content import ArticleScore
+    from app.services.seo.artifacts import get_latest_artifacts_bulk
+    from app.services.scoring_service import compute_global_score
+    from app.services.validation_service import check_validation_thresholds
+
+    if not articles:
+        return []
+
+    article_ids = [a.id for a in articles]
+    project_ids = list({a.project_id for a in articles})
+
+    revisions_by_id = {
+        r.id: r for r in db.execute(
+            select(ArticleRevision).where(
+                ArticleRevision.id.in_([a.current_revision_id for a in articles if a.current_revision_id])
+            )
+        ).scalars().all()
+    }
+    seo_by_article = {
+        s.article_id: s for s in db.execute(
+            select(ArticleSeo).where(ArticleSeo.article_id.in_(article_ids))
+        ).scalars().all()
+    }
+    keyword_rows = db.execute(
+        select(ArticleKeyword.article_id, Keyword.term)
+        .join(Keyword, Keyword.id == ArticleKeyword.keyword_id)
+        .where(ArticleKeyword.article_id.in_(article_ids), ArticleKeyword.role == KeywordRole.PRIMARY)
+    ).all()
+    keyword_by_article = {row.article_id: row.term for row in keyword_rows}
+
+    latest_score_by_article: dict[str, ArticleScore] = {}
+    for score in db.execute(
+        select(ArticleScore)
+        .where(ArticleScore.article_id.in_(article_ids))
+        .order_by(ArticleScore.article_id, ArticleScore.evaluated_at.desc())
+    ).scalars().all():
+        latest_score_by_article.setdefault(score.article_id, score)
+
+    scoring_artifacts_by_article = get_latest_artifacts_bulk(
+        db, article_ids, ["eeat_checklist", "readability_report", "originality_report", "geo_optimization"],
+    )
+    validation_artifacts_by_article = get_latest_artifacts_bulk(
+        db, article_ids, ["originality_report", "sources", "estimated_cost", "fact_check_report"],
+    )
+
+    latest_run_by_article: dict[str, WorkflowRun] = {}
+    for run in db.execute(
+        select(WorkflowRun)
+        .where(WorkflowRun.article_id.in_(article_ids))
+        .order_by(WorkflowRun.article_id, WorkflowRun.started_at.desc())
+    ).scalars().all():
+        latest_run_by_article.setdefault(run.article_id, run)
+
+    pipeline_by_project = {
+        p.project_id: p for p in db.execute(
+            select(Pipeline).where(Pipeline.project_id.in_(project_ids))
+        ).scalars().all()
+    }
+
+    results: list[ArticlePublic] = []
+    for article in articles:
+        revision = revisions_by_id.get(article.current_revision_id) if article.current_revision_id else None
+        seo = seo_by_article.get(article.id)
+        keyword = keyword_by_article.get(article.id)
+        latest_score = latest_score_by_article.get(article.id)
+        latest_run = latest_run_by_article.get(article.id)
+        pipeline = pipeline_by_project.get(article.project_id)
+
+        scoring = compute_global_score(
+            db, article.id, article=article,
+            latest_score=latest_score, artifacts=scoring_artifacts_by_article.get(article.id, {}),
+        )
+
+        ctx = {
+            "content": revision.body if revision else "",
+            "title": revision.title if revision else "",
+            "meta_title": seo.meta_title if seo else "",
+            "meta_description": seo.meta_description if seo else "",
+            "keyword": keyword or "",
+            "originality_report": validation_artifacts_by_article.get(article.id, {}).get("originality_report"),
+            "sources": validation_artifacts_by_article.get(article.id, {}).get("sources"),
+            "estimated_cost": validation_artifacts_by_article.get(article.id, {}).get("estimated_cost"),
+            "fact_check": validation_artifacts_by_article.get(article.id, {}).get("fact_check_report"),
+            "workflow_failed": bool(latest_run and latest_run.status_reason_id == RunStatus.FAILED),
+            "workflow_incomplete": bool(latest_run and latest_run.status_reason_id in (RunStatus.QUEUED, RunStatus.RUNNING)),
+            "cost_limit_eur": float(pipeline.cost_limit_per_article) if pipeline and pipeline.cost_limit_per_article else None,
+            "scheduled_for": article.scheduled_for,
+        }
+
+        try:
+            validation = check_validation_thresholds(db, article, precomputed_scoring=scoring, precomputed_context=ctx)
+            is_validable = validation["valid"]
+            reasons = validation["reasons"]
+            warnings = validation["critical_warnings"]
+            global_score = validation["global_score"]
+            global_score_valid = validation["global_score_valid"]
+        except Exception:
+            is_validable, reasons, warnings = None, [], []
+            global_score = float(latest_score.global_score) if latest_score and latest_score.global_score is not None else None
+            global_score_valid = None
+
+        results.append(ArticlePublic(
+            id=article.id,
+            project_id=article.project_id,
+            category_id=article.category_id,
+            sub_niche=article.sub_niche,
+            title=revision.title if revision else "",
+            slug=article.slug,
+            content=revision.body if revision else None,
+            excerpt=revision.excerpt if revision else None,
+            status=article.status_reason_id,
+            keyword=keyword,
+            meta_title=seo.meta_title if seo else None,
+            meta_description=seo.meta_description if seo else None,
+            word_count=revision.word_count if revision else 0,
+            priority=article.priority,
+            is_featured=article.is_featured,
+            seo_score=scoring["seo_contrib"],
+            readability_score=scoring["readability_contrib"],
+            quality_score=scoring["quality_contrib"],
+            eeat_score=scoring["eeat_contrib"],
+            geo_score=scoring["geo_contrib"],
+            global_score=global_score,
+            global_score_valid=global_score_valid,
+            is_validable=is_validable,
+            validation_reasons=reasons,
+            critical_warnings=warnings,
+            published_at=article.published_at,
+            scheduled_for=article.scheduled_for,
+            created_at=article.created_at,
+            updated_at=article.updated_at,
+            author_name=article.author_name,
+            reading_time_minutes=revision.reading_time_minutes if revision else None,
+            target_word_count=article.target_word_count,
+            content_format=article.content_format,
+            angle=None,
+            search_intent=article.search_intent,
+            opportunity_score=float(article.opportunity_score) if article.opportunity_score is not None else None,
+            audience=None,
+            rejection_reason=article.rejection_reason,
+            rejection_note=article.rejection_note,
+            has_draft_changes=article.current_revision_id != article.published_revision_id,
+        ))
+    return results
+
+
 def to_public(db: Session, article: Article) -> ArticlePublic:
     from app.services.validation_service import check_validation_thresholds
 
