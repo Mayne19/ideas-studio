@@ -2,13 +2,13 @@ import { ReportSection, ReportGroup } from './ReportSection'
 import type { EditorArticle } from '@/types'
 
 export default function GenerationReportPanel({ article }: { article: EditorArticle }) {
-  const hasContent = article.generation_report_json
+  const report = article.artifacts['generation_report']
 
-  if (!hasContent) return null
+  if (!report) return null
 
   return (
     <ReportGroup title="Génération">
-      <ReportSection title="Rapport de génération" data={article.generation_report_json} />
+      <ReportSection title="Rapport de génération" data={report} />
     </ReportGroup>
   )
 }

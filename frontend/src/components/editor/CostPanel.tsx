@@ -2,7 +2,7 @@ import { AlertCircle, DollarSign, TrendingUp, HelpCircle } from '@/components/ui
 import type { EditorArticle } from '@/types'
 
 export default function CostPanel({ article }: { article: EditorArticle }) {
-  const report = article.generation_report_json as Record<string, unknown> | null
+  const report = article.artifacts['generation_report']
   if (!report) {
     return (
       <div className="rounded-[10px] border border-border bg-surface p-3 text-[12px] text-tertiary">

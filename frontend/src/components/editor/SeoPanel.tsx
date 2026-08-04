@@ -8,7 +8,6 @@ import BriefPanel from './BriefPanel'
 import GenerationReportPanel from './GenerationReportPanel'
 import QualityPanel from './QualityPanel'
 import { ReportSection } from './ReportSection'
-import { tryParseJson } from './reportUtils'
 
 function translateSeoError(err: unknown): string {
   if (err instanceof ApiError) {
@@ -110,13 +109,13 @@ function ScoreSummary({
   selected: string
 }) {
   const rows = [
-    { label: 'Global', value: finiteScore(article.global_score ?? expertReview?.score_global), detail: article.global_score_valid === false ? 'Score global incomplet : au moins un contrôle requis manque.' : 'Score global utilisé pour la validation finale.' },
-    { label: 'SEO', value: finiteScore(brief?.seo_score ?? article.seo_score ?? expertReview?.seo_score), detail: 'Balises, mot-clé, structure Hn, slug et densité.' },
-    { label: 'GEO', value: scoreFromReport(article.geo_optimization_json, ['geo_score', 'score']), detail: 'Optimisation des réponses IA, formats extractibles et clarté sémantique.' },
-    { label: 'Orig.', value: scoreFromReport(article.originality_report_json, ['heuristic_score', 'score']), detail: 'Originalité heuristique et risque de contenu trop générique.' },
-    { label: 'Qualité', value: finiteScore(brief?.quality_score ?? article.quality_score), detail: 'Structure éditoriale, longueur, introduction, conclusion et contenu actionnable.' },
-    { label: 'Lisibilité', value: finiteScore(brief?.readability_score ?? article.readability_score ?? expertReview?.readability_score), detail: 'Phrases, paragraphes, rythme et densité de sections.' },
-    { label: 'EEAT', value: finiteScore(brief?.eeat_score ?? article.eeat_score ?? expertReview?.eeat_score), detail: 'Sources, exemples, crédibilité et preuves éditoriales.' },
+    { label: 'Global', value: finiteScore(article.latest_analysis?.global_score ?? expertReview?.score_global), detail: 'Score global utilisé pour la validation finale.' },
+    { label: 'SEO', value: finiteScore(brief?.seo_score ?? expertReview?.seo_score), detail: 'Balises, mot-clé, structure Hn, slug et densité.' },
+    { label: 'GEO', value: scoreFromReport(article.artifacts['geo_optimization'], ['geo_score', 'score']), detail: 'Optimisation des réponses IA, formats extractibles et clarté sémantique.' },
+    { label: 'Orig.', value: scoreFromReport(article.artifacts['originality_report'], ['heuristic_score', 'score']), detail: 'Originalité heuristique et risque de contenu trop générique.' },
+    { label: 'Qualité', value: finiteScore(brief?.quality_score), detail: 'Structure éditoriale, longueur, introduction, conclusion et contenu actionnable.' },
+    { label: 'Lisibilité', value: finiteScore(brief?.readability_score ?? expertReview?.readability_score), detail: 'Phrases, paragraphes, rythme et densité de sections.' },
+    { label: 'EEAT', value: finiteScore(brief?.eeat_score ?? expertReview?.eeat_score), detail: 'Sources, exemples, crédibilité et preuves éditoriales.' },
   ]
   const current = rows.find((row) => row.label === selected) ?? rows[0]
 
@@ -261,7 +260,7 @@ export default function SeoPanel({
   const [expertError, setExpertError] = useState('')
   const [expertSuccess, setExpertSuccess] = useState('')
   const [selectedScore, setSelectedScore] = useState('Global')
-  const expertReview = normalizeExpertReview(expertReviewOverride ?? article.seo_review_json ?? null)
+  const expertReview = normalizeExpertReview(expertReviewOverride)
 
   const brief = analysis ?? article.latest_analysis
   const hasTitleH1 = Boolean(article.title?.trim())
@@ -517,7 +516,7 @@ export default function SeoPanel({
       )}
 
       {/* ── Rapports externalisés ─────────────────────────── */}
-      {(article.generation_report_json || article.research_brief_json || article.language_quality_report_json) && (
+      {(article.artifacts['generation_report'] || article.artifacts['research_brief'] || article.artifacts['language_quality_report']) && (
         <div className="flex flex-col gap-3">
           <p className="text-[12px] font-semibold uppercase tracking-wide text-secondary">
             Rapports
@@ -526,11 +525,11 @@ export default function SeoPanel({
           <GenerationReportPanel article={article} />
           <QualityPanel article={article} />
 
-          {typeof article.outline_json === 'string' && (
-            <ReportSection title="Plan" data={tryParseJson(article.outline_json)} />
+          {article.artifacts['outline'] && (
+            <ReportSection title="Plan" data={article.artifacts['outline']} />
           )}
-          {!!article.image_plan_json && <ReportSection title="Plan images" data={article.image_plan_json} />}
-          {!!article.callout_plan_json && <ReportSection title="Plan callouts" data={article.callout_plan_json} />}
+          {!!article.artifacts['image_plan'] && <ReportSection title="Plan images" data={article.artifacts['image_plan']} />}
+          {!!article.artifacts['callout_plan'] && <ReportSection title="Plan callouts" data={article.artifacts['callout_plan']} />}
         </div>
       )}
     </div>

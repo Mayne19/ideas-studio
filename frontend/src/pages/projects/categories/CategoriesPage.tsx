@@ -78,8 +78,8 @@ function CategoryColumn({
             >
               {category.color ? category.color.toUpperCase() : 'Couleur auto'}
             </span>
-            {(category.monthly_frequency ?? category.target_frequency) !== null && (
-              <span>{category.monthly_frequency ?? category.target_frequency} art./mois</span>
+            {category.monthly_target !== null && (
+              <span>{category.monthly_target} art./mois</span>
             )}
           </div>
         </div>
@@ -285,7 +285,7 @@ export default function CategoriesPage() {
     setForm({
       name: c.name,
       color: categoryColor(c),
-      target_frequency: (c.monthly_frequency ?? c.target_frequency) !== null ? String(c.monthly_frequency ?? c.target_frequency) : '',
+      target_frequency: c.monthly_target !== null ? String(c.monthly_target) : '',
       word_count_min: c.word_count_min != null ? String(c.word_count_min) : '',
       word_count_max: c.word_count_max != null ? String(c.word_count_max) : '',
     })
@@ -308,8 +308,7 @@ export default function CategoriesPage() {
         const payload: UpdateCategoryPayload = {
           name: form.name.trim(),
           color: normalizeColor(form.color),
-          target_frequency: freq,
-          monthly_frequency: freq,
+          monthly_target: freq,
           word_count_min: form.word_count_min.trim() ? parseInt(form.word_count_min) : null,
           word_count_max: form.word_count_max.trim() ? parseInt(form.word_count_max) : null,
         }
@@ -318,8 +317,7 @@ export default function CategoriesPage() {
         const payload: CreateCategoryPayload = {
           name: form.name.trim(),
           color: normalizeColor(form.color),
-          target_frequency: freq ?? undefined,
-          monthly_frequency: freq ?? undefined,
+          monthly_target: freq ?? undefined,
           word_count_min: form.word_count_min.trim() ? parseInt(form.word_count_min) : null,
           word_count_max: form.word_count_max.trim() ? parseInt(form.word_count_max) : null,
         }

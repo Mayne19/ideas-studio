@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom'
 import { Code2, Globe, Key, Power, RefreshCw, Wifi, WifiOff } from '@/components/ui/hugeIcons'
 import { getConnectInfo, disconnectProject, revalidateProject, updateProject } from '@/api/projects'
 import type { ConnectInfo } from '@/types'
+import { ProjectStatus } from '@/lib/status'
 import Button from '@/components/ui/Button'
 import FormCard from '@/components/ui/FormCard'
 import CopyButton from '@/components/ui/CopyButton'
@@ -36,7 +37,6 @@ function cleanRevalidateForm(data: ConnectInfo) {
     return {
       public_site_url: '',
       revalidate_url: '',
-      revalidate_secret: '',
     }
   }
   const derived = deriveRevalidateUrl(publicSiteUrl)
@@ -44,14 +44,7 @@ function cleanRevalidateForm(data: ConnectInfo) {
   return {
     public_site_url: publicSiteUrl,
     revalidate_url: safeEndpoint || derived,
-    revalidate_secret: '',
   }
-}
-
-function generateRevalidationSecret() {
-  const bytes = new Uint8Array(24)
-  window.crypto?.getRandomValues(bytes)
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
 function InfoRow({
@@ -101,7 +94,7 @@ export default function ProjectIntegrationPage() {
   const [showInstructions, setShowInstructions] = useState(false)
   const [disconnectOpen, setDisconnectOpen] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
-  const [revalidateForm, setRevalidateForm] = useState({ public_site_url: '', revalidate_url: '', revalidate_secret: '' })
+  const [revalidateForm, setRevalidateForm] = useState({ public_site_url: '', revalidate_url: '' })
   const [savingRevalidate, setSavingRevalidate] = useState(false)
   const [manualRevalidating, setManualRevalidating] = useState(false)
   const [revalidateMessage, setRevalidateMessage] = useState('')
@@ -163,7 +156,7 @@ export default function ProjectIntegrationPage() {
   if (status === 'loading') return <LoadingState />
   if (status === 'error') return <ErrorState onRetry={loadInfo} />
 
-  const isConnected = info?.status === 'connected'
+  const isConnected = info?.status === ProjectStatus.CONNECTED
   const hasInstructionsVisible = !isConnected || showInstructions
 
   async function handleSaveRevalidation(event: React.FormEvent) {
@@ -176,9 +169,8 @@ export default function ProjectIntegrationPage() {
       : revalidateForm.revalidate_url
     try {
       await updateProject(projectId, {
-        public_site_url: revalidateForm.public_site_url || null,
-        revalidate_url: safeEndpoint || null,
-        revalidate_secret: revalidateForm.revalidate_secret || undefined,
+        site_url: revalidateForm.public_site_url || undefined,
+        revalidate_url: safeEndpoint || undefined,
       })
       const data = await getConnectInfo(projectId)
       setInfo(data)
@@ -292,7 +284,7 @@ export default function ProjectIntegrationPage() {
             icon={<Key size={11} />}
             label="Clé de tracking publique"
             value={info?.public_tracking_key ?? '—'}
-            copyValue={info?.public_tracking_key}
+            copyValue={info?.public_tracking_key ?? undefined}
             canCopy={Boolean(info?.public_tracking_key)}
           />
           <InfoRow
@@ -425,27 +417,6 @@ export default function ProjectIntegrationPage() {
               )}
             </label>
           </div>
-          <label className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[12px] font-medium text-secondary">
-                Mot de passe de revalidation {info?.revalidate_secret_configured ? '(déjà configuré)' : ''}
-              </span>
-              <button
-                type="button"
-                onClick={() => setRevalidateForm((form) => ({ ...form, revalidate_secret: generateRevalidationSecret() }))}
-                className="text-[12px] font-medium text-secondary transition-colors hover:text-primary"
-              >
-                Générer
-              </button>
-            </div>
-            <input
-              value={revalidateForm.revalidate_secret}
-              onChange={(event) => setRevalidateForm((form) => ({ ...form, revalidate_secret: event.target.value }))}
-              placeholder={info?.revalidate_secret_configured ? 'Laisser vide pour conserver le mot de passe actuel' : 'Mot de passe partagé avec le site public'}
-              type="password"
-              className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
-            />
-          </label>
           <div className="grid gap-2 lg:grid-cols-3">
             <InfoRow icon={<RefreshCw size={11} />} label="Dernière revalidation" value={info?.last_revalidated_at ? formatDateTime(info.last_revalidated_at) : 'Jamais'} mono={false} />
             <InfoRow icon={<Wifi size={11} />} label="Statut" value={info?.last_revalidate_status ?? 'Non configuré'} mono={false} />

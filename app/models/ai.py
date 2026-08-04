@@ -9,8 +9,8 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, ForeignKey, ForeignKeyConstraint, Index, Numeric, SmallInteger, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import Boolean, ForeignKey, ForeignKeyConstraint, Index, Numeric, SmallInteger, Text, UniqueConstraint, text
+from sqlalchemy.dialects.postgresql import ENUM, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -60,9 +60,15 @@ class Agent(Base):
     id: Mapped[str] = _uuid_pk()
     key: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     label: Mapped[str] = mapped_column(Text, nullable=False)
-    category: Mapped[AgentCategory] = mapped_column(Text, nullable=False)
+    category: Mapped[AgentCategory] = mapped_column(
+        ENUM(AgentCategory, name="agent_category", schema="ai", create_type=False),
+        nullable=False,
+    )
     phase: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[AgentRegistryStatus] = mapped_column(Text, nullable=False, default=AgentRegistryStatus.PLANNED)
+    status: Mapped[AgentRegistryStatus] = mapped_column(
+        ENUM(AgentRegistryStatus, name="agent_status", schema="ai", create_type=False),
+        nullable=False, default=AgentRegistryStatus.PLANNED,
+    )
     output_json_field: Mapped[str | None] = mapped_column(Text, nullable=True)
     requires_llm: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     requires_search: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -149,6 +155,7 @@ class WorkflowRun(Base):
             ["status_reason_id", "state_id"],
             ["ref.run_status_reasons.id", "ref.run_status_reasons.state_id"],
         ),
+        Index("workflow_runs_article_idx", "article_id", text("started_at DESC")),
         {"schema": "ai"},
     )
 
@@ -176,6 +183,7 @@ class WorkflowStep(Base):
             ["status_reason_id", "state_id"],
             ["ref.step_status_reasons.id", "ref.step_status_reasons.state_id"],
         ),
+        Index("workflow_steps_run_idx", "run_id", "status_reason_id"),
         {"schema": "ai"},
     )
 
@@ -199,7 +207,11 @@ class Artifact(Base):
     par (article, agent_key) — voir app/services/seo/helpers.py:save_artifact."""
 
     __tablename__ = "artifacts"
-    __table_args__ = {"schema": "ai"}
+    __table_args__ = (
+        Index("artifacts_article_agent_idx", "article_id", "agent_key", text("created_at DESC")),
+        Index("artifacts_payload_gin", "payload", postgresql_using="gin", postgresql_ops={"payload": "jsonb_path_ops"}),
+        {"schema": "ai"},
+    )
 
     id: Mapped[str] = _uuid_pk()
     article_id: Mapped[str] = mapped_column(
@@ -219,7 +231,10 @@ class UsageEvent(Base):
     la création de nouvelles partitions reste un DDL manuel/cron distinct."""
 
     __tablename__ = "usage_events"
-    __table_args__ = {"schema": "ai"}
+    __table_args__ = (
+        Index("usage_project_time_idx", "project_id", text("occurred_at DESC")),
+        {"schema": "ai"},
+    )
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
     occurred_at: Mapped[datetime] = mapped_column(primary_key=True, default=_now)

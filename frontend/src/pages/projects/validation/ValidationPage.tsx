@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AlertTriangle, Calendar, CheckCircle, ExternalLink, RefreshCw, Send, XCircle } from '@/components/ui/hugeIcons'
-import { bulkPublishArticles, bulkValidateArticles, listArticles, patchArticle } from '@/api/articles'
+import { bulkPublishArticles, bulkValidateArticles, listArticles } from '@/api/articles'
 import type { BulkValidateResponse } from '@/api/articles'
 import { listCategories } from '@/api/categories'
 import type { Article, Category } from '@/types'
@@ -14,9 +14,10 @@ import Select from '@/components/ui/Select'
 import StatusBadge from '@/components/ui/StatusBadge'
 import ScoreBadge from '@/components/ui/ScoreBadge'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { finiteScore, getGeoScore, getOriginalityScore } from '@/lib/scoreBadge'
+import { finiteScore } from '@/lib/scoreBadge'
+import { ArticleStatus, type ArticleStatusCode } from '@/lib/status'
 
-const VALIDATION_STATUSES = ['ready_to_publish']
+const VALIDATION_STATUSES: ArticleStatusCode[] = [ArticleStatus.READY_TO_PUBLISH]
 
 type ValidationFilter =
   | 'all'
@@ -27,7 +28,6 @@ type ValidationFilter =
   | 'quality_lt_85'
   | 'readability_lt_80'
   | 'geo_lt_80'
-  | 'originality_lt_85'
   | 'critical'
   | 'missing_date'
   | 'needs_fix'
@@ -41,24 +41,22 @@ const FILTERS: Array<{ value: ValidationFilter; label: string }> = [
   { value: 'quality_lt_85', label: 'Qualité < 85' },
   { value: 'readability_lt_80', label: 'Lisibilité < 80' },
   { value: 'geo_lt_80', label: 'GEO < 80' },
-  { value: 'originality_lt_85', label: 'Originalité < 85' },
   { value: 'critical', label: 'Warnings critiques' },
   { value: 'missing_date', label: 'Sans date prévue' },
   { value: 'needs_fix', label: 'À corriger' },
 ]
 
-const GRID = 'lg:grid-cols-[32px_minmax(320px,1fr)_86px_70px_70px_70px_70px_70px_70px_90px_130px_170px]'
+const GRID = 'lg:grid-cols-[32px_minmax(320px,1fr)_86px_70px_70px_70px_70px_70px_90px_130px_170px]'
 
 function isReady(article: Article) {
-  return article.is_validable === true && Boolean(article.scheduled_at)
+  return article.is_validable === true && Boolean(article.scheduled_for)
 }
 
 function matchesFilter(article: Article, filter: ValidationFilter) {
   const global = finiteScore(article.global_score)
   const seo = finiteScore(article.seo_score)
   const quality = finiteScore(article.quality_score)
-  const geo = getGeoScore(article)
-  const originality = getOriginalityScore(article)
+  const geo = finiteScore(article.geo_score)
   if (filter === 'ready') return isReady(article)
   if (filter === 'global_gte_90') return global !== null && global >= 90
   if (filter === 'global_lt_90') return global === null || global < 90 || article.global_score_valid === false
@@ -66,9 +64,8 @@ function matchesFilter(article: Article, filter: ValidationFilter) {
   if (filter === 'quality_lt_85') return quality === null || quality < 85
   if (filter === 'readability_lt_80') return finiteScore(article.readability_score) === null || (finiteScore(article.readability_score) ?? 0) < 80
   if (filter === 'geo_lt_80') return geo === null || geo < 80
-  if (filter === 'originality_lt_85') return originality === null || originality < 85
   if (filter === 'critical') return article.critical_warnings.length > 0
-  if (filter === 'missing_date') return !article.scheduled_at
+  if (filter === 'missing_date') return !article.scheduled_for
   if (filter === 'needs_fix') return article.is_validable === false || article.critical_warnings.length > 0
   return true
 }
@@ -84,7 +81,7 @@ export default function ValidationPage() {
   const [tick, setTick] = useState(0)
   const [error, setError] = useState('')
   const [bulkResult, setBulkResult] = useState<BulkValidateResponse | null>(null)
-  const [confirmMode, setConfirmMode] = useState<'schedule' | 'publish' | 'correction' | null>(null)
+  const [confirmMode, setConfirmMode] = useState<'schedule' | 'publish' | null>(null)
   const [running, setRunning] = useState(false)
 
   useEffect(() => {
@@ -145,9 +142,6 @@ export default function ValidationPage() {
       } else if (confirmMode === 'publish') {
         const result = await bulkPublishArticles(projectId, selectedArticles.map((article) => article.id))
         setBulkResult(result)
-      } else {
-        await Promise.all(selectedArticles.map((article) => patchArticle(projectId, article.id, { status: 'correction_needed' })))
-        setConfirmMode(null)
       }
       setTick((t) => t + 1)
     } catch (err) {
@@ -203,9 +197,6 @@ export default function ValidationPage() {
           <div className="flex flex-wrap items-center gap-2">
             {selectedCount > 0 && (
               <>
-                <Button size="sm" variant="secondary" onClick={() => setConfirmMode('correction')}>
-                  Renvoyer en correction ({selectedCount})
-                </Button>
                 <Button size="sm" variant="secondary" icon={<Calendar size={13} />} onClick={() => setConfirmMode('schedule')}>
                   Valider et programmer ({selectedCount})
                 </Button>
@@ -240,7 +231,6 @@ export default function ValidationPage() {
               <div className="text-center">SEO</div>
               <div className="text-center">Qualité</div>
               <div className="text-center">GEO</div>
-              <div className="text-center">Originalité</div>
               <div className="text-center">Warnings</div>
               <div>Date cible</div>
               <div className="text-right">Actions</div>
@@ -282,16 +272,15 @@ export default function ValidationPage() {
                     <ScoreBadge value={finiteScore(article.seo_score)} label="SEO" className="w-full justify-center" />
                     <ScoreBadge value={finiteScore(article.quality_score)} label="Qualité" className="w-full justify-center" />
                     <ScoreBadge value={finiteScore(article.readability_score)} label="Lisibilité" className="w-full justify-center" />
-                    <ScoreBadge value={getOriginalityScore(article)} label="Orig." className="w-full justify-center" />
-                    <ScoreBadge value={getGeoScore(article)} label="GEO" className="w-full justify-center" />
+                    <ScoreBadge value={finiteScore(article.geo_score)} label="GEO" className="w-full justify-center" />
                     <ScoreBadge value={finiteScore(article.eeat_score)} label="EEAT" className="w-full justify-center" />
                     <span className={`inline-flex items-center justify-center gap-1 rounded-full px-2 py-1 text-[12px] font-medium ${criticalCount > 0 ? 'bg-danger/10 text-danger' : 'bg-success/8 text-success'}`}>
                       {criticalCount > 0 ? <AlertTriangle size={11} /> : <CheckCircle size={11} />}
                       {criticalCount}
                     </span>
-                    <span className={article.scheduled_at ? 'text-[12px] text-secondary' : 'inline-flex items-center gap-1 text-[12px] text-danger'}>
-                      {!article.scheduled_at && <XCircle size={12} />}
-                      {article.scheduled_at ? formatDate(article.scheduled_at) : 'Absente'}
+                    <span className={article.scheduled_for ? 'text-[12px] text-secondary' : 'inline-flex items-center gap-1 text-[12px] text-danger'}>
+                      {!article.scheduled_for && <XCircle size={12} />}
+                      {article.scheduled_for ? formatDate(article.scheduled_for) : 'Absente'}
                     </span>
                     <div className="flex items-center justify-end gap-1.5">
                       <Button size="sm" variant="secondary" icon={<ExternalLink size={12} />} onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}>
@@ -312,7 +301,7 @@ export default function ValidationPage() {
       <Modal
         open={confirmMode !== null}
         onClose={() => { if (!running) { setConfirmMode(null); setBulkResult(null) } }}
-        title={confirmMode === 'publish' ? 'Publier maintenant' : confirmMode === 'correction' ? 'Renvoyer en correction' : 'Valider et programmer'}
+        title={confirmMode === 'publish' ? 'Publier maintenant' : 'Valider et programmer'}
         size="md"
       >
         <div className="flex flex-col gap-4">
@@ -321,9 +310,7 @@ export default function ValidationPage() {
               <p className="text-[14px] leading-relaxed text-secondary">
                 {confirmMode === 'publish'
                   ? `Publication immédiate explicite de ${selectedCount} article(s). Les alertes de validation restent visibles mais ne bloquent pas votre décision.`
-                  : confirmMode === 'correction'
-                    ? `${selectedCount} article(s) repasseront en correction.`
-                    : `${selectedCount} article(s) seront validés et programmés selon leur date prévue.`}
+                  : `${selectedCount} article(s) seront validés et programmés selon leur date prévue.`}
               </p>
               <div className="flex gap-2">
                 <Button size="sm" variant="secondary" className="flex-1 justify-center" onClick={() => setConfirmMode(null)}>

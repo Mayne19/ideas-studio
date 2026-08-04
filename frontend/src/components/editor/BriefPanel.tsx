@@ -2,16 +2,20 @@ import { ReportSection, ReportGroup } from './ReportSection'
 import type { EditorArticle } from '@/types'
 
 export default function BriefPanel({ article }: { article: EditorArticle }) {
-  const hasContent = article.research_brief_json || article.keyword_brief_json || article.editorial_angle_json || article.intent_analysis_json
+  const researchBrief = article.artifacts['research_brief']
+  const keywordBrief = article.artifacts['keyword_brief']
+  const editorialAngle = article.artifacts['editorial_angle']
+  const intentAnalysis = article.artifacts['intent_analysis']
+  const hasContent = researchBrief || keywordBrief || editorialAngle || intentAnalysis
 
   if (!hasContent) return null
 
   return (
     <ReportGroup title="Briefs">
-      {article.research_brief_json && <ReportSection title="Brief Recherche" data={article.research_brief_json} />}
-      {article.keyword_brief_json && <ReportSection title="Brief Mots-clés" data={article.keyword_brief_json} />}
-      {article.editorial_angle_json && <ReportSection title="Angle éditorial" data={article.editorial_angle_json} />}
-      {article.intent_analysis_json && <ReportSection title="Analyse d'intention" data={article.intent_analysis_json} />}
+      {researchBrief && <ReportSection title="Brief Recherche" data={researchBrief} />}
+      {keywordBrief && <ReportSection title="Brief Mots-clés" data={keywordBrief} />}
+      {editorialAngle && <ReportSection title="Angle éditorial" data={editorialAngle} />}
+      {intentAnalysis && <ReportSection title="Analyse d'intention" data={intentAnalysis} />}
     </ReportGroup>
   )
 }

@@ -2,7 +2,7 @@ import { Globe, CheckCircle, HelpCircle, TrendingUp } from '@/components/ui/huge
 import type { EditorArticle } from '@/types'
 
 export default function GeoPanel({ article }: { article: EditorArticle }) {
-  const geo = article.geo_optimization_json as Record<string, unknown> | null
+  const geo = article.artifacts['geo_optimization']
 
   if (!geo) {
     return (

@@ -16,65 +16,35 @@ export function getConnectInfo(id: string): Promise<ConnectInfo> {
 export type CreateProjectPayload = {
   name: string
   domain?: string
-  language?: string
-  country_target?: string
+  locale?: string
   timezone?: string
-  description?: string
-  industry?: string
   audience?: string
   tone?: string
   reader_level?: string
   writing_style?: string
-  editorial_goal?: string
-  value_proposition?: string
-  allowed_topics?: string
-  forbidden_topics?: string
-  words_to_avoid?: string
-  average_target_length?: string
+  vertical?: string
   word_count_min?: number | null
   word_count_max?: number | null
-  preferred_formats?: string
-  technical_level?: string
-  seo_rules?: string
-  geo_rules?: string
-  source_guidelines?: string
-  internal_linking_guidelines?: string
-  external_linking_guidelines?: string
-  style_examples?: string
+  rules?: Record<string, unknown>
+  constraints?: Record<string, unknown>
 }
 
 export type UpdateProjectPayload = {
   name?: string
   domain?: string
-  language?: string
-  vertical?: string
-  country_target?: string
+  locale?: string
   timezone?: string
-  description?: string
-  industry?: string
   audience?: string
   tone?: string
   reader_level?: string
   writing_style?: string
-  editorial_goal?: string
-  value_proposition?: string
-  allowed_topics?: string
-  forbidden_topics?: string
-  words_to_avoid?: string
-  average_target_length?: string
+  vertical?: string
   word_count_min?: number | null
   word_count_max?: number | null
-  preferred_formats?: string
-  technical_level?: string
-  seo_rules?: string
-  geo_rules?: string
-  source_guidelines?: string
-  internal_linking_guidelines?: string
-  external_linking_guidelines?: string
-  style_examples?: string
-  public_site_url?: string | null
-  revalidate_url?: string | null
-  revalidate_secret?: string | null
+  rules?: Record<string, unknown>
+  constraints?: Record<string, unknown>
+  site_url?: string
+  revalidate_url?: string
 }
 
 export function createProject(payload: CreateProjectPayload): Promise<Project> {

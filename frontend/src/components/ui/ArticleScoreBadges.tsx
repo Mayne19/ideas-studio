@@ -1,5 +1,5 @@
 import type { Article } from '@/types'
-import { finiteScore, getOriginalityScore, getGeoScore } from '@/lib/scoreBadge'
+import { finiteScore } from '@/lib/scoreBadge'
 import ScoreBadge from '@/components/ui/ScoreBadge'
 
 interface ArticleScoreBadgesProps {
@@ -15,8 +15,7 @@ export default function ArticleScoreBadges({ article, compact = false, className
       <ScoreBadge label="SEO" value={finiteScore(article.seo_score)} compact={compact} />
       <ScoreBadge label="Qualité" value={finiteScore(article.quality_score)} compact={compact} />
       <ScoreBadge label="Lisibilité" value={finiteScore(article.readability_score)} compact={compact} />
-      <ScoreBadge label="Originalité" value={getOriginalityScore(article)} compact={compact} />
-      <ScoreBadge label="GEO" value={getGeoScore(article)} compact={compact} />
+      <ScoreBadge label="GEO" value={finiteScore(article.geo_score)} compact={compact} />
       <ScoreBadge label="EEAT" value={finiteScore(article.eeat_score)} compact={compact} />
     </div>
   )

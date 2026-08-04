@@ -5,6 +5,7 @@ import { listProjects, createProject, deleteProject } from '@/api/projects'
 import { listArticles } from '@/api/articles'
 import type { CreateProjectPayload } from '@/api/projects'
 import type { Project } from '@/types'
+import { ArticleStatus, ProjectStatus } from '@/lib/status'
 import { formatDate } from '@/utils/format'
 import { Card } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -15,25 +16,12 @@ import EmptyState from '@/components/ui/EmptyState'
 import ErrorState from '@/components/ui/ErrorState'
 import { SkeletonCard } from '@/components/ui/Skeleton'
 
-const LANGUAGE_OPTIONS = [
-  { value: 'fr', label: 'Français' },
-  { value: 'en', label: 'Anglais' },
-  { value: 'es', label: 'Espagnol' },
-  { value: 'de', label: 'Allemand' },
-  { value: 'pt', label: 'Portugais' },
-]
-
-const COUNTRY_OPTIONS = [
-  { value: '', label: 'Pas défini' },
-  { value: 'FR', label: 'France' },
-  { value: 'US', label: 'États-Unis' },
-  { value: 'GB', label: 'Royaume-Uni' },
-  { value: 'BE', label: 'Belgique' },
-  { value: 'CH', label: 'Suisse' },
-  { value: 'CA', label: 'Canada' },
-  { value: 'ES', label: 'Espagne' },
-  { value: 'DE', label: 'Allemagne' },
-  { value: 'BR', label: 'Brésil' },
+const LOCALE_OPTIONS = [
+  { value: 'fr-FR', label: 'Français' },
+  { value: 'en-US', label: 'Anglais' },
+  { value: 'es-ES', label: 'Espagnol' },
+  { value: 'de-DE', label: 'Allemand' },
+  { value: 'pt-PT', label: 'Portugais' },
 ]
 
 type ProjectStats = {
@@ -66,7 +54,7 @@ function ProjectCard({
   onConnect: () => void
   onDelete: () => void
 }) {
-  const isConnected = project.status === 'connected'
+  const isConnected = project.status === ProjectStatus.CONNECTED
   return (
     <Card className="flex flex-col gap-3 hover:shadow-none transition-shadow duration-200 group">
       {/* Header */}
@@ -103,14 +91,9 @@ function ProjectCard({
           <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-success' : 'bg-[#c8c8cc]'}`} />
           {isConnected ? 'Connecté' : 'Non connecté'}
         </span>
-        {project.language && (
+        {project.locale && (
           <span className="rounded-full bg-surface-soft px-2 py-0.5 text-[10px] text-tertiary uppercase font-medium">
-            {project.language}
-          </span>
-        )}
-        {project.country_target && (
-          <span className="rounded-full bg-surface-soft px-2 py-0.5 text-[10px] text-tertiary font-medium">
-            {project.country_target}
+            {project.locale}
           </span>
         )}
       </div>
@@ -157,8 +140,7 @@ function ProjectCard({
 type FormState = {
   name: string
   domain: string
-  language: string
-  country_target: string
+  locale: string
   audience: string
   tone: string
 }
@@ -170,7 +152,7 @@ export default function ProjectsPage() {
   const [projectStats, setProjectStats] = useState<Record<string, ProjectStats>>({})
 
   const [modalOpen, setModalOpen] = useState(false)
-  const [form, setForm] = useState<FormState>({ name: '', domain: '', language: 'fr', country_target: '', audience: '', tone: '' })
+  const [form, setForm] = useState<FormState>({ name: '', domain: '', locale: 'fr-FR', audience: '', tone: '' })
   const [formError, setFormError] = useState('')
   const [creating, setCreating] = useState(false)
 
@@ -188,9 +170,9 @@ export default function ProjectsPage() {
         Promise.allSettled(
           data.map((p) =>
             Promise.allSettled([
-              listArticles(p.id, { status: 'published', limit: 200 }),
-              listArticles(p.id, { status: 'idea_proposed', limit: 200 }),
-              listArticles(p.id, { status: 'review_needed', limit: 100 }),
+              listArticles(p.id, { status: ArticleStatus.PUBLISHED, limit: 200 }),
+              listArticles(p.id, { status: ArticleStatus.IDEA_PROPOSED, limit: 200 }),
+              listArticles(p.id, { status: ArticleStatus.REVIEW_NEEDED, limit: 100 }),
             ]).then(([pub, ideas, review]) => ({
               id: p.id,
               stats: {
@@ -225,14 +207,13 @@ export default function ProjectsPage() {
       const payload: CreateProjectPayload = {
         name: form.name.trim(),
         domain: form.domain.trim(),
-        language: form.language,
-        country_target: form.country_target || undefined,
+        locale: form.locale,
         audience: form.audience.trim() || undefined,
         tone: form.tone.trim() || undefined,
       }
       const project = await createProject(payload)
       setModalOpen(false)
-      setForm({ name: '', domain: '', language: 'fr', country_target: '', audience: '', tone: '' })
+      setForm({ name: '', domain: '', locale: 'fr-FR', audience: '', tone: '' })
       // Redirect to integration (onboarding)
       navigate(`/projects/${project.id}/settings/integration`)
     } catch (err) {
@@ -304,7 +285,7 @@ export default function ProjectsPage() {
       {/* Create project modal */}
       <Modal
         open={modalOpen}
-        onClose={() => { setModalOpen(false); setFormError(''); setForm({ name: '', domain: '', language: 'fr', country_target: '', audience: '', tone: '' }) }}
+        onClose={() => { setModalOpen(false); setFormError(''); setForm({ name: '', domain: '', locale: 'fr-FR', audience: '', tone: '' }) }}
         title="Nouveau projet"
         size="sm"
       >
@@ -328,20 +309,12 @@ export default function ProjectsPage() {
             required
             hint="Sans https:// ni chemin"
           />
-          <div className="grid grid-cols-2 gap-3">
-            <Select
-              label="Langue principale"
-              options={LANGUAGE_OPTIONS}
-              value={form.language}
-              onChange={(e) => setForm((f) => ({ ...f, language: e.target.value }))}
-            />
-            <Select
-              label="Pays cible"
-              options={COUNTRY_OPTIONS}
-              value={form.country_target}
-              onChange={(e) => setForm((f) => ({ ...f, country_target: e.target.value }))}
-            />
-          </div>
+          <Select
+            label="Langue principale"
+            options={LOCALE_OPTIONS}
+            value={form.locale}
+            onChange={(e) => setForm((f) => ({ ...f, locale: e.target.value }))}
+          />
           <Input
             label="Audience cible"
             placeholder="Développeurs web freelances"

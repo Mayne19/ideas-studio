@@ -2,6 +2,7 @@ import { api } from './client'
 import { listArticles } from './articles'
 import type {
   Article,
+  ArticleStatusCode,
   IdeaGenerateRequest,
   IdeaGenerateResponse,
   IdeaRejectRequest,
@@ -9,7 +10,7 @@ import type {
   IdeaLaunchResponse,
 } from '@/types'
 
-export function listIdeas(projectId: string, status?: string): Promise<Article[]> {
+export function listIdeas(projectId: string, status?: ArticleStatusCode): Promise<Article[]> {
   return listArticles(projectId, { status, limit: 100 })
 }
 
@@ -21,8 +22,8 @@ export function rejectIdea(articleId: string, payload: IdeaRejectRequest = {}): 
   return api.post<{ status: string }>(`/articles/${articleId}/reject`, payload)
 }
 
-export function setIdeaPriority(articleId: string, priority: number): Promise<{ priority: number; status: string }> {
-  return api.post<{ priority: number; status: string }>(`/articles/${articleId}/priority`, { priority })
+export function setIdeaPriority(articleId: string, priority: number): Promise<{ priority: number; status: ArticleStatusCode }> {
+  return api.post<{ priority: number; status: ArticleStatusCode }>(`/articles/${articleId}/priority`, { priority })
 }
 
 export function startWriting(articleId: string): Promise<IdeaGenerateResponse> {
@@ -75,16 +76,14 @@ export function discoverIdeas(projectId: string, topic: string, count: number = 
 export type SendToProductionResponse = {
   id: string
   title: string
-  status: string
-  next_agent_key: string | null
-  workflow_status: string | null
+  status: ArticleStatusCode
 }
 
-export function requeueWriting(articleId: string): Promise<{ id: string; title: string; status: string }> {
+export function requeueWriting(articleId: string): Promise<{ id: string; title: string; status: ArticleStatusCode }> {
   return api.post(`/articles/${articleId}/requeue-writing`)
 }
 
-export function cancelWriting(articleId: string): Promise<{ id: string; status: string; cancelled: boolean; cancel_requested?: boolean }> {
+export function cancelWriting(articleId: string): Promise<{ id: string; status: ArticleStatusCode; cancelled: boolean; cancel_requested?: boolean }> {
   return api.post(`/articles/${articleId}/cancel-writing`)
 }
 
@@ -94,11 +93,10 @@ export function sendToProduction(articleId: string): Promise<SendToProductionRes
 
 export type ProductionQueueSummary = {
   total_in_queue: number
-  counts: Record<string, number>
+  counts: Record<number, number>
   next_up: {
     id: string
     title: string
-    next_agent_key: string | null
   } | null
 }
 
@@ -106,7 +104,7 @@ export function getProductionQueue(projectId: string): Promise<ProductionQueueSu
   return api.get<ProductionQueueSummary>(`/projects/${projectId}/production/queue`)
 }
 
-export function processProductionQueue(projectId: string): Promise<{ processed: number; articles: Array<{ id: string; title: string; status: string; next_agent_key: string | null }> }> {
+export function processProductionQueue(projectId: string): Promise<{ processed: number; articles: Array<{ id: string; title: string; status: ArticleStatusCode }> }> {
   return api.post(`/projects/${projectId}/production/process`)
 }
 
@@ -125,7 +123,7 @@ export function generateMonthlyPlan(projectId: string, force: boolean = false, g
 
 export type ImprovementAnalysisResponse = {
   id: string
-  monitoring_status: string | null
+  status: ArticleStatusCode
   performance_diagnosis: Record<string, unknown> | null
   improvement_proposal: Record<string, unknown> | null
 }
@@ -137,9 +135,8 @@ export function analyzeArticleImprovement(articleId: string): Promise<Improvemen
 export type CreateImprovementDraftResponse = {
   id: string
   title: string
-  status: string
-  original_article_id: string | null
-  monitoring_status: string | null
+  article_id: string
+  status: ArticleStatusCode
 }
 
 export function createImprovementDraft(articleId: string): Promise<CreateImprovementDraftResponse> {
@@ -148,7 +145,7 @@ export function createImprovementDraft(articleId: string): Promise<CreateImprove
 
 export type ScanMonitoringResponse = {
   scanned: number
-  articles_with_proposals: Array<{ id: string; title: string; monitoring_status: string | null }>
+  articles_with_proposals: Array<{ id: string; title: string; status: ArticleStatusCode }>
 }
 
 export function scanMonitoring(projectId: string): Promise<ScanMonitoringResponse> {

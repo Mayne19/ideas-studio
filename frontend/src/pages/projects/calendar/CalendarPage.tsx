@@ -4,6 +4,7 @@ import { Calendar, ExternalLink, RefreshCw, List, ChevronLeft, ChevronRight } fr
 import { listArticles } from '@/api/articles'
 import type { Article } from '@/types'
 import { STATUS_LABELS } from '@/utils/articleActions'
+import { ArticleStatus } from '@/lib/status'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
 import StatusBadge from '@/components/ui/StatusBadge'
@@ -54,7 +55,7 @@ function formatDateKey(key: string): string {
 }
 
 function getCalendarDate(article: Article): string | null {
-  return article.published_at ?? article.scheduled_at ?? article.updated_at ?? article.created_at ?? null
+  return article.published_at ?? article.scheduled_for ?? article.updated_at ?? article.created_at ?? null
 }
 
 function getArticleDateKey(article: Article): string | null {
@@ -334,7 +335,7 @@ export default function CalendarPage() {
                           const displayDate = dateKey ? formatDateKey(dateKey) : '—'
                           const displayDay = dateKey ? String(dateFromKey(dateKey).getDate()).padStart(2, '0') : '—'
                           const displayMonth = dateKey ? MONTH_NAMES[dateFromKey(dateKey).getMonth()]?.slice(0, 3) : ''
-                          const dateLabel = a.status === 'scheduled' ? 'Programmé le' : a.status === 'published' ? 'Publié le' : a.status === 'idea_proposed' || a.status === 'idea_priority' ? 'Idée le' : a.status === 'writing_requested' || a.status === 'writing_in_progress' ? 'Rédaction le' : a.status === 'draft_ready' ? 'Brouillon le' : a.status === 'review_needed' ? 'Relecture le' : a.status === 'ready_to_publish' ? 'Prêt le' : 'Daté le'
+                          const dateLabel = a.status === ArticleStatus.SCHEDULED ? 'Programmé le' : a.status === ArticleStatus.PUBLISHED ? 'Publié le' : a.status === ArticleStatus.IDEA_PROPOSED || a.status === ArticleStatus.IDEA_PRIORITY ? 'Idée le' : a.status === ArticleStatus.WRITING_REQUESTED || a.status === ArticleStatus.WRITING_IN_PROGRESS ? 'Rédaction le' : a.status === ArticleStatus.DRAFT_READY ? 'Brouillon le' : a.status === ArticleStatus.REVIEW_NEEDED ? 'Relecture le' : a.status === ArticleStatus.READY_TO_PUBLISH ? 'Prêt le' : 'Daté le'
                           return (
                             <div
                               key={a.id}
@@ -425,15 +426,15 @@ export default function CalendarPage() {
                         key={a.id}
                         onClick={() => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
                         className={`rounded-[4px] px-1.5 py-0.5 text-left text-[10px] font-medium truncate transition-colors ${
-                          a.status === 'scheduled'
+                          a.status === ArticleStatus.SCHEDULED
                             ? 'bg-blue-500/10 text-blue-600 hover:bg-blue-500/15'
-                            : a.status === 'published'
+                            : a.status === ArticleStatus.PUBLISHED
                             ? 'bg-success/8 text-success hover:bg-success/12'
-                            : a.status === 'idea_proposed' || a.status === 'idea_priority'
+                            : a.status === ArticleStatus.IDEA_PROPOSED || a.status === ArticleStatus.IDEA_PRIORITY
                             ? 'bg-accent/8 text-accent hover:bg-accent/12'
-                            : a.status === 'writing_requested' || a.status === 'writing_in_progress' || a.status === 'draft_ready'
+                            : a.status === ArticleStatus.WRITING_REQUESTED || a.status === ArticleStatus.WRITING_IN_PROGRESS || a.status === ArticleStatus.DRAFT_READY
                             ? 'bg-accent/8 text-accent hover:bg-accent/12'
-                            : a.status === 'review_needed' || a.status === 'ready_to_publish'
+                            : a.status === ArticleStatus.REVIEW_NEEDED || a.status === ArticleStatus.READY_TO_PUBLISH
                             ? 'bg-warning/8 text-warning hover:bg-warning/12'
                             : 'bg-surface-soft text-secondary hover:bg-surface-muted'
                         }`}
@@ -463,11 +464,11 @@ export default function CalendarPage() {
             </span>
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-blue-600" />
-              {STATUS_LABELS['scheduled']}
+              {STATUS_LABELS[ArticleStatus.SCHEDULED]}
             </span>
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-success" />
-              {STATUS_LABELS['published']}
+              {STATUS_LABELS[ArticleStatus.PUBLISHED]}
             </span>
           </div>
               </div>

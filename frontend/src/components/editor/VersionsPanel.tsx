@@ -6,9 +6,10 @@ import { formatDateTime } from '@/utils/format'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 
 const VERSION_TYPE_LABELS: Record<string, string> = {
-  manual: 'Manuel',
-  autosave: 'Auto',
-  restore: 'Restauration',
+  human: 'Manuel',
+  ai: 'IA',
+  import: 'Import',
+  rollback: 'Restauration',
 }
 
 export default function VersionsPanel({
@@ -56,7 +57,7 @@ export default function VersionsPanel({
 
   function authorLabel(authorId: string | null): string {
     if (!authorId) return ''
-    const member = members.find((item) => item.user_id === authorId || item.id === authorId)
+    const member = members.find((item) => item.user_id === authorId)
     return member?.user_name || member?.user_email || authorId
   }
 
@@ -79,9 +80,9 @@ export default function VersionsPanel({
             className="flex items-center gap-2 rounded-[8px] border border-transparent px-2 py-1.5 hover:border-border hover:bg-surface-soft"
           >
             <div className="flex-1 min-w-0">
-              <p className="text-[12px] font-medium text-primary truncate">v{v.version_number} — {v.title}</p>
+              <p className="text-[12px] font-medium text-primary truncate">v{v.revision_no} — {v.title}</p>
               <p className="text-[10px] text-tertiary">
-                {VERSION_TYPE_LABELS[v.version_type] ?? v.version_type} · {formatDateTime(v.created_at)}
+                {VERSION_TYPE_LABELS[v.source] ?? v.source} · {formatDateTime(v.created_at)}
                 {v.created_by ? ` · Auteur ${authorLabel(v.created_by)}` : ''}
               </p>
             </div>

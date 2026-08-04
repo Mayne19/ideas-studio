@@ -14,7 +14,7 @@ import {
   Calendar,
   AlertTriangle,
 } from '@/components/ui/hugeIcons'
-import { listArticles, bulkValidateByScore, bulkValidateArticles, bulkPublishArticles, patchArticle, deleteArticle } from '@/api/articles'
+import { listArticles, bulkValidateByScore, bulkValidateArticles, bulkPublishArticles, deleteArticle } from '@/api/articles'
 import type { BulkValidateResponse } from '@/api/articles'
 import {
   generateIdea,
@@ -32,6 +32,7 @@ import type { PipelineRunResult } from '@/api/pipeline'
 import { listCategories } from '@/api/categories'
 import { useProject } from '@/context/ProjectContext'
 import type { Article, Category } from '@/types'
+import { ArticleStatus, type ArticleStatusCode } from '@/lib/status'
 import { formatDate } from '@/utils/format'
 import { finiteScore } from '@/lib/scoreBadge'
 import { ApiError } from '@/api/client'
@@ -46,15 +47,15 @@ import { Skeleton } from '@/components/ui/Skeleton'
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const IDEAS_STATUSES = ['idea_proposed', 'idea_priority', 'idea_rejected']
-const WRITING_STATUSES = ['writing_requested', 'writing_in_progress', 'outline_ready', 'failed']
-const VALIDATE_STATUSES = ['draft_ready', 'ready_to_publish', 'review_needed', 'correction_needed']
+const IDEAS_STATUSES: ArticleStatusCode[] = [ArticleStatus.IDEA_PROPOSED, ArticleStatus.IDEA_PRIORITY, ArticleStatus.IDEA_REJECTED]
+const WRITING_STATUSES: ArticleStatusCode[] = [ArticleStatus.WRITING_REQUESTED, ArticleStatus.WRITING_IN_PROGRESS, ArticleStatus.OUTLINE_READY, ArticleStatus.FAILED]
+const VALIDATE_STATUSES: ArticleStatusCode[] = [ArticleStatus.DRAFT_READY, ArticleStatus.READY_TO_PUBLISH, ArticleStatus.REVIEW_NEEDED, ArticleStatus.CORRECTION_NEEDED]
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Tous les statuts' },
-  { value: 'idea_proposed', label: 'Proposée' },
-  { value: 'idea_priority', label: 'Prioritaire' },
-  { value: 'idea_rejected', label: 'Rejetée' },
+  { value: String(ArticleStatus.IDEA_PROPOSED), label: 'Proposée' },
+  { value: String(ArticleStatus.IDEA_PRIORITY), label: 'Prioritaire' },
+  { value: String(ArticleStatus.IDEA_REJECTED), label: 'Rejetée' },
 ]
 
 const SCORE_OPTIONS = [
@@ -78,33 +79,8 @@ const SCORE_THRESHOLD_OPTIONS = [
   { value: '75', label: 'Score ≥ 75' },
 ]
 
-function parseJsonValue(value: unknown): unknown {
-  let current = value
-  for (let i = 0; i < 2; i += 1) {
-    if (typeof current !== 'string') break
-    try {
-      current = JSON.parse(current)
-    } catch {
-      return value
-    }
-  }
-  return current
-}
-
-function parseJsonObject(value: unknown): Record<string, unknown> {
-  const parsed = parseJsonValue(value)
-  return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {}
-}
-
-function parseJsonList(value: unknown): string[] {
-  const parsed = parseJsonValue(value)
-  if (!Array.isArray(parsed)) return []
-  return parsed.map((item) => String(item)).filter(Boolean)
-}
-
 function stringifyTechnical(value: unknown): string {
-  const parsed = parseJsonValue(value)
-  return JSON.stringify(parsed ?? {}, null, 2)
+  return JSON.stringify(value ?? {}, null, 2)
 }
 
 function textValue(value: unknown): string {
@@ -196,7 +172,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
     let rows = articles
     if (search) rows = rows.filter((a) => a.title?.toLowerCase().includes(search.toLowerCase()) || a.keyword?.toLowerCase().includes(search.toLowerCase()))
     if (categoryFilter) rows = rows.filter((a) => a.category_id === categoryFilter)
-    if (statusFilter) rows = rows.filter((a) => a.status === statusFilter)
+    if (statusFilter) rows = rows.filter((a) => a.status === Number(statusFilter))
     if (scoreFilter) {
       const min = Number(scoreFilter)
       rows = rows.filter((a) => (finiteScore(a.global_score) ?? 0) >= min)
@@ -221,8 +197,8 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
   const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories])
   const monthlyVolume = useMemo(
     () => categories
-      .filter((category) => category.pipeline_enabled !== false)
-      .reduce((sum, category) => sum + Math.max(0, Number(category.monthly_frequency ?? category.target_frequency ?? 0)), 0),
+      .filter((category) => category.is_pipeline_enabled)
+      .reduce((sum, category) => sum + Math.max(0, category.monthly_target ?? 0), 0),
     [categories],
   )
 
@@ -230,7 +206,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
     setActionLoading(article.id + '-prioritize')
     setError('')
     try {
-      await setIdeaPriority(article.id, article.status === 'idea_priority' ? 0 : 1)
+      await setIdeaPriority(article.id, article.status === ArticleStatus.IDEA_PRIORITY ? 0 : 1)
       setTick((t) => t + 1)
     } catch { setError('Impossible de prioriser.') }
     finally { setActionLoading(null) }
@@ -383,15 +359,6 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
     { value: '', label: 'Toutes les catégories' },
     ...categories.map((c) => ({ value: c.id, label: c.name })),
   ]
-  const previewBrief = useMemo(() => parseJsonObject(previewIdea?.planning_brief_json), [previewIdea])
-  const previewSecondaryKeywords = useMemo(
-    () => parseJsonList(previewIdea?.secondary_keywords_json || previewBrief.secondary_keywords),
-    [previewIdea, previewBrief],
-  )
-  const previewCompletedAgents = useMemo(
-    () => parseJsonList(previewIdea?.completed_agent_keys),
-    [previewIdea],
-  )
   const previewCategory = previewIdea?.category_id ? categoryMap.get(previewIdea.category_id)?.name ?? 'À classer' : 'À classer'
   const { project } = useProject()
   const previewWordRange = useMemo(() => {
@@ -402,8 +369,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
     const max = (fromCategory ? cat?.word_count_max : project?.word_count_max) ?? null
     if (!min && !max) return null
     const source = fromCategory ? 'Catégorie' : 'Paramètres projet'
-    const rawTarget = Number(previewIdea.target_word_count ?? previewBrief.target_word_count) || null
-    let target = rawTarget
+    let target = previewIdea.target_word_count
     if (target !== null) {
       if (max && target > max) target = max
       if (min && target < min) target = min
@@ -413,7 +379,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
       target = max ?? min
     }
     return { min, max, source, target }
-  }, [previewIdea, previewBrief, categories, project])
+  }, [previewIdea, categories, project])
 
   if (loadStatus === 'loading') return (
     <div className="flex flex-col gap-2">
@@ -525,18 +491,18 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
                   <StatusBadge status={article.status} />
                   <span className="text-[12px] text-tertiary">{article.created_at ? formatDate(article.created_at) : '—'}</span>
                   <div className="flex items-center justify-end gap-1">
-                    {article.status !== 'idea_rejected' && (
+                    {article.status !== ArticleStatus.IDEA_REJECTED && (
                       <button
                         type="button"
-                        title={article.status === 'idea_priority' ? 'Retirer priorité' : 'Prioriser'}
+                        title={article.status === ArticleStatus.IDEA_PRIORITY ? 'Retirer priorité' : 'Prioriser'}
                         onClick={() => handlePrioritize(article)}
                         disabled={actionLoading === article.id + '-prioritize'}
-                        className={`inline-flex h-7 w-7 items-center justify-center rounded-[8px] border border-border bg-surface shadow-sm transition-all hover:-translate-y-px active:translate-y-0 active:scale-[0.98] ${article.status === 'idea_priority' ? 'border-warning/30 text-warning' : 'text-tertiary hover:border-warning/30 hover:text-warning'}`}
+                        className={`inline-flex h-7 w-7 items-center justify-center rounded-[8px] border border-border bg-surface shadow-sm transition-all hover:-translate-y-px active:translate-y-0 active:scale-[0.98] ${article.status === ArticleStatus.IDEA_PRIORITY ? 'border-warning/30 text-warning' : 'text-tertiary hover:border-warning/30 hover:text-warning'}`}
                       >
                         <Star size={14} />
                       </button>
                     )}
-                    {article.status !== 'idea_rejected' && (
+                    {article.status !== ArticleStatus.IDEA_REJECTED && (
                       <button
                         type="button"
                         title="Valider → production"
@@ -547,7 +513,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
                         <CheckCircle size={14} />
                       </button>
                     )}
-                    {article.status !== 'idea_rejected' && (
+                    {article.status !== ArticleStatus.IDEA_REJECTED && (
                       <button
                         type="button"
                         title="Rejeter"
@@ -557,7 +523,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
                         <XCircle size={14} />
                       </button>
                     )}
-                    {article.status !== 'idea_rejected' && (
+                    {article.status !== ArticleStatus.IDEA_REJECTED && (
                       <button
                         type="button"
                         title="Supprimer définitivement"
@@ -567,7 +533,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                       </button>
                     )}
-                    {article.status === 'idea_rejected' && (
+                    {article.status === ArticleStatus.IDEA_REJECTED && (
                       <>
                         <button
                           type="button"
@@ -678,20 +644,13 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
                 ['Titre proposé', previewIdea.title],
                 ['Catégorie', previewCategory],
                 ['Mot-clé principal', previewIdea.keyword],
-                ['Mots-clés secondaires', previewSecondaryKeywords],
-                ['Audience cible', previewIdea.audience || previewBrief.audience],
-                ['Intention de recherche', previewIdea.search_intent || previewBrief.search_intent],
-                ['Angle éditorial', previewIdea.angle || previewBrief.angle],
-                ['Format recommandé', previewIdea.recommended_format || previewBrief.recommended_format],
-                ['Longueur cible', previewWordRange ? `${previewWordRange.target} mots` : (previewIdea.target_word_count || previewBrief.target_word_count)],
+                ['Audience cible', previewIdea.audience],
+                ['Intention de recherche', previewIdea.search_intent],
+                ['Angle éditorial', previewIdea.angle],
+                ['Format recommandé', previewIdea.content_format],
+                ['Longueur cible', previewWordRange ? `${previewWordRange.target} mots` : previewIdea.target_word_count],
                 ['Plage autorisée', previewWordRange ? `${previewWordRange.min ?? '—'}–${previewWordRange.max ?? '—'} mots (${previewWordRange.source})` : null],
-                ['Difficulté estimée', previewIdea.estimated_difficulty || previewBrief.estimated_difficulty],
-                ['FAQ nécessaire', previewIdea.needs_faq === null ? previewBrief.needs_faq : (previewIdea.needs_faq ? 'Oui' : 'Non')],
-                ['Images nécessaires', previewIdea.needs_images === null ? previewBrief.needs_images : (previewIdea.needs_images ? 'Oui' : 'Non')],
-                ['Statut workflow', previewIdea.workflow_status || previewBrief.phase_current],
-                ['Dernier agent terminé', previewCompletedAgents.at(-1)],
-                ['Prochain agent', previewIdea.next_agent_key || previewBrief.next_step],
-                ['Agents complétés', previewCompletedAgents],
+                ['Score d\'opportunité', previewIdea.opportunity_score],
               ] as Array<[string, unknown]>).map(([label, value]) => (
                 <div key={String(label)} className="rounded-[10px] border border-border px-3 py-2.5">
                   <p className="text-[11px] font-medium uppercase tracking-wide text-tertiary">{label}</p>
@@ -700,34 +659,10 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
               ))}
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="rounded-[10px] border border-border px-3 py-2.5">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-tertiary">Résumé attendu</p>
-                <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-primary">{textValue(previewIdea.main_answer_summary || previewBrief.main_answer_summary)}</p>
-              </div>
-              <div className="rounded-[10px] border border-border px-3 py-2.5">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-tertiary">Réponse principale attendue</p>
-                <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-primary">{textValue(previewBrief.main_answer || previewBrief.expected_answer || previewIdea.main_answer_summary)}</p>
-              </div>
-              <div className="rounded-[10px] border border-border px-3 py-2.5">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-tertiary">Justification de l'opportunité</p>
-                <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-primary">{textValue(previewIdea.opportunity_justification || previewBrief.opportunity_justification)}</p>
-              </div>
-              <div className="rounded-[10px] border border-border px-3 py-2.5">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-tertiary">Liens suggérés</p>
-                <p className="mt-1 text-[13px] text-primary">Internes : {textValue(previewIdea.suggested_internal_links || previewBrief.internal_links)}</p>
-                <p className="mt-1 text-[13px] text-primary">Externes : {textValue(previewIdea.suggested_external_links || previewBrief.external_links)}</p>
-              </div>
-            </div>
-
             <details className="rounded-[10px] border border-border">
               <summary className="cursor-pointer px-3 py-2 text-[13px] font-medium text-primary">Données techniques</summary>
               <pre className="max-h-72 overflow-auto border-t border-border p-3 text-[11px] leading-relaxed text-secondary">
-                {stringifyTechnical({
-                  article: previewIdea,
-                  planning_brief_json: previewIdea.planning_brief_json,
-                  parsed_planning_brief: previewBrief,
-                })}
+                {stringifyTechnical({ article: previewIdea })}
               </pre>
             </details>
 
@@ -793,7 +728,7 @@ function IdeasTab({ projectId, categories }: { projectId: string; categories: Ca
 const WRITING_STALE_MS = 30 * 60 * 1000
 
 function isStaleWriting(article: Article): boolean {
-  if (article.status !== 'writing_in_progress') return false
+  if (article.status !== ArticleStatus.WRITING_IN_PROGRESS) return false
   return Date.now() - new Date(article.updated_at).getTime() > WRITING_STALE_MS
 }
 
@@ -900,20 +835,10 @@ function WritingTab({ projectId, categories }: { projectId: string; categories: 
                   >
                     {article.title || '(sans titre)'}
                   </button>
-                  {article.status === 'failed' && article.writing_error && (
-                    <p className="mt-0.5 truncate text-[11px] text-danger" title={article.writing_error}>
-                      {article.writing_error}
-                    </p>
-                  )}
                 </div>
                 <span className="truncate text-[12px] text-secondary" title={categoryName}>{categoryName}</span>
                 <div className="flex min-w-0 items-center gap-1.5">
                   <StatusBadge status={article.status} />
-                  {article.writing_cancel_requested && article.status === 'writing_in_progress' && (
-                    <span className="inline-flex items-center rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-medium text-warning" title="La rédaction s'arrêtera au prochain point de contrôle">
-                      Annulation…
-                    </span>
-                  )}
                   {isStaleWriting(article) && (
                     <span className="inline-flex items-center rounded-full bg-danger/8 px-2 py-0.5 text-[10px] font-medium text-danger" title="Aucune mise à jour depuis plus de 30 minutes">
                       Bloqué
@@ -922,7 +847,7 @@ function WritingTab({ projectId, categories }: { projectId: string; categories: 
                 </div>
                 <span className="whitespace-nowrap text-[12px] text-tertiary">{formatDate(article.updated_at)}</span>
                 <div className="flex justify-end gap-1.5">
-                  {(article.status === 'failed' || isStaleWriting(article)) && (
+                  {(article.status === ArticleStatus.FAILED || isStaleWriting(article)) && (
                     <button
                       type="button"
                       title="Relancer la rédaction"
@@ -934,10 +859,10 @@ function WritingTab({ projectId, categories }: { projectId: string; categories: 
                       Relancer
                     </button>
                   )}
-                  {['writing_requested', 'writing_in_progress', 'failed'].includes(article.status) && !article.writing_cancel_requested && (
+                  {([ArticleStatus.WRITING_REQUESTED, ArticleStatus.WRITING_IN_PROGRESS, ArticleStatus.FAILED] as ArticleStatusCode[]).includes(article.status) && (
                     <button
                       type="button"
-                      title={article.status === 'writing_in_progress' ? "La rédaction s'arrêtera au prochain point de contrôle" : "Annuler et remettre en idée"}
+                      title={article.status === ArticleStatus.WRITING_IN_PROGRESS ? "La rédaction s'arrêtera au prochain point de contrôle" : "Annuler et remettre en idée"}
                       disabled={cancellingId === article.id}
                       onClick={() => handleCancel(article)}
                       className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-border bg-surface px-2.5 text-[12px] font-medium text-secondary shadow-sm transition-all hover:-translate-y-px hover:border-danger/30 hover:text-danger active:translate-y-0 disabled:opacity-50"
@@ -946,7 +871,7 @@ function WritingTab({ projectId, categories }: { projectId: string; categories: 
                       Annuler
                     </button>
                   )}
-                  {['writing_requested', 'failed'].includes(article.status) && (
+                  {([ArticleStatus.WRITING_REQUESTED, ArticleStatus.FAILED] as ArticleStatusCode[]).includes(article.status) && (
                     <button
                       type="button"
                       title="Supprimer définitivement"
@@ -1025,10 +950,10 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
 
   const visible = useMemo(() => {
     switch (filter) {
-      case 'ready': return articles.filter((a) => a.is_validable && a.scheduled_at)
+      case 'ready': return articles.filter((a) => a.is_validable && a.scheduled_for)
       case 'high_score': return articles.filter((a) => (finiteScore(a.global_score) ?? 0) >= 90)
       case 'warnings': return articles.filter((a) => a.critical_warnings.length > 0)
-      case 'no_date': return articles.filter((a) => !a.scheduled_at)
+      case 'no_date': return articles.filter((a) => !a.scheduled_for)
       default: return articles
     }
   }, [articles, filter])
@@ -1043,7 +968,7 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
     setError('')
     setBulkResult(null)
     try {
-      const res = await bulkValidateByScore(projectId, scoreThreshold, ['draft_ready', 'ready_to_publish'])
+      const res = await bulkValidateByScore(projectId, scoreThreshold, [ArticleStatus.DRAFT_READY, ArticleStatus.READY_TO_PUBLISH])
       setBulkResult(res)
       setTick((t) => t + 1)
     } catch { setError("Impossible d'exécuter la validation par score.") }
@@ -1066,13 +991,6 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
       setTick((t) => t + 1)
     } catch { setError('Action impossible.'); setConfirmMode(null) }
     finally { setRunning(false) }
-  }
-
-  async function handleMarkCorrection(articleId: string) {
-    try {
-      await patchArticle(projectId, articleId, { status: 'correction_needed' })
-      setTick((t) => t + 1)
-    } catch { setError('Impossible de marquer en correction.') }
   }
 
   const catName = (article: Article) => categories.find((c) => c.id === article.category_id)?.name ?? '—'
@@ -1163,14 +1081,14 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
                       {article.global_score_valid === false ? '~' : ''}{score ?? '—'}
                     </span>
                   </div>
-                  <span className={`text-[12px] ${article.scheduled_at ? 'text-secondary' : 'text-tertiary'}`}>
-                    {article.scheduled_at ? formatDate(article.scheduled_at) : '—'}
+                  <span className={`text-[12px] ${article.scheduled_for ? 'text-secondary' : 'text-tertiary'}`}>
+                    {article.scheduled_for ? formatDate(article.scheduled_for) : '—'}
                   </span>
                   <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                     <Button size="sm" variant="secondary" onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}>
                       Ouvrir
                     </Button>
-                    {article.scheduled_at && (
+                    {article.scheduled_for && (
                       <Button
                         size="sm"
                         variant="secondary"
@@ -1187,14 +1105,6 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
                     >
                       Publier
                     </Button>
-                    <button
-                      type="button"
-                      title="Marquer en correction"
-                      onClick={() => handleMarkCorrection(article.id)}
-                      className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary transition-colors hover:bg-danger/10 hover:text-danger"
-                    >
-                      <XCircle size={13} />
-                    </button>
                   </div>
                 </div>
               )

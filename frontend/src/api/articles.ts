@@ -1,9 +1,9 @@
 import { api } from './client'
-import type { Article } from '@/types'
+import type { Article, ArticleStatusCode } from '@/types'
 
 export type ArticleFilters = {
-  status?: string
-  statuses?: string[]
+  status?: ArticleStatusCode
+  statuses?: ArticleStatusCode[]
   category_id?: string
   search?: string
   skip?: number
@@ -18,8 +18,7 @@ export type CreateArticlePayload = {
   keyword?: string
   category_id?: string
   sub_niche?: string
-  featured?: boolean
-  status?: string
+  is_featured?: boolean
 }
 
 export type BulkValidateResponse = {
@@ -37,7 +36,7 @@ export type BulkValidateResponse = {
 
 export function listArticles(projectId: string, filters: ArticleFilters = {}): Promise<Article[]> {
   const params = new URLSearchParams()
-  if (filters.status) params.set('status', filters.status)
+  if (filters.status !== undefined) params.set('status', String(filters.status))
   if (filters.statuses && filters.statuses.length > 0) params.set('statuses', filters.statuses.join(','))
   if (filters.category_id) params.set('category_id', filters.category_id)
   if (filters.search) params.set('search', filters.search)
@@ -101,7 +100,7 @@ export function analyzeSeoArticle(_projectId: string, articleId: string): Promis
   return api.post(`/articles/${articleId}/analyze`)
 }
 
-export function patchArticle(_projectId: string, articleId: string, data: Partial<{ status: string; title: string; keyword: string; category_id: string }>): Promise<Article> {
+export function patchArticle(_projectId: string, articleId: string, data: Partial<{ title: string; keyword: string; category_id: string }>): Promise<Article> {
   return api.patch<Article>(`/articles/${articleId}`, data)
 }
 
@@ -125,7 +124,7 @@ export type BulkValidateByScoreResponse = BulkValidateResponse & {
 export function bulkValidateByScore(
   projectId: string,
   minScore: number,
-  statuses: string[],
+  statuses: ArticleStatusCode[],
 ): Promise<BulkValidateByScoreResponse> {
   return api.post<BulkValidateByScoreResponse>(`/projects/${projectId}/articles/bulk/validate-by-score`, {
     min_score: minScore,
@@ -149,7 +148,7 @@ export type GenerateArticleResponse = {
   id: string
   title: string
   keyword: string | null
-  status: string
+  status: ArticleStatusCode
   word_count: number
   provider_name?: string | null
   model_name?: string | null

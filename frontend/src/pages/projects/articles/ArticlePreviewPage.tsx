@@ -10,7 +10,6 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import { useAuth } from '@/context/AuthContext'
 import { formatDate } from '@/utils/format'
 
-type FaqItem = { question: string; answer: string }
 type OutlineItem = { id: string; level: number; text: string }
 
 function escapeHtml(value: string): string {
@@ -50,25 +49,6 @@ function renderContent(content: string): string {
 
 function stripHtml(value: string): string {
   return value.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
-}
-
-function parseFaqItems(value: unknown): FaqItem[] {
-  if (Array.isArray(value)) {
-    return value.filter((item): item is FaqItem =>
-      item !== null &&
-      typeof item === 'object' &&
-      typeof (item as FaqItem).question === 'string' &&
-      typeof (item as FaqItem).answer === 'string'
-    )
-  }
-  if (typeof value === 'string' && value.trim()) {
-    try {
-      return parseFaqItems(JSON.parse(value))
-    } catch {
-      return []
-    }
-  }
-  return []
 }
 
 function buildOutline(html: string): OutlineItem[] {
@@ -128,7 +108,7 @@ export default function ArticlePreviewPage() {
     }} />
   }
 
-  const faqItems = parseFaqItems(article.faq_json)
+  const faqItems = article.faq
   const renderedContent = article.content ? withHeadingIds(renderContent(article.content)) : ''
   const outline = buildOutline(renderedContent)
   const wordCount = article.word_count > 0 ? article.word_count : countWordsFromHtml(renderedContent)
@@ -177,13 +157,6 @@ export default function ArticlePreviewPage() {
             <h1 id="article-title" className="mb-5 max-w-[760px] text-[32px] font-bold leading-tight text-primary [overflow-wrap:anywhere]">
               {article.title}
             </h1>
-            {article.cover_image_url && (
-              <img
-                src={article.cover_image_url}
-                alt=""
-                className="mb-8 aspect-[16/7] w-full rounded-[14px] object-cover"
-              />
-            )}
           </div>
 
           {article.content ? (

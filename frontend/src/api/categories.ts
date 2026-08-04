@@ -5,12 +5,12 @@ export type CreateCategoryPayload = {
   name: string
   description?: string
   color?: string | null
-  priority?: number
-  target_frequency?: number | null
-  monthly_frequency?: number | null
-  pipeline_enabled?: boolean
+  priority_score?: number | null
+  monthly_target?: number | null
+  is_pipeline_enabled?: boolean
   target_audience?: string | null
   editorial_goal?: string | null
+  internal_notes?: string | null
   word_count_min?: number | null
   word_count_max?: number | null
 }
@@ -19,12 +19,12 @@ export type UpdateCategoryPayload = {
   name?: string
   description?: string | null
   color?: string | null
-  priority?: number
-  target_frequency?: number | null
-  monthly_frequency?: number | null
-  pipeline_enabled?: boolean
+  priority_score?: number | null
+  monthly_target?: number | null
+  is_pipeline_enabled?: boolean
   target_audience?: string | null
   editorial_goal?: string | null
+  internal_notes?: string | null
   word_count_min?: number | null
   word_count_max?: number | null
 }

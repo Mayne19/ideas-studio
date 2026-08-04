@@ -1,29 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  closestCenter,
-  useDroppable,
-} from '@dnd-kit/core'
-import type { DragStartEvent, DragEndEvent, DragOverEvent } from '@dnd-kit/core'
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { CalendarClock, ExternalLink, FileText, Loader2, Plus, RefreshCw } from '@/components/ui/hugeIcons'
 import {
   listArticles, createArticle, publishArticle, unpublishArticle, markReadyArticle, archiveArticle,
-  scheduleArticle, patchArticle,
+  scheduleArticle,
 } from '@/api/articles'
 import { listCategories } from '@/api/categories'
-import { listKanbanColumns, createKanbanColumn, deleteKanbanColumn } from '@/api/kanbanColumns'
-import type { Article, ArticleStatus, Category } from '@/types'
+import type { Article, Category } from '@/types'
+import { ArticleStatus, articleStatusLabel, type ArticleStatusCode } from '@/lib/status'
 import { formatDate } from '@/utils/format'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
@@ -36,28 +20,29 @@ type ColumnDef = {
   status: string
   label: string
   color: string
-  custom?: boolean
 }
 
 const COLUMNS: ColumnDef[] = [
-  { status: 'outline_ready',       label: 'Brief à préparer', color: 'var(--color-accent)' },
-  { status: 'writing_requested',   label: 'Brief prêt',       color: 'var(--color-accent)' },
-  { status: 'draft_ready',         label: 'Brouillon IA',     color: 'var(--color-secondary)' },
-  { status: 'writing_in_progress', label: 'En rédaction',     color: 'var(--color-secondary)' },
-  { status: 'review_needed',       label: 'En relecture',     color: 'var(--color-warning)' },
-  { status: 'correction_needed',   label: 'SEO à corriger',   color: 'var(--color-danger)' },
-  { status: 'ready_to_publish',    label: 'Prêt validation',  color: 'var(--color-success)' },
-  { status: 'failed',              label: 'Échecs',           color: 'var(--color-danger)' },
+  { status: String(ArticleStatus.OUTLINE_READY),       label: 'Brief à préparer', color: 'var(--color-accent)' },
+  { status: String(ArticleStatus.WRITING_REQUESTED),   label: 'Brief prêt',       color: 'var(--color-accent)' },
+  { status: String(ArticleStatus.DRAFT_READY),         label: 'Brouillon IA',     color: 'var(--color-secondary)' },
+  { status: String(ArticleStatus.WRITING_IN_PROGRESS), label: 'En rédaction',     color: 'var(--color-secondary)' },
+  { status: String(ArticleStatus.REVIEW_NEEDED),       label: 'En relecture',     color: 'var(--color-warning)' },
+  { status: String(ArticleStatus.CORRECTION_NEEDED),   label: 'SEO à corriger',   color: 'var(--color-danger)' },
+  { status: String(ArticleStatus.READY_TO_PUBLISH),    label: 'Prêt validation',  color: 'var(--color-success)' },
+  { status: String(ArticleStatus.FAILED),              label: 'Échecs',           color: 'var(--color-danger)' },
 ]
 
-const QUICK_ACTIONS: Partial<Record<ArticleStatus, { key: string; label: string }[]>> = {
-  draft_ready:       [{ key: 'mark-ready', label: 'Marquer prêt' }],
-  review_needed:     [{ key: 'mark-ready', label: 'Marquer prêt' }],
-  correction_needed: [{ key: 'mark-ready', label: 'Marquer prêt' }],
-  ready_to_publish:  [{ key: 'validation', label: 'Valider' }],
+const QUICK_ACTIONS: Partial<Record<ArticleStatusCode, { key: string; label: string }[]>> = {
+  [ArticleStatus.DRAFT_READY]:       [{ key: 'mark-ready', label: 'Marquer prêt' }],
+  [ArticleStatus.REVIEW_NEEDED]:     [{ key: 'mark-ready', label: 'Marquer prêt' }],
+  [ArticleStatus.CORRECTION_NEEDED]: [{ key: 'mark-ready', label: 'Marquer prêt' }],
+  [ArticleStatus.READY_TO_PUBLISH]:  [{ key: 'validation', label: 'Valider' }],
 }
 
-const FINAL_STATUSES = new Set<ArticleStatus>(['scheduled', 'published', 'unpublished', 'archived'])
+const FINAL_STATUSES = new Set<ArticleStatusCode>([
+  ArticleStatus.SCHEDULED, ArticleStatus.PUBLISHED, ArticleStatus.UNPUBLISHED, ArticleStatus.ARCHIVED,
+])
 
 function stripHtml(value: string): string {
   return value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -78,16 +63,9 @@ function formatWordCount(value: number): string {
 
 function getUsefulDate(article: Article): { label: string; value: string } {
   if (article.published_at) return { label: 'Publié', value: article.published_at }
-  if (article.scheduled_at) return { label: 'Planifié', value: article.scheduled_at }
+  if (article.scheduled_for) return { label: 'Planifié', value: article.scheduled_for }
   if (article.updated_at) return { label: 'Maj', value: article.updated_at }
   return { label: 'Créé', value: article.created_at }
-}
-
-function fallbackColumnLabel(status: string): string {
-  return status
-    .replace(/^custom_/, '')
-    .replace(/[_-]+/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
 function CardContent({
@@ -95,20 +73,18 @@ function CardContent({
   categories,
   onEdit,
   onAction,
-  isDragging = false,
 }: {
   article: Article
   categories: Category[]
   onEdit: () => void
   onAction: (key: string, article: Article) => void
-  isDragging?: boolean
 }) {
   const quickActions = QUICK_ACTIONS[article.status] ?? []
   const category = categories.find((c) => c.id === article.category_id)
   const wordCount = getWordCount(article)
   const usefulDate = getUsefulDate(article)
   return (
-    <div className={`rounded-[16px] bg-surface p-3 ${isDragging ? 'opacity-50' : 'hover:bg-white'} transition-colors`}>
+    <div className="rounded-[16px] bg-surface p-3 hover:bg-white transition-colors">
       <div className="flex items-start justify-between gap-2 mb-1.5">
         <p
           className="text-[12px] font-medium text-primary leading-snug cursor-pointer hover:text-accent transition-colors line-clamp-2 flex-1"
@@ -178,58 +154,19 @@ function CardContent({
   )
 }
 
-function SortableCard({
-  article,
-  categories,
-  onEdit,
-  onAction,
-}: {
-  article: Article
-  categories: Category[]
-  onEdit: () => void
-  onAction: (key: string, article: Article) => void
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: article.id,
-  })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    cursor: isDragging ? 'grabbing' : 'grab',
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-    >
-      <CardContent article={article} categories={categories} onEdit={onEdit} onAction={onAction} isDragging={isDragging} />
-    </div>
-  )
-}
-
 function KanbanColumn({
   column,
   articles,
   categories,
   onEdit,
   onAction,
-  onAddArticle,
-  onRemoveColumn,
 }: {
   column: ColumnDef
   articles: Article[]
   categories: Category[]
   onEdit: (a: Article) => void
   onAction: (key: string, a: Article) => void
-  onAddArticle: (status: string) => void
-  onRemoveColumn?: (status: string) => void
 }) {
-  const articleIds = articles.map((a) => a.id)
-  const { setNodeRef, isOver } = useDroppable({ id: column.status })
   const columnBackground = `linear-gradient(180deg, ${column.color}1c 0%, ${column.color}0d 42%, rgba(255,255,255,0) 100%)`
 
   return (
@@ -237,47 +174,27 @@ function KanbanColumn({
       <div className="relative mb-3 flex items-center gap-2 rounded-t-[14px] px-1 py-2 shadow-[0_18px_26px_-26px_rgba(15,23,42,0.45)] after:absolute after:bottom-[-10px] after:left-0 after:right-0 after:h-3 after:bg-gradient-to-b after:from-black/[0.035] after:to-transparent after:content-['']">
         <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: column.color }} />
         <span className="text-[12px] font-semibold text-primary">{column.label}</span>
-        {column.custom && onRemoveColumn && (
-          <button
-            onClick={() => onRemoveColumn(column.status)}
-            className="ml-1 flex h-4 w-4 items-center justify-center rounded-[4px] text-tertiary hover:bg-danger/10 hover:text-danger transition-colors"
-            title="Supprimer cette colonne"
-          >
-            ✕
-          </button>
-        )}
         <span className="text-[12px] text-tertiary bg-surface-soft rounded-full px-1.5 py-0.5">
           {articles.length}
         </span>
       </div>
-      <SortableContext items={articleIds} strategy={verticalListSortingStrategy}>
-        <div
-          ref={setNodeRef}
-          className={`flex min-h-[90px] flex-col gap-2 rounded-b-[14px] transition-colors ${isOver ? 'bg-accent/5' : ''}`}
-        >
-          {articles.length === 0 ? (
-            <div className="flex items-center justify-center rounded-[12px] border border-dashed border-border h-20">
-              <p className="text-[12px] text-tertiary">Vide</p>
-            </div>
-          ) : (
-            articles.map((article) => (
-              <SortableCard
-                key={article.id}
-                article={article}
-                categories={categories}
-                onEdit={() => onEdit(article)}
-                onAction={onAction}
-              />
-            ))
-          )}
-          <button
-            onClick={() => onAddArticle(column.status)}
-            className="flex items-center justify-center gap-1 rounded-[12px] border border-dashed border-border py-2 text-[12px] text-tertiary hover:border-accent/40 hover:text-accent transition-colors"
-          >
-            <Plus size={12} /> Ajouter un article
-          </button>
-        </div>
-      </SortableContext>
+      <div className="flex min-h-[90px] flex-col gap-2 rounded-b-[14px]">
+        {articles.length === 0 ? (
+          <div className="flex items-center justify-center rounded-[12px] border border-dashed border-border h-20">
+            <p className="text-[12px] text-tertiary">Vide</p>
+          </div>
+        ) : (
+          articles.map((article) => (
+            <CardContent
+              key={article.id}
+              article={article}
+              categories={categories}
+              onEdit={() => onEdit(article)}
+              onAction={onAction}
+            />
+          ))
+        )}
+      </div>
     </div>
   )
 }
@@ -292,14 +209,9 @@ export default function KanbanPage() {
   const [actionError, setActionError] = useState('')
   const [loadingAction, setLoadingAction] = useState(false)
   const [tick, setTick] = useState(0)
-  const [activeId, setActiveId] = useState<string | null>(null)
-  const [customColumns, setCustomColumns] = useState<ColumnDef[]>([])
-  const [customColumnIds, setCustomColumnIds] = useState<Map<string, string>>(new Map())
-  const [columnModalOpen, setColumnModalOpen] = useState(false)
-  const [newColumnName, setNewColumnName] = useState('')
 
   // Create article modal state
-  const [createStatus, setCreateStatus] = useState('')
+  const [createOpen, setCreateOpen] = useState(false)
   const [createTitle, setCreateTitle] = useState('')
   const [createKeyword, setCreateKeyword] = useState('')
   const [createCategoryId, setCreateCategoryId] = useState('')
@@ -310,29 +222,9 @@ export default function KanbanPage() {
   const [scheduleDate, setScheduleDate] = useState('')
   const [scheduling, setScheduling] = useState(false)
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  )
-
   useEffect(() => {
     if (!projectId) return
     listCategories(projectId).then(setCategories).catch(() => {})
-  }, [projectId])
-
-  useEffect(() => {
-    if (!projectId) return
-    let cancelled = false
-    listKanbanColumns(projectId).then((cols) => {
-      if (cancelled) return
-      const idMap = new Map<string, string>()
-      const defs: ColumnDef[] = cols.map((c) => {
-        idMap.set(c.status, c.id)
-        return { status: c.status, label: c.label, color: c.color, custom: true }
-      })
-      setCustomColumns(defs)
-      setCustomColumnIds(idMap)
-    }).catch(() => {})
-    return () => { cancelled = true }
   }, [projectId])
 
   useEffect(() => {
@@ -390,50 +282,8 @@ export default function KanbanPage() {
     }
   }
 
-  function handleCreateColumn(event: React.FormEvent) {
-    event.preventDefault()
-    if (!projectId) return
-    const label = newColumnName.trim()
-    if (!label) return
-    createKanbanColumn(projectId, { label }).then((col) => {
-      setCustomColumnIds((prev) => { const m = new Map(prev); m.set(col.status, col.id); return m })
-      setCustomColumns((prev) => [...prev, {
-        status: col.status,
-        label: col.label,
-        color: col.color,
-        custom: true,
-      }])
-    }).catch((err) => {
-      setActionError(err instanceof Error ? err.message : "Erreur lors de la création de la colonne.")
-    })
-    setNewColumnName('')
-    setColumnModalOpen(false)
-  }
-
-  async function handleRemoveColumn(status: string) {
-    if (!projectId) return
-    const colId = customColumnIds.get(status)
-    if (!colId) return
-    setCustomColumns((prev) => prev.filter((c) => c.status !== status))
-    setCustomColumnIds((prev) => { const m = new Map(prev); m.delete(status); return m })
-    try {
-      await deleteKanbanColumn(colId)
-    } catch {
-      // Revert on error
-      listKanbanColumns(projectId).then((cols) => {
-        const idMap = new Map<string, string>()
-        const defs: ColumnDef[] = cols.map((c) => {
-          idMap.set(c.status, c.id)
-          return { status: c.status, label: c.label, color: c.color, custom: true }
-        })
-        setCustomColumns(defs)
-        setCustomColumnIds(idMap)
-      })
-    }
-  }
-
-  function handleAddArticle(status: string) {
-    setCreateStatus(status)
+  function handleAddArticle() {
+    setCreateOpen(true)
     setCreateTitle('')
     setCreateKeyword('')
     setCreateCategoryId('')
@@ -444,14 +294,13 @@ export default function KanbanPage() {
     if (!projectId || !createTitle.trim()) return
     setCreating(true)
     try {
-      const created = await createArticle(projectId, {
+      await createArticle(projectId, {
         title: createTitle.trim(),
         keyword: createKeyword.trim() || undefined,
         category_id: createCategoryId || undefined,
-        status: createStatus,
       })
-      setArticles((prev) => [...prev, created])
-      setCreateStatus('')
+      setCreateOpen(false)
+      navigate(`/projects/${projectId}/ideas`)
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Erreur lors de la création.")
     } finally {
@@ -459,62 +308,21 @@ export default function KanbanPage() {
     }
   }
 
-  const activeArticle = activeId ? articles.find((a) => a.id === activeId) : null
-
-  function handleDragStart(event: DragStartEvent) {
-    setActiveId(event.active.id as string)
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  function handleDragOver(_e: DragOverEvent) { /* handled by useDroppable */ }
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    setActiveId(null)
-    if (!over || !projectId) return
-
-    const overId = String(over.id)
-    // over.id is either a column status (droppable) or an article id (sortable)
-    let newStatus: string | undefined
-    const matchedColumn = allColumns.find((c) => c.status === overId)
-    if (matchedColumn) {
-      newStatus = matchedColumn.status
-    } else {
-      const targetArticle = articles.find((a) => a.id === overId)
-      if (targetArticle) newStatus = targetArticle.status
-    }
-
-    if (!newStatus) return
-
-    const article = articles.find((a) => a.id === active.id)
-    if (!article || article.status === newStatus) return
-
-    // Optimistically update UI
-    const prevStatus = article.status
-    setArticles((prev) => prev.map((a) => a.id === article.id ? { ...a, status: newStatus! as ArticleStatus } : a))
-
-    // Persist to backend — revert on error
-    patchArticle(projectId, article.id, { status: newStatus }).catch(() => {
-      setArticles((prev) => prev.map((a) => a.id === article.id ? { ...a, status: prevStatus } : a))
-    })
-  }
-
-  const knownStatuses = new Set([...COLUMNS, ...customColumns].map((column) => column.status))
+  const knownStatuses = new Set(COLUMNS.map((column) => column.status))
   const unknownColumns: ColumnDef[] = Array.from(new Set(
     articles
-      .map((article) => article.status)
+      .map((article) => String(article.status))
       .filter((status) => !knownStatuses.has(status))
   )).map((status) => ({
     status,
-    label: fallbackColumnLabel(status),
+    label: articleStatusLabel(Number(status)),
     color: 'var(--color-tertiary)',
-    custom: true,
   }))
-  const allColumns = [...COLUMNS, ...customColumns, ...unknownColumns]
+  const allColumns = [...COLUMNS, ...unknownColumns]
 
   const articlesByStatus = (status: string) =>
     articles
-      .filter((a) => a.status === status)
+      .filter((a) => String(a.status) === status)
       .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
 
   if (loadStatus === 'loading') return <LoadingState />
@@ -533,8 +341,8 @@ export default function KanbanPage() {
           </div>
           <div className="flex items-center gap-2">
             {loadingAction && <Loader2 size={14} className="animate-spin text-tertiary" />}
-            <Button size="sm" variant="secondary" icon={<Plus size={13} />} onClick={() => setColumnModalOpen(true)}>
-              Ajouter colonne
+            <Button size="sm" icon={<Plus size={13} />} onClick={handleAddArticle}>
+              Nouvel article
             </Button>
             <Button size="sm" variant="secondary" icon={<RefreshCw size={13} />} onClick={() => setTick((t) => t + 1)}>
               Rafraîchir
@@ -549,86 +357,25 @@ export default function KanbanPage() {
           </div>
         )}
 
-        {/* Kanban board with DnD */}
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            {allColumns.map((col) => (
-              <KanbanColumn
-                key={col.status}
-                column={col}
-                articles={articlesByStatus(col.status)}
-                categories={categories}
-                onEdit={(a) => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
-                onAction={handleAction}
-                onAddArticle={handleAddArticle}
-                onRemoveColumn={col.custom ? handleRemoveColumn : undefined}
-              />
-            ))}
-          </div>
-
-          <DragOverlay>
-            {activeArticle && (
-              <div className="w-[220px] rotate-1 opacity-90">
-                <CardContent
-                  article={activeArticle}
-                  categories={categories}
-                  onEdit={() => {}}
-                  onAction={() => {}}
-                />
-              </div>
-            )}
-          </DragOverlay>
-        </DndContext>
-      </div>
-
-      {/* Custom column modal */}
-      <Modal
-        open={columnModalOpen}
-        onClose={() => { setColumnModalOpen(false); setNewColumnName('') }}
-        title="Ajouter une colonne"
-        size="sm"
-      >
-        <form onSubmit={handleCreateColumn} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[12px] font-medium text-secondary">Nom de la colonne</label>
-            <input
-              value={newColumnName}
-              onChange={(event) => setNewColumnName(event.target.value)}
-              placeholder="Ex. À valider client"
-              className="w-full rounded-[10px] border border-border bg-white px-3 py-2 text-[14px] text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
-              autoFocus
+        {/* Kanban board (lecture seule) */}
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {allColumns.map((col) => (
+            <KanbanColumn
+              key={col.status}
+              column={col}
+              articles={articlesByStatus(col.status)}
+              categories={categories}
+              onEdit={(a) => navigate(`/projects/${projectId}/articles/${a.id}/edit`)}
+              onAction={handleAction}
             />
-            <p className="text-[12px] leading-snug text-tertiary">
-              La colonne est partagée avec toute l'équipe du projet. Les cartes déplacées dans cette colonne sont enregistrées avec ce statut.
-            </p>
-          </div>
-          <div className="flex gap-2 pt-1">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="flex-1 justify-center"
-              onClick={() => { setColumnModalOpen(false); setNewColumnName('') }}
-            >
-              Annuler
-            </Button>
-            <Button type="submit" size="sm" className="flex-1 justify-center" disabled={!newColumnName.trim()}>
-              Ajouter
-            </Button>
-          </div>
-        </form>
-      </Modal>
+          ))}
+        </div>
+      </div>
 
       {/* Create article modal */}
       <Modal
-        open={!!createStatus}
-        onClose={() => setCreateStatus('')}
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
         title="Ajouter un article"
         size="sm"
       >
@@ -666,7 +413,7 @@ export default function KanbanPage() {
             </select>
           </div>
           <div className="flex gap-2 pt-1">
-            <Button type="button" variant="secondary" size="sm" className="flex-1 justify-center" onClick={() => setCreateStatus('')}>
+            <Button type="button" variant="secondary" size="sm" className="flex-1 justify-center" onClick={() => setCreateOpen(false)}>
               Annuler
             </Button>
             <Button type="submit" size="sm" loading={creating} className="flex-1 justify-center" disabled={!createTitle.trim()}>

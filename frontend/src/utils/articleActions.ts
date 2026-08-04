@@ -1,4 +1,4 @@
-import type { ArticleStatus } from '@/types'
+import { ArticleStatus, ARTICLE_STATUS_META, type ArticleStatusCode } from '@/lib/status'
 
 export type ArticleAction = {
   key: string
@@ -6,59 +6,39 @@ export type ArticleAction = {
   variant: 'primary' | 'secondary' | 'danger'
 }
 
-export const STATUS_LABELS: Record<ArticleStatus, string> = {
-  draft: 'Brouillon',
-  idea_proposed: 'Idée proposée',
-  idea_priority: 'Prioritaire',
-  idea_rejected: 'Rejetée',
-  outline_ready: 'Plan prêt',
-  writing_requested: "En file d'attente rédaction",
-  writing_in_progress: 'En rédaction',
-  draft_ready: 'Brouillon prêt',
-  review_needed: 'À relire',
-  correction_needed: 'À corriger',
-  scheduled: 'Programmé',
-  published: 'Publié',
-  ready_to_publish: 'Prêt à publier',
-  update_recommended: 'Mise à jour recommandée',
-  unpublished: 'Dépublié',
-  archived: 'Archivé',
-  failed: 'Échec',
-  improvement_proposed: 'Amélioration proposée',
-  improvement_in_progress: 'Amélioration en cours',
-  improvement_ready: 'Amélioration prête',
-}
+export const STATUS_LABELS: Record<ArticleStatusCode, string> = Object.fromEntries(
+  Object.entries(ARTICLE_STATUS_META).map(([code, meta]) => [Number(code), meta.label]),
+) as Record<ArticleStatusCode, string>
 
-
-export function getAvailableActions(status: ArticleStatus): ArticleAction[] {
+export function getAvailableActions(status: ArticleStatusCode): ArticleAction[] {
   const actions: ArticleAction[] = []
 
-  if (status === 'archived') {
+  if (status === ArticleStatus.ARCHIVED) {
     actions.push({ key: 'restore', label: 'Restaurer en production', variant: 'secondary' })
     actions.push({ key: 'republish', label: 'Republier directement', variant: 'primary' })
     actions.push({ key: 'delete', label: 'Supprimer', variant: 'danger' })
     return actions
   }
 
-  if (status === 'published') {
+  if (status === ArticleStatus.PUBLISHED) {
     actions.push({ key: 'unpublish', label: 'Dépublier', variant: 'secondary' })
     actions.push({ key: 'archive', label: 'Archiver', variant: 'danger' })
     return actions
   }
 
-  if (status === 'scheduled') {
+  if (status === ArticleStatus.SCHEDULED) {
     actions.push({ key: 'publish', label: 'Publier maintenant', variant: 'primary' })
     actions.push({ key: 'unschedule', label: 'Repasser en prêt', variant: 'secondary' })
     actions.push({ key: 'archive', label: 'Archiver', variant: 'danger' })
     return actions
   }
 
-  if (status === 'ready_to_publish' || status === 'draft_ready') {
+  if (status === ArticleStatus.READY_TO_PUBLISH || status === ArticleStatus.DRAFT_READY) {
     actions.push({ key: 'publish', label: 'Publier', variant: 'primary' })
     actions.push({ key: 'schedule', label: 'Programmer', variant: 'secondary' })
   }
 
-  if (!['ready_to_publish'].includes(status)) {
+  if (status !== ArticleStatus.READY_TO_PUBLISH) {
     actions.push({ key: 'mark-ready', label: 'Envoyer en validation', variant: 'secondary' })
   }
 

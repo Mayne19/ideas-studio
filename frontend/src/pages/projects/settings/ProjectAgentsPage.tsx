@@ -59,6 +59,7 @@ export default function ProjectAgentsPage() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [assignAllOpen, setAssignAllOpen] = useState(false)
   const [assigningAll, setAssigningAll] = useState(false)
+  const [assignAllModel, setAssignAllModel] = useState('')
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
@@ -86,15 +87,20 @@ export default function ProjectAgentsPage() {
     Promise.resolve().then(fetchAll)
   }, [fetchAll])
 
+  const [modelDrafts, setModelDrafts] = useState<Record<string, string>>({})
+
   const getAssignment = (agentId: string): AgentAssignment | undefined =>
     assignments.find((a) => a.agent_id === agentId)
 
-  const handleAssign = async (agentId: string, providerId: string) => {
+  const getModelDraft = (agentId: string): string =>
+    modelDrafts[agentId] ?? getAssignment(agentId)?.model ?? ''
+
+  const handleAssign = async (agentId: string, providerCode: string, model: string) => {
     const current = getAssignment(agentId)
     setSavingId(agentId)
     setSuccessMsg(null)
     try {
-      if (!providerId) {
+      if (!providerCode) {
         if (current) {
           await api.delete(`/settings/ai-agents/assignments/${current.id}`)
           setAssignments((prev) => prev.filter((a) => a.agent_id !== agentId))
@@ -103,9 +109,14 @@ export default function ProjectAgentsPage() {
         setTimeout(() => setSuccessMsg(null), 2000)
         return
       }
+      if (!model.trim()) {
+        setError('Indiquez un modèle avant d\'assigner un provider.')
+        return
+      }
       const result = await api.put<AgentAssignment>('/settings/ai-agents/assignments', {
         agent_id: agentId,
-        provider_id: providerId,
+        provider_code: providerCode,
+        model: model.trim(),
         project_id: projectId,
         enabled: true,
         priority: 0,
@@ -123,7 +134,11 @@ export default function ProjectAgentsPage() {
     }
   }
 
-  const handleAssignAll = async (providerId: string) => {
+  const handleAssignAll = async (providerCode: string, model: string) => {
+    if (!model.trim()) {
+      setError('Indiquez un modèle avant d\'assigner tous les agents.')
+      return
+    }
     setAssignAllOpen(false)
     setAssigningAll(true)
     setSuccessMsg(null)
@@ -132,7 +147,8 @@ export default function ProjectAgentsPage() {
         agents.map((agent) =>
           api.put<AgentAssignment>('/settings/ai-agents/assignments', {
             agent_id: agent.agent_id,
-            provider_id: providerId,
+            provider_code: providerCode,
+            model: model.trim(),
             project_id: projectId,
             enabled: true,
             priority: 0,
@@ -184,7 +200,7 @@ export default function ProjectAgentsPage() {
     )
   }
 
-  const enabledProviders = providers.filter((p) => p.enabled && p.api_key_configured)
+  const enabledProviders = providers.filter((p) => p.api_key_configured)
 
   return (
     <div className="space-y-6">
@@ -220,16 +236,23 @@ export default function ProjectAgentsPage() {
                   className="fixed inset-0 z-10 cursor-default"
                   onClick={() => setAssignAllOpen(false)}
                 />
-                <div className="absolute right-0 z-20 mt-1 w-64 rounded-[12px] border border-border bg-surface p-1 shadow-lg">
-                  <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-tertiary">
+                <div className="absolute right-0 z-20 mt-1 w-72 rounded-[12px] border border-border bg-surface p-2 shadow-lg">
+                  <p className="px-1 py-1 text-[11px] font-semibold uppercase tracking-wide text-tertiary">
                     Assigner tous les agents à
                   </p>
+                  <input
+                    value={assignAllModel}
+                    onChange={(e) => setAssignAllModel(e.target.value)}
+                    placeholder="Modèle (ex: gpt-5)"
+                    className="mb-1 w-full rounded-[8px] border border-border bg-transparent px-2.5 py-1.5 text-[12px] text-primary outline-none focus:border-accent"
+                  />
                   {enabledProviders.map((p) => (
                     <button
                       key={p.id}
                       type="button"
-                      onClick={() => handleAssignAll(p.id)}
-                      className="block w-full rounded-[8px] px-3 py-2 text-left text-[13px] text-primary transition-colors hover:bg-surface-soft"
+                      onClick={() => handleAssignAll(p.provider, assignAllModel)}
+                      disabled={!assignAllModel.trim()}
+                      className="block w-full rounded-[8px] px-3 py-2 text-left text-[13px] text-primary transition-colors hover:bg-surface-soft disabled:opacity-40"
                     >
                       {p.label} <span className="text-tertiary">({p.provider})</span>
                     </button>
@@ -275,18 +298,26 @@ export default function ProjectAgentsPage() {
                   {isSaving ? (
                     <Loader2 size={16} className="animate-spin text-secondary" />
                   ) : (
-                    <Select
-                      value={ass?.provider_id || ''}
-                      onChange={(e) => handleAssign(agent.agent_id, e.target.value)}
-                      className="!h-8 !px-3 !pr-8 !text-[12px] !font-medium !text-secondary"
-                      options={[
-                        { value: '', label: 'Provider par défaut' },
-                        ...enabledProviders.map((p) => ({
-                          value: p.id,
-                          label: `${p.label} (${p.provider})`,
-                        })),
-                      ]}
-                    />
+                    <div className="flex flex-col gap-1.5">
+                      <Select
+                        value={ass?.provider_code || ''}
+                        onChange={(e) => handleAssign(agent.agent_id, e.target.value, getModelDraft(agent.agent_id))}
+                        className="!h-8 !px-3 !pr-8 !text-[12px] !font-medium !text-secondary"
+                        options={[
+                          { value: '', label: 'Provider par défaut' },
+                          ...enabledProviders.map((p) => ({
+                            value: p.provider,
+                            label: `${p.label} (${p.provider})`,
+                          })),
+                        ]}
+                      />
+                      <input
+                        value={getModelDraft(agent.agent_id)}
+                        onChange={(e) => setModelDrafts((prev) => ({ ...prev, [agent.agent_id]: e.target.value }))}
+                        placeholder="Modèle (ex: gpt-5)"
+                        className="h-7 rounded-[7px] border border-border bg-transparent px-2 text-[11px] text-primary outline-none focus:border-accent"
+                      />
+                    </div>
                   )}
                 </div>
                 <div className="flex min-w-0 items-center justify-between gap-3">

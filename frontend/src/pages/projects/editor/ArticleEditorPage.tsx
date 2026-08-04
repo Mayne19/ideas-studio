@@ -36,10 +36,10 @@ import {
 } from '@/api/articles'
 import { ApiError } from '@/api/client'
 import type { EditorArticle, Category, ProjectMember, SeoAnalysis, ReadyCheck, CalloutTemplate } from '@/types'
+import { ArticleStatus, type ArticleStatusCode } from '@/lib/status'
 import EditorToolbar from '@/components/editor/EditorToolbar'
 import AutosaveIndicator from '@/components/editor/AutosaveIndicator'
 import AnalysePanel from '@/components/editor/AnalysePanel'
-import MediaPanel from '@/components/editor/MediaPanel'
 import VersionsPanel from '@/components/editor/VersionsPanel'
 import CommentsPanel from '@/components/editor/CommentsPanel'
 import LoadingState from '@/components/ui/LoadingState'
@@ -61,32 +61,15 @@ export type MetaFields = {
   keyword: string
   category_id: string
   sub_niche: string
-  content_format: 'short' | 'medium' | 'long' | 'pillar' | ''
-  target_word_count: string
 }
 
 type FaqItem = { question: string; answer: string }
 type ViewMode = 'read' | 'edit' | 'comment'
 type RightTab = 'publish' | 'analyse' | 'versions'
 type CommentAnchor = { text: string; top: number; left: number; from: number; to: number }
-type PersistedSnapshot = {
-  title: string
-  slug: string
-  excerpt: string
-  keyword: string
-  meta_title: string
-  meta_description: string
-  category_id: string
-  sub_niche: string
-  featured: boolean
-  cover_image_url: string
-  content: string
-  faq_json: string | null
-  author_name: string | null
-  reading_time_minutes: number | null
-}
+type ArticleSchedule = { scheduled_for: string | null; published_at: string | null }
 
-const GENERATING_STATUSES: string[] = ['writing_requested', 'writing_in_progress']
+const GENERATING_STATUSES: ArticleStatusCode[] = [ArticleStatus.WRITING_REQUESTED, ArticleStatus.WRITING_IN_PROGRESS]
 
 const RIGHT_TABS: { key: RightTab; label: string; icon: React.ReactNode }[] = [
   { key: 'publish',  label: 'Publication', icon: <Settings size={13} /> },
@@ -98,15 +81,6 @@ type AutosaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 const EMPTY_META: MetaFields = {
   title: '', slug: '', excerpt: '', meta_title: '', meta_description: '', keyword: '', category_id: '', sub_niche: '',
-  content_format: '', target_word_count: '',
-}
-const NO_NICHE_VALUE = '__no_niche__'
-
-function getCategoryNicheKey(categories: Category[], categoryId?: string | null, subNiche?: string | null) {
-  const trimmedNiche = subNiche?.trim()
-  if (trimmedNiche) return trimmedNiche
-  const category = categories.find((cat) => cat.id === categoryId)
-  return category ? category.niche?.trim() || NO_NICHE_VALUE : ''
 }
 
 const CommentMark = Mark.create({
@@ -162,19 +136,11 @@ function parseFaqItems(value: unknown): FaqItem[] {
       typeof (item as FaqItem).answer === 'string'
     )
   }
-  if (typeof value === 'string' && value.trim()) {
-    try {
-      return parseFaqItems(JSON.parse(value))
-    } catch {
-      return []
-    }
-  }
   return []
 }
 
-function serializeFaqItems(items: FaqItem[]) {
-  const filled = items.filter((item) => item.question.trim() || item.answer.trim())
-  return filled.length > 0 ? JSON.stringify(filled) : null
+function serializeFaqItems(items: FaqItem[]): FaqItem[] {
+  return items.filter((item) => item.question.trim() || item.answer.trim())
 }
 
 function normalizeOptionalText(value: string | null | undefined): string | null {
@@ -199,84 +165,6 @@ function isEffectivelyEmptyHtml(value: string | null | undefined): boolean {
   return text === ''
 }
 
-function buildPersistedSnapshot({
-  content,
-  meta,
-  coverImageUrl,
-  faqItems,
-  authorName,
-  readingTimeMinutes,
-  featured,
-}: {
-  content: string
-  meta: MetaFields
-  coverImageUrl: string
-  faqItems: FaqItem[]
-  authorName: string
-  readingTimeMinutes: number | null
-  featured: boolean
-}): PersistedSnapshot {
-  return {
-    title: meta.title,
-    slug: meta.slug,
-    excerpt: meta.excerpt,
-    keyword: meta.keyword,
-    meta_title: meta.meta_title,
-    meta_description: meta.meta_description,
-    category_id: meta.category_id,
-    sub_niche: meta.sub_niche,
-    featured,
-    cover_image_url: coverImageUrl,
-    content,
-    faq_json: serializeFaqItems(faqItems),
-    author_name: normalizeOptionalText(authorName),
-    reading_time_minutes: normalizeReadingTime(readingTimeMinutes),
-  }
-}
-
-function buildPublishedSnapshot(article: EditorArticle | null): PersistedSnapshot | null {
-  if (!article || article.status !== 'published') return null
-  const hasPublishedFields = article.published_content !== null || article.published_title !== null || article.published_excerpt !== null
-  if (!hasPublishedFields) {
-    return buildPersistedSnapshot({
-      content: article.content ?? '',
-      meta: {
-        title: article.title ?? '',
-        slug: article.slug ?? '',
-        excerpt: article.excerpt ?? '',
-        keyword: article.keyword ?? '',
-        meta_title: article.meta_title ?? '',
-        meta_description: article.meta_description ?? '',
-        category_id: article.category_id ?? '',
-        sub_niche: article.sub_niche ?? '',
-        content_format: (article.content_format as MetaFields['content_format']) ?? '',
-        target_word_count: article.target_word_count ? String(article.target_word_count) : '',
-      },
-      coverImageUrl: article.cover_image_url ?? '',
-      faqItems: parseFaqItems(article.faq_json),
-      authorName: article.author_name ?? '',
-      readingTimeMinutes: article.reading_time_minutes,
-      featured: Boolean(article.featured),
-    })
-  }
-  return {
-    title: article.published_title ?? '',
-    slug: article.slug ?? '',
-    excerpt: article.published_excerpt ?? '',
-    keyword: article.keyword ?? '',
-    meta_title: article.meta_title ?? '',
-    meta_description: article.published_meta_description ?? '',
-    category_id: article.category_id ?? '',
-    sub_niche: article.sub_niche ?? '',
-    featured: Boolean(article.featured),
-    cover_image_url: article.published_cover_image_url ?? '',
-    content: article.published_content ?? '',
-    faq_json: article.published_faq_json as string | null ?? null,
-    author_name: normalizeOptionalText(article.author_name),
-    reading_time_minutes: normalizeReadingTime(article.reading_time_minutes),
-  }
-}
-
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export default function ArticleEditorPage() {
@@ -299,18 +187,14 @@ export default function ArticleEditorPage() {
 
   // Content fields
   const [metaFields, setMetaFields] = useState<MetaFields>(EMPTY_META)
-  const [coverImageUrl, setCoverImageUrl] = useState('')
   const [categories, setCategories] = useState<Category[]>([])
   const [calloutTemplates, setCalloutTemplates] = useState<CalloutTemplate[]>([])
   const [members, setMembers] = useState<ProjectMember[]>([])
-  const [pathNicheKey, setPathNicheKey] = useState('')
   const [manualAuthorName, setManualAuthorName] = useState('')
   const [manualReadingTime, setManualReadingTime] = useState<number | null>(null)
-  const [featured, setFeatured] = useState(false)
-  const [, setPersistedSnapshot] = useState<PersistedSnapshot | null>(null)
-  const [, setLastPromotedSnapshot] = useState<PersistedSnapshot | null>(null)
   const [faqItems, setFaqItems] = useState<FaqItem[]>([])
   const [faqOpen, setFaqOpen] = useState(false)
+  const [articleSchedule, setArticleSchedule] = useState<ArticleSchedule>({ scheduled_for: null, published_at: null })
 
   // Publication actions
   const [actionError, setActionError] = useState('')
@@ -331,7 +215,6 @@ export default function ArticleEditorPage() {
 
   // Refs (stable references for closures)
   const metaRef = useRef<MetaFields>(EMPTY_META)
-  const coverRef = useRef('')
   const faqRef = useRef<FaqItem[]>([])
   const authorNameRef = useRef('')
   const readingTimeRef = useRef<number | null>(null)
@@ -424,27 +307,14 @@ export default function ArticleEditorPage() {
         keyword: normalizeOptionalText(metaRef.current.keyword),
         meta_title: metaRef.current.meta_title || undefined,
         meta_description: metaRef.current.meta_description || undefined,
-        cover_image_url: normalizeOptionalText(coverRef.current),
         category_id: normalizeOptionalText(metaRef.current.category_id),
         sub_niche: normalizeOptionalText(metaRef.current.sub_niche),
-        featured: featuredRef.current,
-        faq_json: serializeFaqItems(faqRef.current),
+        is_featured: featuredRef.current,
+        faq: serializeFaqItems(faqRef.current),
         author_name: normalizeOptionalText(authorNameRef.current),
-        reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
-        content_format: (metaRef.current.content_format as 'short' | 'medium' | 'long' | 'pillar') || null,
-        target_word_count: metaRef.current.target_word_count ? parseInt(metaRef.current.target_word_count, 10) || null : null,
       })
         .then((response) => {
           pendingSaveRef.current = false
-          setPersistedSnapshot(buildPersistedSnapshot({
-            content: html,
-            meta: metaRef.current,
-            coverImageUrl: coverRef.current,
-            faqItems: faqRef.current,
-            authorName: authorNameRef.current,
-            readingTimeMinutes: readingTimeRef.current,
-            featured: featuredRef.current,
-          }))
           setArticle((prev) => prev ? {
             ...prev,
             title: metaRef.current.title,
@@ -455,10 +325,9 @@ export default function ArticleEditorPage() {
             meta_description: normalizeOptionalText(metaRef.current.meta_description),
             category_id: normalizeOptionalText(metaRef.current.category_id),
             sub_niche: normalizeOptionalText(metaRef.current.sub_niche),
-            featured: featuredRef.current,
-            cover_image_url: normalizeOptionalText(coverRef.current),
+            is_featured: featuredRef.current,
             content: html,
-            faq_json: serializeFaqItems(faqRef.current),
+            faq: serializeFaqItems(faqRef.current),
             author_name: normalizeOptionalText(authorNameRef.current),
             reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
             word_count: response.word_count,
@@ -490,26 +359,13 @@ export default function ArticleEditorPage() {
         keyword: normalizeOptionalText(metaRef.current.keyword),
         meta_title: metaRef.current.meta_title || undefined,
         meta_description: metaRef.current.meta_description || undefined,
-        cover_image_url: normalizeOptionalText(coverRef.current),
         category_id: normalizeOptionalText(metaRef.current.category_id),
         sub_niche: normalizeOptionalText(metaRef.current.sub_niche),
-        featured: featuredRef.current,
-        faq_json: serializeFaqItems(faqRef.current),
+        is_featured: featuredRef.current,
+        faq: serializeFaqItems(faqRef.current),
         author_name: normalizeOptionalText(authorNameRef.current),
-        reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
-        content_format: (metaRef.current.content_format as 'short' | 'medium' | 'long' | 'pillar') || null,
-        target_word_count: metaRef.current.target_word_count ? parseInt(metaRef.current.target_word_count, 10) || null : null,
       })
       pendingSaveRef.current = false
-      setPersistedSnapshot(buildPersistedSnapshot({
-        content,
-        meta: metaRef.current,
-        coverImageUrl: coverRef.current,
-        faqItems: faqRef.current,
-        authorName: authorNameRef.current,
-        readingTimeMinutes: readingTimeRef.current,
-        featured: featuredRef.current,
-      }))
       setArticle((prev) => prev ? {
         ...prev,
         title: metaRef.current.title,
@@ -520,10 +376,9 @@ export default function ArticleEditorPage() {
         meta_description: normalizeOptionalText(metaRef.current.meta_description),
         category_id: normalizeOptionalText(metaRef.current.category_id),
         sub_niche: normalizeOptionalText(metaRef.current.sub_niche),
-        featured: featuredRef.current,
-        cover_image_url: normalizeOptionalText(coverRef.current),
+        is_featured: featuredRef.current,
         content,
-        faq_json: serializeFaqItems(faqRef.current),
+        faq: serializeFaqItems(faqRef.current),
         author_name: normalizeOptionalText(authorNameRef.current),
         reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
         word_count: response.word_count,
@@ -569,6 +424,31 @@ export default function ArticleEditorPage() {
 
   // ─── Data loading ────────────────────────────────────────────────────────────
 
+  const hydrateFromArticle = useCallback((art: EditorArticle, options: { setContent?: boolean } = {}) => {
+    setArticle(art)
+    const meta: MetaFields = {
+      title: art.title ?? '',
+      slug: art.slug ?? '',
+      excerpt: art.excerpt ?? '',
+      meta_title: art.meta_title ?? '',
+      meta_description: art.meta_description ?? '',
+      keyword: art.keyword ?? '',
+      category_id: art.category_id ?? '',
+      sub_niche: art.sub_niche ?? '',
+    }
+    setMetaFields(meta)
+    metaRef.current = meta
+    const faq = parseFaqItems(art.faq)
+    setFaqItems(faq)
+    faqRef.current = faq
+    setManualAuthorName(art.author_name ?? '')
+    authorNameRef.current = art.author_name ?? ''
+    setManualReadingTime(normalizeReadingTime(art.reading_time_minutes))
+    readingTimeRef.current = normalizeReadingTime(art.reading_time_minutes)
+    featuredRef.current = Boolean(art.is_featured)
+    if (options.setContent && editor && art.content) editor.commands.setContent(art.content)
+  }, [editor])
+
   useEffect(() => {
     if (!projectId || !articleId) return
     Promise.all([
@@ -583,50 +463,14 @@ export default function ArticleEditorPage() {
         setMembers(mems)
         setLatestSeoAnalysis(null)
         setLatestReadyCheck(null)
-        setArticle(art)
-        const meta: MetaFields = {
-          title: art.title ?? '',
-          slug: art.slug ?? '',
-          excerpt: art.excerpt ?? '',
-          meta_title: art.meta_title ?? '',
-          meta_description: art.meta_description ?? '',
-          keyword: art.keyword ?? '',
-          category_id: art.category_id ?? '',
-          sub_niche: art.sub_niche ?? '',
-          content_format: (art.content_format as MetaFields['content_format']) ?? '',
-          target_word_count: art.target_word_count ? String(art.target_word_count) : '',
-        }
-        setMetaFields(meta)
-        metaRef.current = meta
-        setPathNicheKey(getCategoryNicheKey(cats, art.category_id, art.sub_niche))
+        setArticleSchedule({ scheduled_for: null, published_at: null })
+        hydrateFromArticle(art)
         slugManuallyEditedRef.current = false
-        const cover = art.cover_image_url ?? ''
-        setCoverImageUrl(cover)
-        coverRef.current = cover
-        const faq = parseFaqItems(art.faq_json)
-        setFaqItems(faq)
-        faqRef.current = faq
-        setManualAuthorName(art.author_name ?? '')
-        authorNameRef.current = art.author_name ?? ''
-        setManualReadingTime(normalizeReadingTime(art.reading_time_minutes))
-        readingTimeRef.current = normalizeReadingTime(art.reading_time_minutes)
-        setFeatured(Boolean(art.featured))
-        featuredRef.current = Boolean(art.featured)
-        setPersistedSnapshot(buildPersistedSnapshot({
-          content: art.content ?? '',
-          meta,
-          coverImageUrl: cover,
-          faqItems: faq,
-          authorName: art.author_name ?? '',
-          readingTimeMinutes: art.reading_time_minutes,
-          featured: Boolean(art.featured),
-        }))
-        setLastPromotedSnapshot(buildPublishedSnapshot(art))
         setIsGenerating(GENERATING_STATUSES.includes(art.status))
         setLoadStatus('success')
       })
       .catch(() => setLoadStatus('error'))
-  }, [projectId, articleId, user?.id])
+  }, [projectId, articleId, user?.id, hydrateFromArticle])
 
   useEffect(() => {
     if (!editor || !article) return
@@ -709,44 +553,12 @@ export default function ArticleEditorPage() {
           clearInterval(id)
           setIsGenerating(false)
           setGenerationTimedOut(false)
-          setArticle(art)
-          const m: MetaFields = {
-            title: art.title ?? '', slug: art.slug ?? '', excerpt: art.excerpt ?? '',
-            meta_title: art.meta_title ?? '', meta_description: art.meta_description ?? '',
-            keyword: art.keyword ?? '', category_id: art.category_id ?? '', sub_niche: art.sub_niche ?? '',
-            content_format: (art.content_format as MetaFields['content_format']) ?? '',
-            target_word_count: art.target_word_count ? String(art.target_word_count) : '',
-          }
-          setMetaFields(m)
-          metaRef.current = m
-          setPathNicheKey(getCategoryNicheKey(categories, art.category_id, art.sub_niche))
-          const cov = art.cover_image_url ?? ''
-          setCoverImageUrl(cov)
-          coverRef.current = cov
-          const faq = parseFaqItems(art.faq_json)
-          setFaqItems(faq)
-          faqRef.current = faq
-          setManualAuthorName(art.author_name ?? '')
-          authorNameRef.current = art.author_name ?? ''
-          setManualReadingTime(normalizeReadingTime(art.reading_time_minutes))
-          readingTimeRef.current = normalizeReadingTime(art.reading_time_minutes)
-          setFeatured(Boolean(art.featured))
-          featuredRef.current = Boolean(art.featured)
-          setPersistedSnapshot(buildPersistedSnapshot({
-            content: art.content ?? '',
-            meta: m,
-            coverImageUrl: cov,
-            faqItems: faq,
-            authorName: art.author_name ?? '',
-            readingTimeMinutes: art.reading_time_minutes,
-            featured: Boolean(art.featured),
-          }))
-          if (editor && art.content) editor.commands.setContent(art.content)
+          hydrateFromArticle(art, { setContent: true })
         }
       } catch { /* ignore poll errors */ }
     }, 3000)
     return () => clearInterval(id)
-  }, [isGenerating, projectId, articleId, editor, categories])
+  }, [isGenerating, projectId, articleId, editor, hydrateFromArticle])
 
   async function handleRefreshGeneration() {
     if (!projectId || !articleId) return
@@ -757,39 +569,7 @@ export default function ArticleEditorPage() {
         setIsGenerating(true)
       } else {
         setIsGenerating(false)
-        setArticle(art)
-        const m: MetaFields = {
-          title: art.title ?? '', slug: art.slug ?? '', excerpt: art.excerpt ?? '',
-          meta_title: art.meta_title ?? '', meta_description: art.meta_description ?? '',
-          keyword: art.keyword ?? '', category_id: art.category_id ?? '', sub_niche: art.sub_niche ?? '',
-          content_format: (art.content_format as MetaFields['content_format']) ?? '',
-          target_word_count: art.target_word_count ? String(art.target_word_count) : '',
-        }
-        setMetaFields(m)
-        metaRef.current = m
-        setPathNicheKey(getCategoryNicheKey(categories, art.category_id, art.sub_niche))
-        const cov = art.cover_image_url ?? ''
-        setCoverImageUrl(cov)
-        coverRef.current = cov
-        const faq = parseFaqItems(art.faq_json)
-        setFaqItems(faq)
-        faqRef.current = faq
-        setManualAuthorName(art.author_name ?? '')
-        authorNameRef.current = art.author_name ?? ''
-        setManualReadingTime(normalizeReadingTime(art.reading_time_minutes))
-        readingTimeRef.current = normalizeReadingTime(art.reading_time_minutes)
-        setFeatured(Boolean(art.featured))
-        featuredRef.current = Boolean(art.featured)
-        setPersistedSnapshot(buildPersistedSnapshot({
-          content: art.content ?? '',
-          meta: m,
-          coverImageUrl: cov,
-          faqItems: faq,
-          authorName: art.author_name ?? '',
-          readingTimeMinutes: art.reading_time_minutes,
-          featured: Boolean(art.featured),
-        }))
-        if (editor && art.content) editor.commands.setContent(art.content)
+        hydrateFromArticle(art, { setContent: true })
       }
     } catch { /* ignore */ }
   }
@@ -853,7 +633,7 @@ export default function ArticleEditorPage() {
 
   function handleMetaChange(name: keyof MetaFields, value: string) {
     const next = { ...metaRef.current, [name]: value }
-    if (name === 'title' && !slugManuallyEditedRef.current && article && article.status !== 'published') {
+    if (name === 'title' && !slugManuallyEditedRef.current && article && article.status !== ArticleStatus.PUBLISHED) {
       next.slug = slugify(value || 'item')
     }
     if (name === 'slug') {
@@ -865,51 +645,25 @@ export default function ArticleEditorPage() {
     scheduleAutosave(editor?.getHTML() ?? '')
   }
 
-  function handlePathNicheChange(value: string) {
-    const currentCategory = categories.find((cat) => cat.id === metaRef.current.category_id)
-    const currentCategoryNiche = currentCategory?.niche?.trim() || NO_NICHE_VALUE
-    const nextCategoryId = currentCategory && currentCategoryNiche === value ? currentCategory.id : ''
-    setPathNicheKey(value)
-    const next = {
-      ...metaRef.current,
-      sub_niche: value === NO_NICHE_VALUE ? '' : value,
-      category_id: nextCategoryId,
-    }
+  function handleCategoryChange(categoryId: string) {
+    const next = { ...metaRef.current, category_id: categoryId }
     metaRef.current = next
     setMetaFields(next)
     setArticle((prev) => prev ? {
       ...prev,
-      sub_niche: normalizeOptionalText(next.sub_niche),
       category_id: normalizeOptionalText(next.category_id),
     } : prev)
     scheduleAutosave(editor?.getHTML() ?? '')
   }
 
-  function handlePathCategoryChange(categoryId: string) {
-    const category = categories.find((cat) => cat.id === categoryId)
-    const selectedNiche = metaRef.current.sub_niche
-    const nextNiche = category
-      ? category.niche?.trim() ?? ''
-      : selectedNiche
-    setPathNicheKey(category ? category.niche?.trim() || NO_NICHE_VALUE : pathNicheKey || getCategoryNicheKey(categories, null, selectedNiche))
-    const next = {
-      ...metaRef.current,
-      category_id: categoryId,
-      sub_niche: nextNiche,
-    }
+  function handleSubNicheChange(value: string) {
+    const next = { ...metaRef.current, sub_niche: value }
     metaRef.current = next
     setMetaFields(next)
     setArticle((prev) => prev ? {
       ...prev,
       sub_niche: normalizeOptionalText(next.sub_niche),
-      category_id: normalizeOptionalText(next.category_id),
     } : prev)
-    scheduleAutosave(editor?.getHTML() ?? '')
-  }
-
-  function handleCoverChange(url: string) {
-    coverRef.current = url
-    setCoverImageUrl(url)
     scheduleAutosave(editor?.getHTML() ?? '')
   }
 
@@ -966,6 +720,14 @@ export default function ArticleEditorPage() {
 
   // ─── Publication actions ─────────────────────────────────────────────────────
 
+  function applyArticleUpdate(updated: { status: ArticleStatusCode; updated_at: string; published_at?: string | null; scheduled_for?: string | null }) {
+    setArticle((prev) => prev ? { ...prev, status: updated.status, updated_at: updated.updated_at } : prev)
+    setArticleSchedule((prev) => ({
+      scheduled_for: updated.scheduled_for !== undefined ? updated.scheduled_for : prev.scheduled_for,
+      published_at: updated.published_at !== undefined ? updated.published_at : prev.published_at,
+    }))
+  }
+
   async function doAction(key: string) {
     if (!projectId || !article) return
     setActionLoading(key)
@@ -982,31 +744,26 @@ export default function ArticleEditorPage() {
           keyword: normalizeOptionalText(metaRef.current.keyword),
           meta_title: metaRef.current.meta_title || undefined,
           meta_description: normalizeOptionalText(metaRef.current.meta_description),
-          cover_image_url: normalizeOptionalText(coverRef.current),
           category_id: normalizeOptionalText(metaRef.current.category_id),
           sub_niche: normalizeOptionalText(metaRef.current.sub_niche),
-          featured: featuredRef.current,
-          faq_json: serializeFaqItems(faqRef.current),
+          is_featured: featuredRef.current,
+          faq: serializeFaqItems(faqRef.current),
           author_name: normalizeOptionalText(authorNameRef.current),
-          reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
         })
       }
-      let updated: EditorArticle | undefined
       if (key === 'publish') {
-        const resp = await publishArticle(projectId, article.id)
-        updated = resp as unknown as EditorArticle
+        applyArticleUpdate(await publishArticle(projectId, article.id))
       } else if (key === 'unpublish') {
-        updated = await unpublishArticle(projectId, article.id) as unknown as EditorArticle
+        applyArticleUpdate(await unpublishArticle(projectId, article.id))
       } else if (key === 'mark-ready') {
-        updated = await markReadyArticle(projectId, article.id) as unknown as EditorArticle
+        applyArticleUpdate(await markReadyArticle(projectId, article.id))
       } else if (key === 'archive') {
-        updated = await archiveArticle(projectId, article.id) as unknown as EditorArticle
+        applyArticleUpdate(await archiveArticle(projectId, article.id))
       } else if (key === 'unarchive') {
-        updated = await unarchiveArticle(projectId, article.id) as unknown as EditorArticle
+        applyArticleUpdate(await unarchiveArticle(projectId, article.id))
       } else if (key === 'unschedule') {
-        updated = await unscheduleArticle(projectId, article.id) as unknown as EditorArticle
+        applyArticleUpdate(await unscheduleArticle(projectId, article.id))
       }
-      if (updated) setArticle((prev) => ({ ...prev!, ...updated }))
     } catch (err) {
       setActionError(translateError(err))
     } finally {
@@ -1029,39 +786,14 @@ export default function ArticleEditorPage() {
         keyword: normalizeOptionalText(metaRef.current.keyword),
         meta_title: metaRef.current.meta_title || undefined,
         meta_description: normalizeOptionalText(metaRef.current.meta_description),
-        cover_image_url: normalizeOptionalText(coverRef.current),
         category_id: normalizeOptionalText(metaRef.current.category_id),
         sub_niche: normalizeOptionalText(metaRef.current.sub_niche),
-        featured: featuredRef.current,
-        faq_json: serializeFaqItems(faqRef.current),
+        is_featured: featuredRef.current,
+        faq: serializeFaqItems(faqRef.current),
         author_name: normalizeOptionalText(authorNameRef.current),
-        reading_time_minutes: normalizeReadingTime(readingTimeRef.current),
-        content_format: (metaRef.current.content_format as 'short' | 'medium' | 'long' | 'pillar') || null,
-        target_word_count: metaRef.current.target_word_count ? parseInt(metaRef.current.target_word_count, 10) || null : null,
       })
       const updated: PromoteResponse = await promoteArticle(projectId, article.id)
-      setArticle((prev) => prev ? {
-        ...prev,
-        ...updated,
-        content: prev.content,
-        title: prev.title,
-        excerpt: prev.excerpt,
-        meta_description: prev.meta_description,
-        cover_image_url: prev.cover_image_url,
-        faq_json: prev.faq_json,
-        callouts_json: prev.callouts_json,
-      } : prev)
-      const promotedSnapshot = buildPersistedSnapshot({
-        content,
-        meta: metaFields,
-        coverImageUrl: coverImageUrl,
-        faqItems,
-        authorName: manualAuthorName,
-        readingTimeMinutes: manualReadingTime,
-        featured,
-      })
-      setPersistedSnapshot(promotedSnapshot)
-      setLastPromotedSnapshot(promotedSnapshot)
+      applyArticleUpdate(updated)
     } catch (err) {
       setActionError(translateError(err))
     } finally {
@@ -1076,7 +808,7 @@ export default function ArticleEditorPage() {
     try {
       const iso = new Date(`${scheduleDate}T${scheduleTime}`).toISOString()
       const updated = await scheduleArticle(projectId, article.id, iso)
-      setArticle((prev) => ({ ...prev!, ...updated }))
+      applyArticleUpdate(updated)
       setScheduleDate('')
       setScheduleTime('')
     } catch (err) {
@@ -1157,39 +889,10 @@ export default function ArticleEditorPage() {
     ? editor.getText().split(/\s+/).filter(Boolean).length
     : (article?.word_count ?? 0)
 
-  const selectedCategory = useMemo(
-    () => categories.find((cat) => cat.id === metaFields.category_id) ?? null,
-    [categories, metaFields.category_id],
+  const sortedCategories = useMemo(
+    () => [...categories].sort((a, b) => a.name.localeCompare(b.name, 'fr')),
+    [categories],
   )
-  const selectedPathNiche = metaFields.sub_niche.trim()
-    || (selectedCategory ? selectedCategory.niche?.trim() || NO_NICHE_VALUE : '')
-    || pathNicheKey
-    || ''
-  const nicheOptions = useMemo(() => {
-    const byKey = new Map<string, { value: string; label: string; count: number }>()
-    for (const category of categories) {
-      const niche = category.niche?.trim()
-      const value = niche || NO_NICHE_VALUE
-      const existing = byKey.get(value)
-      if (existing) {
-        existing.count += 1
-      } else {
-        byKey.set(value, {
-          value,
-          label: niche || 'Sans niche',
-          count: 1,
-        })
-      }
-    }
-    return Array.from(byKey.values()).sort((a, b) => a.label.localeCompare(b.label, 'fr'))
-  }, [categories])
-  const effectivePathNiche = selectedPathNiche || (nicheOptions.length === 1 ? nicheOptions[0].value : '')
-  const categoriesForPath = useMemo(() => {
-    if (!effectivePathNiche) return []
-    return categories
-      .filter((category) => (category.niche?.trim() || NO_NICHE_VALUE) === effectivePathNiche)
-      .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-  }, [categories, effectivePathNiche])
 
   const calculatedReadingTime = Math.max(1, Math.ceil(wordCount / 200))
   const readingTime = normalizeReadingTime(manualReadingTime) ?? calculatedReadingTime
@@ -1525,40 +1228,29 @@ export default function ArticleEditorPage() {
                     </Field>
 
                     <div className="flex flex-col gap-2">
-                      <span className="text-[12px] font-medium text-secondary">Couverture</span>
-                      <MediaPanel coverImageUrl={coverImageUrl} onChange={handleCoverChange} projectId={projectId!} />
-                    </div>
-
-                    <div className="flex flex-col gap-2">
                       <span className="text-[12px] font-medium text-secondary">Chemin éditorial</span>
                       <div className="grid grid-cols-2 gap-2">
-                        <Field label="Niche">
-                          <select
-                            value={effectivePathNiche}
-                            onChange={(e) => handlePathNicheChange(e.target.value)}
-                            className={INPUT}
-                            disabled={nicheOptions.length === 0}
-                          >
-                            <option value="">Choisir une niche</option>
-                            {nicheOptions.map((niche) => (
-                              <option key={niche.value} value={niche.value}>
-                                {niche.label}
-                              </option>
-                            ))}
-                          </select>
-                        </Field>
                         <Field label="Catégorie">
                           <select
                             value={metaFields.category_id}
-                            onChange={(e) => handlePathCategoryChange(e.target.value)}
+                            onChange={(e) => handleCategoryChange(e.target.value)}
                             className={INPUT}
-                            disabled={!effectivePathNiche || categoriesForPath.length === 0}
+                            disabled={sortedCategories.length === 0}
                           >
                             <option value="">Choisir une catégorie</option>
-                            {categoriesForPath.map((cat) => (
+                            {sortedCategories.map((cat) => (
                               <option key={cat.id} value={cat.id}>{cat.name}</option>
                             ))}
                           </select>
+                        </Field>
+                        <Field label="Sous-niche">
+                          <input
+                            type="text"
+                            value={metaFields.sub_niche}
+                            onChange={(e) => handleSubNicheChange(e.target.value)}
+                            className={INPUT}
+                            placeholder="ex: nutrition sportive"
+                          />
                         </Field>
                       </div>
                     </div>
@@ -1593,7 +1285,7 @@ export default function ArticleEditorPage() {
                       <StatusBadge status={article.status} />
                     </div>
 
-                    {article.status === 'scheduled' && article.scheduled_at && (
+                    {article.status === ArticleStatus.SCHEDULED && articleSchedule.scheduled_for && (
                       <div className="flex flex-col gap-2 px-3 pb-3">
                         <Button
                           size="sm"
@@ -1605,12 +1297,12 @@ export default function ArticleEditorPage() {
                           Mettre à jour le contenu
                         </Button>
                         <p className="text-center text-[11px] text-tertiary">
-                          La date de publication reste le {formatDate(article.scheduled_at)}
+                          La date de publication reste le {formatDate(articleSchedule.scheduled_for)}
                         </p>
                       </div>
                     )}
 
-                    {article.status === 'published' && (
+                    {article.status === ArticleStatus.PUBLISHED && (
                       <div className="flex flex-col gap-2 px-3 pb-3">
                         <Button
                           size="sm"
@@ -1622,8 +1314,8 @@ export default function ArticleEditorPage() {
                           Mettre à jour
                         </Button>
                         <div className="px-1 text-[11px] text-tertiary">
-                          <p>Publié le {article.published_at ? formatDate(article.published_at) : '—'}</p>
-                          {article.updated_at && article.updated_at !== article.published_at && (
+                          <p>Publié le {articleSchedule.published_at ? formatDate(articleSchedule.published_at) : '—'}</p>
+                          {article.updated_at && articleSchedule.published_at && article.updated_at !== articleSchedule.published_at && (
                             <p>Dernière mise à jour : {formatDate(article.updated_at)}</p>
                           )}
                         </div>
@@ -1632,7 +1324,7 @@ export default function ArticleEditorPage() {
 
                     <div className="flex flex-col gap-2">
                       {/* Scheduled → Déprogrammer */}
-                      {article.status === 'scheduled' && (
+                      {article.status === ArticleStatus.SCHEDULED && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -1646,7 +1338,7 @@ export default function ArticleEditorPage() {
                       )}
 
                       {/* Published → Dépublier + promote si changements */}
-                      {article.status === 'published' && (
+                      {article.status === ArticleStatus.PUBLISHED && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -1660,7 +1352,7 @@ export default function ArticleEditorPage() {
                       )}
 
                       {/* Default (draft, ready_to_publish, etc.) → Publier + Archiver */}
-                      {article.status !== 'published' && article.status !== 'archived' && article.status !== 'scheduled' && (
+                      {article.status !== ArticleStatus.PUBLISHED && article.status !== ArticleStatus.ARCHIVED && article.status !== ArticleStatus.SCHEDULED && (
                         <>
                           <Popover>
                             <PopoverTrigger asChild>
@@ -1738,7 +1430,7 @@ export default function ArticleEditorPage() {
                       )}
 
                       {/* Archived → Désarchiver uniquement */}
-                      {article.status === 'archived' && (
+                      {article.status === ArticleStatus.ARCHIVED && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -1800,28 +1492,18 @@ export default function ArticleEditorPage() {
                     setLatestSeoAnalysis(analysis)
                     setArticle((prev) => prev ? {
                       ...prev,
-                      seo_score: analysis.seo_score,
-                      readability_score: analysis.readability_score,
-                      quality_score: analysis.quality_score,
-                      eeat_score: analysis.eeat_score,
-                      readiness_status: analysis.readiness_status,
                       latest_analysis: {
                         seo_score: analysis.seo_score,
                         readability_score: analysis.readability_score,
                         quality_score: analysis.quality_score,
                         eeat_score: analysis.eeat_score,
-                        readiness_status: analysis.readiness_status,
+                        geo_score: prev.latest_analysis?.geo_score ?? null,
+                        global_score: prev.latest_analysis?.global_score ?? null,
                         created_at: analysis.created_at,
                       },
                     } : prev)
                   }}
                   onReadinessUpdate={setLatestReadyCheck}
-                  onExpertReviewUpdate={(review) => {
-                    setArticle((prev) => prev ? {
-                      ...prev,
-                      seo_review_json: review,
-                    } : prev)
-                  }}
                 />
               )}
 
@@ -1833,39 +1515,7 @@ export default function ArticleEditorPage() {
                     articleId={articleId!}
                     members={members}
                     onRestore={(restored) => {
-                      setArticle(restored)
-                      const meta: MetaFields = {
-                        title: restored.title ?? '', slug: restored.slug ?? '', excerpt: restored.excerpt ?? '',
-                        meta_title: restored.meta_title ?? '', meta_description: restored.meta_description ?? '',
-                        keyword: restored.keyword ?? '', category_id: restored.category_id ?? '', sub_niche: restored.sub_niche ?? '',
-                        content_format: (restored.content_format as MetaFields['content_format']) ?? '',
-                        target_word_count: restored.target_word_count ? String(restored.target_word_count) : '',
-                      }
-                      setMetaFields(meta)
-                      metaRef.current = meta
-                      setPathNicheKey(getCategoryNicheKey(categories, restored.category_id, restored.sub_niche))
-                      const cover = restored.cover_image_url ?? ''
-                      setCoverImageUrl(cover)
-                      coverRef.current = cover
-                      const faq = parseFaqItems(restored.faq_json)
-                      setFaqItems(faq)
-                      faqRef.current = faq
-                      setManualAuthorName(restored.author_name ?? '')
-                      authorNameRef.current = restored.author_name ?? ''
-                      setManualReadingTime(normalizeReadingTime(restored.reading_time_minutes))
-                      readingTimeRef.current = normalizeReadingTime(restored.reading_time_minutes)
-                      setFeatured(Boolean(restored.featured))
-                      featuredRef.current = Boolean(restored.featured)
-                      setPersistedSnapshot(buildPersistedSnapshot({
-                        content: restored.content ?? '',
-                        meta,
-                        coverImageUrl: cover,
-                        faqItems: faq,
-                        authorName: restored.author_name ?? '',
-                        readingTimeMinutes: restored.reading_time_minutes,
-                        featured: Boolean(restored.featured),
-                      }))
-                      if (editor && restored.content) editor.commands.setContent(restored.content)
+                      hydrateFromArticle(restored, { setContent: true })
                       setRightTab('publish')
                     }}
                   />

@@ -8,6 +8,7 @@ import { api } from '@/api/client'
 import type { AIProviderPublic } from '@/api/aiProviders'
 import type { PipelineLog, PipelineSettings } from '@/api/pipeline'
 import type { AgentAssignment, AgentInfo, Article } from '@/types'
+import { ArticleStatus, articleStatusLabel, type ArticleStatusCode } from '@/lib/status'
 import Button from '@/components/ui/Button'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
@@ -27,19 +28,8 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <p className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-secondary">{children}</p>
 }
 
-function articleCost(article: Article) {
-  const actual = article.actual_cost_json?.actual_cost_eur
-  const estimated = article.estimated_cost_json?.estimated_cost_eur
-  const value = typeof actual === 'number' ? actual : typeof estimated === 'number' ? estimated : null
-  return value
-}
-
-function workflowStatus(article: Article) {
-  if (article.workflow_status) return article.workflow_status
-  if (article.status === 'failed') return 'failed'
-  if (article.next_agent_key) return 'running'
-  if (article.completed_agent_keys) return 'completed'
-  return 'not_started'
+function workflowStatus(article: Article): string {
+  return articleStatusLabel(article.status)
 }
 
 function isLogSuccess(status: string) {
@@ -54,6 +44,10 @@ function isLogFailure(log: PipelineLog) {
 function isLogPartial(status: string) {
   return status.toLowerCase() === 'partial_success'
 }
+
+const WORKFLOW_STATUSES: ArticleStatusCode[] = [
+  ArticleStatus.WRITING_REQUESTED, ArticleStatus.WRITING_IN_PROGRESS, ArticleStatus.DRAFT_READY, ArticleStatus.FAILED,
+]
 
 export default function GeneratePage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -103,11 +97,11 @@ export default function GeneratePage() {
   const activeProviders = providers.filter((provider) => provider.enabled && provider.api_key_configured)
   const assignedAgentIds = new Set(assignments.filter((item) => item.enabled).map((item) => item.agent_id))
   const workflowArticles = useMemo(
-    () => articles.filter((article) => article.workflow_run_id || article.next_agent_key || article.completed_agent_keys || article.workflow_status),
+    () => articles.filter((article) => WORKFLOW_STATUSES.includes(article.status)),
     [articles],
   )
-  const runningWorkflows = workflowArticles.filter((article) => ['running', 'in_progress', 'queued'].includes(workflowStatus(article)) || article.next_agent_key)
-  const completedWorkflows = workflowArticles.filter((article) => workflowStatus(article) === 'completed')
+  const runningWorkflows = workflowArticles.filter((article) => article.status === ArticleStatus.WRITING_REQUESTED || article.status === ArticleStatus.WRITING_IN_PROGRESS)
+  const completedWorkflows = workflowArticles.filter((article) => article.status === ArticleStatus.DRAFT_READY)
   const recentGenerations = useMemo(
     () => [...workflowArticles].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()).slice(0, 8),
     [workflowArticles],
@@ -392,15 +386,13 @@ export default function GeneratePage() {
         ) : (
           <div className="overflow-x-auto">
             <div className="min-w-[760px]">
-              <div className="grid grid-cols-[1.6fr_0.7fr_0.9fr_0.6fr_0.7fr] gap-3 border-b border-border px-2 pb-2 text-[12px] font-semibold uppercase tracking-wide text-tertiary">
-                <span>Contenu</span><span>Statut</span><span>Dernier agent</span><span>Coût</span><span>MAJ</span>
+              <div className="grid grid-cols-[1.6fr_0.9fr_0.7fr] gap-3 border-b border-border px-2 pb-2 text-[12px] font-semibold uppercase tracking-wide text-tertiary">
+                <span>Contenu</span><span>Statut</span><span>MAJ</span>
               </div>
               {recentGenerations.map((article) => (
-                <div key={article.id} className="grid grid-cols-[1.6fr_0.7fr_0.9fr_0.6fr_0.7fr] gap-3 border-b border-border px-2 py-3 text-[12px] last:border-0">
+                <div key={article.id} className="grid grid-cols-[1.6fr_0.9fr_0.7fr] gap-3 border-b border-border px-2 py-3 text-[12px] last:border-0">
                   <button className="truncate text-left font-medium text-primary hover:text-accent" onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}>{article.title}</button>
                   <span className="text-secondary">{workflowStatus(article)}</span>
-                  <span className="truncate text-secondary">{article.next_agent_key || article.completed_agent_keys?.split(',').at(-1) || '—'}</span>
-                  <span className="text-secondary">{articleCost(article) ? `${articleCost(article)?.toFixed(4)} €` : '—'}</span>
                   <span className="text-tertiary">{new Date(article.updated_at).toLocaleDateString('fr-FR')}</span>
                 </div>
               ))}

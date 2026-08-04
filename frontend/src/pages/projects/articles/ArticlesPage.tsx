@@ -18,7 +18,8 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import Toolbar from '@/components/ui/Toolbar'
 import ToggleSwitch from '@/components/ui/ToggleSwitch'
 import { TableRoot, Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/Table'
-import { finiteScore, getGeoScore, getOriginalityScore } from '@/lib/scoreBadge'
+import { finiteScore } from '@/lib/scoreBadge'
+import { ArticleStatus, type ArticleStatusCode } from '@/lib/status'
 import ScoreBadge from '@/components/ui/ScoreBadge'
 import { useProject } from '@/context/ProjectContext'
 
@@ -27,9 +28,9 @@ const PAGE_SIZE = 20
 // Cette page ne liste que les articles validés en sortie de production :
 // programmés ou publiés. Tout le reste (idées, brouillons, rédaction,
 // validation) vit dans les pages Idées et Production.
-const POST_PRODUCTION_STATUSES = ['scheduled', 'published']
+const POST_PRODUCTION_STATUSES: ArticleStatusCode[] = [ArticleStatus.SCHEDULED, ArticleStatus.PUBLISHED]
 
-type ScoreFilter = '' | 'global_gte_90' | 'global_lt_90' | 'seo_lt_85' | 'quality_lt_85' | 'readability_lt_80' | 'geo_lt_80' | 'originality_lt_85' | 'critical'
+type ScoreFilter = '' | 'global_gte_90' | 'global_lt_90' | 'seo_lt_85' | 'quality_lt_85' | 'readability_lt_80' | 'geo_lt_80' | 'critical'
 
 function getPublicUrl(domain: string | undefined | null, slug: string): string {
   if (!domain) return ''
@@ -43,11 +44,11 @@ function getUniqueAuthors(articles: Article[]): string[] {
   return Array.from(names).sort()
 }
 
-const PUBLISHED_STATUSES = new Set(['published', 'scheduled'])
-const EDITABLE_STATUSES = new Set([
-  'draft', 'outline_ready', 'writing_requested', 'writing_in_progress',
-  'draft_ready', 'review_needed', 'correction_needed', 'ready_to_publish',
-  'update_recommended', 'failed',
+const PUBLISHED_STATUSES = new Set<ArticleStatusCode>([ArticleStatus.PUBLISHED, ArticleStatus.SCHEDULED])
+const EDITABLE_STATUSES = new Set<ArticleStatusCode>([
+  ArticleStatus.DRAFT, ArticleStatus.OUTLINE_READY, ArticleStatus.WRITING_REQUESTED, ArticleStatus.WRITING_IN_PROGRESS,
+  ArticleStatus.DRAFT_READY, ArticleStatus.REVIEW_NEEDED, ArticleStatus.CORRECTION_NEEDED, ArticleStatus.READY_TO_PUBLISH,
+  ArticleStatus.UPDATE_RECOMMENDED, ArticleStatus.FAILED,
 ])
 
 function ArticleRow({
@@ -64,7 +65,6 @@ function ArticleRow({
   const category = categories.find((c) => c.id === article.category_id)
   const isPublished = PUBLISHED_STATUSES.has(article.status)
   const isEditable = EDITABLE_STATUSES.has(article.status)
-  const originalityScore = getOriginalityScore(article)
   const rowCellClass = 'border-y-2 border-border bg-transparent py-2.5 transition-colors first:rounded-l-[12px] first:border-l-2 last:rounded-r-[12px] last:border-r-2 group-hover:bg-surface-soft'
   const scoreCellClass = `w-[40px] px-1 text-center ${rowCellClass}`
 
@@ -101,16 +101,13 @@ function ArticleRow({
         <ScoreBadge label="S" value={finiteScore(article.seo_score)} compact showLabel={false} />
       </TableCell>
       <TableCell className={scoreCellClass}>
-        <ScoreBadge label="GEO" value={getGeoScore(article)} compact showLabel={false} />
+        <ScoreBadge label="GEO" value={finiteScore(article.geo_score)} compact showLabel={false} />
       </TableCell>
       <TableCell className={scoreCellClass}>
         <ScoreBadge label="Q" value={finiteScore(article.quality_score)} compact showLabel={false} />
       </TableCell>
       <TableCell className={scoreCellClass}>
         <ScoreBadge label="L" value={finiteScore(article.readability_score)} compact showLabel={false} />
-      </TableCell>
-      <TableCell className={scoreCellClass}>
-        <ScoreBadge label="O" value={originalityScore} compact showLabel={false} />
       </TableCell>
       <TableCell className={`${scoreCellClass} pr-4`}>
         <ScoreBadge label="E" value={finiteScore(article.eeat_score)} compact showLabel={false} />
@@ -200,7 +197,7 @@ export default function ArticlesPage() {
     let cancelled = false
     Promise.resolve().then(() => { if (!cancelled) setStatus('loading') })
     listArticles(projectId, {
-      status: filterStatus || undefined,
+      status: filterStatus ? Number(filterStatus) as ArticleStatusCode : undefined,
       statuses: filterStatus ? undefined : POST_PRODUCTION_STATUSES,
       category_id: filterCategory || undefined,
       search: debouncedSearch || undefined,
@@ -228,7 +225,7 @@ export default function ArticlesPage() {
     if (!projectId) return
     setLoadingMore(true)
     listArticles(projectId, {
-      status: filterStatus || undefined,
+      status: filterStatus ? Number(filterStatus) as ArticleStatusCode : undefined,
       statuses: filterStatus ? undefined : POST_PRODUCTION_STATUSES,
       category_id: filterCategory || undefined,
       search: debouncedSearch || undefined,
@@ -359,8 +356,8 @@ export default function ArticlesPage() {
 
   const statusOptions = [
     { value: '', label: 'Tous les statuts' },
-    { value: 'scheduled', label: 'Programmé' },
-    { value: 'published', label: 'Publié' },
+    { value: String(ArticleStatus.SCHEDULED), label: 'Programmé' },
+    { value: String(ArticleStatus.PUBLISHED), label: 'Publié' },
   ]
 
   const categoryOptions = [
@@ -376,7 +373,6 @@ export default function ArticlesPage() {
     { value: 'quality_lt_85', label: 'Qualité < 85' },
     { value: 'readability_lt_80', label: 'Lisibilité < 80' },
     { value: 'geo_lt_80', label: 'GEO < 80' },
-    { value: 'originality_lt_85', label: 'Originalité < 85' },
     { value: 'critical', label: 'Warnings critiques' },
   ]
 
@@ -390,8 +386,7 @@ export default function ArticlesPage() {
     const g = finiteScore(article.global_score)
     const s = finiteScore(article.seo_score)
     const q = finiteScore(article.quality_score)
-    const geo = getGeoScore(article)
-    const o = getOriginalityScore(article)
+    const geo = finiteScore(article.geo_score)
     const r = finiteScore(article.readability_score)
     if (filterScore === 'global_gte_90') return g !== null && g >= 90
     if (filterScore === 'global_lt_90') return g === null || g < 90
@@ -399,7 +394,6 @@ export default function ArticlesPage() {
     if (filterScore === 'quality_lt_85') return q === null || q < 85
     if (filterScore === 'readability_lt_80') return r === null || r < 80
     if (filterScore === 'geo_lt_80') return geo === null || geo < 80
-    if (filterScore === 'originality_lt_85') return o === null || o < 85
     if (filterScore === 'critical') return article.critical_warnings.length > 0
     return true
   }
@@ -520,7 +514,6 @@ export default function ArticlesPage() {
                   <TableHead className="w-[40px] px-1 text-center">GEO</TableHead>
                   <TableHead className="w-[40px] px-1 text-center">Qual.</TableHead>
                   <TableHead className="w-[40px] px-1 text-center">Lisi.</TableHead>
-                  <TableHead className="w-[40px] px-1 text-center">Orig.</TableHead>
                   <TableHead className="w-[40px] px-1 pr-4 text-center">EEAT</TableHead>
                   <TableHead className="w-[124px] px-5 text-center">Statut</TableHead>
                   <TableHead className="w-[206px] pl-5 text-right">Actions</TableHead>

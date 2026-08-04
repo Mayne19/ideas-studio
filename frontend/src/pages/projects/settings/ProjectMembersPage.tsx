@@ -361,7 +361,7 @@ export default function ProjectMembersPage() {
           <div className="flex flex-col gap-2">
             {members.map((member) => (
               <MemberRow
-                key={member.id}
+                key={member.user_id}
                 member={member}
                 isSelf={member.user_id === user?.id}
                 canManage={canManage || isProjectOwner}

@@ -5,27 +5,17 @@ import type { UpdateProjectPayload } from '@/api/projects'
 import { useProject } from '@/context/ProjectContext'
 import FormCard from '@/components/ui/FormCard'
 import Input from '@/components/ui/Input'
-import Textarea from '@/components/ui/Textarea'
 import Select from '@/components/ui/Select'
 import Button from '@/components/ui/Button'
 import LoadingState from '@/components/ui/LoadingState'
 
-const LANGUAGE_OPTIONS = [
-  { value: 'fr', label: 'Français' },
-  { value: 'en', label: 'Anglais' },
-  { value: 'es', label: 'Espagnol' },
-  { value: 'de', label: 'Allemand' },
-  { value: 'pt', label: 'Portugais' },
-  { value: 'it', label: 'Italien' },
-]
-
-const COUNTRY_OPTIONS = [
-  { value: '', label: 'Non défini' },
-  { value: 'France', label: 'France' },
-  { value: 'Belgique', label: 'Belgique' },
-  { value: 'Suisse', label: 'Suisse' },
-  { value: 'Canada', label: 'Canada francophone' },
-  { value: 'International', label: 'International' },
+const LOCALE_OPTIONS = [
+  { value: 'fr-FR', label: 'Français' },
+  { value: 'en-US', label: 'Anglais' },
+  { value: 'es-ES', label: 'Espagnol' },
+  { value: 'de-DE', label: 'Allemand' },
+  { value: 'pt-PT', label: 'Portugais' },
+  { value: 'it-IT', label: 'Italien' },
 ]
 
 const TIMEZONE_OPTIONS = [
@@ -34,17 +24,6 @@ const TIMEZONE_OPTIONS = [
   { value: 'Europe/Zurich', label: 'Europe/Zurich' },
   { value: 'America/Montreal', label: 'America/Montreal' },
   { value: 'UTC', label: 'UTC' },
-]
-
-const INDUSTRY_OPTIONS = [
-  { value: '', label: 'Non défini' },
-  { value: 'SaaS B2B', label: 'SaaS B2B' },
-  { value: 'E-commerce', label: 'E-commerce' },
-  { value: 'Média / publication', label: 'Média / publication' },
-  { value: 'Agence', label: 'Agence' },
-  { value: 'Formation', label: 'Formation' },
-  { value: 'Services professionnels', label: 'Services professionnels' },
-  { value: '__custom__', label: 'Autre / personnalisé' },
 ]
 
 const VERTICAL_OPTIONS = [
@@ -66,13 +45,9 @@ const VERTICAL_OPTIONS = [
 type FormState = {
   name: string
   domain: string
-  language: string
+  locale: string
   vertical: string
-  country_target: string
   timezone: string
-  description: string
-  industry: string
-  industry_custom: string
   word_count_min: string
   word_count_max: string
 }
@@ -85,35 +60,23 @@ export default function ProjectSettingsPage() {
   const [form, setForm] = useState<FormState>({
     name: '',
     domain: '',
-    language: 'fr',
+    locale: 'fr-FR',
     vertical: '',
-    country_target: '',
     timezone: 'Europe/Paris',
-    description: '',
-    industry: '',
-    industry_custom: '',
     word_count_min: '',
     word_count_max: '',
   })
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [errorMsg, setErrorMsg] = useState('')
 
-  const isCustomIndustry = form.industry === '__custom__'
-
   useEffect(() => {
     if (!project) return
-    const raw = project.industry ?? ''
-    const isCustom = !INDUSTRY_OPTIONS.some((o) => o.value === raw)
     const values = {
       name: project.name ?? '',
       domain: project.domain ?? '',
-      language: project.language ?? 'fr',
+      locale: project.locale ?? 'fr-FR',
       vertical: project.vertical ?? '',
-      country_target: project.country_target ?? '',
       timezone: project.timezone ?? 'Europe/Paris',
-      description: project.description ?? '',
-      industry: isCustom ? '__custom__' : raw,
-      industry_custom: isCustom ? raw : '',
       word_count_min: project.word_count_min != null ? String(project.word_count_min) : '',
       word_count_max: project.word_count_max != null ? String(project.word_count_max) : '',
     }
@@ -133,16 +96,12 @@ export default function ProjectSettingsPage() {
     setErrorMsg('')
     setSaveStatus('saving')
     try {
-      const industry = isCustomIndustry ? form.industry_custom.trim() : form.industry
       const payload: UpdateProjectPayload = {
         name: form.name.trim(),
         domain: form.domain.trim() || undefined,
-        language: form.language || undefined,
+        locale: form.locale || undefined,
         vertical: form.vertical || undefined,
-        country_target: form.country_target.trim() || undefined,
         timezone: form.timezone.trim() || undefined,
-        description: form.description.trim() || undefined,
-        industry: industry || undefined,
         word_count_min: form.word_count_min.trim() ? parseInt(form.word_count_min) : null,
         word_count_max: form.word_count_max.trim() ? parseInt(form.word_count_max) : null,
       }
@@ -196,15 +155,9 @@ export default function ProjectSettingsPage() {
           <div className="grid grid-cols-3 gap-4">
             <Select
               label="Langue principale"
-              options={LANGUAGE_OPTIONS}
-              value={form.language}
-              onChange={set('language')}
-            />
-            <Select
-              label="Pays cible"
-              options={COUNTRY_OPTIONS}
-              value={form.country_target}
-              onChange={set('country_target')}
+              options={LOCALE_OPTIONS}
+              value={form.locale}
+              onChange={set('locale')}
             />
             <Select
               label="Fuseau horaire"
@@ -212,24 +165,6 @@ export default function ProjectSettingsPage() {
               value={form.timezone}
               onChange={set('timezone')}
             />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <Select
-                label="Secteur / niche"
-                options={INDUSTRY_OPTIONS}
-                value={form.industry}
-                onChange={set('industry')}
-              />
-              {isCustomIndustry && (
-                <Input
-                  label="Secteur personnalisé"
-                  value={form.industry_custom}
-                  onChange={set('industry_custom')}
-                  placeholder="Ex. Crypto, Immobilier, Santé…"
-                />
-              )}
-            </div>
             <Select
               label="Vertical éditorial"
               options={VERTICAL_OPTIONS}
@@ -237,13 +172,6 @@ export default function ProjectSettingsPage() {
               onChange={set('vertical')}
             />
           </div>
-          <Textarea
-            label="Description courte du projet"
-            value={form.description}
-            onChange={set('description')}
-            placeholder="Décrivez ce que publie le site, pour qui, et pourquoi."
-            rows={3}
-          />
           {/* Volume éditorial — plage de mots par défaut pour tout le projet */}
           <div>
             <p className="text-[13px] font-medium text-primary mb-1">

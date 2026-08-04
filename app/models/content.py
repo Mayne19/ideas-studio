@@ -9,9 +9,9 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    BigInteger, Boolean, CheckConstraint, ForeignKey, ForeignKeyConstraint, Integer, Numeric, SmallInteger, Text, UniqueConstraint,
+    BigInteger, Boolean, CheckConstraint, ForeignKey, ForeignKeyConstraint, Index, Integer, Numeric, SmallInteger, Text, UniqueConstraint, text,
 )
-from sqlalchemy.dialects.postgresql import CITEXT, JSONB, UUID
+from sqlalchemy.dialects.postgresql import CITEXT, ENUM, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -30,6 +30,7 @@ class Category(Base):
     __tablename__ = "categories"
     __table_args__ = (
         UniqueConstraint("project_id", "slug"),
+        Index("categories_project_idx", "project_id"),
         {"schema": "content"},
     )
 
@@ -64,6 +65,9 @@ class Article(Base):
             ["status_reason_id", "state_id"],
             ["ref.article_status_reasons.id", "ref.article_status_reasons.state_id"],
         ),
+        Index("articles_project_status_idx", "project_id", "state_id", "status_reason_id", text("updated_at DESC")),
+        Index("articles_project_cat_idx", "project_id", "category_id"),
+        Index("articles_scheduled_idx", "scheduled_for", postgresql_where=text("status_reason_id = 110")),
         {"schema": "content"},
     )
 
@@ -121,6 +125,7 @@ class ArticleRevision(Base):
     __tablename__ = "article_revisions"
     __table_args__ = (
         UniqueConstraint("article_id", "revision_no"),
+        Index("revisions_article_idx", "article_id", text("revision_no DESC")),
         {"schema": "content"},
     )
 
@@ -129,7 +134,10 @@ class ArticleRevision(Base):
         UUID(as_uuid=False), ForeignKey("content.articles.id", ondelete="CASCADE"), nullable=False
     )
     revision_no: Mapped[int] = mapped_column(Integer, nullable=False)
-    source: Mapped[RevisionSource] = mapped_column(Text, nullable=False, default=RevisionSource.AI)
+    source: Mapped[RevisionSource] = mapped_column(
+        ENUM(RevisionSource, name="revision_source", schema="content", create_type=False),
+        nullable=False, default=RevisionSource.AI,
+    )
     title: Mapped[str] = mapped_column(Text, nullable=False)
     excerpt: Mapped[str | None] = mapped_column(Text, nullable=True)
     body: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -181,7 +189,10 @@ class Keyword(Base):
 
 class ArticleKeyword(Base):
     __tablename__ = "article_keywords"
-    __table_args__ = {"schema": "content"}
+    __table_args__ = (
+        Index("article_keywords_one_primary", "article_id", unique=True, postgresql_where=text("role = 'primary'")),
+        {"schema": "content"},
+    )
 
     article_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("content.articles.id", ondelete="CASCADE"), primary_key=True
@@ -189,7 +200,10 @@ class ArticleKeyword(Base):
     keyword_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("content.keywords.id", ondelete="CASCADE"), primary_key=True
     )
-    role: Mapped[KeywordRole] = mapped_column(Text, nullable=False, default=KeywordRole.SECONDARY)
+    role: Mapped[KeywordRole] = mapped_column(
+        ENUM(KeywordRole, name="keyword_role", schema="content", create_type=False),
+        nullable=False, default=KeywordRole.SECONDARY,
+    )
 
 
 class ArticleLink(Base):
@@ -206,7 +220,10 @@ class ArticleLink(Base):
     article_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("content.articles.id", ondelete="CASCADE"), nullable=False
     )
-    kind: Mapped[LinkKind] = mapped_column(Text, nullable=False)
+    kind: Mapped[LinkKind] = mapped_column(
+        ENUM(LinkKind, name="link_kind", schema="content", create_type=False),
+        nullable=False,
+    )
     target_article_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("content.articles.id", ondelete="SET NULL"), nullable=True
     )
@@ -245,13 +262,19 @@ class ArticleMedia(Base):
     media_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("content.media_assets.id", ondelete="CASCADE"), primary_key=True
     )
-    role: Mapped[MediaRole] = mapped_column(Text, nullable=False, default=MediaRole.INLINE, primary_key=True)
+    role: Mapped[MediaRole] = mapped_column(
+        ENUM(MediaRole, name="media_role", schema="content", create_type=False),
+        nullable=False, default=MediaRole.INLINE, primary_key=True,
+    )
     position: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
 
 
 class ArticleScore(Base):
     __tablename__ = "article_scores"
-    __table_args__ = {"schema": "content"}
+    __table_args__ = (
+        Index("scores_article_idx", "article_id", text("evaluated_at DESC")),
+        {"schema": "content"},
+    )
 
     id: Mapped[str] = _uuid_pk()
     article_id: Mapped[str] = mapped_column(
@@ -276,7 +299,10 @@ class ArticleScore(Base):
 
 class ArticleComment(Base):
     __tablename__ = "article_comments"
-    __table_args__ = {"schema": "content"}
+    __table_args__ = (
+        Index("comments_article_open_idx", "article_id", postgresql_where=text("resolved_at IS NULL")),
+        {"schema": "content"},
+    )
 
     id: Mapped[str] = _uuid_pk()
     article_id: Mapped[str] = mapped_column(

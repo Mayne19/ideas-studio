@@ -22,7 +22,8 @@ import { Card } from '@/components/ui/Card'
 import StatusBadge from '@/components/ui/StatusBadge'
 import LoadingState from '@/components/ui/LoadingState'
 import { formatDate } from '@/utils/format'
-import { getGeoScore } from '@/lib/scoreBadge'
+import { finiteScore } from '@/lib/scoreBadge'
+import { ArticleStatus, IDEA_ARTICLE_STATUSES, ProjectStatus, type ArticleStatusCode } from '@/lib/status'
 import { SeoRadialCard, AreaMetricCard, type MonthPoint } from '@/components/charts/TrendCards'
 import { NEUTRAL_CHART_COLORS } from '@/utils/chartPalette'
 
@@ -62,7 +63,6 @@ type DashboardData = {
   readyCount: number
   scheduledCount: number
   failedCount: number
-  aiValidatedCount: number
   ideasReadyForProductionCount: number
   activeProductionCount: number
   pendingRecs: OptimizationRecommendation[]
@@ -81,40 +81,27 @@ type DashboardData = {
   publishedChangePct: number
 }
 
-const IN_PROGRESS_STATUSES = new Set<Article['status']>([
-  'draft',
-  'outline_ready',
-  'writing_requested',
-  'writing_in_progress',
-  'draft_ready',
-  'review_needed',
-  'correction_needed',
-  'ready_to_publish',
-  'scheduled',
-  'update_recommended',
+const IN_PROGRESS_STATUSES = new Set<ArticleStatusCode>([
+  ArticleStatus.DRAFT,
+  ArticleStatus.OUTLINE_READY,
+  ArticleStatus.WRITING_REQUESTED,
+  ArticleStatus.WRITING_IN_PROGRESS,
+  ArticleStatus.DRAFT_READY,
+  ArticleStatus.REVIEW_NEEDED,
+  ArticleStatus.CORRECTION_NEEDED,
+  ArticleStatus.READY_TO_PUBLISH,
+  ArticleStatus.SCHEDULED,
+  ArticleStatus.UPDATE_RECOMMENDED,
 ])
 
-const PRODUCTION_STATUSES = new Set<Article['status']>([
-  'outline_ready',
-  'writing_requested',
-  'writing_in_progress',
-  'draft_ready',
-  'review_needed',
-  'correction_needed',
+const PRODUCTION_STATUSES = new Set<ArticleStatusCode>([
+  ArticleStatus.OUTLINE_READY,
+  ArticleStatus.WRITING_REQUESTED,
+  ArticleStatus.WRITING_IN_PROGRESS,
+  ArticleStatus.DRAFT_READY,
+  ArticleStatus.REVIEW_NEEDED,
+  ArticleStatus.CORRECTION_NEEDED,
 ])
-
-function isAiGeneratedArticle(article: Article) {
-  const source = (article.proposal_source ?? '').toLowerCase()
-  return Boolean(
-    article.generation_report_json ||
-    article.workflow_run_id ||
-    article.agent_outputs_json ||
-    article.production_brief_json ||
-    source.includes('ia') ||
-    source.includes('ai') ||
-    source.includes('llm'),
-  )
-}
 
 function isFilledScore(score: number | null | undefined): score is number {
   return typeof score === 'number' && Number.isFinite(score)
@@ -131,7 +118,7 @@ function formatCompact(value: number | null | undefined): string {
 }
 
 function getArticleDate(article: Article): string {
-  return article.published_at ?? article.scheduled_at ?? article.updated_at ?? article.created_at
+  return article.published_at ?? article.scheduled_for ?? article.updated_at ?? article.created_at
 }
 
 function buildMonthlyMetric(articles: Article[], getValue: (arts: Article[]) => number): MonthPoint[] {
@@ -278,7 +265,7 @@ function PipelineSummaryItem({
 function deriveActivityEvents(articles: Article[], projectId: string): ActivityEvent[] {
   const events: ActivityEvent[] = []
   for (const a of articles.slice(0, 20)) {
-    if (a.status === 'published') {
+    if (a.status === ArticleStatus.PUBLISHED) {
       events.push({
         id: `pub-${a.id}`,
         icon: <Send size={11} />,
@@ -288,17 +275,17 @@ function deriveActivityEvents(articles: Article[], projectId: string): ActivityE
         href: `/projects/${projectId}/articles/${a.id}/edit`,
         dotClassName: 'bg-success',
       })
-    } else if (a.status === 'scheduled') {
+    } else if (a.status === ArticleStatus.SCHEDULED) {
       events.push({
         id: `sched-${a.id}`,
         icon: <Clock size={11} />,
         label: 'Publication programmée',
         articleTitle: a.title,
-        time: timeAgo(a.scheduled_at ?? a.updated_at),
+        time: timeAgo(a.scheduled_for ?? a.updated_at),
         href: `/projects/${projectId}/articles/${a.id}/edit`,
         dotClassName: 'bg-success',
       })
-    } else if (a.status === 'idea_proposed' || a.status === 'idea_priority') {
+    } else if (a.status === ArticleStatus.IDEA_PROPOSED || a.status === ArticleStatus.IDEA_PRIORITY) {
       events.push({
         id: `idea-${a.id}`,
         icon: <Lightbulb size={11} />,
@@ -308,17 +295,17 @@ function deriveActivityEvents(articles: Article[], projectId: string): ActivityE
         href: `/projects/${projectId}/ideas`,
         dotClassName: 'bg-warning',
       })
-    } else if (a.status === 'correction_needed' || a.status === 'failed') {
+    } else if (a.status === ArticleStatus.CORRECTION_NEEDED || a.status === ArticleStatus.FAILED) {
       events.push({
         id: `risk-${a.id}`,
         icon: <AlertCircle size={11} />,
-        label: a.status === 'failed' ? 'Article en échec' : 'Correction requise',
+        label: a.status === ArticleStatus.FAILED ? 'Article en échec' : 'Correction requise',
         articleTitle: a.title,
         time: timeAgo(a.updated_at),
         href: `/projects/${projectId}/articles/${a.id}/edit`,
         dotClassName: 'bg-danger',
       })
-    } else if (a.status === 'draft_ready' || a.status === 'review_needed') {
+    } else if (a.status === ArticleStatus.DRAFT_READY || a.status === ArticleStatus.REVIEW_NEEDED) {
       events.push({
         id: `review-${a.id}`,
         icon: <Eye size={11} />,
@@ -382,7 +369,7 @@ export default function ProjectDashboardPage() {
           ? [...articles.value].sort((a, b) => getArticleDate(b).localeCompare(getArticleDate(a)))
           : []
       const contentRecentArticles = allArticles
-        .filter((article) => !article.status.startsWith('idea_'))
+        .filter((article) => !IDEA_ARTICLE_STATUSES.includes(article.status))
         .slice(0, RECENT_ARTICLES_LIMIT)
       const recentArticles =
         contentRecentArticles.length >= RECENT_ARTICLES_LIMIT
@@ -395,23 +382,18 @@ export default function ProjectDashboardPage() {
             ]
       const activityArticles = allArticles.slice(0, 20)
       const categories = cats.status === 'fulfilled' ? cats.value : []
-      const contentArticles = allArticles.filter((article) => !article.status.startsWith('idea_'))
-      const publishedArticles = allArticles.filter((article) => article.status === 'published')
+      const contentArticles = allArticles.filter((article) => !IDEA_ARTICLE_STATUSES.includes(article.status))
+      const publishedArticles = allArticles.filter((article) => article.status === ArticleStatus.PUBLISHED)
       const inProgressArticles = allArticles.filter((article) => IN_PROGRESS_STATUSES.has(article.status))
-      const aiValidatedArticles = allArticles.filter((article) =>
-        isAiGeneratedArticle(article) &&
-        ['published', 'scheduled'].includes(article.status) &&
-        Boolean(article.human_validated_at || article.published_at || article.scheduled_at),
-      )
-      const ideasReadyForProduction = allArticles.filter((article) => article.status === 'idea_priority')
+      const ideasReadyForProduction = allArticles.filter((article) => article.status === ArticleStatus.IDEA_PRIORITY)
       const activeProductionArticles = allArticles.filter((article) => PRODUCTION_STATUSES.has(article.status))
       const scored = contentArticles.filter((a) => a.seo_score !== null)
       const avgSeoScore = scored.length > 0
         ? scored.reduce((s, a) => s + (a.seo_score ?? 0), 0) / scored.length
         : null
-      const geoScored = contentArticles.filter((a) => getGeoScore(a) !== null)
+      const geoScored = contentArticles.filter((a) => finiteScore(a.geo_score) !== null)
       const avgGeoScore = geoScored.length > 0
-        ? geoScored.reduce((s, a) => s + (scoreOnHundred(getGeoScore(a)) ?? 0), 0) / geoScored.length
+        ? geoScored.reduce((s, a) => s + (scoreOnHundred(finiteScore(a.geo_score)) ?? 0), 0) / geoScored.length
         : null
       const worded = contentArticles.filter((a) => a.word_count > 0)
       const avgReadingTime = worded.length > 0
@@ -425,7 +407,7 @@ export default function ProjectDashboardPage() {
       )
       const geoMonthly = buildMonthlyMetric(
         geoScored,
-        (arts) => Math.round(arts.reduce((s, a) => s + scoreOnHundred(getGeoScore(a))!, 0) / arts.length),
+        (arts) => Math.round(arts.reduce((s, a) => s + scoreOnHundred(finiteScore(a.geo_score))!, 0) / arts.length),
       )
       const timeMonthly = buildMonthlyMetric(
         worded,
@@ -437,7 +419,7 @@ export default function ProjectDashboardPage() {
       )
       // Weekly data only for the published bar chart (52 dernières semaines)
       const publishedMonthly = buildWeeklyMetric(
-        allArticles.filter((a) => a.status === 'published'),
+        allArticles.filter((a) => a.status === ArticleStatus.PUBLISHED),
         (arts) => arts.length,
         { carryForward: false },
       )
@@ -459,12 +441,11 @@ export default function ProjectDashboardPage() {
         publishedCount: publishedArticles.length,
         inProgressCount: inProgressArticles.length,
         ideasCount:
-          allArticles.filter((article) => article.status === 'idea_proposed' || article.status === 'idea_priority').length,
-        reviewNeededCount: allArticles.filter((article) => article.status === 'review_needed').length,
-        readyCount: allArticles.filter((article) => article.status === 'ready_to_publish').length,
-        scheduledCount: allArticles.filter((article) => article.status === 'scheduled').length,
-        failedCount: allArticles.filter((article) => article.status === 'failed').length,
-        aiValidatedCount: aiValidatedArticles.length,
+          allArticles.filter((article) => article.status === ArticleStatus.IDEA_PROPOSED || article.status === ArticleStatus.IDEA_PRIORITY).length,
+        reviewNeededCount: allArticles.filter((article) => article.status === ArticleStatus.REVIEW_NEEDED).length,
+        readyCount: allArticles.filter((article) => article.status === ArticleStatus.READY_TO_PUBLISH).length,
+        scheduledCount: allArticles.filter((article) => article.status === ArticleStatus.SCHEDULED).length,
+        failedCount: allArticles.filter((article) => article.status === ArticleStatus.FAILED).length,
         ideasReadyForProductionCount: ideasReadyForProduction.length,
         activeProductionCount: activeProductionArticles.length,
         pendingRecs:
@@ -490,7 +471,7 @@ export default function ProjectDashboardPage() {
 
   if (projectLoading) return <LoadingState />
 
-  const isConnected = project?.status === 'connected'
+  const isConnected = project?.status === ProjectStatus.CONNECTED
   const firstName = user?.name?.split(' ')[0] ?? user?.name ?? ''
 
   const activityEvents = data ? deriveActivityEvents(data.activityArticles, projectId ?? '') : []

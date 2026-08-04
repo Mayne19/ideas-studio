@@ -6,47 +6,33 @@ export type User = {
   last_name: string | null
   email: string
   avatar_url: string | null
+  is_active: boolean
+  is_staff: boolean
   created_at: string
+  updated_at: string
 }
 
 export type Project = {
   id: string
-  owner_id: string
+  owner_id: string | null
   name: string
   domain: string | null
-  language: string | null
-  vertical: string | null
-  country_target: string | null
-  timezone: string | null
-  description: string | null
-  industry: string | null
+  locale: string
+  timezone: string
   audience: string | null
   tone: string | null
   reader_level: string | null
   writing_style: string | null
-  editorial_goal: string | null
-  value_proposition: string | null
-  allowed_topics: string | null
-  forbidden_topics: string | null
-  words_to_avoid: string | null
-  average_target_length: string | null
+  vertical: string | null
   word_count_min: number | null
   word_count_max: number | null
-  preferred_formats: string | null
-  technical_level: string | null
-  seo_rules: string | null
-  geo_rules: string | null
-  source_guidelines: string | null
-  internal_linking_guidelines: string | null
-  external_linking_guidelines: string | null
-  style_examples: string | null
-  status: string
-  public_tracking_key: string
+  status: ProjectStatusCode
+  public_tracking_key_prefix: string | null
   connected_at: string | null
   last_seen_at: string | null
   public_site_url: string | null
   revalidate_url: string | null
-  revalidate_secret_configured: boolean
+  revalidate_configured: boolean
   last_revalidated_at: string | null
   last_revalidate_status: string | null
   last_revalidate_error: string | null
@@ -59,7 +45,7 @@ export type ProjectRole = 'owner' | 'admin' | 'editor' | 'designer' | 'viewer'
 export type ActivityLog = {
   id: string
   project_id: string
-  user_id: string
+  user_id: string | null
   user_name: string | null
   action: string
   resource_type: string | null
@@ -70,7 +56,6 @@ export type ActivityLog = {
 }
 
 export type ProjectMember = {
-  id: string
   user_id: string
   user_name: string | null
   user_email: string | null
@@ -83,16 +68,16 @@ export type ProjectMember = {
 export type ConnectInfo = {
   project_id: string
   domain: string | null
-  status: string
-  public_tracking_key: string
-  secret_api_key_masked: string
+  status: ProjectStatusCode
+  public_tracking_key: string | null
+  secret_api_key_masked: string | null
   connected_at: string | null
   last_seen_at: string | null
   snippet: string
   public_api_endpoints: Record<string, string>
   public_site_url: string | null
   revalidate_url: string | null
-  revalidate_secret_configured: boolean
+  revalidate_configured: boolean
   last_revalidated_at: string | null
   last_revalidate_status: string | null
   last_revalidate_error: string | null
@@ -103,27 +88,10 @@ export type LoginResponse = {
   token_type: string
 }
 
-export type ArticleStatus =
-  | 'draft'
-  | 'idea_proposed'
-  | 'idea_priority'
-  | 'idea_rejected'
-  | 'outline_ready'
-  | 'writing_requested'
-  | 'writing_in_progress'
-  | 'draft_ready'
-  | 'review_needed'
-  | 'correction_needed'
-  | 'scheduled'
-  | 'published'
-  | 'ready_to_publish'
-  | 'update_recommended'
-  | 'unpublished'
-  | 'archived'
-  | 'failed'
-  | 'improvement_proposed'
-  | 'improvement_in_progress'
-  | 'improvement_ready'
+// Statuts d'article : voir frontend/src/lib/status.ts pour les codes/labels/
+// couleurs (backend renvoie désormais un entier, plus une chaîne).
+export type { ArticleStatusCode, ProjectStatusCode } from '@/lib/status'
+import type { ArticleStatusCode, ProjectStatusCode } from '@/lib/status'
 
 export type Article = {
   id: string
@@ -132,84 +100,41 @@ export type Article = {
   sub_niche: string | null
   title: string
   slug: string
-  status: ArticleStatus
-  keyword: string | null
   content: string | null
   excerpt: string | null
+  status: ArticleStatusCode
+  keyword: string | null
   meta_title: string | null
   meta_description: string | null
-  cover_image_url: string | null
   word_count: number
   priority: number
-  featured: boolean
+  is_featured: boolean
   seo_score: number | null
   readability_score: number | null
   quality_score: number | null
   eeat_score: number | null
-  readiness_status: string | null
+  geo_score: number | null
   global_score: number | null
   global_score_valid: boolean | null
   is_validable: boolean | null
   validation_reasons: string[]
   critical_warnings: Array<{ type: string; severity: string; message: string }>
+  published_at: string | null
+  scheduled_for: string | null
+  created_at: string
+  updated_at: string
   author_name: string | null
   reading_time_minutes: number | null
-  scheduled_at: string | null
-  published_at: string | null
-  // Idea-specific fields
+  target_word_count: number | null
+  content_format: 'short' | 'medium' | 'long' | 'pillar' | null
   angle: string | null
   search_intent: string | null
   opportunity_score: number | null
   audience: string | null
   rejection_reason: string | null
   rejection_note: string | null
-  // Workflow tracking
-  workflow_run_id: string | null
-  completed_agent_keys: string | null
-  next_agent_key: string | null
-  agent_outputs_json: Record<string, unknown> | null
-  planning_brief_json: Record<string, unknown> | string | null
-  production_brief_json: Record<string, unknown> | null
-  workflow_status: string | null
-  writing_error?: string | null
-  writing_cancel_requested?: boolean | null
-  // Target dates
-  target_write_at: string | null
-  target_review_at: string | null
-  // Pre-brief fields
-  main_answer_summary: string | null
-  opportunity_justification: string | null
-  recommended_format: string | null
-  target_word_count: number | null
-  needs_faq: boolean | null
-  needs_images: boolean | null
-  suggested_internal_links: string | null
-  suggested_external_links: string | null
-  estimated_difficulty: string | null
-  proposal_source: string | null
-  secondary_keywords_json: string | null
-  // Monitoring / improvement
-  improvement_proposal_json: Record<string, unknown> | null
-  performance_diagnosis_json: Record<string, unknown> | null
-  original_article_id: string | null
-  revision_of_article_id: string | null
-  proposed_changes_json: Record<string, unknown> | null
-  improvement_reason: string | null
-  monitoring_status: string | null
-  next_review_at: string | null
-  created_at: string
-  updated_at: string
-  // Extended fields
-  generation_report_json: Record<string, unknown> | null
-  human_validated_at: string | null
-  estimated_cost_json: Record<string, unknown> | null
-  actual_cost_json: Record<string, unknown> | null
-  geo_optimization_json: Record<string, unknown> | null
-  originality_report_json: Record<string, unknown> | null
-  content_format: 'short' | 'medium' | 'long' | 'pillar' | null
+  has_draft_changes: boolean
 }
-
-export type IdeaStatus = 'idea_proposed' | 'idea_priority' | 'idea_rejected'
 
 export type IdeaGenerateRequest = {
   context_hint?: string | null
@@ -228,11 +153,9 @@ export type IdeaGenerateResponse = {
   title: string
   keyword: string | null
   category_id?: string | null
-  angle: string | null
   search_intent: string | null
-  audience: string | null
   opportunity_score: number | null
-  status: string
+  status: ArticleStatusCode
   provider_name?: string | null
   model_name?: string | null
 }
@@ -270,9 +193,13 @@ export type IdeaLaunchResponse = {
   model_name?: string | null
 }
 
-export const IDEA_STATUSES: IdeaStatus[] = ['idea_proposed', 'idea_priority', 'idea_rejected']
-
-export const WRITING_STATUSES: ArticleStatus[] = ['outline_ready', 'writing_requested', 'writing_in_progress']
+export type BulkDeleteResponse = {
+  deleted: number
+  skipped: number
+  deleted_ids: string[]
+  skipped_items: Array<{ id: string; reason: string }>
+  message: string
+}
 
 export type Category = {
   id: string
@@ -281,18 +208,14 @@ export type Category = {
   slug: string
   description: string | null
   color: string | null
-  priority: number
-  target_frequency: number | null
-  monthly_frequency: number | null
-  pipeline_enabled: boolean | null
   priority_score: number | null
+  monthly_target: number | null
+  is_pipeline_enabled: boolean
   editorial_goal: string | null
   target_audience: string | null
   internal_notes: string | null
-  vertical?: string | null
-  niche?: string | null
-  word_count_min?: number | null
-  word_count_max?: number | null
+  word_count_min: number | null
+  word_count_max: number | null
   created_at: string
   updated_at: string
 }
@@ -311,9 +234,7 @@ export type CalloutTemplate = {
   source: 'imported' | 'manual' | string
   external_id: string | null
   class_name: string | null
-  settings_json: string | null
   created_at: string
-  updated_at: string
 }
 
 export type SeoIssue = {
@@ -331,7 +252,8 @@ export type AnalysisBrief = {
   readability_score: number | null
   quality_score: number | null
   eeat_score: number | null
-  readiness_status: string | null
+  geo_score: number | null
+  global_score: number | null
   created_at: string
 }
 
@@ -339,11 +261,11 @@ export type SeoAnalysis = {
   id: string
   article_id: string
   project_id: string
-  seo_score: number | null
-  readability_score: number | null
-  quality_score: number | null
-  eeat_score: number | null
-  readiness_status: string | null
+  seo_score: number
+  readability_score: number
+  quality_score: number
+  eeat_score: number
+  readiness_status: string
   issues: SeoIssue[]
   suggestions: string[]
   created_at: string
@@ -381,11 +303,11 @@ export type SeoExpertReview = {
 
 export type ReadyCheck = {
   article_id: string
-  readiness_status: string | null
-  seo_score: number | null
-  readability_score: number | null
-  quality_score: number | null
-  eeat_score: number | null
+  readiness_status: string
+  seo_score: number
+  readability_score: number
+  quality_score: number
+  eeat_score: number
   global_score: number | null
   global_score_valid: boolean | null
   blocking_issues: SeoIssue[]
@@ -398,63 +320,45 @@ export type ArticleVersion = {
   article_id: string
   project_id: string
   title: string
-  slug: string
-  version_number: number
-  version_type: 'manual' | 'autosave' | 'restore'
+  revision_no: number
+  source: 'ai' | 'human' | 'import' | 'rollback' | string
   created_by: string | null
   created_at: string
 }
 
-export type EditorArticle = Article & {
-  faq_json: unknown | null
-  callouts_json: unknown | null
-  internal_links_json: unknown | null
-  external_links_json: unknown | null
-  content_blocks_json: unknown | null
-  seo_review_json: SeoExpertReview | null
-  generation_report_json: Record<string, unknown> | null
-  project_context_json: Record<string, unknown> | null
-  category_strategy_json: Record<string, unknown> | null
-  idea_discovery_json: Record<string, unknown> | null
-  intent_analysis_json: Record<string, unknown> | null
-  research_brief_json: Record<string, unknown> | null
-  keyword_brief_json: Record<string, unknown> | null
-  cannibalization_check_json: Record<string, unknown> | null
-  editorial_angle_json: Record<string, unknown> | null
-  outline_json: unknown | null
-  image_plan_json: Record<string, unknown> | null
-  image_sources_json: Record<string, unknown> | null
-  callout_plan_json: Record<string, unknown> | null
-  language_quality_report_json: Record<string, unknown> | null
-  originality_report_json: Record<string, unknown> | null
-  humanization_report_json: Record<string, unknown> | null
-  eeat_checklist_json: Record<string, unknown> | null
-  editorial_quality_report_json: Record<string, unknown> | null
-  seo_final_checklist_json: Record<string, unknown> | null
-  sources_json: Record<string, unknown> | null
-  serp_analysis_json: Record<string, unknown> | null
-  extracted_sources_json: Record<string, unknown> | null
-  content_gap_json: Record<string, unknown> | null
-  source_quality_report_json: Record<string, unknown> | null
-  evidence_pack_json: Record<string, unknown> | null
-  style_guide_json: Record<string, unknown> | null
-  cannibalization_outline_json: Record<string, unknown> | null
-  claims_json: Record<string, unknown> | null
-  fact_check_report_json: Record<string, unknown> | null
-  estimated_cost_json: Record<string, unknown> | null
-  geo_optimization_json: Record<string, unknown> | null
-  structured_data_json: Record<string, unknown> | null
-  readability_report_json: Record<string, unknown> | null
-  content_format: 'short' | 'medium' | 'long' | 'pillar' | null
+// Sortie de tous les agents (project_context, outline, eeat_checklist, ...)
+// indexée par agent_key — remplace les ~30 colonnes *_json de l'ancien modèle,
+// voir ai.artifacts côté backend (app/services/seo/artifacts.py).
+export type ArtifactsMap = Record<string, Record<string, unknown>>
+
+export type EditorArticle = {
+  id: string
+  project_id: string
+  category_id: string | null
+  sub_niche: string | null
+  title: string
+  slug: string
+  content: string | null
+  excerpt: string | null
+  status: ArticleStatusCode
+  keyword: string | null
+  meta_title: string | null
+  meta_description: string | null
+  faq: Array<{ question: string; answer: string }>
+  callouts: unknown[]
+  word_count: number
+  artifacts: ArtifactsMap
+  author_name: string | null
+  reading_time_minutes: number | null
+  is_featured: boolean
   latest_analysis: AnalysisBrief | null
-  published_content: string | null
+  created_at: string
+  updated_at: string
   published_title: string | null
+  published_content: string | null
   published_excerpt: string | null
   published_meta_description: string | null
-  published_cover_image_url: string | null
-  published_faq_json: unknown | null
-  published_callouts_json: unknown | null
-  has_draft_changes: boolean | null
+  has_draft_changes: boolean
 }
 
 export type AutosaveRequest = {
@@ -465,19 +369,12 @@ export type AutosaveRequest = {
   keyword?: string | null
   meta_title?: string | null
   meta_description?: string | null
-  cover_image_url?: string | null
-  faq_json?: unknown | null
-  callouts_json?: unknown | null
-  internal_links_json?: unknown | null
-  external_links_json?: unknown | null
-  content_blocks_json?: unknown | null
+  faq?: Array<{ question: string; answer: string }> | null
+  callouts?: unknown[] | null
   category_id?: string | null
   sub_niche?: string | null
-  featured?: boolean | null
   author_name?: string | null
-  reading_time_minutes?: number | null
-  content_format?: 'short' | 'medium' | 'long' | 'pillar' | null
-  target_word_count?: number | null
+  is_featured?: boolean | null
 }
 
 export type AutosaveResponse = {
@@ -486,6 +383,23 @@ export type AutosaveResponse = {
   updated: boolean
   version_created: boolean
   updated_at: string
+}
+
+export type PreviewResponse = {
+  id: string
+  title: string
+  slug: string
+  content: string | null
+  excerpt: string | null
+  meta_title: string | null
+  meta_description: string | null
+  sub_niche: string | null
+  is_featured: boolean
+  faq: Array<{ question: string; answer: string }>
+  callouts: unknown[]
+  author_name: string | null
+  reading_time_minutes: number | null
+  status: ArticleStatusCode
 }
 
 export type ApiValidationError = {
@@ -588,7 +502,7 @@ export type OptimizationRecommendation = {
   suggestion: string
   status: RecommendationStatus | string
   created_at: string
-  updated_at: string
+  resolved_at: string | null
 }
 
 export type Invitation = {
@@ -596,8 +510,8 @@ export type Invitation = {
   project_id: string
   email: string
   role: string
-  token: string
-  invited_by_user_id: string
+  token: string | null
+  invited_by_user_id: string | null
   target_user_id: string | null
   accepted_at: string | null
   expires_at: string
@@ -605,6 +519,15 @@ export type Invitation = {
 }
 
 export type InvitationCreateResult = Invitation
+
+export type InvitationInfo = {
+  project_name: string
+  role: string
+  email: string
+  expires_at: string
+  already_accepted: boolean
+  expired: boolean
+}
 
 export type Notification = {
   id: string
@@ -641,11 +564,10 @@ export type AgentAssignment = {
   id: string
   project_id: string | null
   agent_id: string
-  provider_id: string
+  provider_code: string
+  model: string
   enabled: boolean
   priority: number
-  created_at: string
-  updated_at: string
   agent: AgentInfo
   provider_name: string
   provider_label: string
@@ -656,15 +578,116 @@ export type AIProviderConfig = {
   project_id: string | null
   provider: string
   label: string
-  display_name: string | null
   api_key_configured: boolean
-  model: string | null
   base_url: string | null
-  is_default: boolean
-  enabled: boolean
   last_test_status: string | null
   last_test_error: string | null
   last_tested_at: string | null
   created_at: string
+}
+
+// ── Kanban ──────────────────────────────────────────────────────────────
+
+export type KanbanColumn = {
+  id: string
+  project_id: string
+  label: string
+  status: string
+  color: string | null
+  sort_order: number
+}
+
+// ── Comments ────────────────────────────────────────────────────────────
+
+export type ArticleComment = {
+  id: string
+  article_id: string
+  author_id: string | null
+  author_name: string | null
+  parent_id: string | null
+  text: string
+  selected_text: string | null
+  resolved: boolean
+  created_at: string
+}
+
+// ── Media ───────────────────────────────────────────────────────────────
+
+export type MediaAsset = {
+  id: string
+  project_id: string
+  article_id: string | null
+  url: string
+  public_url: string | null
+  filename: string
+  mime_type: string | null
+  size: number | null
+  alt_text: string | null
+  caption: string | null
+  source: string | null
+  created_at: string
+}
+
+// ── Webhooks ────────────────────────────────────────────────────────────
+
+export type Webhook = {
+  id: string
+  project_id: string
+  name: string
+  url: string
+  events: string[]
+  enabled: boolean
+  last_triggered_at: string | null
+  last_status: string | null
+  created_at: string
+}
+
+// ── Pipeline ────────────────────────────────────────────────────────────
+
+export type CategoryFrequencyInfo = {
+  id: string
+  name: string
+  monthly_frequency: number | null
+  pipeline_enabled: boolean | null
+  priority: number
+}
+
+export type PipelineSettings = {
+  project_id: string
+  enabled: boolean
+  active_days: string[]
+  launch_hour: number
+  articles_per_week: number
+  category_priorities: Record<string, number>
+  ideas_per_week: number | null
+  max_pending_drafts: number | null
+  max_parallel_writing_jobs: number | null
+  paused_until: string | null
+  paused_indefinitely: boolean | null
+  default_quality_mode: string | null
+  ideas_day_of_month: number | null
+  publish_hour_start: number | null
+  publish_hour_end: number | null
+  launch_hours: string[] | null
+  cost_limit_per_article_eur: number | null
+  total_monthly_from_categories: number | null
+  categories_frequencies: CategoryFrequencyInfo[]
+  automation_notes: string
   updated_at: string
+}
+
+export type PipelineLog = {
+  id: string
+  project_id: string
+  status: string
+  workflow_run_id: string | null
+  expected_ideas: number
+  generated_ideas: number
+  failed_categories: Array<Record<string, unknown>>
+  run_errors: string[]
+  ideas_generated: number
+  articles_created: number
+  errors: string | null
+  started_at: string
+  finished_at: string | null
 }

@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import ARRAY, Boolean, ForeignKey, SmallInteger, Text
+from sqlalchemy import ARRAY, Boolean, ForeignKey, Index, SmallInteger, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -36,7 +36,10 @@ class EventLog(Base):
 
 class Notification(Base):
     __tablename__ = "notifications"
-    __table_args__ = {"schema": "ops"}
+    __table_args__ = (
+        Index("notifications_unread_idx", "user_id", postgresql_where=text("read_at IS NULL")),
+        {"schema": "ops"},
+    )
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
     project_id: Mapped[str] = mapped_column(

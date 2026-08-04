@@ -1,6 +1,5 @@
 import Badge from './Badge'
-import type { ArticleStatus } from '@/types'
-import { STATUS_LABELS as ARTICLE_STATUS_LABELS } from '@/utils/articleActions'
+import { ArticleStatus, ARTICLE_STATUS_META, type ArticleStatusCode } from '@/lib/status'
 import {
   AlertCircle,
   Archive,
@@ -13,77 +12,64 @@ import {
 
 type BadgeVariant = 'default' | 'blue' | 'green' | 'orange' | 'red' | 'gray'
 
-const STATUS_LABELS = ARTICLE_STATUS_LABELS
-
-const COMPACT_STATUS_LABELS: Partial<Record<ArticleStatus, string>> = {
-  idea_proposed: 'Proposée',
-  writing_requested: 'En attente',
-  writing_in_progress: 'En cours',
-  draft_ready: 'Prêt',
-  correction_needed: 'Correction',
-  ready_to_publish: 'Validable',
-  update_recommended: 'MAJ',
-  improvement_proposed: 'Amél. proposée',
-  improvement_in_progress: 'Amél. en cours',
-  improvement_ready: 'Amél. prête',
+const STATUS_VARIANTS: Record<ArticleStatusCode, BadgeVariant> = {
+  [ArticleStatus.DRAFT]: 'gray',
+  [ArticleStatus.IDEA_PROPOSED]: 'blue',
+  [ArticleStatus.IDEA_PRIORITY]: 'blue',
+  [ArticleStatus.IDEA_REJECTED]: 'red',
+  [ArticleStatus.OUTLINE_READY]: 'blue',
+  [ArticleStatus.WRITING_REQUESTED]: 'orange',
+  [ArticleStatus.WRITING_IN_PROGRESS]: 'orange',
+  [ArticleStatus.DRAFT_READY]: 'blue',
+  [ArticleStatus.REVIEW_NEEDED]: 'orange',
+  [ArticleStatus.CORRECTION_NEEDED]: 'red',
+  [ArticleStatus.READY_TO_PUBLISH]: 'green',
+  [ArticleStatus.SCHEDULED]: 'blue',
+  [ArticleStatus.PUBLISHED]: 'green',
+  [ArticleStatus.UNPUBLISHED]: 'gray',
+  [ArticleStatus.UPDATE_RECOMMENDED]: 'orange',
+  [ArticleStatus.IMPROVEMENT_PROPOSED]: 'orange',
+  [ArticleStatus.IMPROVEMENT_IN_PROGRESS]: 'orange',
+  [ArticleStatus.IMPROVEMENT_READY]: 'blue',
+  [ArticleStatus.FAILED]: 'red',
+  [ArticleStatus.BLOCKED_COST_LIMIT]: 'red',
+  [ArticleStatus.ARCHIVED]: 'gray',
 }
 
-const STATUS_VARIANTS: Record<ArticleStatus, BadgeVariant> = {
-  draft:                'gray',
-  idea_proposed:        'blue',
-  idea_priority:        'blue',
-  idea_rejected:        'red',
-  outline_ready:        'blue',
-  writing_requested:    'orange',
-  writing_in_progress:  'orange',
-  draft_ready:          'blue',
-  review_needed:        'orange',
-  correction_needed:    'red',
-  scheduled:            'blue',
-  published:            'green',
-  ready_to_publish:     'green',
-  update_recommended:   'orange',
-  unpublished:          'gray',
-  archived:             'gray',
-  failed:               'red',
-  improvement_proposed:   'orange',
-  improvement_in_progress: 'orange',
-  improvement_ready:      'blue',
-}
-
-const STATUS_ICONS: Partial<Record<ArticleStatus, typeof CheckCircle>> = {
-  draft: FileText,
-  idea_proposed: FileText,
-  idea_priority: FileText,
-  idea_rejected: XCircle,
-  outline_ready: FileText,
-  writing_requested: Clock,
-  writing_in_progress: Loader2,
-  draft_ready: FileText,
-  review_needed: AlertCircle,
-  correction_needed: AlertCircle,
-  scheduled: Clock,
-  published: CheckCircle,
-  ready_to_publish: CheckCircle,
-  update_recommended: AlertCircle,
-  unpublished: FileText,
-  archived: Archive,
-  failed: XCircle,
-  improvement_proposed: FileText,
-  improvement_in_progress: Loader2,
-  improvement_ready: CheckCircle,
+const STATUS_ICONS: Partial<Record<ArticleStatusCode, typeof CheckCircle>> = {
+  [ArticleStatus.DRAFT]: FileText,
+  [ArticleStatus.IDEA_PROPOSED]: FileText,
+  [ArticleStatus.IDEA_PRIORITY]: FileText,
+  [ArticleStatus.IDEA_REJECTED]: XCircle,
+  [ArticleStatus.OUTLINE_READY]: FileText,
+  [ArticleStatus.WRITING_REQUESTED]: Clock,
+  [ArticleStatus.WRITING_IN_PROGRESS]: Loader2,
+  [ArticleStatus.DRAFT_READY]: FileText,
+  [ArticleStatus.REVIEW_NEEDED]: AlertCircle,
+  [ArticleStatus.CORRECTION_NEEDED]: AlertCircle,
+  [ArticleStatus.READY_TO_PUBLISH]: CheckCircle,
+  [ArticleStatus.SCHEDULED]: Clock,
+  [ArticleStatus.PUBLISHED]: CheckCircle,
+  [ArticleStatus.UNPUBLISHED]: FileText,
+  [ArticleStatus.UPDATE_RECOMMENDED]: AlertCircle,
+  [ArticleStatus.IMPROVEMENT_PROPOSED]: FileText,
+  [ArticleStatus.IMPROVEMENT_IN_PROGRESS]: Loader2,
+  [ArticleStatus.IMPROVEMENT_READY]: CheckCircle,
+  [ArticleStatus.FAILED]: XCircle,
+  [ArticleStatus.ARCHIVED]: Archive,
 }
 
 type StatusBadgeProps = {
-  status: ArticleStatus | string
+  status: ArticleStatusCode | number | null | undefined
   className?: string
 }
 
 export default function StatusBadge({ status, className }: StatusBadgeProps) {
-  const label = STATUS_LABELS[status as ArticleStatus] ?? status
-  const visibleLabel = COMPACT_STATUS_LABELS[status as ArticleStatus] ?? label
-  const variant = STATUS_VARIANTS[status as ArticleStatus] ?? 'default'
-  const Icon = STATUS_ICONS[status as ArticleStatus] ?? FileText
+  const meta = status != null ? ARTICLE_STATUS_META[status as ArticleStatusCode] : undefined
+  const label = meta?.label ?? String(status ?? '—')
+  const visibleLabel = meta?.compactLabel ?? label
+  const variant = (status != null ? STATUS_VARIANTS[status as ArticleStatusCode] : undefined) ?? 'default'
+  const Icon = (status != null ? STATUS_ICONS[status as ArticleStatusCode] : undefined) ?? FileText
 
   return (
     <Badge variant={variant} className={className} title={label}>

@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime, timezone
 
-from sqlalchemy import CHAR, ForeignKey, ForeignKeyConstraint, Numeric, SmallInteger, Text
+from sqlalchemy import CHAR, ForeignKey, ForeignKeyConstraint, Index, Numeric, SmallInteger, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,7 +19,10 @@ class TrafficEvent(Base):
     """Table partitionnée par mois (analytics.traffic_events_2026_08, ...)."""
 
     __tablename__ = "traffic_events"
-    __table_args__ = {"schema": "analytics"}
+    __table_args__ = (
+        Index("traffic_project_time_idx", "project_id", text("occurred_at DESC")),
+        {"schema": "analytics"},
+    )
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
     occurred_at: Mapped[datetime] = mapped_column(primary_key=True, default=_now)

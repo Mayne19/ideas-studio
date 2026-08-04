@@ -11,6 +11,7 @@ import {
 import { listArticles } from '@/api/articles'
 import { ApiError } from '@/api/client'
 import type { OptimizationRecommendation, RecommendationStatus } from '@/types'
+import { ArticleStatus } from '@/lib/status'
 import { formatDate } from '@/utils/format'
 import Button from '@/components/ui/Button'
 import LoadingState from '@/components/ui/LoadingState'
@@ -205,7 +206,7 @@ export default function RecommendationsPage() {
     Promise.resolve().then(() => { if (!cancelled) setLoadStatus('loading') })
     Promise.all([
       listRecommendations(projectId),
-      listArticles(projectId, { status: 'published', limit: 500 }),
+      listArticles(projectId, { status: ArticleStatus.PUBLISHED, limit: 500 }),
     ])
       .then(([data, articles]) => {
         if (!cancelled) {

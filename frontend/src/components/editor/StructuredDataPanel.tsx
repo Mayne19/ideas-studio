@@ -2,7 +2,7 @@ import { Code, AlertCircle, CheckCircle } from '@/components/ui/hugeIcons'
 import type { EditorArticle } from '@/types'
 
 export default function StructuredDataPanel({ article }: { article: EditorArticle }) {
-  const sd = article.structured_data_json as Record<string, unknown> | null
+  const sd = article.artifacts['structured_data']
 
   if (!sd) {
     return (

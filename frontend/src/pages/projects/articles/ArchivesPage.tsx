@@ -15,20 +15,13 @@ import ErrorState from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import Toolbar from '@/components/ui/Toolbar'
 import ArticleScoreBadges from '@/components/ui/ArticleScoreBadges'
-import { finiteScore, getGeoScore, getOriginalityScore } from '@/lib/scoreBadge'
+import { finiteScore } from '@/lib/scoreBadge'
 
 const PAGE_SIZE = 20
 
-type ScoreFilter = '' | 'global_gte_90' | 'global_lt_90' | 'seo_lt_85' | 'quality_lt_85' | 'readability_lt_80' | 'geo_lt_80' | 'originality_lt_85' | 'critical'
+type ScoreFilter = '' | 'global_gte_90' | 'global_lt_90' | 'seo_lt_85' | 'quality_lt_85' | 'readability_lt_80' | 'geo_lt_80' | 'critical'
 
-function getCost(article: Article): number | null {
-  const costJson = article.estimated_cost_json
-  if (!costJson || typeof costJson !== 'object') return null
-  const cost = (costJson as Record<string, unknown>).estimated_cost_eur
-  return typeof cost === 'number' && Number.isFinite(cost) ? cost : null
-}
-
-const TABLE_GRID = 'lg:grid-cols-[minmax(240px,1.2fr)_minmax(300px,auto)_80px_90px_130px]'
+const TABLE_GRID = 'lg:grid-cols-[minmax(240px,1.2fr)_minmax(300px,auto)_90px_130px]'
 
 function ArticleRow({
   article,
@@ -70,20 +63,6 @@ function ArticleRow({
         </div>
       </div>
       <ArticleScoreBadges article={article} />
-      <div className="flex items-center">
-        {(() => {
-          const cost = getCost(article)
-          return cost !== null ? (
-            <span className="inline-flex items-center rounded-full bg-accent/8 px-1.5 py-0.5 text-[10px] font-medium text-accent">
-              {cost.toFixed(4)} €
-            </span>
-          ) : (
-            <span className="inline-flex items-center rounded-full bg-surface-soft px-1.5 py-0.5 text-[10px] font-medium text-tertiary">
-              — €
-            </span>
-          )
-        })()}
-      </div>
       <div className="flex items-center">
         <StatusBadge status={article.status} />
       </div>
@@ -271,15 +250,13 @@ export default function ArchivesPage() {
     { value: 'quality_lt_85', label: 'Qualité < 85' },
     { value: 'readability_lt_80', label: 'Lisibilité < 80' },
     { value: 'geo_lt_80', label: 'GEO < 80' },
-    { value: 'originality_lt_85', label: 'Originalité < 85' },
   ]
 
   function matchesScoreFilter(article: Article) {
     const g = finiteScore(article.global_score)
     const s = finiteScore(article.seo_score)
     const q = finiteScore(article.quality_score)
-    const geo = getGeoScore(article)
-    const o = getOriginalityScore(article)
+    const geo = finiteScore(article.geo_score)
     const r = finiteScore(article.readability_score)
     if (filterScore === 'global_gte_90') return g !== null && g >= 90
     if (filterScore === 'global_lt_90') return g === null || g < 90
@@ -287,7 +264,6 @@ export default function ArchivesPage() {
     if (filterScore === 'quality_lt_85') return q === null || q < 85
     if (filterScore === 'readability_lt_80') return r === null || r < 80
     if (filterScore === 'geo_lt_80') return geo === null || geo < 80
-    if (filterScore === 'originality_lt_85') return o === null || o < 85
     return true
   }
 
@@ -361,7 +337,6 @@ export default function ArchivesPage() {
             <div className={`hidden gap-2.5 px-3 pb-1.5 text-[12px] font-medium uppercase tracking-wide text-tertiary lg:grid ${TABLE_GRID}`}>
               <div>Titre</div>
               <div>Scores</div>
-              <div>Coût</div>
               <div>Statut</div>
               <div className="text-right">Actions</div>
             </div>

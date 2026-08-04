@@ -5,6 +5,7 @@ import { getProject, updateProject } from '@/api/projects'
 import type { Project } from '@/types'
 import Textarea from '@/components/ui/Textarea'
 import Select from '@/components/ui/Select'
+import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import LoadingState from '@/components/ui/LoadingState'
@@ -37,42 +38,13 @@ const WRITING_STYLE_OPTIONS = [
   { value: 'Article éditorial', label: 'Article éditorial' },
 ]
 
-const LENGTH_OPTIONS = [
-  { value: '', label: 'Adaptatif' },
-  { value: '600-900 mots', label: '600-900 mots' },
-  { value: '900-1200 mots', label: '900-1200 mots' },
-  { value: '1200-1600 mots', label: '1200-1600 mots' },
-  { value: '1600-2200 mots', label: '1600-2200 mots' },
-  { value: '2200+ mots si la SERP le justifie', label: '2200+ mots si la SERP le justifie' },
-]
-
-const TECHNICAL_LEVEL_OPTIONS = [
-  { value: '', label: 'Non défini' },
-  { value: 'Accessible sans prérequis', label: 'Accessible sans prérequis' },
-  { value: 'Exemples concrets modérés', label: 'Exemples concrets modérés' },
-  { value: 'Technique assumé', label: 'Technique assumé' },
-  { value: 'Expert avec détails avancés', label: 'Expert avec détails avancés' },
-]
-
 type StrategyForm = {
   audience: string
   tone: string
   reader_level: string
   writing_style: string
-  editorial_goal: string
-  value_proposition: string
-  allowed_topics: string
-  forbidden_topics: string
-  words_to_avoid: string
-  average_target_length: string
-  preferred_formats: string
-  technical_level: string
-  seo_rules: string
-  geo_rules: string
-  source_guidelines: string
-  internal_linking_guidelines: string
-  external_linking_guidelines: string
-  style_examples: string
+  word_count_min: string
+  word_count_max: string
 }
 
 export default function ProjectStrategyPage() {
@@ -89,20 +61,8 @@ export default function ProjectStrategyPage() {
     tone: '',
     reader_level: '',
     writing_style: '',
-    editorial_goal: '',
-    value_proposition: '',
-    allowed_topics: '',
-    forbidden_topics: '',
-    words_to_avoid: '',
-    average_target_length: '',
-    preferred_formats: '',
-    technical_level: '',
-    seo_rules: '',
-    geo_rules: '',
-    source_guidelines: '',
-    internal_linking_guidelines: '',
-    external_linking_guidelines: '',
-    style_examples: '',
+    word_count_min: '',
+    word_count_max: '',
   })
 
   useEffect(() => {
@@ -115,20 +75,8 @@ export default function ProjectStrategyPage() {
           tone: p.tone ?? '',
           reader_level: p.reader_level ?? '',
           writing_style: p.writing_style ?? '',
-          editorial_goal: p.editorial_goal ?? '',
-          value_proposition: p.value_proposition ?? '',
-          allowed_topics: p.allowed_topics ?? '',
-          forbidden_topics: p.forbidden_topics ?? '',
-          words_to_avoid: p.words_to_avoid ?? '',
-          average_target_length: p.average_target_length ?? '',
-          preferred_formats: p.preferred_formats ?? '',
-          technical_level: p.technical_level ?? '',
-          seo_rules: p.seo_rules ?? '',
-          geo_rules: p.geo_rules ?? '',
-          source_guidelines: p.source_guidelines ?? '',
-          internal_linking_guidelines: p.internal_linking_guidelines ?? '',
-          external_linking_guidelines: p.external_linking_guidelines ?? '',
-          style_examples: p.style_examples ?? '',
+          word_count_min: p.word_count_min != null ? String(p.word_count_min) : '',
+          word_count_max: p.word_count_max != null ? String(p.word_count_max) : '',
         })
       })
       .catch(() => setError('Impossible de charger le projet.'))
@@ -142,9 +90,14 @@ export default function ProjectStrategyPage() {
     setSaved(false)
     setError('')
     try {
-      await updateProject(projectId, Object.fromEntries(
-        Object.entries(form).map(([key, value]) => [key, value.trim() || undefined]),
-      ))
+      await updateProject(projectId, {
+        audience: form.audience.trim() || undefined,
+        tone: form.tone.trim() || undefined,
+        reader_level: form.reader_level.trim() || undefined,
+        writing_style: form.writing_style.trim() || undefined,
+        word_count_min: form.word_count_min.trim() ? Number(form.word_count_min) : null,
+        word_count_max: form.word_count_max.trim() ? Number(form.word_count_max) : null,
+      })
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (err) {
@@ -226,20 +179,22 @@ export default function ProjectStrategyPage() {
             value={form.writing_style}
             onChange={(e) => setForm((f) => ({ ...f, writing_style: e.target.value }))}
           />
-          <Select
-            label="Longueur moyenne cible"
-            options={LENGTH_OPTIONS}
-            value={form.average_target_length}
-            onChange={(e) => setForm((f) => ({ ...f, average_target_length: e.target.value }))}
-          />
         </div>
-          <Select
-            label="Niveau de technicité"
-            options={TECHNICAL_LEVEL_OPTIONS}
-            value={form.technical_level}
-            onChange={(e) => setForm((f) => ({ ...f, technical_level: e.target.value }))}
+        <div className="grid gap-4 md:grid-cols-2">
+          <Input
+            type="number"
+            label="Longueur minimale (mots)"
+            value={form.word_count_min}
+            onChange={(e) => setForm((f) => ({ ...f, word_count_min: e.target.value }))}
             hint="Ces paramètres sont transmis au contexte de génération et contraignent le brief rédactionnel."
           />
+          <Input
+            type="number"
+            label="Longueur maximale (mots)"
+            value={form.word_count_max}
+            onChange={(e) => setForm((f) => ({ ...f, word_count_max: e.target.value }))}
+          />
+        </div>
         </Card>
 
       <div className="flex items-center gap-3">

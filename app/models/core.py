@@ -10,8 +10,8 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, ForeignKey, ForeignKeyConstraint, Integer, LargeBinary, SmallInteger, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import CITEXT, JSONB, UUID
+from sqlalchemy import Boolean, ForeignKey, ForeignKeyConstraint, Index, Integer, LargeBinary, SmallInteger, Text, UniqueConstraint, text
+from sqlalchemy.dialects.postgresql import CITEXT, ENUM, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -86,6 +86,7 @@ class Project(Base):
             ["status_reason_id", "state_id"],
             ["ref.project_status_reasons.id", "ref.project_status_reasons.state_id"],
         ),
+        Index("projects_org_status_idx", "organization_id", "state_id", "status_reason_id"),
         {"schema": "core"},
     )
 
@@ -145,6 +146,7 @@ class EditorialProfile(Base):
     __tablename__ = "editorial_profiles"
     __table_args__ = (
         UniqueConstraint("project_id", "version"),
+        Index("editorial_profiles_one_active", "project_id", unique=True, postgresql_where=text("is_active")),
         {"schema": "core"},
     )
 
@@ -197,6 +199,7 @@ class ProjectCredential(Base):
     __tablename__ = "project_credentials"
     __table_args__ = (
         UniqueConstraint("project_id", "kind", "label"),
+        Index("project_credentials_sha_idx", "token_sha256", unique=True, postgresql_where=text("revoked_at IS NULL")),
         {"schema": "core"},
     )
 
@@ -205,7 +208,7 @@ class ProjectCredential(Base):
         UUID(as_uuid=False), ForeignKey("core.projects.id", ondelete="CASCADE"), nullable=False
     )
     kind: Mapped[CredentialKind] = mapped_column(
-        "kind", Text, nullable=False
+        "kind", ENUM(CredentialKind, name="credential_kind", schema="core", create_type=False), nullable=False
     )
     label: Mapped[str] = mapped_column(Text, nullable=False)
     token_prefix: Mapped[str] = mapped_column(Text, nullable=False)
@@ -219,7 +222,10 @@ class ProjectCredential(Base):
 
 class Invitation(Base):
     __tablename__ = "invitations"
-    __table_args__ = {"schema": "core"}
+    __table_args__ = (
+        Index("invitations_token_idx", "token_sha256"),
+        {"schema": "core"},
+    )
 
     id: Mapped[str] = _uuid_pk()
     project_id: Mapped[str] = mapped_column(
@@ -241,7 +247,10 @@ class Invitation(Base):
 
 class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"
-    __table_args__ = {"schema": "core"}
+    __table_args__ = (
+        Index("password_reset_token_idx", "token_sha256"),
+        {"schema": "core"},
+    )
 
     id: Mapped[str] = _uuid_pk()
     user_id: Mapped[str] = mapped_column(

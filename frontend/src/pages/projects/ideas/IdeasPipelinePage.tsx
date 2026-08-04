@@ -9,6 +9,7 @@ import type { AutoGenerateIdeasResponse } from '@/api/ideas'
 import { listCategories } from '@/api/categories'
 import { ApiError } from '@/api/client'
 import type { Article, Category } from '@/types'
+import { ArticleStatus, type ArticleStatusCode } from '@/lib/status'
 import { formatDate } from '@/utils/format'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
@@ -18,19 +19,19 @@ import ErrorState from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import StatusBadge from '@/components/ui/StatusBadge'
 
-const IDEA_STATUSES_TO_FETCH = [
-  'idea_proposed', 'idea_priority', 'idea_rejected',
-  'outline_ready', 'writing_requested', 'writing_in_progress', 'draft_ready',
+const IDEA_STATUSES_TO_FETCH: ArticleStatusCode[] = [
+  ArticleStatus.IDEA_PROPOSED, ArticleStatus.IDEA_PRIORITY, ArticleStatus.IDEA_REJECTED,
+  ArticleStatus.OUTLINE_READY, ArticleStatus.WRITING_REQUESTED, ArticleStatus.WRITING_IN_PROGRESS, ArticleStatus.DRAFT_READY,
 ]
 
 const IDEA_STATI: { key: string; label: string; title?: string; color: string }[] = [
   { key: '', label: 'Tous', color: '' },
-  { key: 'idea_proposed', label: 'Proposée', title: 'Idée proposée', color: 'bg-accent/8 text-accent' },
-  { key: 'idea_priority', label: 'Prioritaire', color: 'bg-warning/8 text-warning' },
-  { key: 'idea_rejected', label: 'Rejetée', color: 'bg-danger/8 text-danger' },
-  { key: 'writing_requested', label: 'Demandée', title: 'Rédaction demandée', color: 'bg-accent/8 text-accent' },
-  { key: 'writing_in_progress', label: 'En cours', title: 'En rédaction', color: 'bg-accent/8 text-accent' },
-  { key: 'draft_ready', label: 'Prêt', title: 'Brouillon prêt', color: 'bg-success/8 text-success' },
+  { key: String(ArticleStatus.IDEA_PROPOSED), label: 'Proposée', title: 'Idée proposée', color: 'bg-accent/8 text-accent' },
+  { key: String(ArticleStatus.IDEA_PRIORITY), label: 'Prioritaire', color: 'bg-warning/8 text-warning' },
+  { key: String(ArticleStatus.IDEA_REJECTED), label: 'Rejetée', color: 'bg-danger/8 text-danger' },
+  { key: String(ArticleStatus.WRITING_REQUESTED), label: 'Demandée', title: 'Rédaction demandée', color: 'bg-accent/8 text-accent' },
+  { key: String(ArticleStatus.WRITING_IN_PROGRESS), label: 'En cours', title: 'En rédaction', color: 'bg-accent/8 text-accent' },
+  { key: String(ArticleStatus.DRAFT_READY), label: 'Prêt', title: 'Brouillon prêt', color: 'bg-success/8 text-success' },
 ]
 
 function translateIdeaError(err: unknown, context: 'action' | 'generate' | 'reject'): string {
@@ -46,23 +47,6 @@ function translateIdeaError(err: unknown, context: 'action' | 'generate' | 'reje
     }
   }
   return 'Une erreur inattendue est survenue.'
-}
-
-function getLastCompletedAgent(article: Article): string | null {
-  if (article.completed_agent_keys) {
-    try {
-      const keys = JSON.parse(article.completed_agent_keys)
-      if (Array.isArray(keys) && keys.length > 0) {
-        return keys[keys.length - 1]
-      }
-    } catch { /* invalid JSON */ }
-  }
-  return null
-}
-
-function getNextAgent(article: Article): string | null {
-  if (article.next_agent_key) return article.next_agent_key
-  return null
 }
 
 function normalizeOpportunityScore(score: number | null | undefined): number | null {
@@ -155,7 +139,7 @@ export default function IdeasPipelinePage() {
   const filtered = useMemo(() => {
     let items = [...allIdeas]
     if (filterCategory) items = items.filter((a) => a.category_id === filterCategory)
-    if (filterStatus) items = items.filter((a) => a.status === filterStatus)
+    if (filterStatus) items = items.filter((a) => a.status === Number(filterStatus))
     if (filterSearch) {
       const q = filterSearch.toLowerCase()
       items = items.filter((a) =>
@@ -549,8 +533,6 @@ export default function IdeasPipelinePage() {
                   <th className="px-2 py-2 text-left hidden md:table-cell">Catégorie</th>
                   <th className="px-2 py-2 text-left hidden lg:table-cell">Mot-clé</th>
                   <th className="px-2 py-2 text-left hidden lg:table-cell">Statut</th>
-                  <th className="px-2 py-2 text-left hidden xl:table-cell">Dernier agent</th>
-                  <th className="px-2 py-2 text-left hidden xl:table-cell">Prochain agent</th>
                   <th className="px-2 py-2 text-left"><button onClick={() => toggleSort('created_at')} className="flex items-center gap-1 text-[12px] font-semibold uppercase tracking-wider text-tertiary hover:text-secondary transition-colors">Date{sortField === 'created_at' && <span className="text-accent">{sortDir === 'desc' ? '↓' : '↑'}</span>}</button></th>
                   <th className="sticky right-0 z-10 w-[168px] bg-bg px-2 py-2 text-right">Actions</th>
                 </tr>
@@ -558,10 +540,8 @@ export default function IdeasPipelinePage() {
               <tbody>
                 {filtered.map((article) => {
                   const cat = catMap.get(article.category_id ?? '')
-                  const lastAgent = getLastCompletedAgent(article)
-                  const nextAgent = getNextAgent(article)
-                  const isRejected = article.status === 'idea_rejected'
-                  const isIdea = ['idea_proposed', 'idea_priority'].includes(article.status)
+                  const isRejected = article.status === ArticleStatus.IDEA_REJECTED
+                  const isIdea = ([ArticleStatus.IDEA_PROPOSED, ArticleStatus.IDEA_PRIORITY] as ArticleStatusCode[]).includes(article.status)
                   return (
                     <tr
                       key={article.id}
@@ -626,12 +606,6 @@ export default function IdeasPipelinePage() {
                       <td className="px-2 py-2.5 hidden lg:table-cell">
                         <StatusBadge status={article.status} className="px-1.5" />
                       </td>
-                      <td className="px-2 py-2.5 hidden xl:table-cell">
-                        <span className="text-[12px] text-tertiary">{lastAgent ?? '—'}</span>
-                      </td>
-                      <td className="px-2 py-2.5 hidden xl:table-cell">
-                        <span className="text-[12px] font-medium text-accent">{nextAgent ?? '—'}</span>
-                      </td>
                       <td className="px-2 py-2.5 whitespace-nowrap">
                         <span className="text-[12px] text-tertiary">{formatDate(article.created_at)}</span>
                       </td>
@@ -639,7 +613,7 @@ export default function IdeasPipelinePage() {
                         <div className="flex min-w-[160px] items-center justify-end gap-1.5">
                           {isIdea && !isRejected && (
                             <>
-                              {article.status === 'idea_proposed' && (
+                              {article.status === ArticleStatus.IDEA_PROPOSED && (
                                 <button
                                   type="button"
                                   onClick={() => handleAction('prioritize', article)}
@@ -763,10 +737,10 @@ export default function IdeasPipelinePage() {
                   <p className="text-[14px] text-primary">{previewIdea.keyword}</p>
                 </div>
               )}
-              {previewIdea.recommended_format && (
+              {previewIdea.content_format && (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Format recommandé</p>
-                  <p className="text-[14px] text-primary capitalize">{previewIdea.recommended_format}</p>
+                  <p className="text-[14px] text-primary capitalize">{previewIdea.content_format}</p>
                 </div>
               )}
               {previewIdea.search_intent && (
@@ -781,141 +755,13 @@ export default function IdeasPipelinePage() {
                   <p className="text-[14px] text-primary">{previewIdea.audience}</p>
                 </div>
               )}
-              {previewIdea.estimated_difficulty && (
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Difficulté estimée</p>
-                  <p className="text-[14px] text-primary capitalize">{previewIdea.estimated_difficulty}</p>
-                </div>
-              )}
               {previewIdea.target_word_count && (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Longueur cible</p>
                   <p className="text-[14px] text-primary">{previewIdea.target_word_count} mots</p>
                 </div>
               )}
-              {previewIdea.needs_faq !== null && (
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">FAQ prévue</p>
-                  <p className="text-[14px] text-primary">{previewIdea.needs_faq ? 'Oui' : 'Non'}</p>
-                </div>
-              )}
-              {previewIdea.needs_images !== null && (
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Images nécessaires</p>
-                  <p className="text-[14px] text-primary">{previewIdea.needs_images ? 'Oui' : 'Non'}</p>
-                </div>
-              )}
-              {previewIdea.target_write_at && (
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Date rédaction cible</p>
-                  <p className="text-[14px] text-primary">{formatDate(previewIdea.target_write_at)}</p>
-                </div>
-              )}
-              {previewIdea.target_review_at && (
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Date relecture cible</p>
-                  <p className="text-[14px] text-primary">{formatDate(previewIdea.target_review_at)}</p>
-                </div>
-              )}
-              {previewIdea.scheduled_at && (
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Date publication cible</p>
-                  <p className="text-[14px] text-primary">{formatDate(previewIdea.scheduled_at)}</p>
-                </div>
-              )}
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Dernier agent terminé</p>
-                <p className="text-[14px] text-primary">{getLastCompletedAgent(previewIdea) ?? 'Aucun'}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Prochain agent</p>
-                <p className="text-[14px] font-medium text-accent">{getNextAgent(previewIdea) ?? 'Aucun'}</p>
-              </div>
-              {previewIdea.workflow_status && (
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Phase workflow</p>
-                  <p className="text-[14px] text-primary capitalize">{previewIdea.workflow_status}</p>
-                </div>
-              )}
             </div>
-
-            {/* Estimated cost */}
-            {previewIdea.estimated_cost_json && typeof previewIdea.estimated_cost_json === 'object' && (
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Coût estimé</p>
-                <p className="text-[14px] text-primary">
-                  {(previewIdea.estimated_cost_json as Record<string, unknown>).estimated_cost_eur != null
-                    ? `${((previewIdea.estimated_cost_json as Record<string, unknown>).estimated_cost_eur as number).toFixed(4)} €`
-                    : 'Non disponible'}
-                </p>
-              </div>
-            )}
-
-            {/* Secondary keywords */}
-            {(() => {
-              let sk: string[] | null = null
-              try {
-                if (typeof previewIdea.secondary_keywords_json === 'string') sk = JSON.parse(previewIdea.secondary_keywords_json)
-                else if (Array.isArray(previewIdea.secondary_keywords_json)) sk = previewIdea.secondary_keywords_json as string[]
-              } catch { console.error('Failed to parse secondary_keywords_json') }
-              return sk && sk.length > 0
-            })() && (
-              <div className="col-span-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Mots-clés secondaires</p>
-                <div className="flex flex-wrap gap-1">
-                  {(() => {
-                    let sk: string[] = []
-                    try {
-                      if (typeof previewIdea.secondary_keywords_json === 'string') sk = JSON.parse(previewIdea.secondary_keywords_json)
-                      else if (Array.isArray(previewIdea.secondary_keywords_json)) sk = previewIdea.secondary_keywords_json as string[]
-              } catch { console.error('Failed to parse secondary_keywords_json') }
-                    return sk
-                  })().map((kw, i) => (
-                    <span key={i} className="rounded-full bg-accent/8 px-2 py-0.5 text-[10px] text-accent">{kw}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Agent outputs JSON */}
-            {previewIdea.agent_outputs_json && (
-              <details className="group">
-                <summary className="cursor-pointer text-[12px] text-secondary hover:text-primary transition-colors">
-                  Sorties des agents
-                </summary>
-                <pre className="mt-1 max-h-40 overflow-auto rounded-[6px] bg-surface-soft p-2 text-[10px] leading-relaxed text-primary">
-                  {JSON.stringify(previewIdea.agent_outputs_json, null, 2)}
-                </pre>
-              </details>
-            )}
-
-            {/* Planning brief JSON */}
-            {previewIdea.planning_brief_json && (
-              <details className="group">
-                <summary className="cursor-pointer text-[12px] text-secondary hover:text-primary transition-colors">
-                  Brief planning
-                </summary>
-                <pre className="mt-1 max-h-40 overflow-auto rounded-[6px] bg-surface-soft p-2 text-[10px] leading-relaxed text-primary">
-                  {JSON.stringify(previewIdea.planning_brief_json, null, 2)}
-                </pre>
-              </details>
-            )}
-
-            {/* Opportunity justification */}
-            {previewIdea.opportunity_justification && (
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Justification du score</p>
-                <p className="text-[14px] text-secondary leading-relaxed">{previewIdea.opportunity_justification}</p>
-              </div>
-            )}
-
-            {/* Main answer summary */}
-            {previewIdea.main_answer_summary && (
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary mb-0.5">Réponse principale attendue</p>
-                <p className="text-[14px] text-secondary leading-relaxed">{previewIdea.main_answer_summary}</p>
-              </div>
-            )}
 
             {/* Angle */}
             {previewIdea.angle && (
@@ -927,7 +773,7 @@ export default function IdeasPipelinePage() {
 
             {/* Actions */}
             <div className="flex gap-2 pt-2 border-t border-border">
-              {['idea_proposed', 'idea_priority'].includes(previewIdea.status) && (
+              {([ArticleStatus.IDEA_PROPOSED, ArticleStatus.IDEA_PRIORITY] as ArticleStatusCode[]).includes(previewIdea.status) && (
                 <>
                   <Button size="sm" icon={<Send size={12} />} onClick={() => { handleAction('send-to-production', previewIdea); setPreviewIdea(null) }}>
                     Envoyer en production
@@ -937,7 +783,7 @@ export default function IdeasPipelinePage() {
                   </Button>
                 </>
               )}
-              {previewIdea.status === 'idea_rejected' && (
+              {previewIdea.status === ArticleStatus.IDEA_REJECTED && (
                 <>
                   <Button size="sm" icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>} variant="secondary" onClick={() => { handleRestore(previewIdea); setPreviewIdea(null) }}>
                     Restaurer

@@ -6,7 +6,7 @@ import {
 import { analyzeArticle, readyCheck } from '@/api/seo'
 import { ApiError } from '@/api/client'
 import type { AnalysisBrief, SeoAnalysis, SeoIssue, ReadyCheck, EditorArticle, SeoExpertReview } from '@/types'
-import { finiteScore, getOriginalityScore, getGeoScore } from '@/lib/scoreBadge'
+import { finiteScore } from '@/lib/scoreBadge'
 import Button from '@/components/ui/Button'
 import { Gauge } from '@/lib/vercel-geistcn/components'
 
@@ -40,15 +40,34 @@ const SCORE_TILES = [
 
 type ScoreKey = typeof SCORE_TILES[number]['key']
 
+function getArtifact(article: EditorArticle, agentKey: string): Record<string, unknown> | null {
+  return article.artifacts[agentKey] ?? null
+}
+
+function getOriginalityScore(article: EditorArticle): number | null {
+  const report = getArtifact(article, 'originality_report')
+  if (!report) return null
+  const v2 = report.v2 as Record<string, unknown> | undefined
+  const score = v2 && typeof v2 === 'object' ? v2.score : report.heuristic_score
+  return typeof score === 'number' && Number.isFinite(score) ? score : null
+}
+
+function getGeoScoreFromArtifact(article: EditorArticle): number | null {
+  const report = getArtifact(article, 'geo_optimization')
+  if (!report) return null
+  const score = report.geo_score ?? report.score
+  return typeof score === 'number' && Number.isFinite(score) ? score : null
+}
+
 function resolveScore(article: EditorArticle, brief: AnalysisBrief | SeoAnalysis | null, expertReview: SeoExpertReview | null, key: ScoreKey): number | null {
   switch (key) {
-    case 'Synthèse': return finiteScore(article.global_score)
-    case 'SEO': return finiteScore(brief?.seo_score ?? article.seo_score ?? expertReview?.seo_score)
-    case 'Qualité': return finiteScore(brief?.quality_score ?? article.quality_score)
-    case 'Lisibilité': return finiteScore(brief?.readability_score ?? article.readability_score ?? expertReview?.readability_score)
+    case 'Synthèse': return finiteScore(article.latest_analysis?.global_score)
+    case 'SEO': return finiteScore(brief?.seo_score ?? expertReview?.seo_score)
+    case 'Qualité': return finiteScore(brief?.quality_score)
+    case 'Lisibilité': return finiteScore(brief?.readability_score ?? expertReview?.readability_score)
     case 'Originalité': return getOriginalityScore(article)
-    case 'GEO': return getGeoScore(article)
-    case 'EEAT': return finiteScore(brief?.eeat_score ?? article.eeat_score)
+    case 'GEO': return finiteScore(article.latest_analysis?.geo_score) ?? getGeoScoreFromArtifact(article)
+    case 'EEAT': return finiteScore(brief?.eeat_score)
   }
 }
 
@@ -202,10 +221,10 @@ type V2Report = { score?: number; signals?: Record<string, V2Signal>; flags?: st
 function getV2Report(article: EditorArticle, key: ScoreKey): V2Report | null {
   const raw: Record<string, unknown> | null = (() => {
     switch (key) {
-      case 'EEAT':        return (article.eeat_checklist_json as Record<string, unknown> | null)
-      case 'Originalité': return (article.originality_report_json as Record<string, unknown> | null)
-      case 'GEO':         return (article.geo_optimization_json as Record<string, unknown> | null)
-      case 'Lisibilité':  return (article.readability_report_json as Record<string, unknown> | null)
+      case 'EEAT':        return getArtifact(article, 'eeat_checklist')
+      case 'Originalité': return getArtifact(article, 'originality_report')
+      case 'GEO':         return getArtifact(article, 'geo_optimization')
+      case 'Lisibilité':  return getArtifact(article, 'readability_report')
       default:            return null
     }
   })()
@@ -472,7 +491,6 @@ type AnalysePanelProps = {
   initialReadiness: ReadyCheck | null
   onAnalysisUpdate: (analysis: SeoAnalysis) => void
   onReadinessUpdate: (check: ReadyCheck) => void
-  onExpertReviewUpdate: (review: SeoExpertReview) => void
 }
 
 export default function AnalysePanel({
@@ -487,7 +505,7 @@ export default function AnalysePanel({
   const [selectedScore, setSelectedScore] = useState<ScoreKey>('Synthèse')
 
   const brief = analysis ?? article.latest_analysis
-  const expertReview = article.seo_review_json ?? null
+  const expertReview: SeoExpertReview | null = null
 
   const autoTriggeredRef = useRef(false)
   useEffect(() => {
