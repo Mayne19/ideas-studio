@@ -1369,8 +1369,8 @@ class SEOGenerationOrchestrator:
                 "model": log.model or "",
                 "input_tokens": log.prompt_tokens or 0,
                 "output_tokens": log.completion_tokens or 0,
-                "estimated_cost_eur": est,
-                "actual_cost_eur": act,
+                "estimated_cost_eur": float(est) if est is not None else None,
+                "actual_cost_eur": float(act) if act is not None else None,
                 "cost_status": (
                     "unknown_price" if est is None
                     else "tracked" if act is not None
