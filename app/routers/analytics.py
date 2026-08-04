@@ -15,5 +15,6 @@ def get_ga4_analytics(
     member: MemberView = Depends(get_project_member),
 ):
     """Retourne les données GA4 pour la page Analytics."""
-    from app.services.ga4_service import get_full_report
-    return get_full_report(start_date, end_date)
+    from app.services.ga4_service import get_full_report, resolve_ga4_credentials
+    property_id, service_account_json = resolve_ga4_credentials(db, project_id)
+    return get_full_report(start_date, end_date, property_id=property_id, service_account_json=service_account_json)

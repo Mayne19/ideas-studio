@@ -209,6 +209,8 @@ def serialize_project(db: Session, project: Project) -> dict:
         "last_revalidated_at": target.last_synced_at if target else None,
         "last_revalidate_status": target.last_sync_status if target else None,
         "last_revalidate_error": target.last_sync_error if target else None,
+        "ga4_property_id": target.ga4_property_id if target else None,
+        "ga4_configured": bool(target and target.ga4_property_id and target.ga4_service_account_json),
         "created_at": project.created_at,
         "updated_at": project.updated_at,
     }
@@ -218,6 +220,8 @@ def update_project(db: Session, project: Project, data: ProjectUpdate) -> dict:
     update_data = data.model_dump(exclude_unset=True)
     site_url = update_data.pop("site_url", None)
     revalidate_url = update_data.pop("revalidate_url", None)
+    ga4_property_id = update_data.pop("ga4_property_id", None)
+    ga4_service_account_json = update_data.pop("ga4_service_account_json", None)
 
     profile_fields = {"audience", "tone", "reader_level", "writing_style", "vertical",
                        "word_count_min", "word_count_max", "rules", "constraints"}
@@ -235,7 +239,9 @@ def update_project(db: Session, project: Project, data: ProjectUpdate) -> dict:
         for field, value in profile_updates.items():
             setattr(profile, field, value)
 
-    if site_url is not None or revalidate_url is not None:
+    if site_url is not None or revalidate_url is not None or ga4_property_id is not None or ga4_service_account_json is not None:
+        from app.core.security import encrypt_secret
+
         target = _primary_target(db, project.id)
         if target is None:
             target = PublishingTarget(project_id=project.id, site_url=site_url or "", is_primary=True)
@@ -244,6 +250,10 @@ def update_project(db: Session, project: Project, data: ProjectUpdate) -> dict:
             target.site_url = site_url
         if revalidate_url is not None:
             target.revalidate_url = revalidate_url
+        if ga4_property_id is not None:
+            target.ga4_property_id = ga4_property_id
+        if ga4_service_account_json is not None:
+            target.ga4_service_account_json = encrypt_secret(ga4_service_account_json)
         if not target.revalidate_secret:
             from app.core.security import encrypt_secret
             target.revalidate_secret = encrypt_secret(_generate_key())

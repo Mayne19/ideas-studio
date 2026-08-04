@@ -97,3 +97,88 @@ def check_cannibalization_dict(
     exclude_article_id: str | None = None,
 ) -> dict:
     return asdict(check_cannibalization(db, project_id, title, keyword, category_id, exclude_article_id))
+
+
+def check_section_cannibalization(
+    db: Session,
+    project_id: str,
+    outline: dict,
+    exclude_article_id: str | None = None,
+    similarity_threshold: float = 0.6,
+) -> dict:
+    """Compare les H2/H3 du plan proposé (outline) aux plans déjà publiés/en
+    cours du projet — la vérification titre/mot-clé de check_cannibalization
+    ne détecte pas deux articles différents qui traitent en réalité les mêmes
+    sous-sujets. Similarité = mots communs / mots du plus court des deux
+    headings normalisés (Jaccard simplifié, aucune dépendance externe)."""
+    from app.services.seo.artifacts import get_latest_artifacts_bulk
+
+    proposed_headings = [
+        normalize_text(s.get("heading", ""))
+        for s in outline.get("sections", [])
+        if s.get("heading")
+    ]
+    proposed_headings = [h for h in proposed_headings if h]
+    if not proposed_headings:
+        return {"overlapping_sections": [], "risk_level": "none"}
+
+    article_ids = [
+        row.id for row in db.execute(
+            select(Article.id).where(
+                Article.project_id == project_id,
+                Article.status_reason_id.in_(_RELEVANT_STATUSES),
+                Article.id != exclude_article_id if exclude_article_id else True,
+            )
+        ).all()
+    ]
+    if not article_ids:
+        return {"overlapping_sections": [], "risk_level": "none"}
+
+    outlines_by_article = get_latest_artifacts_bulk(db, article_ids, ["outline"])
+
+    titles_by_article = {
+        row.id: row.title for row in db.execute(
+            select(Article.id, ArticleRevision.title)
+            .join(ArticleRevision, ArticleRevision.id == Article.current_revision_id)
+            .where(Article.id.in_(article_ids))
+        ).all()
+    }
+
+    def _similarity(a: str, b: str) -> float:
+        words_a, words_b = set(a.split()), set(b.split())
+        if not words_a or not words_b:
+            return 0.0
+        shorter = min(len(words_a), len(words_b))
+        return len(words_a & words_b) / shorter
+
+    overlaps: list[dict] = []
+    for article_id, artifacts in outlines_by_article.items():
+        existing_outline = artifacts.get("outline")
+        if not existing_outline:
+            continue
+        existing_headings = [
+            normalize_text(s.get("heading", ""))
+            for s in existing_outline.get("sections", [])
+            if s.get("heading")
+        ]
+        matched_pairs = []
+        for proposed in proposed_headings:
+            for existing in existing_headings:
+                if not existing:
+                    continue
+                score = _similarity(proposed, existing)
+                if score >= similarity_threshold:
+                    matched_pairs.append({"proposed": proposed, "existing": existing, "score": round(score, 2)})
+        if matched_pairs:
+            overlaps.append({
+                "article_id": article_id,
+                "title": titles_by_article.get(article_id),
+                "overlapping_sections": matched_pairs,
+            })
+
+    risk_level = "none"
+    if overlaps:
+        max_overlap = max(len(o["overlapping_sections"]) for o in overlaps)
+        risk_level = "high" if max_overlap >= 3 else "medium"
+
+    return {"overlapping_sections": overlaps, "risk_level": risk_level}

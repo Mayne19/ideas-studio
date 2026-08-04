@@ -26,7 +26,7 @@ from app.services.seo.artifacts import save_artifact, get_latest_artifact
 from app.services.seo.helpers import safe_json_dump, safe_json_load
 from app.services.seo.project_context_service import build_project_context_dict
 from app.services.seo.category_strategy_service import compute_category_strategy_dict
-from app.services.seo.cannibalization_service import check_cannibalization_dict
+from app.services.seo.cannibalization_service import check_cannibalization_dict, check_section_cannibalization
 from app.services.seo.intent_analysis_service import analyze_intent_dict
 from app.services.seo.research_brief_service import build_research_brief_dict
 from app.services.seo.source_quality_service import validate_sources
@@ -320,6 +320,20 @@ class SEOGenerationOrchestrator:
             else None
         )
 
+        # 9c. Cannibalisation au niveau des sections (H2/H3) — deux articles
+        # peuvent avoir des titres/mots-clés différents tout en traitant les
+        # mêmes sous-sujets ; check_cannibalization_dict seul ne le détecte pas.
+        section_cannibalization = check_section_cannibalization(
+            self.db, self.project_id, outline, exclude_article_id=existing_article_id
+        )
+        self.context["section_cannibalization"] = section_cannibalization
+        if section_cannibalization.get("risk_level") != "none":
+            self._log(
+                f"Section overlap detected : {len(section_cannibalization.get('overlapping_sections', []))} "
+                f"article(s) partagent des sous-thèmes avec ce plan",
+                level="warning", step="CannibalizationCheckOutline",
+            )
+
         # 10. ImagePlan
         image_plan_result = build_image_plan_dict(final_keyword, outline)
         self.context["image_plan"] = image_plan_result.get("image_plan", {})
@@ -415,6 +429,7 @@ class SEOGenerationOrchestrator:
         self._save(article.id, "idea_discovery", idea_discovery)
         self._save(article.id, "cannibalization_check", cannibalization)
         self._save(article.id, "cannibalization_outline", cannibalization_outline)
+        self._save(article.id, "section_cannibalization", section_cannibalization)
         self._save(article.id, "intent_analysis", intent_analysis)
         self._save(article.id, "research_brief", research_brief)
         self._save(article.id, "keyword_brief", keyword_brief)
@@ -938,6 +953,11 @@ class SEOGenerationOrchestrator:
             raise GenerationFailedError("Le provider IA n'a pas retourné de contenu exploitable pour la rédaction.")
 
         self._raise_if_cancelled(article)
+
+        image_sources = self.context.get("image_sources") or []
+        if image_sources:
+            from app.services.seo.image_plan_service import insert_images_in_content
+            content = insert_images_in_content(content, image_sources)
 
         draft.content = content
         draft.word_count = calculate_word_count(content)

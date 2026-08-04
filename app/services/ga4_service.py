@@ -8,17 +8,11 @@ from functools import lru_cache
 logger = logging.getLogger(__name__)
 
 
-def _get_client():
-    from app.core.config import settings
+def _get_client(service_account_json: str):
     from google.analytics.data_v1beta import BetaAnalyticsDataClient
     from google.oauth2 import service_account
 
-    if not settings.GOOGLE_SERVICE_ACCOUNT_JSON:
-        raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON not set")
-    if not settings.GA4_PROPERTY_ID:
-        raise ValueError("GA4_PROPERTY_ID not set")
-
-    creds_dict = json.loads(settings.GOOGLE_SERVICE_ACCOUNT_JSON)
+    creds_dict = json.loads(service_account_json)
     credentials = service_account.Credentials.from_service_account_info(
         creds_dict,
         scopes=["https://www.googleapis.com/auth/analytics.readonly"],
@@ -26,24 +20,53 @@ def _get_client():
     return BetaAnalyticsDataClient(credentials=credentials)
 
 
-def _property():
+def _property(property_id: str) -> str:
+    return f"properties/{property_id}"
+
+
+def resolve_ga4_credentials(db, project_id: str | None) -> tuple[str | None, str | None]:
+    """Renvoie (property_id, service_account_json) — le projet a priorité,
+    repli sur settings.GA4_PROPERTY_ID/GOOGLE_SERVICE_ACCOUNT_JSON si absent."""
     from app.core.config import settings
-    return f"properties/{settings.GA4_PROPERTY_ID}"
+    from app.core.security import decrypt_secret
+    from app.models.core import PublishingTarget
+    from sqlalchemy import select
+
+    property_id = None
+    service_account_json = None
+    if project_id:
+        target = db.execute(
+            select(PublishingTarget)
+            .where(PublishingTarget.project_id == project_id)
+            .order_by(PublishingTarget.is_primary.desc(), PublishingTarget.created_at.asc())
+            .limit(1)
+        ).scalar_one_or_none()
+        if target:
+            property_id = target.ga4_property_id
+            service_account_json = decrypt_secret(target.ga4_service_account_json)
+
+    return (
+        property_id or settings.GA4_PROPERTY_ID or None,
+        service_account_json or settings.GOOGLE_SERVICE_ACCOUNT_JSON or None,
+    )
 
 
 def get_overview(
     start_date: str = "30daysAgo",
     end_date: str = "today",
+    *,
+    property_id: str,
+    service_account_json: str,
 ) -> dict:
     from google.analytics.data_v1beta.types import (
         DateRange, Metric, Dimension, RunReportRequest
     )
 
     try:
-        client = _get_client()
+        client = _get_client(service_account_json)
 
         request = RunReportRequest(
-            property=_property(),
+            property=_property(property_id),
             date_ranges=[DateRange(start_date=start_date, end_date=end_date)],
             metrics=[
                 Metric(name="activeUsers"),
@@ -80,16 +103,19 @@ def get_overview(
 def get_top_articles(
     start_date: str = "30daysAgo",
     end_date: str = "today",
+    *,
+    property_id: str,
+    service_account_json: str,
 ) -> list[dict]:
     from google.analytics.data_v1beta.types import (
         DateRange, Metric, Dimension, RunReportRequest, OrderBy
     )
 
     try:
-        client = _get_client()
+        client = _get_client(service_account_json)
 
         request = RunReportRequest(
-            property=_property(),
+            property=_property(property_id),
             date_ranges=[DateRange(start_date=start_date, end_date=end_date)],
             dimensions=[
                 Dimension(name="pagePath"),
@@ -138,16 +164,19 @@ def get_top_articles(
 def get_traffic_sources(
     start_date: str = "30daysAgo",
     end_date: str = "today",
+    *,
+    property_id: str,
+    service_account_json: str,
 ) -> list[dict]:
     from google.analytics.data_v1beta.types import (
         DateRange, Metric, Dimension, RunReportRequest, OrderBy
     )
 
     try:
-        client = _get_client()
+        client = _get_client(service_account_json)
 
         request = RunReportRequest(
-            property=_property(),
+            property=_property(property_id),
             date_ranges=[DateRange(start_date=start_date, end_date=end_date)],
             dimensions=[Dimension(name="sessionDefaultChannelGroup")],
             metrics=[
@@ -181,16 +210,19 @@ def get_traffic_sources(
 def get_evolution(
     start_date: str = "30daysAgo",
     end_date: str = "today",
+    *,
+    property_id: str,
+    service_account_json: str,
 ) -> list[dict]:
     from google.analytics.data_v1beta.types import (
         DateRange, Metric, Dimension, RunReportRequest, OrderBy
     )
 
     try:
-        client = _get_client()
+        client = _get_client(service_account_json)
 
         request = RunReportRequest(
-            property=_property(),
+            property=_property(property_id),
             date_ranges=[DateRange(start_date=start_date, end_date=end_date)],
             dimensions=[Dimension(name="date")],
             metrics=[
@@ -225,12 +257,24 @@ def get_evolution(
 def get_full_report(
     start_date: str = "30daysAgo",
     end_date: str = "today",
+    *,
+    property_id: str | None,
+    service_account_json: str | None,
 ) -> dict:
+    if not property_id or not service_account_json:
+        return {
+            "overview": _empty_overview(),
+            "top_articles": [],
+            "traffic_sources": [],
+            "evolution": [],
+            "period": {"start": start_date, "end": end_date},
+            "source": "not_configured",
+        }
     return {
-        "overview": get_overview(start_date, end_date),
-        "top_articles": get_top_articles(start_date, end_date),
-        "traffic_sources": get_traffic_sources(start_date, end_date),
-        "evolution": get_evolution(start_date, end_date),
+        "overview": get_overview(start_date, end_date, property_id=property_id, service_account_json=service_account_json),
+        "top_articles": get_top_articles(start_date, end_date, property_id=property_id, service_account_json=service_account_json),
+        "traffic_sources": get_traffic_sources(start_date, end_date, property_id=property_id, service_account_json=service_account_json),
+        "evolution": get_evolution(start_date, end_date, property_id=property_id, service_account_json=service_account_json),
         "period": {"start": start_date, "end": end_date},
         "source": "google_analytics",
     }

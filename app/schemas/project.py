@@ -35,6 +35,8 @@ class ProjectUpdate(BaseModel):
     constraints: Optional[dict] = None
     site_url: Optional[str] = None
     revalidate_url: Optional[str] = None
+    ga4_property_id: Optional[str] = None
+    ga4_service_account_json: Optional[str] = None
 
 
 class ProjectPublic(BaseModel):
@@ -84,3 +86,5 @@ class ProjectConnectInfo(BaseModel):
     last_revalidated_at: Optional[datetime] = None
     last_revalidate_status: Optional[str] = None
     last_revalidate_error: Optional[str] = None
+    ga4_property_id: Optional[str] = None
+    ga4_configured: bool = False

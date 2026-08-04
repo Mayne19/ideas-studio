@@ -188,6 +188,11 @@ class PublishingTarget(Base):
     # d'avoir un secret indépendant plutôt que de partager BLOG_REVALIDATE_SECRET
     # (settings.BLOG_REVALIDATE_SECRET reste le repli si cette colonne est vide).
     revalidate_secret: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Google Analytics 4 propre à ce projet — repli sur settings.GA4_PROPERTY_ID/
+    # GOOGLE_SERVICE_ACCOUNT_JSON (variables globales) si absents. Le JSON de
+    # service account est chiffré (Fernet), même mécanisme que revalidate_secret.
+    ga4_property_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ga4_service_account_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     last_synced_at: Mapped[datetime | None] = mapped_column(nullable=True)
     last_sync_status: Mapped[str | None] = mapped_column(Text, nullable=True)

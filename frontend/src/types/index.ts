@@ -82,6 +82,8 @@ export type ConnectInfo = {
   last_revalidated_at: string | null
   last_revalidate_status: string | null
   last_revalidate_error: string | null
+  ga4_property_id: string | null
+  ga4_configured: boolean
 }
 
 export type LoginResponse = {

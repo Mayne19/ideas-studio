@@ -101,6 +101,9 @@ export default function ProjectIntegrationPage() {
   const [revalidateEndpointEdited, setRevalidateEndpointEdited] = useState(false)
   const [showSecret, setShowSecret] = useState(false)
   const [rotatingSecret, setRotatingSecret] = useState(false)
+  const [ga4Form, setGa4Form] = useState({ property_id: '', service_account_json: '' })
+  const [savingGa4, setSavingGa4] = useState(false)
+  const [ga4Message, setGa4Message] = useState('')
 
   async function handleDisconnect() {
     if (!projectId) return
@@ -126,6 +129,7 @@ export default function ProjectIntegrationPage() {
         setInfo(data)
         setRevalidateForm(cleanRevalidateForm(data))
         setRevalidateEndpointEdited(false)
+        setGa4Form({ property_id: data.ga4_property_id ?? '', service_account_json: '' })
         setStatus('success')
         if (quiet) {
           setRefreshState('success')
@@ -150,6 +154,7 @@ export default function ProjectIntegrationPage() {
         setInfo(data)
         setRevalidateForm(cleanRevalidateForm(data))
         setRevalidateEndpointEdited(false)
+        setGa4Form({ property_id: data.ga4_property_id ?? '', service_account_json: '' })
         setStatus('success')
       })
       .catch(() => setStatus('error'))
@@ -183,6 +188,27 @@ export default function ProjectIntegrationPage() {
       setRevalidateMessage(err instanceof Error ? err.message : 'Sauvegarde impossible.')
     } finally {
       setSavingRevalidate(false)
+    }
+  }
+
+  async function handleSaveGa4(event: React.FormEvent) {
+    event.preventDefault()
+    if (!projectId) return
+    setSavingGa4(true)
+    setGa4Message('')
+    try {
+      await updateProject(projectId, {
+        ga4_property_id: ga4Form.property_id.trim() || undefined,
+        ga4_service_account_json: ga4Form.service_account_json.trim() || undefined,
+      })
+      const data = await getConnectInfo(projectId)
+      setInfo(data)
+      setGa4Form({ property_id: data.ga4_property_id ?? '', service_account_json: '' })
+      setGa4Message('Configuration Google Analytics sauvegardée.')
+    } catch (err) {
+      setGa4Message(err instanceof Error ? err.message : 'Sauvegarde impossible.')
+    } finally {
+      setSavingGa4(false)
     }
   }
 
@@ -496,6 +522,52 @@ export default function ProjectIntegrationPage() {
             >
               <RefreshCw size={13} className={manualRevalidating ? 'animate-spin' : ''} />
               Relancer la revalidation
+            </Button>
+          </div>
+        </form>
+      </FormCard>
+
+      <FormCard
+        title="Google Analytics 4"
+        description="Connectez GA4 pour afficher le trafic réel directement dans Analytics, sans repasser par la console Google."
+      >
+        <form onSubmit={handleSaveGa4} className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[12px] font-medium text-secondary">Property ID</span>
+            <input
+              value={ga4Form.property_id}
+              onChange={(event) => setGa4Form((f) => ({ ...f, property_id: event.target.value }))}
+              placeholder="ex : 123456789"
+              className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[12px] font-medium text-secondary">
+              Clé de service (JSON) {info?.ga4_configured ? '(laisser vide pour conserver)' : ''}
+            </span>
+            <textarea
+              value={ga4Form.service_account_json}
+              onChange={(event) => setGa4Form((f) => ({ ...f, service_account_json: event.target.value }))}
+              placeholder='{"type": "service_account", "project_id": "...", ...}'
+              rows={4}
+              className="rounded-[10px] border border-border bg-surface px-3 py-2 font-mono text-[12px] text-primary outline-none focus:border-accent"
+            />
+            <span className="text-[11px] text-tertiary">
+              Fichier de clé JSON d'un compte de service Google Cloud avec accès en lecture à cette propriété GA4.
+              Jamais renvoyé en clair une fois enregistré.
+            </span>
+          </label>
+          <div className="flex items-center gap-2">
+            <InfoRow icon={<Wifi size={11} />} label="Statut" value={info?.ga4_configured ? 'Connecté' : 'Non configuré'} mono={false} />
+          </div>
+          {ga4Message && (
+            <p className={`text-[12px] ${ga4Message.includes('impossible') ? 'text-danger' : 'text-success'}`}>
+              {ga4Message}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" type="submit" loading={savingGa4}>
+              Sauvegarder Google Analytics
             </Button>
           </div>
         </form>

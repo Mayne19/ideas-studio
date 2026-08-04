@@ -114,6 +114,8 @@ def connect_info(
         last_revalidated_at=info["last_revalidated_at"],
         last_revalidate_status=info["last_revalidate_status"],
         last_revalidate_error=info["last_revalidate_error"],
+        ga4_property_id=info["ga4_property_id"],
+        ga4_configured=info["ga4_configured"],
     )
 
 

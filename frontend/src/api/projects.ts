@@ -45,6 +45,8 @@ export type UpdateProjectPayload = {
   constraints?: Record<string, unknown>
   site_url?: string
   revalidate_url?: string
+  ga4_property_id?: string
+  ga4_service_account_json?: string
 }
 
 export function createProject(payload: CreateProjectPayload): Promise<Project> {
