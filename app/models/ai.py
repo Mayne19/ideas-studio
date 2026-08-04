@@ -61,12 +61,12 @@ class Agent(Base):
     key: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     label: Mapped[str] = mapped_column(Text, nullable=False)
     category: Mapped[AgentCategory] = mapped_column(
-        ENUM(AgentCategory, name="agent_category", schema="ai", create_type=False),
+        ENUM(AgentCategory, values_callable=lambda e: [m.value for m in e], name="agent_category", schema="ai", create_type=False),
         nullable=False,
     )
     phase: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[AgentRegistryStatus] = mapped_column(
-        ENUM(AgentRegistryStatus, name="agent_status", schema="ai", create_type=False),
+        ENUM(AgentRegistryStatus, values_callable=lambda e: [m.value for m in e], name="agent_status", schema="ai", create_type=False),
         nullable=False, default=AgentRegistryStatus.PLANNED,
     )
     output_json_field: Mapped[str | None] = mapped_column(Text, nullable=True)

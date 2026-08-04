@@ -135,7 +135,7 @@ class ArticleRevision(Base):
     )
     revision_no: Mapped[int] = mapped_column(Integer, nullable=False)
     source: Mapped[RevisionSource] = mapped_column(
-        ENUM(RevisionSource, name="revision_source", schema="content", create_type=False),
+        ENUM(RevisionSource, values_callable=lambda e: [m.value for m in e], name="revision_source", schema="content", create_type=False),
         nullable=False, default=RevisionSource.AI,
     )
     title: Mapped[str] = mapped_column(Text, nullable=False)
@@ -201,7 +201,7 @@ class ArticleKeyword(Base):
         UUID(as_uuid=False), ForeignKey("content.keywords.id", ondelete="CASCADE"), primary_key=True
     )
     role: Mapped[KeywordRole] = mapped_column(
-        ENUM(KeywordRole, name="keyword_role", schema="content", create_type=False),
+        ENUM(KeywordRole, values_callable=lambda e: [m.value for m in e], name="keyword_role", schema="content", create_type=False),
         nullable=False, default=KeywordRole.SECONDARY,
     )
 
@@ -221,7 +221,7 @@ class ArticleLink(Base):
         UUID(as_uuid=False), ForeignKey("content.articles.id", ondelete="CASCADE"), nullable=False
     )
     kind: Mapped[LinkKind] = mapped_column(
-        ENUM(LinkKind, name="link_kind", schema="content", create_type=False),
+        ENUM(LinkKind, values_callable=lambda e: [m.value for m in e], name="link_kind", schema="content", create_type=False),
         nullable=False,
     )
     target_article_id: Mapped[str | None] = mapped_column(
@@ -263,7 +263,7 @@ class ArticleMedia(Base):
         UUID(as_uuid=False), ForeignKey("content.media_assets.id", ondelete="CASCADE"), primary_key=True
     )
     role: Mapped[MediaRole] = mapped_column(
-        ENUM(MediaRole, name="media_role", schema="content", create_type=False),
+        ENUM(MediaRole, values_callable=lambda e: [m.value for m in e], name="media_role", schema="content", create_type=False),
         nullable=False, default=MediaRole.INLINE, primary_key=True,
     )
     position: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)

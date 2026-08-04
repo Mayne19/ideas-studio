@@ -208,7 +208,7 @@ class ProjectCredential(Base):
         UUID(as_uuid=False), ForeignKey("core.projects.id", ondelete="CASCADE"), nullable=False
     )
     kind: Mapped[CredentialKind] = mapped_column(
-        "kind", ENUM(CredentialKind, name="credential_kind", schema="core", create_type=False), nullable=False
+        "kind", ENUM(CredentialKind, values_callable=lambda e: [m.value for m in e], name="credential_kind", schema="core", create_type=False), nullable=False
     )
     label: Mapped[str] = mapped_column(Text, nullable=False)
     token_prefix: Mapped[str] = mapped_column(Text, nullable=False)
