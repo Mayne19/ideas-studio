@@ -1041,8 +1041,14 @@ class SEOGenerationOrchestrator:
             )
         self._ensure_slug(article, draft.title, draft.keyword)
 
+        from app.services.seo.content_structure_guard import clean_meta_text
+
         if not draft.meta_title:
-            meta_prompt = f"Écris un meta title SEO (max 60 car.) pour : {draft.title}. Mot-clé : {draft.keyword}"
+            meta_prompt = (
+                f"Écris un meta title SEO (max 60 caractères) pour : {draft.title}. Mot-clé : {draft.keyword}\n"
+                "Réponds UNIQUEMENT avec le meta title, sans Markdown, sans introduction, "
+                "sans analyse, sans note de longueur, une seule ligne de texte brut."
+            )
             if self.agent_router is not None:
                 from app.services.agents.agent_router import call_agent
                 meta_title, result = call_agent(
@@ -1054,13 +1060,18 @@ class SEOGenerationOrchestrator:
                     article_id=article.id,
                     temperature=0.3,
                 )
-                draft.meta_title = ((meta_title if result.status == "success" else draft.title) or draft.title)[:255]
+                raw_title = meta_title if result.status == "success" else ""
             else:
                 title_llm = self._get_agent_provider("meta_writer", writer_llm)
-                draft.meta_title = (title_llm.generate_text(meta_prompt, temperature=0.3) or draft.title)[:255]
+                raw_title = title_llm.generate_text(meta_prompt, temperature=0.3) or ""
+            draft.meta_title = clean_meta_text(raw_title, 255) or draft.title[:255]
 
         if not draft.meta_description:
-            desc_prompt = f"Écris une meta description SEO (140-160 car.) pour : {draft.title}. Mot-clé : {draft.keyword}"
+            desc_prompt = (
+                f"Écris une meta description SEO (140-160 caractères) pour : {draft.title}. Mot-clé : {draft.keyword}\n"
+                "Réponds UNIQUEMENT avec la meta description, sans Markdown, sans introduction, "
+                "sans analyse, sans note de longueur, un seul paragraphe de texte brut."
+            )
             if self.agent_router is not None:
                 from app.services.agents.agent_router import call_agent
                 meta_description, result = call_agent(
@@ -1072,10 +1083,11 @@ class SEOGenerationOrchestrator:
                     article_id=article.id,
                     temperature=0.3,
                 )
-                draft.meta_description = (meta_description if result.status == "success" else "")[:500]
+                raw_desc = meta_description if result.status == "success" else ""
             else:
                 desc_llm = self._get_agent_provider("meta_writer", writer_llm)
-                draft.meta_description = (desc_llm.generate_text(desc_prompt, temperature=0.3) or "")[:500]
+                raw_desc = desc_llm.generate_text(desc_prompt, temperature=0.3) or ""
+            draft.meta_description = clean_meta_text(raw_desc, 500)
 
         draft.excerpt = self._extract_excerpt(content)
 

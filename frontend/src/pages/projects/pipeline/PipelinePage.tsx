@@ -1100,7 +1100,7 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
                   <span className={`text-[12px] ${article.scheduled_for ? 'text-secondary' : 'text-tertiary'}`}>
                     {article.scheduled_for ? formatDate(article.scheduled_for) : '—'}
                   </span>
-                  <div className="flex flex-wrap items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex flex-wrap items-center justify-end gap-1">
                     <Button size="sm" variant="secondary" onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}>
                       Ouvrir
                     </Button>

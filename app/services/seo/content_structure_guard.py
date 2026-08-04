@@ -91,3 +91,43 @@ def apply_structure_guards(content: str, title: str | None) -> str:
     content = strip_duplicate_h1(content, title)
     content = fix_heading_hierarchy(content)
     return content
+
+
+_MARKDOWN_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
+_PARENTHETICAL_NOTE_RE = re.compile(r"\s*\([^)]*\bcaractères?\b[^)]*\)\s*$", re.IGNORECASE)
+
+
+def clean_meta_text(raw: str | None, max_length: int) -> str:
+    """Isole la vraie meta value d'une réponse LLM qui inclut souvent son
+    raisonnement complet malgré la consigne ("Écris un meta title...") — un
+    prompt sans contrainte de format explicite laisse le modèle répondre avec
+    une intro ("Voici une proposition..."), le résultat en gras Markdown, puis
+    une analyse ("**Analyse :**\n* Longueur : ..."), observé en production sur
+    meta_title et meta_description. La ligne en gras (**...**) est presque
+    toujours le vrai contenu demandé dans ce genre de réponse structurée —
+    priorité sur elle ; à défaut, repli sur la première ligne de contenu qui
+    n'est ni une intro/en-tête d'analyse ni une puce."""
+    if not raw:
+        return ""
+    lines = [line.strip() for line in raw.strip().splitlines() if line.strip()]
+
+    bold_match = re.search(r"\*\*(.+?)\*\*", raw, re.DOTALL)
+    if bold_match:
+        candidate = _PARENTHETICAL_NOTE_RE.sub("", bold_match.group(1).strip())
+        candidate = candidate.strip(" \"'")
+        if candidate:
+            return candidate[:max_length]
+
+    for line in lines:
+        if line in ("---", "***"):
+            continue
+        if re.match(r"^(\*\*)?(voici|analyse|longueur|mot-clé|note)\s*[:.]?", line, re.IGNORECASE):
+            continue
+        if line.startswith(("*", "-", "•")):
+            continue
+        cleaned = _MARKDOWN_BOLD_RE.sub(r"\1", line)
+        cleaned = _PARENTHETICAL_NOTE_RE.sub("", cleaned)
+        cleaned = cleaned.strip(" \"'")
+        if cleaned:
+            return cleaned[:max_length]
+    return ""
