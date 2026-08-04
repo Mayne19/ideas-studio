@@ -46,6 +46,7 @@ from app.services.seo.editorial_quality_gate import check_editorial_quality_dict
 from app.services.seo.seo_final_checklist_service import check_seo_final_dict
 from app.services.seo.seo_review_service import build_aggregated_seo_review, build_review_error_report, run_and_store_seo_review
 from app.services.seo.generation_report_service import build_generation_report_dict
+from app.services.seo.error_manager_service import analyze_generation_errors
 from app.services.seo.adapters.serp_adapter import serp_adapter
 from app.services.seo.adapters.trends_adapter import trends_adapter
 from app.services.seo.adapters.image_sourcing_adapter import image_sourcing_adapter
@@ -1441,6 +1442,13 @@ class SEOGenerationOrchestrator:
         cost_data = self._get_article_cost_data(article.id)
 
         try:
+            error_analysis = analyze_generation_errors(self.errors, self.steps_completed)
+            self._save(article.id, "error_analysis", error_analysis)
+        except Exception as exc:
+            error_analysis = None
+            self._error("ErrorManager", str(exc))
+
+        try:
             report = build_generation_report_dict(
                 provider=self.llm.provider_name,
                 model=self.llm.model_name or "",
@@ -1470,6 +1478,7 @@ class SEOGenerationOrchestrator:
                 errors=self.errors,
                 limitations=self.limitations,
                 final_status=article.status_reason_id,
+                error_analysis=error_analysis,
                 **cost_data,
             )
             self._save(article.id, "generation_report", report)

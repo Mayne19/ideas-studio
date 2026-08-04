@@ -274,6 +274,7 @@ class GenerationReport:
     errors: list[str] = field(default_factory=list)
     limitations: list[str] = field(default_factory=list)
     final_status: str = "draft_ready"
+    error_analysis: dict | None = None
     # Cost tracking
     estimated_cost_eur: float | None = None
     actual_cost_eur: float | None = None

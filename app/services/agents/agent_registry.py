@@ -539,8 +539,9 @@ AGENTS: list[AgentDef] = [
         phase="final",
         requires_llm=False,
         icon="alert-circle",
-        status=AgentStatus.not_implemented,
-        output_json_field=None,
+        status=AgentStatus.active,
+        implementation_ref="error_manager_service.analyze_generation_errors",
+        output_json_field="error_analysis_json",
     ),
     AgentDef(
         agent_id="generation_report_builder",

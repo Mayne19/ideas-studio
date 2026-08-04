@@ -32,6 +32,7 @@ def build_generation_report(
     errors: list[str] | None = None,
     limitations: list[str] | None = None,
     final_status: str = "draft_ready",
+    error_analysis: dict | None = None,
     # Cost tracking
     estimated_cost_eur: float | None = None,
     actual_cost_eur: float | None = None,
@@ -70,6 +71,7 @@ def build_generation_report(
         errors=errors or [],
         limitations=limitations or [],
         final_status=final_status,
+        error_analysis=error_analysis,
         estimated_cost_eur=estimated_cost_eur,
         actual_cost_eur=actual_cost_eur,
         cost_limit_eur=cost_limit_eur,
