@@ -7,6 +7,7 @@ from app.services.providers.llm_provider import (
     LLMProvider,
     ProviderUnavailableError,
     parse_openai_usage,
+    run_with_deadline,
 )
 
 
@@ -47,57 +48,72 @@ class OpenAILLMProvider(LLMProvider):
             "temperature": temperature,
         }
 
-        last_error: Exception | None = None
         self.last_usage = None
-        for attempt in range(self.max_retries + 1):
-            try:
-                resp = httpx.post(
-                    f"{self.base_url}/chat/completions",
-                    json=payload,
-                    headers=self._headers(),
-                    timeout=self.timeout_seconds,
-                )
-                if resp.status_code == 429 and attempt < self.max_retries:
-                    delay = 3 * (2 ** attempt)
-                    time.sleep(delay)
-                    continue
-                resp.raise_for_status()
-                data = resp.json()
-                self.last_usage = parse_openai_usage(data)
-                content = data["choices"][0]["message"]["content"]
-                if content is None:
-                    raise ProviderUnavailableError(
-                        f"Provider {self.provider_name} model {self.model} a retourné content=null "
-                        "(mode raisonnement activé sans réponse textuelle)."
-                    )
-                return content.strip()
-            except ProviderUnavailableError:
-                raise
-            except httpx.HTTPStatusError as exc:
-                detail = ""
-                try:
-                    detail = exc.response.json().get("error", {}).get("message", exc.response.text)
-                except Exception:
-                    detail = exc.response.text[:200]
-                last_error = ProviderUnavailableError(
-                    f"Provider {self.provider_name} (HTTP {exc.response.status_code}): {detail}"
-                )
-                if attempt < self.max_retries:
-                    time.sleep(3 * (2 ** attempt))
-            except httpx.TimeoutException:
-                last_error = ProviderUnavailableError(
-                    f"Provider {self.provider_name} model {self.model} : timeout après {self.timeout_seconds}s"
-                )
-                if attempt < self.max_retries:
-                    time.sleep(3 * (2 ** attempt))
-            except Exception as exc:
-                last_error = ProviderUnavailableError(
-                    f"Provider IA indisponible ({self.provider_name}): {exc}"
-                )
-                break
 
-        raise last_error or ProviderUnavailableError(
-            f"Provider {self.provider_name} indisponible après {self.max_retries + 1} tentative(s)."
+        def _do_request() -> str:
+            last_error: Exception | None = None
+            for attempt in range(self.max_retries + 1):
+                try:
+                    resp = httpx.post(
+                        f"{self.base_url}/chat/completions",
+                        json=payload,
+                        headers=self._headers(),
+                        timeout=self.timeout_seconds,
+                    )
+                    if resp.status_code == 429 and attempt < self.max_retries:
+                        delay = 3 * (2 ** attempt)
+                        time.sleep(delay)
+                        continue
+                    resp.raise_for_status()
+                    data = resp.json()
+                    self.last_usage = parse_openai_usage(data)
+                    content = data["choices"][0]["message"]["content"]
+                    if content is None:
+                        raise ProviderUnavailableError(
+                            f"Provider {self.provider_name} model {self.model} a retourné content=null "
+                            "(mode raisonnement activé sans réponse textuelle)."
+                        )
+                    return content.strip()
+                except ProviderUnavailableError:
+                    raise
+                except httpx.HTTPStatusError as exc:
+                    detail = ""
+                    try:
+                        detail = exc.response.json().get("error", {}).get("message", exc.response.text)
+                    except Exception:
+                        detail = exc.response.text[:200]
+                    last_error = ProviderUnavailableError(
+                        f"Provider {self.provider_name} (HTTP {exc.response.status_code}): {detail}"
+                    )
+                    if attempt < self.max_retries:
+                        time.sleep(3 * (2 ** attempt))
+                except httpx.TimeoutException:
+                    last_error = ProviderUnavailableError(
+                        f"Provider {self.provider_name} model {self.model} : timeout après {self.timeout_seconds}s"
+                    )
+                    if attempt < self.max_retries:
+                        time.sleep(3 * (2 ** attempt))
+                except Exception as exc:
+                    last_error = ProviderUnavailableError(
+                        f"Provider IA indisponible ({self.provider_name}): {exc}"
+                    )
+                    break
+
+            raise last_error or ProviderUnavailableError(
+                f"Provider {self.provider_name} indisponible après {self.max_retries + 1} tentative(s)."
+            )
+
+        # Plafond absolu sur l'ensemble des tentatives : httpx.post(timeout=N)
+        # applique N secondes par phase réseau (connexion/lecture/écriture),
+        # jamais un total — un serveur qui répond par à-coups sans jamais
+        # rester silencieux plus de N secondes d'affilée peut bloquer l'appel
+        # indéfiniment sans jamais lever httpx.TimeoutException (observé en
+        # production : appel Gemini resté suspendu 22+ minutes sans erreur).
+        deadline_seconds = self.timeout_seconds * (self.max_retries + 1) + 30
+        return run_with_deadline(
+            _do_request,
+            seconds=deadline_seconds,
+            message=f"Provider {self.provider_name} model {self.model} : aucune réponse après {deadline_seconds}s (deadline absolue)",
         )
 
     def generate_json(self, prompt: str, schema_hint: str | None = None):

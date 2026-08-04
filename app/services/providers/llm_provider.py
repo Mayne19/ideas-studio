@@ -1,5 +1,6 @@
 import json
 import logging
+import threading
 from abc import ABC, abstractmethod
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -9,6 +10,47 @@ logger = logging.getLogger(__name__)
 
 class ProviderUnavailableError(RuntimeError):
     """Raised when a real LLM provider cannot be reached."""
+
+
+class ProviderTimeoutError(ProviderUnavailableError):
+    """Raised when a provider call exceeds its absolute wall-clock deadline."""
+
+
+def run_with_deadline(fn, args=(), kwargs=None, *, seconds: int, message: str):
+    """httpx.post(timeout=N) applique N secondes à CHAQUE phase (connexion,
+    écriture, lecture, pool) séparément, jamais un plafond total : un serveur
+    qui répond en filet continu sans jamais rester silencieux plus de N
+    secondes d'affilée peut donc bloquer un appel indéfiniment sans jamais
+    déclencher httpx.TimeoutException (observé en production : un appel
+    Gemini resté suspendu 22+ minutes sans aucune erreur, exécuté par le
+    scheduler APScheduler).
+
+    signal.alarm garantirait une interruption dure mais ne fonctionne que
+    sur le thread principal — or APScheduler (BackgroundScheduler) exécute
+    tous ses jobs dans des threads secondaires, où signal.alarm lève
+    ValueError. On exécute donc l'appel dans un thread démon avec deadline :
+    si le thread ne s'est pas terminé après `seconds`, on abandonne et on
+    lève ProviderTimeoutError — le thread bloqué est laissé mourir en
+    arrière-plan (thread démon, ne retient pas le process) plutôt que d'être
+    tué de force, ce que Python ne permet pas nativement."""
+    kwargs = kwargs or {}
+    result: dict = {}
+
+    def _target():
+        try:
+            result["value"] = fn(*args, **kwargs)
+        except BaseException as exc:  # noqa: BLE001 - relayé tel quel au thread appelant
+            result["error"] = exc
+
+    thread = threading.Thread(target=_target, daemon=True)
+    thread.start()
+    thread.join(timeout=seconds)
+
+    if thread.is_alive():
+        raise ProviderTimeoutError(message)
+    if "error" in result:
+        raise result["error"]
+    return result.get("value")
 
 
 class GenerationFailedError(RuntimeError):
@@ -161,6 +203,7 @@ class OllamaLLMProvider(LLMProvider):
         if not self._ensure_model():
             raise ProviderUnavailableError(self._last_error or "Aucun modèle Ollama disponible")
         self.last_usage = None
+        deadline_seconds = self.timeout_seconds + 30
         try:
             messages: list[dict[str, str]] = []
             if system:
@@ -172,7 +215,13 @@ class OllamaLLMProvider(LLMProvider):
                 "stream": False,
                 "options": {"temperature": temperature},
             }
-            resp = httpx.post(f"{self.base_url}/api/chat", json=payload, timeout=self.timeout_seconds, headers=self._auth_headers)
+            resp = run_with_deadline(
+                httpx.post,
+                (f"{self.base_url}/api/chat",),
+                {"json": payload, "timeout": self.timeout_seconds, "headers": self._auth_headers},
+                seconds=deadline_seconds,
+                message=f"Ollama modèle {self.model} : aucune réponse après {deadline_seconds}s (deadline absolue)",
+            )
             if resp.status_code == 404:
                 raise ProviderUnavailableError(
                     f"Modèle Ollama '{self.model}' non trouvé. Lancez: ollama pull {self.model}"
@@ -188,6 +237,8 @@ class OllamaLLMProvider(LLMProvider):
             if not content:
                 raise ProviderUnavailableError("Ollama a retourné une réponse vide")
             return content.strip()
+        except ProviderTimeoutError:
+            raise
         except ProviderUnavailableError:
             raise
         except httpx.ConnectError:
