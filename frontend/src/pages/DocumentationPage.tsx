@@ -921,22 +921,31 @@ export default function DocumentationPage() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Highlight the section currently in view in the right-hand outline.
+  // Highlight the section currently in view in the right-hand outline: the
+  // active heading is the last one whose top has scrolled past the sticky
+  // header, defaulting to the first heading of the chapter.
   useEffect(() => {
     const container = contentRef.current
     if (!container) return
-    const headings = Array.from(container.querySelectorAll('h2[id], h3[id]'))
+    const headings = Array.from(container.querySelectorAll('h2[id], h3[id]')) as HTMLElement[]
     if (headings.length === 0) return
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) setActiveSectionId(entry.target.id)
-        })
-      },
-      { rootMargin: '-96px 0px -70% 0px', threshold: 0 },
-    )
-    headings.forEach((h) => observer.observe(h))
-    return () => observer.disconnect()
+
+    function updateActiveSection() {
+      const offset = 96
+      let currentId = headings[0]?.id ?? null
+      for (const heading of headings) {
+        if (heading.getBoundingClientRect().top - offset <= 0) {
+          currentId = heading.id
+        } else {
+          break
+        }
+      }
+      setActiveSectionId(currentId)
+    }
+
+    updateActiveSection()
+    window.addEventListener('scroll', updateActiveSection, { passive: true })
+    return () => window.removeEventListener('scroll', updateActiveSection)
   }, [activeChapterId])
 
   // Scroll to a specific heading once its chapter has rendered.
@@ -1171,16 +1180,20 @@ export default function DocumentationPage() {
         <aside className="hidden xl:block border-l border-border min-h-[calc(100vh-56px)]">
           <div className="sticky top-14 py-6 pl-4">
             <p className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-tertiary">Sur cette page</p>
-            <nav className="flex flex-col gap-0.5 border-l border-border pl-4">
+            <nav className="flex flex-col gap-0.5">
               {outline.map((item) => {
                 const isActive = activeSectionId === item.id
                 return (
                   <a
                     key={item.id}
                     href={`#${item.id}`}
-                    className={`py-1 text-[14px] transition-colors ${item.depth === 3 ? 'pl-3' : ''} ${
-                      isActive ? 'font-medium text-accent' : item.depth === 3 ? 'text-tertiary' : 'text-secondary'
-                    } hover:text-primary`}
+                    className={`border-l-2 py-1.5 text-[14px] transition-colors duration-200 ${
+                      item.depth === 3 ? 'pl-6' : 'pl-4'
+                    } ${
+                      isActive
+                        ? 'border-accent font-medium text-accent'
+                        : `border-border hover:border-border-strong hover:text-primary ${item.depth === 3 ? 'text-tertiary' : 'text-secondary'}`
+                    }`}
                   >
                     {item.label}
                   </a>
