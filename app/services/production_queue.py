@@ -140,8 +140,13 @@ def write_queued_article(article_id: str, project_id: str) -> dict:
     from app.services.providers.search_provider import get_search_provider
     from app.services.agents.agent_router import get_agent_router
     from app.services.seo.seo_generation_orchestrator import WritingCancelledError, generate_full_article
+    from app.core.database import set_current_project_id
 
     db = SessionLocal()
+    # Thread dédié (ThreadPoolExecutor) : le contexte project_id du thread
+    # appelant ne se propage pas automatiquement, on le repose ici depuis le
+    # paramètre déjà reçu, avant toute requête RLS.
+    set_current_project_id(project_id)
     try:
         article = db.get(Article, article_id)
         if not article:
@@ -223,6 +228,7 @@ def write_queued_article(article_id: str, project_id: str) -> dict:
                 db.commit()
             return {"id": article_id, "status": "failed", "error": str(exc)}
     finally:
+        set_current_project_id(None)
         db.close()
 
 
