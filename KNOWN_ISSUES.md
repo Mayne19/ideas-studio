@@ -79,18 +79,6 @@
 
 ---
 
-### [KI-006] — Migrations SQLite vs PostgreSQL : différences de comportement non testées
-
-- **Priorité** : 🟠 HAUTE
-- **Description** : Les tests s'exécutent sur SQLite mais la production tourne sur PostgreSQL. Certains comportements diffèrent (JSONB, ILIKE, types booléens, auto-increment).
-- **Impact** : Risque de bug en production non détectable par les tests locaux
-- **Fichiers concernés** : `tests/conftest.py`, `alembic/versions/`
-- **Solution envisagée** : Configurer un job CI qui exécute les tests sur PostgreSQL ; ou utiliser un PostgreSQL local pour les tests de staging
-- **État** : Ouvert — risque accepté en V1, à traiter avant montée en charge
-- **Date découverte** : 2026-06-26
-
----
-
 ### [KI-007] — Refresh token absent — sessions de 24h max
 
 - **Priorité** : 🟡 MOYENNE
@@ -128,3 +116,7 @@
 ### [KI-RES-003] — Erreurs revalidation remontées dans canal SEO éditeur → [RÉSOLU 2026-06]
 
 - **Solution** : Séparation des canaux d'erreur réseau vs SEO → voir LL-005
+
+### [KI-RES-004] — Migrations SQLite vs PostgreSQL : différences de comportement non testées → [RÉSOLU 2026-08]
+
+- **Solution** : Migration complète vers PostgreSQL (schéma v3) en développement, test et production — SQLite n'est plus supporté (`Settings.database_url_must_be_postgres` rejette toute autre valeur hors `APP_ENV=test`). Le risque de divergence de comportement entre les deux moteurs a disparu puisqu'il n'y a plus qu'un seul moteur.
