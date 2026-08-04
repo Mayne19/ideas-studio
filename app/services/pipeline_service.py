@@ -203,6 +203,8 @@ def _model_to_settings(pipe: Pipeline, db: Session | None = None) -> PipelineSet
         enabled=pipe.is_enabled,
         active_days=schedule.get("active_days", []),
         launch_hour=schedule.get("launch_hour", 8),
+        ideas_frequency=schedule.get("ideas_frequency", "monthly"),
+        launch_day=schedule.get("launch_day"),
         ideas_day_of_month=schedule.get("ideas_day_of_month"),
         publish_hour_start=schedule.get("publish_hour_start", 8),
         publish_hour_end=schedule.get("publish_hour_end", 10),
@@ -243,6 +245,8 @@ def get_pipeline(db: Session, project_id: str) -> PipelineSettingsPublic | None:
             enabled=False,
             active_days=[],
             launch_hour=8,
+            ideas_frequency="monthly",
+            launch_day=None,
             ideas_day_of_month=None,
             publish_hour_start=8,
             publish_hour_end=10,
@@ -264,8 +268,9 @@ def get_pipeline(db: Session, project_id: str) -> PipelineSettingsPublic | None:
 
 
 _SCHEDULE_FIELDS = {
-    "active_days", "launch_hour", "ideas_day_of_month", "publish_hour_start",
-    "publish_hour_end", "category_priorities", "launch_hours", "paused_indefinitely",
+    "active_days", "launch_hour", "ideas_frequency", "launch_day", "ideas_day_of_month",
+    "publish_hour_start", "publish_hour_end", "category_priorities", "launch_hours",
+    "paused_indefinitely",
 }
 _PIPELINE_FIELD_MAP = {
     "enabled": "is_enabled",

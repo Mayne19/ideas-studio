@@ -8,6 +8,8 @@ export type PipelineSettings = {
   enabled: boolean
   active_days: string[]
   launch_hour: number
+  ideas_frequency: 'daily' | 'weekly' | 'monthly' | 'quarterly'
+  launch_day: number | null
   ideas_day_of_month: number | null
   publish_hour_start: number
   publish_hour_end: number
@@ -33,6 +35,8 @@ export type PipelineSettingsUpdate = {
   max_parallel_writing_jobs?: number
   active_days?: string[]
   launch_hour?: number
+  ideas_frequency?: 'daily' | 'weekly' | 'monthly' | 'quarterly'
+  launch_day?: number | null
   ideas_day_of_month?: number | null
   publish_hour_start?: number
   publish_hour_end?: number

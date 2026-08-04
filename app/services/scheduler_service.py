@@ -1,11 +1,12 @@
+from datetime import datetime, timedelta, timezone
 from math import ceil
 
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
 from app.models.core import Project
-from app.models.ai import Pipeline
-from app.models.reference import ProjectStatus
+from app.models.ai import Pipeline, PipelineRun
+from app.models.reference import ProjectStatus, RunStatus
 from app.services.optimization_engine import review_published_articles
 from app.services.notification_service import create_notification
 from app.services.log_service import log_step
@@ -13,6 +14,54 @@ from app.services.idea_engine import generate_idea
 from app.services.providers.llm_provider import get_llm_provider
 from app.services.providers.search_provider import get_search_provider
 from app.core.config import settings
+
+
+def is_generation_due(schedule: dict, now: datetime) -> bool:
+    """Le déclenchement de la génération d'idées est strictement piloté par la
+    configuration utilisateur (ideas_frequency + launch_day + launch_hour) —
+    aucune génération ne doit avoir lieu en dehors de cette échéance précise.
+    Voir PipelineSettingsUpdate.ideas_frequency pour la sémantique de launch_day."""
+    frequency = schedule.get("ideas_frequency") or ("monthly" if schedule.get("ideas_day_of_month") else None)
+    launch_hour = schedule.get("launch_hour")
+    if frequency is None or launch_hour is None or launch_hour != now.hour:
+        return False
+
+    if frequency == "daily":
+        return True
+
+    launch_day = schedule.get("launch_day", schedule.get("ideas_day_of_month"))
+    if launch_day is None:
+        return False
+
+    if frequency == "weekly":
+        return now.weekday() == launch_day
+    if frequency == "monthly":
+        return now.day == launch_day
+    if frequency == "quarterly":
+        return now.day == launch_day and now.month in (1, 4, 7, 10)
+    return False
+
+
+def _generation_window_start(schedule: dict, now: datetime) -> datetime:
+    """Début de la fenêtre d'échéance courante, pour l'anti-double-exécution :
+    une seule génération par échéance, même si le job cron tourne plusieurs
+    fois pendant l'heure ou si le process redémarre."""
+    frequency = schedule.get("ideas_frequency") or "monthly"
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    if frequency == "daily":
+        return today_start
+    return today_start - timedelta(hours=1)  # weekly/monthly/quarterly : une occurrence par jour suffit
+
+
+def generation_already_ran(db: Session, project_id: str, schedule: dict, now: datetime) -> bool:
+    window_start = _generation_window_start(schedule, now)
+    return db.execute(
+        select(PipelineRun.id).where(
+            PipelineRun.project_id == project_id,
+            PipelineRun.started_at >= window_start,
+            PipelineRun.status_reason_id.in_((RunStatus.QUEUED, RunStatus.RUNNING, RunStatus.SUCCEEDED)),
+        ).limit(1)
+    ).scalar_one_or_none() is not None
 
 
 def generate_daily_ideas(db: Session) -> dict:

@@ -11,6 +11,10 @@ from app.services.log_service import log_step
 logger = logging.getLogger(__name__)
 
 WRITING_STALE_MINUTES = 30
+# Au-delà de ce nombre de reprises automatiques sur les dernières 24h, on
+# arrête d'insister : l'échec est probablement réel (pas un simple crash
+# serveur/déploiement), l'article repasse en FAILED pour relance manuelle.
+MAX_AUTO_REQUEUE_ATTEMPTS = 3
 
 
 def _latest_run(db: Session, article_id: str) -> WorkflowRun | None:
@@ -49,8 +53,20 @@ def send_to_production(db: Session, article_id: str) -> Article | None:
     return article
 
 
+def _recent_requeue_attempts(db: Session, article_id: str) -> int:
+    since = datetime.now(timezone.utc) - timedelta(hours=24)
+    return len(db.execute(
+        select(WorkflowRun.id).where(
+            WorkflowRun.article_id == article_id,
+            WorkflowRun.started_at >= since,
+        )
+    ).scalars().all())
+
+
 def requeue_stale_writing(db: Session, project_id: str, minutes: int = WRITING_STALE_MINUTES) -> int:
-    """Remet en file les rédactions bloquées (writing_in_progress sans update depuis X minutes)."""
+    """Remet en file les rédactions bloquées (writing_in_progress sans update depuis X minutes).
+    Après MAX_AUTO_REQUEUE_ATTEMPTS tentatives sur 24h, bascule en FAILED
+    plutôt que de reprendre indéfiniment un article qui échoue réellement."""
     threshold = datetime.now(timezone.utc) - timedelta(minutes=minutes)
     stale = db.execute(
         select(Article).where(
@@ -60,9 +76,18 @@ def requeue_stale_writing(db: Session, project_id: str, minutes: int = WRITING_S
         )
     ).scalars().all()
     for article in stale:
+        title = article.current_revision.title if article.current_revision else ""
+        if _recent_requeue_attempts(db, article.id) >= MAX_AUTO_REQUEUE_ATTEMPTS:
+            set_article_status(article, ArticleStatus.FAILED)
+            article.updated_at = datetime.now(timezone.utc)
+            log_step(
+                db, project_id,
+                f"Rédaction bloquée après {MAX_AUTO_REQUEUE_ATTEMPTS} tentatives automatiques, marquée en échec : {title}",
+                level="error", step="writing_queue", article_id=article.id,
+            )
+            continue
         set_article_status(article, ArticleStatus.WRITING_REQUESTED)
         article.updated_at = datetime.now(timezone.utc)
-        title = article.current_revision.title if article.current_revision else ""
         log_step(
             db, project_id,
             f"Rédaction bloquée depuis plus de {minutes} min, remise en file : {title}",

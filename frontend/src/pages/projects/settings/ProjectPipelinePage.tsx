@@ -12,6 +12,21 @@ import { useProject } from '@/context/ProjectContext'
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1)
+const WEEKDAYS = [
+  { value: 0, label: 'Lundi' },
+  { value: 1, label: 'Mardi' },
+  { value: 2, label: 'Mercredi' },
+  { value: 3, label: 'Jeudi' },
+  { value: 4, label: 'Vendredi' },
+  { value: 5, label: 'Samedi' },
+  { value: 6, label: 'Dimanche' },
+]
+const FREQUENCIES: Array<{ value: 'daily' | 'weekly' | 'monthly' | 'quarterly'; label: string }> = [
+  { value: 'daily', label: 'Chaque jour' },
+  { value: 'weekly', label: 'Chaque semaine' },
+  { value: 'monthly', label: 'Chaque mois' },
+  { value: 'quarterly', label: 'Chaque trimestre' },
+]
 
 function hourLabel(h: number): string {
   return `${String(h).padStart(2, '0')}h00`
@@ -48,7 +63,8 @@ export default function ProjectPipelinePage() {
   // Editable local state
   const [enabled, setEnabled] = useState(false)
   const [launchHour, setLaunchHour] = useState(8)
-  const [ideasDayOfMonth, setIdeasDayOfMonth] = useState(25)
+  const [ideasFrequency, setIdeasFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'quarterly'>('monthly')
+  const [launchDay, setLaunchDay] = useState(25)
   const [publishHourStart, setPublishHourStart] = useState(8)
   const [publishHourEnd, setPublishHourEnd] = useState(10)
   const [costLimitPerArticle, setCostLimitPerArticle] = useState('')
@@ -66,7 +82,8 @@ export default function ProjectPipelinePage() {
         setEnabled(s.enabled)
         setSettings(s)
         setLaunchHour(s.launch_hour)
-        setIdeasDayOfMonth(s.ideas_day_of_month ?? 25)
+        setIdeasFrequency(s.ideas_frequency ?? 'monthly')
+        setLaunchDay(s.launch_day ?? s.ideas_day_of_month ?? 25)
         setPublishHourStart(s.publish_hour_start ?? 8)
         setPublishHourEnd(s.publish_hour_end ?? 10)
         setCostLimitPerArticle(s.cost_limit_per_article_eur == null ? '' : String(s.cost_limit_per_article_eur))
@@ -97,7 +114,9 @@ export default function ProjectPipelinePage() {
       const updated = await updatePipelineSettings(projectId, {
         enabled,
         launch_hour: launchHour,
-        ideas_day_of_month: ideasDayOfMonth,
+        ideas_frequency: ideasFrequency,
+        launch_day: ideasFrequency === 'daily' ? null : launchDay,
+        ideas_day_of_month: ideasFrequency === 'monthly' || ideasFrequency === 'quarterly' ? launchDay : null,
         publish_hour_start: publishHourStart,
         publish_hour_end: publishHourEnd,
         cost_limit_per_article_eur: costLimitPerArticle.trim() === '' ? null : Number(costLimitPerArticle),
@@ -210,17 +229,45 @@ export default function ProjectPipelinePage() {
           <div className="mb-4">
             <p className="mb-1.5 text-[12px] font-medium text-secondary">Génération des idées</p>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[12px] text-tertiary">Le</span>
               <select
-                value={ideasDayOfMonth}
-                onChange={(e) => { setIdeasDayOfMonth(Number(e.target.value)); setDirty(true) }}
+                value={ideasFrequency}
+                onChange={(e) => { setIdeasFrequency(e.target.value as typeof ideasFrequency); setDirty(true) }}
                 className="h-9 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
               >
-                {DAYS.map((d) => (
-                  <option key={d} value={d}>{d}</option>
+                {FREQUENCIES.map((f) => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
                 ))}
               </select>
-              <span className="text-[12px] text-tertiary">de chaque mois à</span>
+              {ideasFrequency === 'weekly' && (
+                <>
+                  <span className="text-[12px] text-tertiary">le</span>
+                  <select
+                    value={launchDay}
+                    onChange={(e) => { setLaunchDay(Number(e.target.value)); setDirty(true) }}
+                    className="h-9 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
+                  >
+                    {WEEKDAYS.map((d) => (
+                      <option key={d.value} value={d.value}>{d.label}</option>
+                    ))}
+                  </select>
+                </>
+              )}
+              {(ideasFrequency === 'monthly' || ideasFrequency === 'quarterly') && (
+                <>
+                  <span className="text-[12px] text-tertiary">le</span>
+                  <select
+                    value={launchDay}
+                    onChange={(e) => { setLaunchDay(Number(e.target.value)); setDirty(true) }}
+                    className="h-9 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
+                  >
+                    {DAYS.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                  <span className="text-[12px] text-tertiary">{ideasFrequency === 'quarterly' ? 'de chaque trimestre (jan/avr/jui/oct)' : 'de chaque mois'}</span>
+                </>
+              )}
+              <span className="text-[12px] text-tertiary">à</span>
               <select
                 value={launchHour}
                 onChange={(e) => { setLaunchHour(Number(e.target.value)); setDirty(true) }}
@@ -231,6 +278,9 @@ export default function ProjectPipelinePage() {
                 ))}
               </select>
             </div>
+            <p className="mt-1.5 text-[11px] text-tertiary">
+              La génération se déclenche une seule fois, exactement à cette échéance — jamais en dehors.
+            </p>
           </div>
 
           {/* Plage de publication */}

@@ -5,10 +5,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy import select
 from app.core.database import SessionLocal
-from app.models.core import Project
-from app.models.ai import Pipeline, PipelineRun
-from app.models.reference import RunStatus
-from app.services.scheduler_service import run_daily_project_tasks
+from app.models.ai import Pipeline
+from app.services.scheduler_service import is_generation_due, generation_already_ran
 from app.services.pipeline_service import run_pipeline
 
 logger = logging.getLogger(__name__)
@@ -43,34 +41,11 @@ def check_scheduled_publications():
         db.close()
 
 
-def run_daily_tasks():
-    """Run daily tasks for all active projects."""
-    db = SessionLocal()
-    try:
-        projects = db.execute(select(Project)).scalars().all()
-        for project in projects:
-            try:
-                run_daily_project_tasks(db, project.id)
-                logger.info("Daily tasks completed for project %s", project.id)
-            except Exception as e:
-                logger.error("Daily tasks failed for project %s: %s", project.id, e)
-    finally:
-        db.close()
-
-
-def _pipeline_already_ran_today(db, project_id: str) -> bool:
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    return db.execute(
-        select(PipelineRun.id).where(
-            PipelineRun.project_id == project_id,
-            PipelineRun.started_at >= today_start,
-            PipelineRun.status_reason_id.in_((RunStatus.QUEUED, RunStatus.RUNNING, RunStatus.SUCCEEDED)),
-        ).limit(1)
-    ).scalar_one_or_none() is not None
-
-
-def check_monthly_idea_generation():
-    """Trigger idea generation for pipelines configured for a specific day of month."""
+def check_scheduled_idea_generation():
+    """Déclenche la génération d'idées uniquement pour les projets dont
+    l'échéance configurée (ideas_frequency + launch_day + launch_hour, voir
+    app.services.scheduler_service.is_generation_due) correspond exactement à
+    maintenant. Aucune génération en dehors de cette échéance précise."""
     db = SessionLocal()
     try:
         now = datetime.now(timezone.utc)
@@ -81,48 +56,20 @@ def check_monthly_idea_generation():
             # run_pipeline committe et expire la session : recharger avant tout accès aux attributs
             db.refresh(pipeline)
             schedule = pipeline.schedule or {}
-            ideas_day_of_month = schedule.get("ideas_day_of_month")
-            launch_hour = schedule.get("launch_hour")
-            if ideas_day_of_month is None or ideas_day_of_month != now.day:
+            if not is_generation_due(schedule, now):
                 continue
-            if launch_hour is None or launch_hour != now.hour:
-                continue
-            if _pipeline_already_ran_today(db, pipeline.project_id):
+            if generation_already_ran(db, pipeline.project_id, schedule, now):
                 continue
             try:
                 result = run_pipeline(db, pipeline.project_id)
                 logger.info(
-                    "Monthly pipeline run for project %s: %s ideas, %s articles",
+                    "Scheduled pipeline run for project %s: %s ideas, %s articles",
                     pipeline.project_id,
                     result.get("ideas_generated", 0),
                     result.get("articles_created", 0),
                 )
             except Exception as e:
-                logger.error("Monthly pipeline failed for project %s: %s", pipeline.project_id, e)
-    finally:
-        db.close()
-
-
-def run_pipelines():
-    """Run automated pipelines for projects with pipeline enabled."""
-    db = SessionLocal()
-    try:
-        pipelines = db.execute(select(Pipeline).where(Pipeline.is_enabled.is_(True))).scalars().all()
-        for pipeline in pipelines:
-            # run_pipeline committe et expire la session : recharger avant tout accès aux attributs
-            db.refresh(pipeline)
-            if _pipeline_already_ran_today(db, pipeline.project_id):
-                continue
-            try:
-                result = run_pipeline(db, pipeline.project_id)
-                logger.info(
-                    "Pipeline run for project %s: %s ideas, %s articles",
-                    pipeline.project_id,
-                    result.get("ideas_generated", 0),
-                    result.get("articles_created", 0),
-                )
-            except Exception as e:
-                logger.error("Pipeline failed for project %s: %s", pipeline.project_id, e)
+                logger.error("Scheduled pipeline failed for project %s: %s", pipeline.project_id, e)
     finally:
         db.close()
 
@@ -168,23 +115,9 @@ def start_scheduler():
     )
 
     scheduler.add_job(
-        run_daily_tasks,
-        trigger=CronTrigger(hour=6, minute=0),
-        id="run_daily_tasks",
-        replace_existing=True,
-    )
-
-    scheduler.add_job(
-        run_pipelines,
+        check_scheduled_idea_generation,
         trigger=CronTrigger(minute="0"),
-        id="run_pipelines",
-        replace_existing=True,
-    )
-
-    scheduler.add_job(
-        check_monthly_idea_generation,
-        trigger=CronTrigger(minute="0"),
-        id="check_monthly_idea_generation",
+        id="check_scheduled_idea_generation",
         replace_existing=True,
     )
 
@@ -198,7 +131,7 @@ def start_scheduler():
     )
 
     scheduler.start()
-    logger.info("Background scheduler started with jobs: check_scheduled_publications, run_daily_tasks, run_pipelines, check_monthly_idea_generation, process_writing_queues")
+    logger.info("Background scheduler started with jobs: check_scheduled_publications, check_scheduled_idea_generation, process_writing_queues")
 
 
 def stop_scheduler():

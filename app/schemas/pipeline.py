@@ -7,6 +7,13 @@ class PipelineSettingsUpdate(BaseModel):
     enabled: Optional[bool] = None
     active_days: Optional[list[str]] = None
     launch_hour: Optional[int] = None
+    # Fréquence de génération des idées : daily, weekly, monthly, quarterly.
+    # launch_day s'interprète selon la fréquence : ignoré si daily, jour de la
+    # semaine 0=lundi..6=dimanche si weekly, jour du mois (1-31) si monthly ou
+    # quarterly (auquel cas le mois doit aussi être un multiple du cycle de 3
+    # depuis l'activation — voir app.services.scheduler_service).
+    ideas_frequency: Optional[str] = None
+    launch_day: Optional[int] = None
     ideas_day_of_month: Optional[int] = None
     publish_hour_start: Optional[int] = None
     publish_hour_end: Optional[int] = None
@@ -35,6 +42,8 @@ class PipelineSettingsPublic(BaseModel):
     enabled: bool
     active_days: list[str] = []
     launch_hour: int = 8
+    ideas_frequency: str = "monthly"
+    launch_day: Optional[int] = None
     articles_per_week: int
     category_priorities: dict[str, int] = {}
     ideas_per_week: Optional[int] = None
