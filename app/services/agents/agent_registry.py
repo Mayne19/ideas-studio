@@ -167,8 +167,9 @@ AGENTS: list[AgentDef] = [
         category=AgentCategory.research,
         phase="research",
         icon="briefcase",
-        status=AgentStatus.not_implemented,
-        output_json_field=None,
+        implementation_ref="agent_services.build_evidence_pack",
+        status=AgentStatus.active,
+        output_json_field="evidence_pack_json",
     ),
     # ═══════════════════════════════════════════════════════════════════════
     # Phase 3 — Strategic Understanding
@@ -404,8 +405,9 @@ AGENTS: list[AgentDef] = [
         category=AgentCategory.review,
         phase="seo",
         icon="heart",
-        status=AgentStatus.not_implemented,
-        output_json_field=None,
+        implementation_ref="agent_services.improve_engagement",
+        status=AgentStatus.active,
+        output_json_field="engagement_report_json",
     ),
     AgentDef(
         agent_id="reader_retention_checker",
@@ -414,8 +416,9 @@ AGENTS: list[AgentDef] = [
         category=AgentCategory.review,
         phase="seo",
         icon="users",
-        status=AgentStatus.not_implemented,
-        output_json_field=None,
+        implementation_ref="agent_services.check_reader_retention",
+        status=AgentStatus.active,
+        output_json_field="reader_retention_report_json",
     ),
     # ═══════════════════════════════════════════════════════════════════════
     # Phase 7 — Quality Control
@@ -460,8 +463,9 @@ AGENTS: list[AgentDef] = [
         category=AgentCategory.research,
         phase="quality",
         icon="check-square",
-        status=AgentStatus.not_implemented,
-        output_json_field=None,
+        implementation_ref="agent_services.extract_claims",
+        status=AgentStatus.active,
+        output_json_field="extracted_claims_json",
     ),
     AgentDef(
         agent_id="fact_checker",

@@ -69,6 +69,96 @@ def fact_check_article(
         return {"status": "error", "message": str(exc), "fact_checks": [], "overall_risk": "unknown"}
 
 
+def extract_claims(
+    content: str,
+    title: str,
+    db=None,
+    project_id: str | None = None,
+) -> dict[str, Any]:
+    """Isole les affirmations factuelles vérifiables du contenu (chiffres,
+    dates, statistiques, faits attribuables) avant le fact-check complet —
+    donne au fact-checker une liste déjà identifiée plutôt que de tout
+    redécouvrir depuis zéro sur le texte brut."""
+    router = _get_router(db)
+    try:
+        provider = router.get_provider("claim_extractor", project_id=project_id)
+    except Exception as exc:
+        logger.warning("Claim extractor provider resolution failed: %s", exc)
+        return {"status": "skipped", "message": f"Provider indisponible : {exc}", "claims": []}
+    if provider.is_mock:
+        return {"status": "skipped", "message": "Claim extractor not configured (mock provider)", "claims": []}
+
+    prompt = (
+        "Extrait uniquement les affirmations factuelles vérifiables de cet article : chiffres, "
+        "statistiques, dates, faits attribuables à une source, comparaisons quantifiées. "
+        "Ignore les opinions, conseils génériques et tournures rhétoriques.\n\n"
+        f"Titre : {title}\n\n"
+        f"Contenu :\n{content[:5000]}\n\n"
+        "Réponds UNIQUEMENT avec un JSON valide :\n"
+        '{"claims": [{"text": "affirmation exacte extraite du texte", "type": "statistic|date|fact|comparison", '
+        '"verifiable": true|false}]}'
+    )
+    try:
+        result = provider.generate_json(prompt, schema_hint="json claims object")
+        if isinstance(result, dict) and "claims" in result:
+            return {"status": "success", **result}
+        return {"status": "error", "message": "Invalid response format", "claims": []}
+    except Exception as exc:
+        logger.warning("Claim extractor agent failed: %s", exc)
+        return {"status": "error", "message": str(exc), "claims": []}
+
+
+def build_evidence_pack(
+    keyword: str,
+    title: str,
+    research_brief: dict[str, Any],
+    db=None,
+    project_id: str | None = None,
+) -> dict[str, Any]:
+    """Sélectionne, dans les sources déjà collectées par le research brief, les
+    faits et sources les plus fiables à utiliser pendant la rédaction — filtre
+    et hiérarchise plutôt que de refaire une recherche. Repose entièrement sur
+    ce que research_brief a déjà trouvé (aucun nouvel appel réseau)."""
+    external_links = research_brief.get("sources_consulted") or []
+    if not external_links:
+        return {
+            "status": "skipped",
+            "message": "Aucune source disponible dans le research brief pour constituer un dossier.",
+            "evidence_items": [],
+        }
+
+    router = _get_router(db)
+    try:
+        provider = router.get_provider("evidence_pack_builder", project_id=project_id)
+    except Exception as exc:
+        logger.warning("Evidence pack builder provider resolution failed: %s", exc)
+        return {"status": "skipped", "message": f"Provider indisponible : {exc}", "evidence_items": []}
+    if provider.is_mock:
+        return {"status": "skipped", "message": "Evidence pack builder not configured (mock provider)", "evidence_items": []}
+
+    sources_text = "\n".join(
+        f"- {s.get('url', '')} : {s.get('title', s.get('snippet', ''))}" for s in external_links[:10]
+    )
+    prompt = (
+        "À partir de ces sources trouvées pour préparer un article, sélectionne les faits et "
+        "données les plus fiables et pertinents à citer, avec leur source d'origine. Ignore les "
+        "sources peu fiables ou hors-sujet.\n\n"
+        f"Titre : {title}\n"
+        f"Mot-clé : {keyword}\n\n"
+        f"Sources disponibles :\n{sources_text}\n\n"
+        "Réponds UNIQUEMENT avec un JSON valide :\n"
+        '{"evidence_items": [{"fact": "...", "source_url": "...", "reliability": "high|medium|low"}]}'
+    )
+    try:
+        result = provider.generate_json(prompt, schema_hint="json evidence pack object")
+        if isinstance(result, dict) and "evidence_items" in result:
+            return {"status": "success", **result}
+        return {"status": "error", "message": "Invalid response format", "evidence_items": []}
+    except Exception as exc:
+        logger.warning("Evidence pack builder agent failed: %s", exc)
+        return {"status": "error", "message": str(exc), "evidence_items": []}
+
+
 def adapt_editorial_style(
     base_tone: str | None,
     base_reader_level: str | None,
@@ -251,3 +341,78 @@ def quality_rate_article(
     except Exception as exc:
         logger.warning("Quality rater agent failed: %s", exc)
         return {"status": "error", "message": str(exc), "dimensions": {}, "overall_score": None}
+
+
+def check_reader_retention(
+    content: str,
+    title: str,
+    db=None,
+    project_id: str | None = None,
+) -> dict[str, Any]:
+    """Détecte les passages où un lecteur risque de décrocher : sections trop
+    denses, trop longues sans respiration, jargon non expliqué, absence
+    d'exemples concrets sur un point complexe."""
+    router = _get_router(db)
+    try:
+        provider = router.get_provider("reader_retention_checker", project_id=project_id)
+    except Exception as exc:
+        logger.warning("Reader retention checker provider resolution failed: %s", exc)
+        return {"status": "skipped", "message": f"Provider indisponible : {exc}", "drop_off_points": []}
+    if provider.is_mock:
+        return {"status": "skipped", "message": "Reader retention checker not configured (mock provider)", "drop_off_points": []}
+
+    prompt = (
+        "Identifie les passages de cet article où un lecteur risque de décrocher : paragraphes "
+        "trop denses ou trop longs sans respiration, jargon non expliqué, sections répétitives, "
+        "manque d'exemple concret sur un point complexe.\n\n"
+        f"Titre : {title}\n\n"
+        f"Contenu :\n{content[:5000]}\n\n"
+        "Réponds UNIQUEMENT avec un JSON valide :\n"
+        '{"drop_off_points": [{"excerpt": "extrait concerné", "issue": "...", "suggestion": "..."}], '
+        '"retention_score": 0.0-1.0}'
+    )
+    try:
+        result = provider.generate_json(prompt, schema_hint="json retention object")
+        if isinstance(result, dict) and "drop_off_points" in result:
+            return {"status": "success", **result}
+        return {"status": "error", "message": "Invalid response format", "drop_off_points": []}
+    except Exception as exc:
+        logger.warning("Reader retention checker agent failed: %s", exc)
+        return {"status": "error", "message": str(exc), "drop_off_points": []}
+
+
+def improve_engagement(
+    content: str,
+    title: str,
+    db=None,
+    project_id: str | None = None,
+) -> dict[str, Any]:
+    """Évalue et propose des améliorations d'accroche/engagement — ne modifie
+    jamais le contenu directement, propose des suggestions à appliquer."""
+    router = _get_router(db)
+    try:
+        provider = router.get_provider("engagement_editor", project_id=project_id)
+    except Exception as exc:
+        logger.warning("Engagement editor provider resolution failed: %s", exc)
+        return {"status": "skipped", "message": f"Provider indisponible : {exc}", "suggestions": []}
+    if provider.is_mock:
+        return {"status": "skipped", "message": "Engagement editor not configured (mock provider)", "suggestions": []}
+
+    prompt = (
+        "Évalue la capacité de cet article à capter et retenir l'attention du lecteur : accroche "
+        "d'introduction, transitions entre sections, appels à l'action, questions rhétoriques bien "
+        "placées. Propose des suggestions concrètes d'amélioration sans réécrire le texte.\n\n"
+        f"Titre : {title}\n\n"
+        f"Contenu :\n{content[:5000]}\n\n"
+        "Réponds UNIQUEMENT avec un JSON valide :\n"
+        '{"engagement_score": 0.0-1.0, "suggestions": [{"location": "...", "suggestion": "..."}], '
+        '"hook_quality": "strong|adequate|weak"}'
+    )
+    try:
+        result = provider.generate_json(prompt, schema_hint="json engagement object")
+        if isinstance(result, dict) and "suggestions" in result:
+            return {"status": "success", **result}
+        return {"status": "error", "message": "Invalid response format", "suggestions": []}
+    except Exception as exc:
+        logger.warning("Engagement editor agent failed: %s", exc)
+        return {"status": "error", "message": str(exc), "suggestions": []}

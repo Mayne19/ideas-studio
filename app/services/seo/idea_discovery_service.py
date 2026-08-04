@@ -9,6 +9,7 @@ from app.schemas.seo_workflow import IdeaDiscoveryResult, asdict
 from app.services.providers.llm_provider import LLMProvider
 from app.services.providers.search_provider import SearchProvider, MockSearchProvider
 from app.services.seo.adapters.serp_adapter import serp_adapter
+from app.services.seo.adapters.trends_adapter import trends_adapter
 
 _EXISTING_KEYWORD_STATUSES = (
     ArticleStatus.PUBLISHED,
@@ -61,10 +62,18 @@ def discover_ideas(
                 serp_results = search.search(query, limit=3)
                 serp_context = "\n".join(f"- {r.title}: {r.snippet}" for r in serp_results) if not isinstance(search, MockSearchProvider) else ""
 
+                trend_hint = ""
+                if trends_adapter.configured and context_hint:
+                    trend = trends_adapter.get_trends(context_hint)
+                    if trend.get("status") == "success" and trend.get("trend_score") is not None:
+                        direction = "en hausse" if trend["trend_score"] > 1.2 else "stable ou en baisse" if trend["trend_score"] < 0.8 else "stable"
+                        trend_hint = f"Tendance estimée sur ce sujet : {direction} (proxy, pas une mesure officielle).\n"
+
                 prompt = (
                     f"Génère une idée d'article SEO originale en langue '{project_language}'.\n"
                     f"Audience cible : {project_audience or 'grand public'}.\n"
                     f"Contexte : {context_hint or 'aucun'}.\n"
+                    f"{trend_hint}"
                     f"Contexte SERP :\n{serp_context}\n\n"
                     'Réponds en JSON : {"title": "...", "keyword": "...", "angle": "...", "search_intent": "informational|commercial"}'
                 )

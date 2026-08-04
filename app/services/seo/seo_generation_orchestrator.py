@@ -286,6 +286,19 @@ class SEOGenerationOrchestrator:
         self.context["keyword_brief"] = keyword_brief
         self._step("KeywordBrief")
 
+        # 7b. EvidencePack — sélection des faits/sources les plus fiables parmi
+        # ceux déjà trouvés par ResearchBrief, pour guider la rédaction
+        try:
+            from app.services.agents.agent_services import build_evidence_pack
+            evidence_pack = build_evidence_pack(
+                final_keyword, final_title, research_brief, db=self.db, project_id=self.project_id,
+            )
+            self.context["evidence_pack"] = evidence_pack
+            self._step("EvidencePack")
+        except Exception as exc:
+            self._error("EvidencePack", str(exc))
+            self.context["evidence_pack"] = {}
+
         # 8. EditorialAngle
         editorial_angle = define_editorial_angle_dict(
             final_title, final_keyword, intent_analysis, research_brief, category_name
@@ -671,6 +684,17 @@ class SEOGenerationOrchestrator:
             self._error("SEOReview", str(exc))
             self._save(article.id, "seo_review", build_review_error_report(str(exc)))
 
+        # 19d. ClaimExtraction — isole les affirmations vérifiables avant le
+        # fact-check complet (donne au fact-checker une base déjà identifiée)
+        try:
+            if self.agent_router is not None:
+                from app.services.agents.agent_services import extract_claims
+                claims = extract_claims(draft.content or "", draft.title, db=self.db, project_id=self.project_id)
+                self._save(article.id, "extracted_claims", claims)
+                self._step("ClaimExtraction")
+        except Exception as exc:
+            self._error("ClaimExtraction", str(exc))
+
         # 20b. FactCheckPass (LLM-based)
         try:
             if self.agent_router is not None:
@@ -692,6 +716,26 @@ class SEOGenerationOrchestrator:
                 self._step("EditorialReview")
         except Exception as exc:
             self._error("EditorialReview", str(exc))
+
+        # 20c-2. ReaderRetentionCheck (LLM-based)
+        try:
+            if self.agent_router is not None:
+                from app.services.agents.agent_services import check_reader_retention
+                retention = check_reader_retention(draft.content or "", draft.title, db=self.db, project_id=self.project_id)
+                self._save(article.id, "reader_retention_report", retention)
+                self._step("ReaderRetentionCheck")
+        except Exception as exc:
+            self._error("ReaderRetentionCheck", str(exc))
+
+        # 20c-3. EngagementReview (LLM-based)
+        try:
+            if self.agent_router is not None:
+                from app.services.agents.agent_services import improve_engagement
+                engagement = improve_engagement(draft.content or "", draft.title, db=self.db, project_id=self.project_id)
+                self._save(article.id, "engagement_report", engagement)
+                self._step("EngagementReview")
+        except Exception as exc:
+            self._error("EngagementReview", str(exc))
 
         # 20d. SEOOptimizerPass (LLM-based)
         try:
