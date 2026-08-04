@@ -325,6 +325,7 @@ export type ArticleVersion = {
   title: string
   revision_no: number
   source: 'ai' | 'human' | 'import' | 'rollback' | string
+  word_count: number
   created_by: string | null
   created_at: string
 }

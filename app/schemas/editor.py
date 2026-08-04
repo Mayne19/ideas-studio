@@ -94,5 +94,6 @@ class VersionPublic(BaseModel):
     title: str
     revision_no: int
     source: str
+    word_count: int = 0
     created_by: Optional[str] = None
     created_at: datetime

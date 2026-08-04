@@ -84,6 +84,12 @@ export default function VersionsPanel({
               <p className="text-[10px] text-tertiary">
                 {VERSION_TYPE_LABELS[v.source] ?? v.source} · {formatDateTime(v.created_at)}
                 {v.created_by ? ` · Auteur ${authorLabel(v.created_by)}` : ''}
+                {' · '}
+                {v.word_count > 20 ? (
+                  `${v.word_count} mots`
+                ) : (
+                  <span className="font-medium text-danger">contenu vide ou quasi vide</span>
+                )}
               </p>
             </div>
             <button

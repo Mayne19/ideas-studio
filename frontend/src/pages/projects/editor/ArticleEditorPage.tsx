@@ -279,6 +279,13 @@ export default function ArticleEditorPage() {
     },
     onUpdate: ({ editor: e }) => {
       if (isHydratingEditorRef.current) return
+      // Tant que l'hydratation initiale de CET article n'a pas eu lieu au
+      // moins une fois, l'éditeur peut encore contenir son état par défaut
+      // (<p></p>) hérité d'un montage précédent — sauvegarder à ce moment-là
+      // écraserait la vraie révision avec un corps vide (observé en
+      // production : révisions "human" à 7 caractères remplaçant un article
+      // de 13800 caractères généré par l'IA).
+      if (lastHydratedArticleIdRef.current !== articleId) return
       scheduleAutosave(e.getHTML())
     },
   })
@@ -293,9 +300,15 @@ export default function ArticleEditorPage() {
 
   const scheduleAutosave = useCallback((html: string) => {
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
-    pendingSaveRef.current = true
     const pid = projectId
     const aid = articleId
+    // Défense en profondeur : les handlers de champs meta (titre, catégorie,
+    // FAQ...) appellent scheduleAutosave(editor?.getHTML() ?? '') sans passer
+    // par le garde d'hydratation de onUpdate — si l'un d'eux se déclenche
+    // avant l'hydratation initiale de cet article, ne rien planifier plutôt
+    // que d'écraser la révision existante avec un contenu vide.
+    if (lastHydratedArticleIdRef.current !== aid) return
+    pendingSaveRef.current = true
     autosaveTimer.current = setTimeout(() => {
       if (!pid || !aid) return
       setAutosaveStatus('saving')
@@ -348,6 +361,11 @@ export default function ArticleEditorPage() {
     const pid = projectId
     const aid = articleId
     if (!pid || !aid) return false
+    // Même garde que onUpdate : ne jamais persister le contenu de l'éditeur
+    // avant que l'hydratation initiale de cet article ait eu lieu, sinon un
+    // save déclenché tôt (blocker de navigation, Ctrl+S, beforeunload)
+    // écrase la vraie révision avec l'état par défaut vide de TipTap.
+    if (lastHydratedArticleIdRef.current !== aid) return false
     setAutosaveStatus('saving')
     try {
       const content = editor?.getHTML() ?? ''
@@ -735,7 +753,10 @@ export default function ArticleEditorPage() {
     try {
       if (key === 'publish' || key === 'promote') {
         if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
-        const content = editor?.getHTML() ?? article.content ?? ''
+        // Ne jamais utiliser un éditeur non hydraté comme source du contenu
+        // publié — mieux vaut retomber sur article.content (déjà connu bon)
+        // que de publier un corps vide par accident.
+        const content = (lastHydratedArticleIdRef.current === article.id ? editor?.getHTML() : null) ?? article.content ?? ''
         await autosaveArticle(projectId, article.id, {
           content,
           title: metaRef.current.title || undefined,

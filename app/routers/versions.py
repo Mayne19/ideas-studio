@@ -53,6 +53,7 @@ def list_versions(
             title=r.title,
             revision_no=r.revision_no,
             source=r.source,
+            word_count=r.word_count or 0,
             created_by=r.created_by,
             created_at=r.created_at,
         )

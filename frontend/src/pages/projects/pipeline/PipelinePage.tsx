@@ -935,6 +935,8 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
   const [running, setRunning] = useState(false)
   const [bulkResult, setBulkResult] = useState<BulkValidateResponse | null>(null)
   const [error, setError] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<Article | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const load = useCallback(() => {
     setLoadStatus('loading')
@@ -991,6 +993,20 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
       setTick((t) => t + 1)
     } catch { setError('Action impossible.'); setConfirmMode(null) }
     finally { setRunning(false) }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await deleteArticle(projectId, deleteTarget.id)
+      setDeleteTarget(null)
+      setTick((t) => t + 1)
+    } catch (err) {
+      console.error('deleteArticle failed:', err)
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const catName = (article: Article) => categories.find((c) => c.id === article.category_id)?.name ?? '—'
@@ -1050,7 +1066,7 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
         />
       ) : (
         <>
-          <div className="mb-1 hidden grid-cols-[minmax(0,1fr)_90px_120px_160px] gap-3 px-3 text-[12px] font-medium uppercase tracking-wide text-tertiary lg:grid">
+          <div className="mb-1 hidden grid-cols-[minmax(0,1fr)_90px_120px_minmax(320px,auto)] gap-3 px-3 text-[12px] font-medium uppercase tracking-wide text-tertiary lg:grid">
             <div>Titre / Catégorie</div>
             <div className="text-center">Score global</div>
             <div>Date prévue</div>
@@ -1063,7 +1079,7 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
               return (
                 <div
                   key={article.id}
-                  className="group grid grid-cols-[minmax(0,1fr)_90px_120px_160px] items-center gap-3 border-b border-border/30 px-3 py-3 transition-colors hover:bg-surface-soft"
+                  className="group grid grid-cols-[minmax(0,1fr)_90px_120px_minmax(320px,auto)] items-center gap-3 border-b border-border/30 px-3 py-3 transition-colors hover:bg-surface-soft"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-[14px] font-medium text-primary">{article.title || '(sans titre)'}</p>
@@ -1084,7 +1100,7 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
                   <span className={`text-[12px] ${article.scheduled_for ? 'text-secondary' : 'text-tertiary'}`}>
                     {article.scheduled_for ? formatDate(article.scheduled_for) : '—'}
                   </span>
-                  <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex flex-wrap items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                     <Button size="sm" variant="secondary" onClick={() => navigate(`/projects/${projectId}/articles/${article.id}/edit`)}>
                       Ouvrir
                     </Button>
@@ -1105,6 +1121,14 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
                     >
                       Publier
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      icon={<XCircle size={12} />}
+                      onClick={() => setDeleteTarget(article)}
+                    >
+                      Rejeter
+                    </Button>
                   </div>
                 </div>
               )
@@ -1112,6 +1136,25 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
           </div>
         </>
       )}
+
+      <Modal open={!!deleteTarget} onClose={() => { if (!deleting) setDeleteTarget(null) }} title="Rejeter cet article ?" size="sm">
+        <div className="flex flex-col gap-4">
+          <div className="rounded-[12px] border border-danger/20 bg-danger/5 px-3.5 py-3">
+            <p className="text-[14px] font-medium text-primary">{deleteTarget?.title}</p>
+            <p className="mt-0.5 text-[12px] leading-snug text-secondary">
+              L'article et son historique de versions seront définitivement supprimés.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" size="sm" className="flex-1 justify-center" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+              Annuler
+            </Button>
+            <Button type="button" variant="danger" size="sm" loading={deleting} className="flex-1 justify-center" onClick={handleDelete}>
+              Rejeter définitivement
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={confirmMode === 'publish' || confirmMode === 'schedule'}

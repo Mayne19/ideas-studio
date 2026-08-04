@@ -6,13 +6,24 @@ from app.schemas.seo_workflow import ImagePlan, asdict
 from app.services.seo.adapters.image_sourcing_adapter import image_sourcing_adapter
 
 
+# Titres H2 purement structurels, sans contenu visuel propre (numérotation
+# d'étapes, questions génériques...) — chercher une image dessus seuls
+# renvoie n'importe quoi ("Qu'est-ce que c'est ?" -> panneau "ouch" trouvé
+# en production). Combinés au mot-clé principal, ils n'apportent rien de
+# plus qu'une recherche sur le mot-clé seul.
+_GENERIC_HEADING_PATTERNS = re.compile(
+    r"^(qu['’]est.ce que|pourquoi|comment\s*\??|conclusion|résumé|"
+    r"étape\s*\d|astuces?|conseils?|introduction|en\s+bref|faq)\b",
+    re.IGNORECASE,
+)
+
+
 def build_image_plan(keyword: str, outline: dict | None = None) -> tuple[ImagePlan, list[dict]]:
-    """Une recherche Unsplash sur le seul mot-clé principal (ex: "CMS") renvoie
-    des photos décoratives génériques puisque le mot-clé SEO n'est pas un
-    concept visuel — chaque image est donc cherchée sur le titre H2 de la
-    section où elle sera insérée (insert_images_in_content associe images et
-    sections dans le même ordre), avec repli sur le mot-clé si l'outline est
-    absent ou vide."""
+    """Une recherche Unsplash sur le seul titre H2 (ex: "Qu'est-ce que c'est ?")
+    renvoie des photos sans rapport dès que le titre est structurel plutôt que
+    visuellement concret — le mot-clé principal de l'article ancre donc
+    toujours la requête, complété par le titre H2 seulement s'il ajoute un
+    terme concret (pas une simple formule de structure)."""
     plan = ImagePlan()
     sources: list[dict] = []
 
@@ -30,7 +41,13 @@ def build_image_plan(keyword: str, outline: dict | None = None) -> tuple[ImagePl
         s.get("heading") for s in (outline or {}).get("sections", [])
         if isinstance(s, dict) and s.get("heading") and s.get("level", 2) == 2
     ]
-    queries = section_headings or [keyword]
+    if section_headings:
+        queries = [
+            keyword if _GENERIC_HEADING_PATTERNS.match(heading.strip()) else f"{keyword} {heading}"
+            for heading in section_headings
+        ]
+    else:
+        queries = [keyword]
 
     seen_urls: set[str] = set()
     for query in queries:

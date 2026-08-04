@@ -1,11 +1,18 @@
 import re
 import hashlib
+import unicodedata
 from datetime import date
 
 
 def slugify(text: str) -> str:
     text = text.lower().strip()
-    text = re.sub(r"[^\w\s-]", "", text)
+    # \w en Python est Unicode-aware et matche les lettres accentuées
+    # (é, à, û...) — un [^\w\s-] ne les retire donc jamais. Translittération
+    # explicite via décomposition NFD (é -> e + accent combinant) puis
+    # suppression des marques diacritiques (catégorie Unicode "Mn").
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    text = re.sub(r"[^a-z0-9\s-]", "", text)
     text = re.sub(r"[\s_]+", "-", text)
     text = re.sub(r"-+", "-", text)
     return text.strip("-") or "item"
