@@ -183,6 +183,11 @@ class PublishingTarget(Base):
     )
     site_url: Mapped[str] = mapped_column(Text, nullable=False)
     revalidate_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Secret propre à ce site, chiffré (Fernet, voir app.core.security). Généré
+    # automatiquement à la première configuration — permet à chaque projet
+    # d'avoir un secret indépendant plutôt que de partager BLOG_REVALIDATE_SECRET
+    # (settings.BLOG_REVALIDATE_SECRET reste le repli si cette colonne est vide).
+    revalidate_secret: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     last_synced_at: Mapped[datetime | None] = mapped_column(nullable=True)
     last_sync_status: Mapped[str | None] = mapped_column(Text, nullable=True)

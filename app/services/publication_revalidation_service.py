@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.security import decrypt_secret
 from app.models.core import Project, PublishingTarget
 
 
@@ -29,7 +30,9 @@ def trigger_project_revalidation(
 ) -> dict:
     target = _primary_target(db, project.id)
     url = (target.revalidate_url if target else None) or settings.BLOG_REVALIDATE_URL
-    secret = settings.BLOG_REVALIDATE_SECRET
+    # Secret propre au projet en priorité (ai.publishing_targets.revalidate_secret),
+    # repli sur la variable globale pour compat ascendante — voir docstring du champ.
+    secret = (decrypt_secret(target.revalidate_secret) if target else None) or settings.BLOG_REVALIDATE_SECRET
 
     if not url or not secret:
         if target:

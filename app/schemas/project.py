@@ -79,6 +79,7 @@ class ProjectConnectInfo(BaseModel):
     public_api_endpoints: dict
     public_site_url: Optional[str] = None
     revalidate_url: Optional[str] = None
+    revalidate_secret: Optional[str] = None
     revalidate_configured: bool = False
     last_revalidated_at: Optional[datetime] = None
     last_revalidate_status: Optional[str] = None

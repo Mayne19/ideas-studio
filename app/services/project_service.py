@@ -147,6 +147,26 @@ def _primary_target(db: Session, project_id: str) -> PublishingTarget | None:
     ).scalar_one_or_none()
 
 
+def _decrypted_revalidate_secret(target: PublishingTarget | None) -> str | None:
+    if not target or not target.revalidate_secret:
+        return None
+    from app.core.security import decrypt_secret
+    return decrypt_secret(target.revalidate_secret)
+
+
+def rotate_revalidate_secret(db: Session, project: Project) -> str:
+    from app.core.security import encrypt_secret
+
+    target = _primary_target(db, project.id)
+    if target is None:
+        target = PublishingTarget(project_id=project.id, site_url="", is_primary=True)
+        db.add(target)
+    new_secret = _generate_key()
+    target.revalidate_secret = encrypt_secret(new_secret)
+    db.commit()
+    return new_secret
+
+
 def serialize_project(db: Session, project: Project) -> dict:
     profile = project.active_editorial_profile
     target = _primary_target(db, project.id)
@@ -184,6 +204,7 @@ def serialize_project(db: Session, project: Project) -> dict:
         "last_seen_at": None,
         "public_site_url": target.site_url if target else None,
         "revalidate_url": target.revalidate_url if target else None,
+        "revalidate_secret": _decrypted_revalidate_secret(target),
         "revalidate_configured": bool(target and target.revalidate_url),
         "last_revalidated_at": target.last_synced_at if target else None,
         "last_revalidate_status": target.last_sync_status if target else None,
@@ -223,6 +244,9 @@ def update_project(db: Session, project: Project, data: ProjectUpdate) -> dict:
             target.site_url = site_url
         if revalidate_url is not None:
             target.revalidate_url = revalidate_url
+        if not target.revalidate_secret:
+            from app.core.security import encrypt_secret
+            target.revalidate_secret = encrypt_secret(_generate_key())
 
     db.commit()
     db.refresh(project)

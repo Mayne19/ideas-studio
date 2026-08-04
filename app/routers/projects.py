@@ -16,6 +16,7 @@ from app.services.project_service import (
     serialize_project,
     update_project,
     disconnect_project,
+    rotate_revalidate_secret,
 )
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -124,6 +125,17 @@ def revalidate_project(
 ):
     project = _get_project_or_404(db, project_id)
     return trigger_project_revalidation(db, project, event_type="manual")
+
+
+@router.post("/{project_id}/revalidate-secret/rotate")
+def rotate_revalidate_secret_route(
+    project_id: str,
+    member: MemberView = Depends(require_project_role("owner", "admin")),
+    db: Session = Depends(get_db),
+):
+    project = _get_project_or_404(db, project_id)
+    new_secret = rotate_revalidate_secret(db, project)
+    return {"revalidate_secret": new_secret}
 
 
 @router.delete("/{project_id}", status_code=204)

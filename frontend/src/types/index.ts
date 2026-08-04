@@ -77,6 +77,7 @@ export type ConnectInfo = {
   public_api_endpoints: Record<string, string>
   public_site_url: string | null
   revalidate_url: string | null
+  revalidate_secret: string | null
   revalidate_configured: boolean
   last_revalidated_at: string | null
   last_revalidate_status: string | null

@@ -354,15 +354,16 @@ CREATE UNIQUE INDEX editorial_profiles_one_active
   ON core.editorial_profiles (project_id) WHERE is_active;
 
 CREATE TABLE core.publishing_targets (
-  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id       uuid NOT NULL REFERENCES core.projects(id) ON DELETE CASCADE,
-  site_url         text NOT NULL,
-  revalidate_url   text,
-  is_primary       boolean NOT NULL DEFAULT true,
-  last_synced_at   timestamptz,
-  last_sync_status text,
-  last_sync_error  text,
-  created_at       timestamptz NOT NULL DEFAULT now()
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id         uuid NOT NULL REFERENCES core.projects(id) ON DELETE CASCADE,
+  site_url           text NOT NULL,
+  revalidate_url     text,
+  revalidate_secret  text,  -- chiffré (Fernet) ; secret propre à ce site, repli sur BLOG_REVALIDATE_SECRET si NULL
+  is_primary         boolean NOT NULL DEFAULT true,
+  last_synced_at     timestamptz,
+  last_sync_status   text,
+  last_sync_error    text,
+  created_at         timestamptz NOT NULL DEFAULT now()
 );
 
 -- Clés de projet : SHA-256, pas bcrypt.

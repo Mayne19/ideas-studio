@@ -67,6 +67,10 @@ export function revalidateProject(id: string): Promise<{ revalidated: boolean; s
   return api.post(`/projects/${id}/revalidate`)
 }
 
+export function rotateRevalidateSecret(id: string): Promise<{ revalidate_secret: string }> {
+  return api.post(`/projects/${id}/revalidate-secret/rotate`)
+}
+
 export type EditorialSuggestion = {
   description: string
   audience: string

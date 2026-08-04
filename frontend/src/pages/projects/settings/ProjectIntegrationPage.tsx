@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
-import { Code2, Globe, Key, Power, RefreshCw, Wifi, WifiOff } from '@/components/ui/hugeIcons'
-import { getConnectInfo, disconnectProject, revalidateProject, updateProject } from '@/api/projects'
+import { Code2, Eye, EyeOff, Globe, Key, Power, RefreshCw, Wifi, WifiOff } from '@/components/ui/hugeIcons'
+import { getConnectInfo, disconnectProject, revalidateProject, rotateRevalidateSecret, updateProject } from '@/api/projects'
 import type { ConnectInfo } from '@/types'
 import { ProjectStatus } from '@/lib/status'
 import Button from '@/components/ui/Button'
@@ -99,6 +99,8 @@ export default function ProjectIntegrationPage() {
   const [manualRevalidating, setManualRevalidating] = useState(false)
   const [revalidateMessage, setRevalidateMessage] = useState('')
   const [revalidateEndpointEdited, setRevalidateEndpointEdited] = useState(false)
+  const [showSecret, setShowSecret] = useState(false)
+  const [rotatingSecret, setRotatingSecret] = useState(false)
 
   async function handleDisconnect() {
     if (!projectId) return
@@ -181,6 +183,24 @@ export default function ProjectIntegrationPage() {
       setRevalidateMessage(err instanceof Error ? err.message : 'Sauvegarde impossible.')
     } finally {
       setSavingRevalidate(false)
+    }
+  }
+
+  async function handleRotateSecret() {
+    if (!projectId) return
+    if (!confirm("Régénérer le secret de revalidation ? L'ancienne valeur cessera de fonctionner immédiatement : pensez à la mettre à jour côté Vercel/Next.js après coup.")) return
+    setRotatingSecret(true)
+    setRevalidateMessage('')
+    try {
+      await rotateRevalidateSecret(projectId)
+      const data = await getConnectInfo(projectId)
+      setInfo(data)
+      setShowSecret(true)
+      setRevalidateMessage('Nouveau secret généré. Copiez-le et mettez à jour la variable côté Vercel/Next.js.')
+    } catch (err) {
+      setRevalidateMessage(err instanceof Error ? err.message : 'Régénération impossible.')
+    } finally {
+      setRotatingSecret(false)
     }
   }
 
@@ -417,6 +437,38 @@ export default function ProjectIntegrationPage() {
               )}
             </label>
           </div>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[12px] font-medium text-secondary">Secret de revalidation (propre à ce projet)</span>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <input
+                  readOnly
+                  type={showSecret ? 'text' : 'password'}
+                  value={info?.revalidate_secret ?? ''}
+                  placeholder="Sera généré à l'enregistrement de l'URL du site"
+                  className="w-full rounded-[10px] border border-border bg-surface px-3 py-2 pr-8 text-[13px] text-primary outline-none focus:border-accent"
+                />
+                {info?.revalidate_secret && (
+                  <button
+                    type="button"
+                    onClick={() => setShowSecret((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-tertiary hover:text-primary"
+                  >
+                    {showSecret ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                )}
+              </div>
+              {info?.revalidate_secret && <CopyButton value={info.revalidate_secret} />}
+              <Button size="sm" variant="ghost" type="button" disabled={rotatingSecret} onClick={handleRotateSecret}>
+                <RefreshCw size={13} className={rotatingSecret ? 'animate-spin' : ''} />
+                Régénérer
+              </Button>
+            </div>
+            <span className="text-[12px] text-tertiary">
+              À coller côté Vercel/Next.js (variable d'environnement lue par votre route /api/ideas-studio/revalidate).
+              Chaque projet a son propre secret : pas besoin de le partager entre plusieurs sites.
+            </span>
+          </label>
           <div className="grid gap-2 lg:grid-cols-3">
             <InfoRow icon={<RefreshCw size={11} />} label="Dernière revalidation" value={info?.last_revalidated_at ? formatDateTime(info.last_revalidated_at) : 'Jamais'} mono={false} />
             <InfoRow icon={<Wifi size={11} />} label="Statut" value={info?.last_revalidate_status ?? 'Non configuré'} mono={false} />
