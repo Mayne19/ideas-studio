@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { Plus, Trash2, TestTube, CheckCircle, XCircle, Loader2, Eye, EyeOff, Save } from '@/components/ui/hugeIcons'
+import { Plus, Trash2, TestTube, CheckCircle, XCircle, Loader2, Eye, EyeOff, Save, Settings } from '@/components/ui/hugeIcons'
 import { api } from '@/api/client'
 import { Card } from '@/components/ui/Card'
 import { useProject } from '@/context/ProjectContext'
+import { useAuth } from '@/context/AuthContext'
 
 type AIProviderConfig = {
   id: string
@@ -18,24 +19,16 @@ type AIProviderConfig = {
   created_at: string
 }
 
-type ProviderDef = {
-  key: string
+type ProviderCatalogEntry = {
+  id: string
+  code: string
   label: string
+  base_url: string | null
+  is_enabled: boolean
 }
 
-// Doit correspondre au catalogue ai.providers (db/migration-v3/01-schema.sql) —
-// pas d'endpoint pour ajouter un provider au catalogue depuis l'UI, uniquement
-// pour connecter une clé API sur un provider déjà présent en base.
-const SUPPORTED_PROVIDERS: ProviderDef[] = [
-  { key: 'gemini', label: 'Google Gemini' },
-  { key: 'openai', label: 'OpenAI' },
-  { key: 'openrouter', label: 'OpenRouter' },
-  { key: 'mistral', label: 'Mistral' },
-  { key: 'ollama', label: 'Ollama (local)' },
-]
-
-function getProviderDef(key: string): ProviderDef | undefined {
-  return SUPPORTED_PROVIDERS.find((p) => p.key === key)
+function getCatalogEntry(catalog: ProviderCatalogEntry[], code: string): ProviderCatalogEntry | undefined {
+  return catalog.find((p) => p.code === code)
 }
 
 type ProviderFormData = {
@@ -45,10 +38,18 @@ type ProviderFormData = {
 }
 
 const emptyForm: ProviderFormData = {
-  provider: 'gemini',
+  provider: '',
   label: '',
   api_key: '',
 }
+
+type CatalogFormData = {
+  code: string
+  label: string
+  base_url: string
+}
+
+const emptyCatalogForm: CatalogFormData = { code: '', label: '', base_url: '' }
 
 function AccessDenied() {
   return (
@@ -67,7 +68,9 @@ function AccessDenied() {
 export default function ProjectProvidersPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const { myRole } = useProject()
+  const { user } = useAuth()
   const [configs, setConfigs] = useState<AIProviderConfig[]>([])
+  const [catalog, setCatalog] = useState<ProviderCatalogEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -79,12 +82,22 @@ export default function ProjectProvidersPage() {
   const [showKeys, setShowKeys] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState<string | null>(null)
 
+  // Gestion du catalogue global (admin plateforme uniquement)
+  const [catalogManagerOpen, setCatalogManagerOpen] = useState(false)
+  const [catalogForm, setCatalogForm] = useState<CatalogFormData>(emptyCatalogForm)
+  const [savingCatalog, setSavingCatalog] = useState(false)
+  const [catalogError, setCatalogError] = useState('')
+
   const loadConfigs = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const data = await api.get<AIProviderConfig[]>(projectId ? `/settings/ai-providers?project_id=${projectId}` : '/settings/ai-providers')
+      const [data, catalogData] = await Promise.all([
+        api.get<AIProviderConfig[]>(projectId ? `/settings/ai-providers?project_id=${projectId}` : '/settings/ai-providers'),
+        api.get<ProviderCatalogEntry[]>('/settings/ai-providers/catalog'),
+      ])
       setConfigs(data)
+      setCatalog(catalogData)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur de chargement'
       setError(msg)
@@ -99,11 +112,13 @@ export default function ProjectProvidersPage() {
     return () => clearTimeout(timer)
   }, [loadConfigs])
 
-  function openCreate(providerKey: string) {
-    const def = getProviderDef(providerKey)
+  const availableCatalog = catalog.filter((p) => p.is_enabled)
+
+  function openCreate(code: string) {
+    const def = getCatalogEntry(catalog, code)
     setForm({
-      provider: providerKey,
-      label: def?.label ?? providerKey,
+      provider: code,
+      label: def?.label ?? code,
       api_key: '',
     })
     setEditingId(null)
@@ -187,6 +202,46 @@ export default function ProjectProvidersPage() {
     })
   }
 
+  async function handleAddCatalogEntry(event: React.FormEvent) {
+    event.preventDefault()
+    const code = catalogForm.code.trim().toLowerCase()
+    if (!code || !catalogForm.label.trim()) return
+    setSavingCatalog(true)
+    setCatalogError('')
+    try {
+      await api.post('/settings/ai-providers/catalog', {
+        code,
+        label: catalogForm.label.trim(),
+        base_url: catalogForm.base_url.trim() || undefined,
+      })
+      setCatalogForm(emptyCatalogForm)
+      await loadConfigs()
+    } catch (err: unknown) {
+      setCatalogError(err instanceof Error ? err.message : "Erreur lors de l'ajout au catalogue")
+    } finally {
+      setSavingCatalog(false)
+    }
+  }
+
+  async function handleToggleCatalogEntry(entry: ProviderCatalogEntry) {
+    try {
+      await api.patch(`/settings/ai-providers/catalog/${entry.id}`, { is_enabled: !entry.is_enabled })
+      await loadConfigs()
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Erreur lors de la mise à jour')
+    }
+  }
+
+  async function handleDeleteCatalogEntry(entry: ProviderCatalogEntry) {
+    if (!confirm(`Retirer "${entry.label}" du catalogue ? Impossible si des clés y sont encore connectées.`)) return
+    try {
+      await api.delete(`/settings/ai-providers/catalog/${entry.id}`)
+      await loadConfigs()
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Erreur lors de la suppression')
+    }
+  }
+
   if (myRole !== null && myRole !== 'owner' && myRole !== 'admin') {
     return <AccessDenied />
   }
@@ -203,6 +258,15 @@ export default function ProjectProvidersPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h2 className="text-[15px] font-semibold text-primary">Configuration des providers IA</h2>
+        {user?.is_staff && (
+          <button
+            onClick={() => setCatalogManagerOpen((open) => !open)}
+            className="flex items-center gap-1.5 rounded-[10px] border border-border px-3 py-1.5 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary"
+          >
+            <Settings size={13} />
+            Catalogue des plateformes
+          </button>
+        )}
       </div>
 
       <div className="rounded-[14px] border border-accent/20 bg-accent/5 px-4 py-3">
@@ -211,6 +275,72 @@ export default function ProjectProvidersPage() {
           se choisit dans Paramètres → Agents, pas ici.
         </p>
       </div>
+
+      {user?.is_staff && catalogManagerOpen && (
+        <Card>
+          <p className="text-[14px] font-medium text-primary mb-1">Catalogue des plateformes IA</p>
+          <p className="text-[12px] text-tertiary mb-3">
+            Liste globale, partagée par tous les projets. Réservé aux administrateurs plateforme.
+          </p>
+          <div className="flex flex-col gap-2 mb-4">
+            {catalog.map((entry) => (
+              <div key={entry.id} className="flex items-center justify-between gap-3 rounded-[8px] border border-border px-3 py-2">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-medium text-primary">{entry.label} <span className="text-tertiary font-normal">({entry.code})</span></p>
+                  {entry.base_url && <p className="text-[11px] text-tertiary truncate">{entry.base_url}</p>}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => handleToggleCatalogEntry(entry)}
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${entry.is_enabled ? 'bg-success/8 text-success' : 'bg-surface-soft text-tertiary'}`}
+                  >
+                    {entry.is_enabled ? 'Activé' : 'Désactivé'}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteCatalogEntry(entry)}
+                    className="flex h-6 w-6 items-center justify-center rounded-[6px] text-tertiary hover:bg-danger/10 hover:text-danger transition-colors"
+                    title="Retirer du catalogue"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <form onSubmit={handleAddCatalogEntry} className="flex flex-col gap-2 border-t border-border pt-3">
+            <p className="text-[12px] font-medium text-secondary">Ajouter une plateforme</p>
+            {catalogError && <p className="text-[12px] text-danger">{catalogError}</p>}
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+              <input
+                value={catalogForm.code}
+                onChange={(e) => setCatalogForm((f) => ({ ...f, code: e.target.value }))}
+                placeholder="code (ex: anthropic)"
+                className="rounded-[8px] border border-border bg-surface px-2.5 py-1.5 text-[12px] text-primary outline-none focus:border-accent"
+              />
+              <input
+                value={catalogForm.label}
+                onChange={(e) => setCatalogForm((f) => ({ ...f, label: e.target.value }))}
+                placeholder="Label (ex: Claude / Anthropic)"
+                className="rounded-[8px] border border-border bg-surface px-2.5 py-1.5 text-[12px] text-primary outline-none focus:border-accent"
+              />
+              <input
+                value={catalogForm.base_url}
+                onChange={(e) => setCatalogForm((f) => ({ ...f, base_url: e.target.value }))}
+                placeholder="Base URL (optionnel)"
+                className="rounded-[8px] border border-border bg-surface px-2.5 py-1.5 text-[12px] text-primary outline-none focus:border-accent"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={savingCatalog || !catalogForm.code.trim() || !catalogForm.label.trim()}
+              className="w-fit flex items-center gap-1.5 rounded-[8px] bg-accent px-3 py-1.5 text-[12px] font-medium text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {savingCatalog ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+              Ajouter au catalogue
+            </button>
+          </form>
+        </Card>
+      )}
 
       {error && (
         <div className="rounded-[12px] border border-danger/20 bg-danger/5 px-4 py-3">
@@ -233,10 +363,10 @@ export default function ProjectProvidersPage() {
         <Card className="text-center">
           <p className="text-[14px] text-secondary mb-4">Aucun provider configuré. Ajoutez-en un depuis la liste ci-dessous.</p>
           <div className="flex flex-wrap justify-center gap-2">
-            {SUPPORTED_PROVIDERS.map((p) => (
+            {availableCatalog.map((p) => (
               <button
-                key={p.key}
-                onClick={() => openCreate(p.key)}
+                key={p.code}
+                onClick={() => openCreate(p.code)}
                 disabled={!!error}
                 className="flex items-center gap-1.5 rounded-[10px] border border-border px-3 py-2 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -316,13 +446,13 @@ export default function ProjectProvidersPage() {
 
       {configs.length > 0 && !showForm && (
         <div className="flex flex-wrap gap-2">
-          {SUPPORTED_PROVIDERS.map((p) => {
-            const alreadyConfigured = configs.some((c) => c.provider === p.key)
+          {availableCatalog.map((p) => {
+            const alreadyConfigured = configs.some((c) => c.provider === p.code)
             if (alreadyConfigured) return null
             return (
               <button
-                key={p.key}
-                onClick={() => openCreate(p.key)}
+                key={p.code}
+                onClick={() => openCreate(p.code)}
                 disabled={!!error}
                 className="flex items-center gap-1.5 rounded-[10px] border border-border px-3 py-2 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-soft hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -337,7 +467,7 @@ export default function ProjectProvidersPage() {
       {showForm && (
         <Card>
           <p className="text-[14px] font-medium text-primary mb-4">
-            {editingId ? `Modifier la clé : ${form.label}` : `Ajouter : ${getProviderDef(form.provider)?.label || form.provider}`}
+            {editingId ? `Modifier la clé : ${form.label}` : `Ajouter : ${getCatalogEntry(catalog, form.provider)?.label || form.provider}`}
           </p>
           <div className="flex flex-col gap-3">
             {!editingId && (
@@ -347,7 +477,7 @@ export default function ProjectProvidersPage() {
                   <select
                     value={form.provider}
                     onChange={(e) => {
-                      const def = getProviderDef(e.target.value)
+                      const def = getCatalogEntry(catalog, e.target.value)
                       setForm({
                         ...form,
                         provider: e.target.value,
@@ -356,8 +486,8 @@ export default function ProjectProvidersPage() {
                     }}
                     className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
                   >
-                    {SUPPORTED_PROVIDERS.map((p) => (
-                      <option key={p.key} value={p.key}>{p.label}</option>
+                    {availableCatalog.map((p) => (
+                      <option key={p.code} value={p.code}>{p.label}</option>
                     ))}
                   </select>
                 </div>

@@ -32,3 +32,24 @@ class AIProviderTestResult(BaseModel):
     status: str
     message: Optional[str] = None
     model: Optional[str] = None
+
+
+class ProviderCatalogEntryCreate(BaseModel):
+    code: str
+    label: str
+    base_url: Optional[str] = None
+    is_enabled: bool = True
+
+
+class ProviderCatalogEntryUpdate(BaseModel):
+    label: Optional[str] = None
+    base_url: Optional[str] = None
+    is_enabled: Optional[bool] = None
+
+
+class ProviderCatalogEntryPublic(BaseModel):
+    id: str
+    code: str
+    label: str
+    base_url: Optional[str] = None
+    is_enabled: bool

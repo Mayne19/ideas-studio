@@ -7,7 +7,10 @@ from app.core.database import get_db
 from app.dependencies.auth import get_current_user, get_member_for_project
 from app.models.core import User
 from app.models.ai import Provider, ProviderCredential
-from app.schemas.ai_provider import AIProviderCreate, AIProviderUpdate, AIProviderPublic, AIProviderTestResult
+from app.schemas.ai_provider import (
+    AIProviderCreate, AIProviderUpdate, AIProviderPublic, AIProviderTestResult,
+    ProviderCatalogEntryCreate, ProviderCatalogEntryUpdate, ProviderCatalogEntryPublic,
+)
 from app.core.security import decrypt_secret, encrypt_secret
 from app.core.config import settings
 
@@ -210,6 +213,78 @@ def get_default_provider(
         "enabled": True,
         "source": "env",
     }
+
+
+@router.get("/catalog", response_model=list[ProviderCatalogEntryPublic])
+def list_provider_catalog(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Catalogue global ai.providers (pas de project_id) — toute plateforme IA
+    connectable doit d'abord y avoir une ligne. Lecture ouverte à tout
+    utilisateur connecté : sert à peupler les sélecteurs de provider."""
+    rows = db.execute(select(Provider).order_by(Provider.code)).scalars().all()
+    return [
+        ProviderCatalogEntryPublic(id=p.id, code=p.code, label=p.label, base_url=p.base_url, is_enabled=p.is_enabled)
+        for p in rows
+    ]
+
+
+@router.post("/catalog", response_model=ProviderCatalogEntryPublic, status_code=201)
+def create_provider_catalog_entry(
+    data: ProviderCatalogEntryCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _ensure_platform_admin(current_user)
+    existing = db.execute(select(Provider).where(Provider.code == data.code)).scalar_one_or_none()
+    if existing:
+        raise HTTPException(status_code=409, detail=f"Provider '{data.code}' already in catalog")
+    row = Provider(code=data.code, label=data.label, base_url=data.base_url, is_enabled=data.is_enabled)
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return ProviderCatalogEntryPublic(id=row.id, code=row.code, label=row.label, base_url=row.base_url, is_enabled=row.is_enabled)
+
+
+@router.patch("/catalog/{catalog_id}", response_model=ProviderCatalogEntryPublic)
+def update_provider_catalog_entry(
+    catalog_id: str,
+    data: ProviderCatalogEntryUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _ensure_platform_admin(current_user)
+    row = db.get(Provider, catalog_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Catalog entry not found")
+    if data.label is not None:
+        row.label = data.label
+    if data.base_url is not None:
+        row.base_url = data.base_url
+    if data.is_enabled is not None:
+        row.is_enabled = data.is_enabled
+    db.commit()
+    db.refresh(row)
+    return ProviderCatalogEntryPublic(id=row.id, code=row.code, label=row.label, base_url=row.base_url, is_enabled=row.is_enabled)
+
+
+@router.delete("/catalog/{catalog_id}", status_code=204)
+def delete_provider_catalog_entry(
+    catalog_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _ensure_platform_admin(current_user)
+    row = db.get(Provider, catalog_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Catalog entry not found")
+    in_use = db.execute(select(ProviderCredential).where(ProviderCredential.provider_id == catalog_id)).first()
+    if in_use:
+        raise HTTPException(status_code=409, detail="Provider still has credentials configured — remove them first")
+    db.delete(row)
+    db.commit()
+    return None
 
 
 @router.get("/{provider_id}", response_model=AIProviderPublic)
