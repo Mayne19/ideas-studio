@@ -810,8 +810,8 @@ function WritingTab({ projectId, categories }: { projectId: string; categories: 
 
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-[1120px]">
-        <div className="mb-1 hidden grid-cols-[minmax(420px,1.45fr)_minmax(190px,0.55fr)_160px_120px_120px] gap-5 px-3 text-[12px] font-medium uppercase tracking-wide text-tertiary lg:grid">
+      <div className="min-w-[1180px]">
+        <div className="mb-1 hidden grid-cols-[minmax(360px,1.2fr)_minmax(150px,0.45fr)_140px_110px_minmax(260px,auto)] gap-5 px-3 text-[12px] font-medium uppercase tracking-wide text-tertiary lg:grid">
           <div>Titre</div>
           <div>Catégorie</div>
           <div>Étape</div>
@@ -824,7 +824,7 @@ function WritingTab({ projectId, categories }: { projectId: string; categories: 
             return (
               <div
                 key={article.id}
-                className="group grid grid-cols-[minmax(420px,1.45fr)_minmax(190px,0.55fr)_160px_120px_120px] items-center gap-5 border-b border-border/30 px-3 py-3 transition-colors hover:bg-surface-soft"
+                className="group grid grid-cols-[minmax(360px,1.2fr)_minmax(150px,0.45fr)_140px_110px_minmax(260px,auto)] items-center gap-5 border-b border-border/30 px-3 py-3 transition-colors hover:bg-surface-soft"
               >
                 <div className="min-w-0">
                   <button
@@ -846,7 +846,7 @@ function WritingTab({ projectId, categories }: { projectId: string; categories: 
                   )}
                 </div>
                 <span className="whitespace-nowrap text-[12px] text-tertiary">{formatDate(article.updated_at)}</span>
-                <div className="flex justify-end gap-1.5">
+                <div className="flex flex-wrap justify-end gap-1.5">
                   {(article.status === ArticleStatus.FAILED || isStaleWriting(article)) && (
                     <button
                       type="button"
