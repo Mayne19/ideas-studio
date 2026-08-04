@@ -859,7 +859,6 @@ interface PaletteItem {
 }
 
 export default function DocumentationPage() {
-  const [query, setQuery] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeChapterId, setActiveChapterId] = useState(CHAPTERS[0]?.id ?? '')
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
@@ -875,12 +874,6 @@ export default function DocumentationPage() {
   const activeChapterIndex = CHAPTERS.findIndex((c) => c.id === activeChapterId)
   const prevChapter = activeChapterIndex > 0 ? CHAPTERS[activeChapterIndex - 1] : null
   const nextChapter = activeChapterIndex >= 0 && activeChapterIndex < CHAPTERS.length - 1 ? CHAPTERS[activeChapterIndex + 1] : null
-
-  const filteredChapters = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return CHAPTERS
-    return CHAPTERS.filter((ch) => ch.label.toLowerCase().includes(q))
-  }, [query])
 
   const outline = activeChapter ? extractOutline(activeChapter.sections) : []
   const swaggerUrl = `${documentationApiUrl}/docs`
@@ -959,7 +952,6 @@ export default function DocumentationPage() {
 
   function goToChapter(id: string) {
     setActiveChapterId(id)
-    setQuery('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -1082,17 +1074,17 @@ export default function DocumentationPage() {
         {/* Left sidebar - chapters */}
         <aside className="hidden lg:block border-r border-border min-h-[calc(100vh-56px)]">
           <div className="sticky top-14 py-6 pr-4">
-            <div className="mb-4 flex items-center gap-2 rounded-[8px] border border-border bg-surface px-3 py-2">
-              <Search size={14} className="text-tertiary shrink-0" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Rechercher dans la doc…"
-                className="w-full bg-transparent text-[14px] text-primary outline-none placeholder:text-tertiary"
-              />
-            </div>
+            <button
+              type="button"
+              onClick={openPalette}
+              className="mb-4 flex w-full items-center gap-2 rounded-[8px] border border-border bg-surface px-3 py-2 text-left text-[14px] text-tertiary hover:border-border-strong hover:text-secondary transition-colors"
+            >
+              <Search size={14} className="shrink-0" />
+              Rechercher dans la doc…
+              <kbd className="ml-auto shrink-0 rounded-[4px] border border-border bg-surface-soft px-1.5 py-0.5 text-[11px] font-medium text-tertiary">⌘K</kbd>
+            </button>
             <nav className="flex flex-col gap-0.5">
-              {filteredChapters.map((ch) => {
+              {CHAPTERS.map((ch) => {
                 const ChapterIcon = ch.icon
                 return (
                   <button
