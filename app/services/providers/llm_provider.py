@@ -89,6 +89,14 @@ class OllamaLLMProvider(LLMProvider):
         self.fallback_model = fallback_model
         self.timeout_seconds = timeout_seconds
         self.api_key = api_key
+        # Ollama Cloud (ollama.com) : /api/tags y liste le catalogue public de
+        # vitrine, pas les modèles réellement accessibles avec ce compte, et
+        # les noms n'y portent jamais le suffixe ":cloud" utilisé par /api/chat
+        # (ex: "gemma4:31b" au catalogue vs "gemma4:cloud" pour l'appel réel).
+        # Comparer self.model à cette liste rejette donc à tort des modèles
+        # cloud valides — on ne peut vérifier la disponibilité qu'en appelant
+        # /api/chat directement.
+        self.is_cloud = "ollama.com" in self.base_url
         self._model_checked = False
         self._model_available = False
         self.last_usage: dict[str, int] | None = None
@@ -101,6 +109,8 @@ class OllamaLLMProvider(LLMProvider):
         if self._model_checked:
             return self._model_available
         self._model_checked = True
+        if self.is_cloud:
+            return self._ensure_model_cloud()
         try:
             import httpx
             resp = httpx.get(f"{self.base_url}/api/tags", timeout=10, headers=self._auth_headers)
@@ -121,6 +131,28 @@ class OllamaLLMProvider(LLMProvider):
             self._model_available = False
         except Exception as exc:
             self._last_error = f"Erreur Ollama: {exc}"
+            self._model_available = False
+        return self._model_available
+
+    def _ensure_model_cloud(self) -> bool:
+        try:
+            import httpx
+            payload = {"model": self.model, "messages": [{"role": "user", "content": "ping"}], "stream": False}
+            resp = httpx.post(f"{self.base_url}/api/chat", json=payload, timeout=20, headers=self._auth_headers)
+            if resp.status_code == 401:
+                self._last_error = "Clé API Ollama Cloud invalide ou expirée"
+                self._model_available = False
+            elif resp.status_code == 404:
+                self._last_error = f"Modèle Ollama Cloud '{self.model}' introuvable"
+                self._model_available = False
+            else:
+                resp.raise_for_status()
+                self._model_available = True
+        except httpx.ConnectError:
+            self._last_error = "Ollama Cloud indisponible"
+            self._model_available = False
+        except Exception as exc:
+            self._last_error = f"Erreur Ollama Cloud: {exc}"
             self._model_available = False
         return self._model_available
 
@@ -190,6 +222,12 @@ class OllamaLLMProvider(LLMProvider):
 
     def health_check(self) -> dict:
         """Return structured health status (does NOT raise)."""
+        if self.is_cloud:
+            available = self._ensure_model_cloud()
+            return {
+                "provider": "ollama", "model": self.model, "configured": True,
+                "available": available, "error": None if available else self._last_error,
+            }
         try:
             import httpx
             tags_resp = httpx.get(f"{self.base_url}/api/tags", timeout=10, headers=self._auth_headers)

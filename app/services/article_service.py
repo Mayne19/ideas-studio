@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.utils import slugify, generate_unique_slug, calculate_word_count, calculate_reading_time_minutes
 from app.models.content import Article, ArticleKeyword, ArticleRevision, ArticleSeo, Category, Keyword, KeywordRole
-from app.models.reference import ArticleStatus, RevisionSource, set_article_status
+from app.models.reference import ArticleStatus, RevisionSource, RunStatus, set_article_status
 from app.schemas.article import ArticleCreate, ArticleUpdate, ArticlePublic, ArticlePublicApiResponse, CategoryBrief
 from app.services.callout_template_service import extract_callouts_from_content
 
