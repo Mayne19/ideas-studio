@@ -1131,7 +1131,7 @@ class SEOGenerationOrchestrator:
                 .limit(1)
             ).scalar()
             if current_score is not None and current_score < AUTO_IMPROVE_SCORE_TARGET:
-                self._auto_improve_score(draft, max_iterations=2)
+                self._auto_improve_score(draft, max_iterations=4)
         except Exception as exc:
             self._error("AutoImprove", str(exc))
 
@@ -1168,10 +1168,20 @@ class SEOGenerationOrchestrator:
         self.db.flush()
         return revision
 
-    def _auto_improve_score(self, draft: _DraftArticle, max_iterations: int = 2):
-        """Tant que global_score < AUTO_IMPROVE_SCORE_TARGET, améliore le signal le plus faible."""
+    def _auto_improve_score(self, draft: _DraftArticle, max_iterations: int = 4):
+        """Tant que global_score < AUTO_IMPROVE_SCORE_TARGET, améliore le signal le plus faible.
+
+        Utilise compute_global_score() (même source de vérité que le score
+        affiché à l'utilisateur et que check_validation_thresholds) plutôt que
+        de relire ArticleScore directement : cette table n'a pas de colonne
+        originality_score, ce qui rendait ce signal invisible à la boucle
+        (toujours None, jamais amélioré) alors que le score global le pénalise
+        bel et bien. Le volume de mots hors plage est aussi traité comme un
+        signal corrigible, séparément des 5 signaux de score (une correction
+        déterministe de troncature/extension, pas un aller-retour LLM)."""
         from app.services.seo.seo_review_service import run_and_store_seo_review
         from app.services.scoring_service import compute_global_score
+        from app.services.seo.content_structure_guard import check_word_count_compliance
 
         article = draft.article
         IMPROVEMENT_INSTRUCTIONS = {
@@ -1197,31 +1207,40 @@ class SEOGenerationOrchestrator:
             ),
         }
 
+        wc_min = self.context.get("word_count_min")
+        wc_max = self.context.get("word_count_max")
+
         for iteration in range(max_iterations):
             self._raise_if_cancelled(article)
-            latest = self.db.execute(
-                select(ArticleScore)
-                .where(ArticleScore.article_id == article.id)
-                .order_by(ArticleScore.evaluated_at.desc())
-                .limit(1)
-            ).scalar_one_or_none()
-            current_score = latest.global_score if latest else None
+            scoring = compute_global_score(self.db, article.id, article=article)
+            current_score = scoring.get("global_score")
             if current_score is None or current_score >= AUTO_IMPROVE_SCORE_TARGET:
                 break
 
+            wc_check = check_word_count_compliance(draft.word_count, wc_min, wc_max)
             signals = {
-                'EEAT': latest.eeat_score if latest else None,
-                'SEO': latest.seo_score if latest else None,
-                'Lisibilité': latest.readability_score if latest else None,
-                'Originalité': None,
-                'GEO': latest.geo_score if latest else None,
+                'EEAT': scoring.get("eeat_contrib"),
+                'SEO': scoring.get("seo_contrib"),
+                'Lisibilité': scoring.get("readability_contrib"),
+                'Originalité': scoring.get("originality_contrib"),
+                'GEO': scoring.get("geo_contrib"),
             }
             valid_signals = {k: v for k, v in signals.items() if v is not None}
-            if not valid_signals:
+            if not valid_signals and wc_check["status"] not in ("under_minimum", "over_maximum"):
                 break
 
-            weakest_signal = min(valid_signals, key=valid_signals.get)
-            instruction = IMPROVEMENT_INSTRUCTIONS.get(weakest_signal, "Améliore la qualité globale du texte.")
+            if wc_check["status"] in ("under_minimum", "over_maximum"):
+                weakest_signal = "Volume"
+                direction = "raccourcis" if wc_check["status"] == "over_maximum" else "développe"
+                instruction = (
+                    f"Le contenu fait {wc_check['word_count']} mots, la cible est "
+                    f"{wc_check.get('target_min') or 0}-{wc_check.get('target_max') or '∞'} mots. "
+                    f"{direction.capitalize()} le contenu pour respecter cette plage, "
+                    "sans changer le plan ni le nombre de sections."
+                )
+            else:
+                weakest_signal = min(valid_signals, key=valid_signals.get)
+                instruction = IMPROVEMENT_INSTRUCTIONS.get(weakest_signal, "Améliore la qualité globale du texte.")
 
             improve_prompt = (
                 f"Améliore ce contenu HTML en appliquant UNE SEULE modification ciblée.\n\n"
@@ -1229,9 +1248,8 @@ class SEOGenerationOrchestrator:
                 "Règles impératives :\n"
                 "- Conserve exactement la structure HTML (balises H1, H2, H3, p, ul, li)\n"
                 "- Ne change pas le titre principal (H1)\n"
-                "- Ne modifie pas la longueur totale de plus de 20%\n"
                 "- Retourne uniquement le HTML amélioré, sans explication, sans backticks\n\n"
-                f"Contenu :\n{(draft.content or '')[:4000]}"
+                f"Contenu :\n{(draft.content or '')[:6000]}"
             )
 
             try:
@@ -1242,6 +1260,8 @@ class SEOGenerationOrchestrator:
                     break
                 improved = editor_llm.generate_text(improve_prompt)
                 if improved and len(improved) > 200:
+                    from app.services.seo.content_structure_guard import apply_structure_guards
+                    improved = apply_structure_guards(improved, draft.title)
                     draft.content = improved
                     draft.word_count = calculate_word_count(improved)
                     draft.reading_time_minutes = calculate_reading_time_minutes(draft.word_count)
@@ -1251,15 +1271,15 @@ class SEOGenerationOrchestrator:
 
                     try:
                         run_and_store_seo_review(self.db, article)
-                        scoring = compute_global_score(self.db, article.id, article=article)
+                        rescored = compute_global_score(self.db, article.id, article=article)
                         self.db.add(ArticleScore(
                             article_id=article.id,
                             revision_id=article.current_revision_id,
-                            global_score=scoring.get("global_score"),
-                            seo_score=scoring.get("seo_contrib"),
-                            eeat_score=scoring.get("eeat_contrib"),
-                            readability_score=scoring.get("readability_contrib"),
-                            geo_score=scoring.get("geo_contrib"),
+                            global_score=rescored.get("global_score"),
+                            seo_score=rescored.get("seo_contrib"),
+                            eeat_score=rescored.get("eeat_contrib"),
+                            readability_score=rescored.get("readability_contrib"),
+                            geo_score=rescored.get("geo_contrib"),
                         ))
                         self.db.flush()
                     except Exception as score_exc:
