@@ -127,8 +127,9 @@ export default function ProjectAgentsPage() {
     setAssigningAll(true)
     setSuccessMsg(null)
     try {
+      const assignable = agents.filter((agent) => agent.requires_llm)
       const results = await Promise.allSettled(
-        agents.map((agent) =>
+        assignable.map((agent) =>
           api.put<AgentAssignment>('/settings/ai-agents/assignments', {
             agent_id: agent.agent_id,
             provider_code: providerCode,
@@ -140,7 +141,7 @@ export default function ProjectAgentsPage() {
       )
       const failed = results.filter((r) => r.status === 'rejected').length
       await fetchAll()
-      setSuccessMsg(failed === 0 ? `${agents.length} agents assignés` : `${agents.length - failed} agents assignés, ${failed} en échec`)
+      setSuccessMsg(failed === 0 ? `${assignable.length} agents assignés` : `${assignable.length - failed} agents assignés, ${failed} en échec`)
       setTimeout(() => setSuccessMsg(null), 3000)
     } catch (err) {
       console.error('Failed to assign all agents:', err)
@@ -256,6 +257,10 @@ export default function ProjectAgentsPage() {
                 <div>
                   {isSaving ? (
                     <Loader2 size={16} className="animate-spin text-secondary" />
+                  ) : !agent.requires_llm ? (
+                    <span className="text-[12px] text-tertiary" title="Cet agent fonctionne sans LLM (règles internes) — aucun provider ne lui est applicable.">
+                      Sans LLM
+                    </span>
                   ) : (
                     <Select
                       value={ass?.provider_code || ''}

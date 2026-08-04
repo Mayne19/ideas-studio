@@ -81,13 +81,10 @@ def list_all_agents(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Return the canonical agent list.
-
-    Project settings consume the frontend-visible list. The global admin view
-    keeps the full registry available for diagnostics and tests.
-    """
+    """Return the full canonical agent list — project settings and the global
+    admin view both show all 62 agents, aucun n'est masqué."""
     _ensure_project_admin(project_id, current_user, db)
-    return [serialize_agent(a) for a in list_agents(visible_only=bool(project_id))]
+    return [serialize_agent(a) for a in list_agents()]
 
 
 @router.get("/assignments", response_model=list[AgentAssignmentWithDetails])
@@ -116,6 +113,11 @@ def create_or_update_assignment(
     agent = get_agent(data.agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail=f"Agent '{data.agent_id}' not found")
+    if not agent.requires_llm:
+        raise HTTPException(
+            status_code=400,
+            detail=f"L'agent '{data.agent_id}' fonctionne sans LLM (heuristique) — aucun provider ne peut lui être assigné.",
+        )
     agent_row = db.execute(select(Agent).where(Agent.key == data.agent_id)).scalar_one_or_none()
     if not agent_row:
         raise HTTPException(status_code=404, detail=f"Agent '{data.agent_id}' not synced (ai.agents)")
