@@ -10,7 +10,7 @@ import sys
 
 from sqlalchemy import select
 
-from app.core.database import SessionLocal
+from app.core.database import SessionLocal, set_current_project_id
 
 
 def _should_run_pipeline_today(pipeline) -> bool:
@@ -37,6 +37,7 @@ def cmd_daily(_args) -> None:
         processed = 0
         skipped = 0
         for project in projects:
+            set_current_project_id(project.id)
             pipeline = db.get(Pipeline, project.id)
             if _should_run_pipeline_today(pipeline):
                 result = run_daily_project_tasks(db, project.id)
@@ -48,6 +49,7 @@ def cmd_daily(_args) -> None:
                 skipped += 1
         print(f"Processed {processed} project(s), {skipped} skipped (pipeline disabled or not active today).")
     finally:
+        set_current_project_id(None)
         db.close()
 
 
@@ -63,6 +65,7 @@ def cmd_generate_ideas(args) -> None:
         if not project:
             print(f"Project {args.project_id} not found.")
             sys.exit(1)
+        set_current_project_id(project.id)
         profile = project.active_editorial_profile
 
         llm = get_llm_provider()
@@ -81,6 +84,7 @@ def cmd_generate_ideas(args) -> None:
         else:
             print("No new idea generated (possible duplicate).")
     finally:
+        set_current_project_id(None)
         db.close()
 
 
@@ -88,6 +92,7 @@ def cmd_review(args) -> None:
     from app.services.optimization_engine import review_published_articles
 
     db = SessionLocal()
+    set_current_project_id(args.project_id)
     try:
         result = review_published_articles(db, args.project_id)
         db.commit()
@@ -95,6 +100,7 @@ def cmd_review(args) -> None:
         print(f"  Recommendations created : {result['recommendations_created']}")
         print(f"  Notifications created   : {result['notifications_created']}")
     finally:
+        set_current_project_id(None)
         db.close()
 
 

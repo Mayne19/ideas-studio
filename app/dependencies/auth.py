@@ -4,7 +4,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.core.database import get_db
+from app.core.database import get_db, set_current_project_id
 from app.core.security import decode_access_token
 from app.models.core import Project, ProjectMember, User
 from app.models.reference import MemberRole, MembershipStatus
@@ -94,6 +94,7 @@ def get_project_member(
             status_reason_id=MembershipStatus.ACTIVE,
             created_at=datetime.now(timezone.utc),
         )
+        set_current_project_id(project_id)
         return MemberView(virtual, "owner")
     member = db.execute(
         select(ProjectMember).where(
@@ -104,6 +105,7 @@ def get_project_member(
     ).scalar_one_or_none()
     if not member:
         raise HTTPException(status_code=403, detail="Access denied: not a project member")
+    set_current_project_id(project_id)
     return MemberView(member, _role_code(member.role_id))
 
 
@@ -121,6 +123,7 @@ def get_member_for_project(db: Session, user_id: str, project_id: str) -> Member
     ).scalar_one_or_none()
     if not member:
         return None
+    set_current_project_id(project_id)
     return MemberView(member, _role_code(member.role_id))
 
 
