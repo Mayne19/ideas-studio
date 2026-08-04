@@ -3,40 +3,35 @@ import { useParams } from 'react-router-dom'
 import { Plus, Trash2, TestTube, CheckCircle, XCircle, Loader2, Eye, EyeOff, Save } from '@/components/ui/hugeIcons'
 import { api } from '@/api/client'
 import { Card } from '@/components/ui/Card'
-import ToggleSwitch from '@/components/ui/ToggleSwitch'
 import { useProject } from '@/context/ProjectContext'
 
 type AIProviderConfig = {
   id: string
+  project_id: string | null
   provider: string
   label: string
   api_key_configured: boolean
-  model: string
-  base_url: string
-  is_default: boolean
-  enabled: boolean
+  base_url: string | null
   last_test_status: string | null
   last_test_error: string | null
   last_tested_at: string | null
   created_at: string
-  updated_at: string
 }
 
 type ProviderDef = {
   key: string
   label: string
-  default_model: string
-  default_base_url: string
 }
 
+// Doit correspondre au catalogue ai.providers (db/migration-v3/01-schema.sql) —
+// pas d'endpoint pour ajouter un provider au catalogue depuis l'UI, uniquement
+// pour connecter une clé API sur un provider déjà présent en base.
 const SUPPORTED_PROVIDERS: ProviderDef[] = [
-  { key: 'gemini', label: 'Google Gemini', default_model: 'gemini-2.5-flash', default_base_url: 'https://generativelanguage.googleapis.com/v1beta/openai/' },
-  { key: 'openai', label: 'OpenAI', default_model: 'gpt-4o-mini', default_base_url: 'https://api.openai.com/v1' },
-  { key: 'openrouter', label: 'OpenRouter', default_model: 'deepseek/deepseek-v4-flash', default_base_url: 'https://openrouter.ai/api/v1' },
-  { key: 'anthropic', label: 'Claude / Anthropic', default_model: 'claude-3-5-sonnet-latest', default_base_url: 'https://api.anthropic.com/v1' },
-  { key: 'mistral', label: 'Mistral', default_model: 'mistral-large-latest', default_base_url: 'https://api.mistral.ai/v1' },
-  { key: 'ollama', label: 'Ollama (local)', default_model: 'qwen3:14b', default_base_url: 'http://127.0.0.1:11434/v1' },
-  { key: 'custom', label: 'Custom OpenAI-compatible', default_model: '', default_base_url: '' },
+  { key: 'gemini', label: 'Google Gemini' },
+  { key: 'openai', label: 'OpenAI' },
+  { key: 'openrouter', label: 'OpenRouter' },
+  { key: 'mistral', label: 'Mistral' },
+  { key: 'ollama', label: 'Ollama (local)' },
 ]
 
 function getProviderDef(key: string): ProviderDef | undefined {
@@ -47,20 +42,12 @@ type ProviderFormData = {
   provider: string
   label: string
   api_key: string
-  model: string
-  base_url: string
-  is_default: boolean
-  enabled: boolean
 }
 
 const emptyForm: ProviderFormData = {
   provider: 'gemini',
   label: '',
   api_key: '',
-  model: '',
-  base_url: '',
-  is_default: false,
-  enabled: true,
 }
 
 function AccessDenied() {
@@ -91,7 +78,6 @@ export default function ProjectProvidersPage() {
   const [testResult, setTestResult] = useState<{ id: string; status: string; message: string } | null>(null)
   const [showKeys, setShowKeys] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState<string | null>(null)
-  const [advancedOpen, setAdvancedOpen] = useState(false)
 
   const loadConfigs = useCallback(async () => {
     setLoading(true)
@@ -119,60 +105,38 @@ export default function ProjectProvidersPage() {
       provider: providerKey,
       label: def?.label ?? providerKey,
       api_key: '',
-      model: def?.default_model ?? '',
-      base_url: def?.default_base_url ?? '',
-      is_default: configs.length === 0,
-      enabled: true,
     })
     setEditingId(null)
     setShowForm(true)
     setTestResult(null)
-    setAdvancedOpen(providerKey === 'custom' || providerKey === 'ollama')
   }
 
   function openEdit(config: AIProviderConfig) {
-    const def = getProviderDef(config.provider)
     setForm({
       provider: config.provider,
       label: config.label,
       api_key: '',
-      model: config.model || def?.default_model || '',
-      base_url: config.base_url || def?.default_base_url || '',
-      is_default: config.is_default,
-      enabled: config.enabled,
     })
     setEditingId(config.id)
     setShowForm(true)
     setTestResult(null)
-    setAdvancedOpen(config.provider === 'custom' || config.provider === 'ollama')
   }
 
   async function handleSave() {
     setSaving(true)
     try {
-      const body: Record<string, unknown> = {
-        provider: form.provider,
-        label: form.label || form.provider,
-        project_id: projectId,
-        model: form.model || undefined,
-        base_url: form.base_url || undefined,
-        is_default: form.is_default,
-        enabled: form.enabled,
-      }
-      // Trim : une clé collée avec espaces/saut de ligne serait stockée cassée
       const apiKey = form.api_key.trim()
-      if (apiKey) body.api_key = apiKey
-
-      // Confirmer la présence d'api_key dans le payload (valeur masquée, jamais la clé en clair)
-      console.debug(`[providers] ${editingId ? 'PATCH' : 'POST'} payload`, {
-        ...body,
-        api_key: apiKey ? `<${apiKey.length} caractères>` : '<absent : clé existante conservée>',
-      })
-
       if (editingId) {
-        await api.patch(`/settings/ai-providers/${editingId}`, body)
+        // AIProviderUpdate n'accepte que api_key côté backend v3 — le label et le
+        // provider sont fixés à la création (contrainte unique project_id+provider).
+        await api.patch(`/settings/ai-providers/${editingId}`, apiKey ? { api_key: apiKey } : {})
       } else {
-        await api.post('/settings/ai-providers', body)
+        await api.post('/settings/ai-providers', {
+          provider: form.provider,
+          label: form.label || form.provider,
+          project_id: projectId,
+          api_key: apiKey || undefined,
+        })
       }
       setShowForm(false)
       setEditingId(null)
@@ -203,7 +167,7 @@ export default function ProjectProvidersPage() {
     setTesting(id)
     setTestResult(null)
     try {
-      const result = await api.post<{ status: string; message: string }>(`/settings/ai-providers/${id}/test`)
+      const result = await api.post<{ provider: string; status: string; message: string | null; model: string | null }>(`/settings/ai-providers/${id}/test`)
       setTestResult({ id, status: result.status, message: result.message || (result.status === 'connected' ? 'Connexion réussie' : 'Erreur inconnue') })
       await loadConfigs()
     } catch (err: unknown) {
@@ -239,6 +203,13 @@ export default function ProjectProvidersPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h2 className="text-[15px] font-semibold text-primary">Configuration des providers IA</h2>
+      </div>
+
+      <div className="rounded-[14px] border border-accent/20 bg-accent/5 px-4 py-3">
+        <p className="text-[12px] text-secondary leading-snug">
+          Un provider ici correspond à une clé API pour une plateforme donnée. Le modèle utilisé par chaque agent
+          se choisit dans Paramètres → Agents, pas ici.
+        </p>
       </div>
 
       {error && (
@@ -278,16 +249,12 @@ export default function ProjectProvidersPage() {
       )}
 
       {configs.map((config) => {
-        const def = getProviderDef(config.provider)
         return (
           <div key={config.id} className="rounded-[8px] border border-border bg-surface p-4">
             <div className="flex items-start justify-between mb-3">
               <div>
                 <div className="flex items-center gap-2">
                   <p className="text-[14px] font-medium text-primary">{config.label}</p>
-                  {config.is_default && (
-                    <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">Par défaut</span>
-                  )}
                   {config.last_test_status === 'connected' && (
                     <span className="rounded-full bg-success/8 px-2 py-0.5 text-[10px] font-medium text-success">Connecté</span>
                   )}
@@ -296,7 +263,7 @@ export default function ProjectProvidersPage() {
                   )}
                 </div>
                 <p className="mt-0.5 text-[12px] text-tertiary">
-                  {config.provider} · {config.model || def?.default_model || 'Modèle par défaut'}
+                  {config.provider}{config.base_url ? ` · ${config.base_url}` : ''}
                 </p>
               </div>
               <div className="flex items-center gap-1">
@@ -311,7 +278,7 @@ export default function ProjectProvidersPage() {
                 <button
                   onClick={() => openEdit(config)}
                   className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
-                  title="Modifier"
+                  title="Modifier la clé API"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
@@ -342,7 +309,6 @@ export default function ProjectProvidersPage() {
             <div className="flex flex-wrap gap-4 text-[12px] text-tertiary">
               <span>Clé API : {config.api_key_configured ? 'Configurée' : 'Non configurée'}</span>
               {config.last_tested_at && <span>Dernier test : {new Date(config.last_tested_at).toLocaleString('fr-FR')}</span>}
-              <span>Statut : {config.enabled ? 'Actif' : 'Inactif'}</span>
             </div>
           </div>
         )
@@ -371,43 +337,42 @@ export default function ProjectProvidersPage() {
       {showForm && (
         <Card>
           <p className="text-[14px] font-medium text-primary mb-4">
-            {editingId ? `Modifier : ${form.label}` : `Ajouter : ${getProviderDef(form.provider)?.label || form.provider}`}
+            {editingId ? `Modifier la clé : ${form.label}` : `Ajouter : ${getProviderDef(form.provider)?.label || form.provider}`}
           </p>
           <div className="flex flex-col gap-3">
             {!editingId && (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[12px] font-medium text-secondary">Type de provider</label>
-                <select
-                  value={form.provider}
-                  onChange={(e) => {
-                    const def = getProviderDef(e.target.value)
-                    setForm({
-                      ...form,
-                      provider: e.target.value,
-                      label: def?.label ?? e.target.value,
-                      model: def?.default_model ?? '',
-                      base_url: def?.default_base_url ?? '',
-                    })
-                    setAdvancedOpen(e.target.value === 'custom' || e.target.value === 'ollama')
-                  }}
-                  className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
-                >
-                  {SUPPORTED_PROVIDERS.map((p) => (
-                    <option key={p.key} value={p.key}>{p.label}</option>
-                  ))}
-                </select>
-              </div>
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[12px] font-medium text-secondary">Type de provider</label>
+                  <select
+                    value={form.provider}
+                    onChange={(e) => {
+                      const def = getProviderDef(e.target.value)
+                      setForm({
+                        ...form,
+                        provider: e.target.value,
+                        label: def?.label ?? e.target.value,
+                      })
+                    }}
+                    className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
+                  >
+                    {SUPPORTED_PROVIDERS.map((p) => (
+                      <option key={p.key} value={p.key}>{p.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[12px] font-medium text-secondary">Label</label>
+                  <input
+                    type="text"
+                    value={form.label}
+                    onChange={(e) => setForm({ ...form, label: e.target.value })}
+                    placeholder="Mon provider Gemini"
+                    className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
+                  />
+                </div>
+              </>
             )}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[12px] font-medium text-secondary">Label</label>
-              <input
-                type="text"
-                value={form.label}
-                onChange={(e) => setForm({ ...form, label: e.target.value })}
-                placeholder="Mon provider Gemini"
-                className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
-              />
-            </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[12px] font-medium text-secondary">
                 Clé API {editingId ? '(laisser vide pour conserver)' : ''}
@@ -429,48 +394,11 @@ export default function ProjectProvidersPage() {
                 </button>
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[12px] font-medium text-secondary">Modèle</label>
-                <input
-                  type="text"
-                  value={form.model}
-                  onChange={(e) => setForm({ ...form, model: e.target.value })}
-                  placeholder="gemini-2.5-flash"
-                  className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
-                />
-              </div>
-              {(advancedOpen || form.provider === 'custom' || form.provider === 'ollama') && (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[12px] font-medium text-secondary">URL de base</label>
-                  <input
-                    type="text"
-                    value={form.base_url}
-                    onChange={(e) => setForm({ ...form, base_url: e.target.value })}
-                    placeholder="https://api.openai.com/v1"
-                    className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
-                  />
-                </div>
-              )}
-            </div>
-            {form.provider !== 'custom' && form.provider !== 'ollama' && (
-              <button
-                type="button"
-                onClick={() => setAdvancedOpen((open) => !open)}
-                className="w-fit rounded-[8px] px-2 py-1 text-[12px] font-medium text-accent hover:bg-accent/8"
-              >
-                {advancedOpen ? 'Masquer les options avancées' : 'Afficher Base URL avancée'}
-              </button>
-            )}
             {form.provider === 'ollama' && (
               <div className="rounded-[12px] bg-warning/8 px-3 py-2 text-[12px] text-secondary">
                 Ollama local fonctionne sur votre machine. Sur Render, utilisez un endpoint public sécurisé ou un provider cloud.
               </div>
             )}
-            <div className="flex items-center gap-4">
-              <ToggleSwitch checked={form.is_default} onChange={(v) => setForm({ ...form, is_default: v })} label="Provider par défaut" />
-              <ToggleSwitch checked={form.enabled} onChange={(v) => setForm({ ...form, enabled: v })} label="Activé" />
-            </div>
             <div className="flex items-center gap-2 pt-2">
               <button
                 onClick={handleSave}
@@ -490,14 +418,6 @@ export default function ProjectProvidersPage() {
           </div>
         </Card>
       )}
-
-      <div className="rounded-[14px] border border-accent/20 bg-accent/5 px-4 py-3">
-        <p className="text-[12px] text-secondary leading-snug">
-          Les providers configurés ici sont prioritaires par rapport aux variables d'environnement. 
-          Vous pouvez ajouter un provider par type, tester sa connexion, et définir le provider par défaut.
-          Les clés API sont stockées de manière sécurisée et ne sont jamais exposées au frontend.
-        </p>
-      </div>
     </div>
   )
 }
