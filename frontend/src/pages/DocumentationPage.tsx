@@ -1032,15 +1032,6 @@ export default function DocumentationPage() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={openPalette}
-              className="hidden sm:flex items-center gap-2 rounded-[8px] border border-border bg-surface-soft px-3 py-1.5 text-[13px] text-tertiary hover:border-border-strong hover:text-secondary transition-colors"
-            >
-              <Search size={13} />
-              Rechercher
-              <kbd className="ml-1 rounded-[4px] border border-border bg-surface px-1.5 py-0.5 text-[11px] font-medium text-tertiary">⌘K</kbd>
-            </button>
             <Link to="/login" className="hidden sm:inline-flex rounded-[8px] px-3 py-1.5 text-[14px] font-medium text-secondary hover:bg-surface-soft hover:text-primary transition-colors">
               Connexion
             </Link>
