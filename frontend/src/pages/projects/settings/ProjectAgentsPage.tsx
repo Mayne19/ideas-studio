@@ -1,12 +1,11 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { Bot, CheckCircle, ChevronDown, ChevronRight, Loader2, RefreshCw } from '@/components/ui/hugeIcons'
+import { Bot, CheckCircle, Loader2, RefreshCw } from '@/components/ui/hugeIcons'
 import { api } from '@/api/client'
 import Button from '@/components/ui/Button'
 import Select from '@/components/ui/Select'
 import LoadingState from '@/components/ui/LoadingState'
 import ErrorState from '@/components/ui/ErrorState'
-import ToggleSwitch from '@/components/ui/ToggleSwitch'
 import type { AgentInfo, AgentAssignment, AIProviderConfig } from '@/types'
 import { useProject } from '@/context/ProjectContext'
 
@@ -59,8 +58,6 @@ export default function ProjectAgentsPage() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [assignAllOpen, setAssignAllOpen] = useState(false)
   const [assigningAll, setAssigningAll] = useState(false)
-  const [assignAllModel, setAssignAllModel] = useState('')
-  const [advancedMode, setAdvancedMode] = useState(false)
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
@@ -88,15 +85,10 @@ export default function ProjectAgentsPage() {
     Promise.resolve().then(fetchAll)
   }, [fetchAll])
 
-  const [modelDrafts, setModelDrafts] = useState<Record<string, string>>({})
-
   const getAssignment = (agentId: string): AgentAssignment | undefined =>
     assignments.find((a) => a.agent_id === agentId)
 
-  const getModelDraft = (agentId: string): string =>
-    modelDrafts[agentId] ?? getAssignment(agentId)?.model ?? ''
-
-  const handleAssign = async (agentId: string, providerCode: string, model: string) => {
+  const handleAssign = async (agentId: string, providerCode: string) => {
     const current = getAssignment(agentId)
     setSavingId(agentId)
     setSuccessMsg(null)
@@ -110,14 +102,9 @@ export default function ProjectAgentsPage() {
         setTimeout(() => setSuccessMsg(null), 2000)
         return
       }
-      if (!model.trim()) {
-        setError('Indiquez un modèle avant d\'assigner un provider.')
-        return
-      }
       const result = await api.put<AgentAssignment>('/settings/ai-agents/assignments', {
         agent_id: agentId,
         provider_code: providerCode,
-        model: model.trim(),
         project_id: projectId,
         enabled: true,
         priority: 0,
@@ -126,7 +113,7 @@ export default function ProjectAgentsPage() {
         const filtered = prev.filter((a) => a.agent_id !== agentId)
         return [...filtered, result]
       })
-      setSuccessMsg(`Agent mis à jour`)
+      setSuccessMsg('Agent mis à jour')
       setTimeout(() => setSuccessMsg(null), 2000)
     } catch (err) {
       console.error('Failed to assign agent:', err)
@@ -135,11 +122,7 @@ export default function ProjectAgentsPage() {
     }
   }
 
-  const handleAssignAll = async (providerCode: string, model: string) => {
-    if (!model.trim()) {
-      setError('Indiquez un modèle avant d\'assigner tous les agents.')
-      return
-    }
+  const handleAssignAll = async (providerCode: string) => {
     setAssignAllOpen(false)
     setAssigningAll(true)
     setSuccessMsg(null)
@@ -149,7 +132,6 @@ export default function ProjectAgentsPage() {
           api.put<AgentAssignment>('/settings/ai-agents/assignments', {
             agent_id: agent.agent_id,
             provider_code: providerCode,
-            model: model.trim(),
             project_id: projectId,
             enabled: true,
             priority: 0,
@@ -164,24 +146,6 @@ export default function ProjectAgentsPage() {
       console.error('Failed to assign all agents:', err)
     } finally {
       setAssigningAll(false)
-    }
-  }
-
-  const handleToggle = async (agentId: string, currentEnabled: boolean) => {
-    const ass = getAssignment(agentId)
-    if (!ass) return
-    setSavingId(agentId)
-    try {
-      await api.patch<AgentAssignment>(`/settings/ai-agents/assignments/${ass.id}`, {
-        enabled: !currentEnabled,
-      })
-      setAssignments((prev) =>
-        prev.map((a) => (a.agent_id === agentId ? { ...a, enabled: !currentEnabled } : a))
-      )
-    } catch (err) {
-      console.error('Failed to toggle agent:', err)
-    } finally {
-      setSavingId(null)
     }
   }
 
@@ -209,8 +173,8 @@ export default function ProjectAgentsPage() {
         <div>
           <h2 className="text-[18px] font-semibold text-primary">Agents IA</h2>
           <p className="mt-0.5 text-[14px] text-secondary">
-            Tous les agents utilisent le provider connecté dans Paramètres → Providers. Le mode avancé permet
-            d'assigner un provider et un modèle différents à un agent spécifique, si besoin.
+            Assignez un provider IA à chaque agent pour ce projet. Le modèle utilisé est celui défini sur le
+            provider (Paramètres → Providers). Les agents sans assignation utilisent le provider par défaut du projet.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -219,6 +183,43 @@ export default function ProjectAgentsPage() {
               <CheckCircle size={14} /> {successMsg}
             </span>
           )}
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={assigningAll || enabledProviders.length === 0}
+              onClick={() => setAssignAllOpen((open) => !open)}
+              title={enabledProviders.length === 0 ? 'Aucun provider actif configuré' : 'Assigner tous les agents au même provider'}
+            >
+              {assigningAll ? <Loader2 size={14} className="mr-1 animate-spin" /> : <Bot size={14} className="mr-1" />}
+              Tout assigner
+            </Button>
+            {assignAllOpen && (
+              <>
+                <button
+                  type="button"
+                  aria-label="Fermer"
+                  className="fixed inset-0 z-10 cursor-default"
+                  onClick={() => setAssignAllOpen(false)}
+                />
+                <div className="absolute right-0 z-20 mt-1 w-64 rounded-[12px] border border-border bg-surface p-2 shadow-lg">
+                  <p className="px-1 py-1 text-[11px] font-semibold uppercase tracking-wide text-tertiary">
+                    Assigner tous les agents à
+                  </p>
+                  {enabledProviders.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handleAssignAll(p.provider)}
+                      className="block w-full rounded-[8px] px-3 py-2 text-left text-[13px] text-primary transition-colors hover:bg-surface-soft"
+                    >
+                      {p.label} <span className="text-tertiary">({p.provider})</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           <Button variant="ghost" size="sm" onClick={fetchAll}>
             <RefreshCw size={14} className="mr-1" /> Rafraîchir
           </Button>
@@ -231,166 +232,58 @@ export default function ProjectAgentsPage() {
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => setAdvancedMode((v) => !v)}
-        className="flex w-fit items-center gap-1.5 text-[13px] font-medium text-secondary transition-colors hover:text-primary"
-      >
-        {advancedMode ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        Mode avancé (provider/modèle par agent)
-      </button>
-
-      {!advancedMode && (
-        <div className="overflow-x-auto rounded-[16px] bg-surface">
-          <div className="min-w-[600px]">
-            <div className="grid grid-cols-[1.1fr_1.8fr_1fr] gap-4 border-b border-border px-4 py-3 text-[12px] font-semibold uppercase tracking-wide text-tertiary">
-              <span>Agent</span>
-              <span>Mission</span>
-              <span>État</span>
-            </div>
-            {agents.map((agent) => {
-              const ass = getAssignment(agent.agent_id)
-              return (
-                <div key={agent.agent_id} className="grid grid-cols-[1.1fr_1.8fr_1fr] items-center gap-4 border-b border-border px-4 py-3 text-[12px] last:border-0">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-primary">{agent.name}</p>
-                    <p className="mt-0.5 truncate text-[12px] text-tertiary">{CATEGORY_LABELS[agent.category] ?? agent.category}</p>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-secondary" title={agent.description}>{agent.description}</p>
-                  </div>
-                  <div className="min-w-0">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[12px] font-medium ${statusBadge(agent).className}`}
-                      title={ass ? `Override : ${ass.provider_code} / ${ass.model}` : statusBadge(agent).title}
-                    >
-                      {statusBadge(agent).label}
-                    </span>
-                    {ass && <span className="ml-1.5 text-[11px] text-tertiary">override actif</span>}
-                  </div>
+      <div className="overflow-x-auto rounded-[16px] bg-surface">
+        <div className="min-w-[860px]">
+          <div className="grid grid-cols-[1.1fr_1.8fr_1.15fr_1fr] gap-4 border-b border-border px-4 py-3 text-[12px] font-semibold uppercase tracking-wide text-tertiary">
+            <span>Agent</span>
+            <span>Mission</span>
+            <span>Provider IA</span>
+            <span>État</span>
+          </div>
+          {agents.map((agent) => {
+            const ass = getAssignment(agent.agent_id)
+            const isSaving = savingId === agent.agent_id
+            return (
+              <div key={agent.agent_id} className="grid grid-cols-[1.1fr_1.8fr_1.15fr_1fr] items-center gap-4 border-b border-border px-4 py-3 text-[12px] last:border-0">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-primary">{agent.name}</p>
+                  <p className="mt-0.5 truncate text-[12px] text-tertiary">{CATEGORY_LABELS[agent.category] ?? agent.category}</p>
                 </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {advancedMode && (
-        <>
-          <div className="flex items-center justify-end">
-            <div className="relative">
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={assigningAll || enabledProviders.length === 0}
-                onClick={() => setAssignAllOpen((open) => !open)}
-                title={enabledProviders.length === 0 ? 'Aucun provider actif configuré' : 'Assigner tous les agents au même provider'}
-              >
-                {assigningAll ? <Loader2 size={14} className="mr-1 animate-spin" /> : <Bot size={14} className="mr-1" />}
-                Tout assigner
-              </Button>
-              {assignAllOpen && (
-                <>
-                  <button
-                    type="button"
-                    aria-label="Fermer"
-                    className="fixed inset-0 z-10 cursor-default"
-                    onClick={() => setAssignAllOpen(false)}
-                  />
-                  <div className="absolute right-0 z-20 mt-1 w-72 rounded-[12px] border border-border bg-surface p-2 shadow-lg">
-                    <p className="px-1 py-1 text-[11px] font-semibold uppercase tracking-wide text-tertiary">
-                      Assigner tous les agents à
-                    </p>
-                    <input
-                      value={assignAllModel}
-                      onChange={(e) => setAssignAllModel(e.target.value)}
-                      placeholder="Modèle (ex: gpt-5)"
-                      className="mb-1 w-full rounded-[8px] border border-border bg-transparent px-2.5 py-1.5 text-[12px] text-primary outline-none focus:border-accent"
+                <div className="min-w-0">
+                  <p className="truncate text-secondary" title={agent.description}>{agent.description}</p>
+                  <p className="mt-0.5 truncate text-[12px] text-tertiary">{agent.agent_id}</p>
+                </div>
+                <div>
+                  {isSaving ? (
+                    <Loader2 size={16} className="animate-spin text-secondary" />
+                  ) : (
+                    <Select
+                      value={ass?.provider_code || ''}
+                      onChange={(e) => handleAssign(agent.agent_id, e.target.value)}
+                      className="!h-8 !px-3 !pr-8 !text-[12px] !font-medium !text-secondary"
+                      options={[
+                        { value: '', label: 'Provider par défaut' },
+                        ...enabledProviders.map((p) => ({
+                          value: p.provider,
+                          label: `${p.label} (${p.provider})`,
+                        })),
+                      ]}
                     />
-                    {enabledProviders.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => handleAssignAll(p.provider, assignAllModel)}
-                        disabled={!assignAllModel.trim()}
-                        className="block w-full rounded-[8px] px-3 py-2 text-left text-[13px] text-primary transition-colors hover:bg-surface-soft disabled:opacity-40"
-                      >
-                        {p.label} <span className="text-tertiary">({p.provider})</span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="overflow-x-auto rounded-[16px] bg-surface">
-            <div className="min-w-[860px]">
-              <div className="grid grid-cols-[1.1fr_1.8fr_1.15fr_1fr] gap-4 border-b border-border px-4 py-3 text-[12px] font-semibold uppercase tracking-wide text-tertiary">
-                <span>Agent</span>
-                <span>Mission</span>
-                <span>Provider IA</span>
-                <span>État</span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[12px] font-medium ${statusBadge(agent).className}`}
+                    title={statusBadge(agent).title}
+                  >
+                    {statusBadge(agent).label}
+                  </span>
+                </div>
               </div>
-              {agents.map((agent) => {
-                const ass = getAssignment(agent.agent_id)
-                const isSaving = savingId === agent.agent_id
-                return (
-                  <div key={agent.agent_id} className="grid grid-cols-[1.1fr_1.8fr_1.15fr_1fr] items-center gap-4 border-b border-border px-4 py-3 text-[12px] last:border-0">
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-primary">{agent.name}</p>
-                      <p className="mt-0.5 truncate text-[12px] text-tertiary">{CATEGORY_LABELS[agent.category] ?? agent.category}</p>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-secondary" title={agent.description}>{agent.description}</p>
-                      <p className="mt-0.5 truncate text-[12px] text-tertiary">{agent.agent_id}</p>
-                    </div>
-                    <div>
-                      {isSaving ? (
-                        <Loader2 size={16} className="animate-spin text-secondary" />
-                      ) : (
-                        <div className="flex flex-col gap-1.5">
-                          <Select
-                            value={ass?.provider_code || ''}
-                            onChange={(e) => handleAssign(agent.agent_id, e.target.value, getModelDraft(agent.agent_id))}
-                            className="!h-8 !px-3 !pr-8 !text-[12px] !font-medium !text-secondary"
-                            options={[
-                              { value: '', label: 'Provider par défaut' },
-                              ...enabledProviders.map((p) => ({
-                                value: p.provider,
-                                label: `${p.label} (${p.provider})`,
-                              })),
-                            ]}
-                          />
-                          <input
-                            value={getModelDraft(agent.agent_id)}
-                            onChange={(e) => setModelDrafts((prev) => ({ ...prev, [agent.agent_id]: e.target.value }))}
-                            placeholder="Modèle (ex: gpt-5)"
-                            className="h-7 rounded-[7px] border border-border bg-transparent px-2 text-[11px] text-primary outline-none focus:border-accent"
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex min-w-0 items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[12px] font-medium ${statusBadge(agent).className}`}
-                          title={statusBadge(agent).title}
-                        >
-                          {statusBadge(agent).label}
-                        </span>
-                      </div>
-                      {ass && (
-                        <ToggleSwitch checked={ass.enabled} onChange={() => handleToggle(agent.agent_id, ass.enabled)} disabled={isSaving} />
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </>
-      )}
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }

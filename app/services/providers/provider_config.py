@@ -89,7 +89,10 @@ def resolve_binding_for_agent(db: Session, agent_row_id: str, project_id: str | 
         return None
 
     credential = _credential_for(db, provider_row.id, project_id)
-    return _to_config(provider_row, credential, binding.model, binding.id)
+    # Le modèle de l'agent prime s'il est défini explicitement, sinon on
+    # hérite du modèle par défaut configuré une fois sur le provider.
+    model = binding.model or (credential.model if credential else None)
+    return _to_config(provider_row, credential, model, binding.id)
 
 
 def resolve_default_provider(db: Session, project_id: str | None) -> ResolvedProviderConfig | None:
@@ -103,7 +106,7 @@ def resolve_default_provider(db: Session, project_id: str | None) -> ResolvedPro
         if cred is not None:
             provider_row = db.get(Provider, cred.provider_id)
             if provider_row is not None and provider_row.is_enabled:
-                return _to_config(provider_row, cred, None, cred.id)
+                return _to_config(provider_row, cred, cred.model, cred.id)
 
     cred = db.execute(
         select(ProviderCredential).where(ProviderCredential.project_id.is_(None))
@@ -111,5 +114,5 @@ def resolve_default_provider(db: Session, project_id: str | None) -> ResolvedPro
     if cred is not None:
         provider_row = db.get(Provider, cred.provider_id)
         if provider_row is not None and provider_row.is_enabled:
-            return _to_config(provider_row, cred, None, cred.id)
+            return _to_config(provider_row, cred, cred.model, cred.id)
     return None

@@ -48,6 +48,9 @@ class ProviderCredential(Base):
         UUID(as_uuid=False), ForeignKey("core.projects.id", ondelete="CASCADE"), nullable=True
     )
     secret_ref: Mapped[str] = mapped_column(Text, nullable=False)
+    # Modèle utilisé par défaut à chaque appel de ce provider — voir
+    # AgentBinding.model : un agent sans modèle explicite hérite de celui-ci.
+    model: Mapped[str | None] = mapped_column(Text, nullable=True)
     last_test_at: Mapped[datetime | None] = mapped_column(nullable=True)
     last_test_ok: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=_now)
@@ -101,7 +104,9 @@ class AgentBinding(Base):
     project_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("core.projects.id", ondelete="CASCADE"), nullable=True
     )
-    model: Mapped[str] = mapped_column(Text, nullable=False)
+    # Optionnel : si absent, le modèle du ProviderCredential du provider choisi
+    # s'applique — un agent n'a besoin que de choisir un provider, pas un modèle.
+    model: Mapped[str | None] = mapped_column(Text, nullable=True)
     priority: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
     is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 

@@ -8,10 +8,12 @@ class AIProviderCreate(BaseModel):
     label: str
     project_id: Optional[str] = None
     api_key: Optional[str] = None
+    model: Optional[str] = None
 
 
 class AIProviderUpdate(BaseModel):
     api_key: Optional[str] = None
+    model: Optional[str] = None
 
 
 class AIProviderPublic(BaseModel):
@@ -21,6 +23,7 @@ class AIProviderPublic(BaseModel):
     label: str
     api_key_configured: bool = False
     base_url: Optional[str] = None
+    model: Optional[str] = None
     last_test_status: Optional[str] = None
     last_test_error: Optional[str] = None
     last_tested_at: Optional[datetime] = None

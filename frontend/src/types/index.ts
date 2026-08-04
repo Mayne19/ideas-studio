@@ -566,7 +566,7 @@ export type AgentAssignment = {
   project_id: string | null
   agent_id: string
   provider_code: string
-  model: string
+  model: string | null
   enabled: boolean
   priority: number
   agent: AgentInfo

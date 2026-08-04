@@ -23,7 +23,7 @@ class AgentAssignmentCreate(BaseModel):
     project_id: Optional[str] = None
     agent_id: str
     provider_code: str
-    model: str
+    model: Optional[str] = None
     enabled: bool = True
     priority: int = 0
 
@@ -40,7 +40,7 @@ class AgentAssignmentPublic(BaseModel):
     project_id: Optional[str] = None
     agent_id: str
     provider_code: str
-    model: str
+    model: Optional[str] = None
     enabled: bool
     priority: int
 

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user, get_member_for_project
 from app.models.core import User
-from app.models.ai import Agent, AgentBinding, Provider
+from app.models.ai import Agent, AgentBinding, Provider, ProviderCredential
 from app.schemas.ai_agent import AgentInfo, AgentAssignmentPublic, AgentAssignmentCreate, AgentAssignmentUpdate, AgentAssignmentWithDetails
 from app.services.agents.agent_registry import list_agents, serialize_agent, get_agent
 from app.core.config import settings
@@ -43,12 +43,30 @@ def _assignment_public(db: Session, binding: AgentBinding) -> AgentAssignmentWit
     agent_key = agent_row.key if agent_row else binding.agent_id
     agent = get_agent(agent_key)
     provider_row = db.get(Provider, binding.provider_id)
+    # Modèle affiché : celui de l'agent s'il en a un, sinon celui par défaut
+    # du provider (ai.provider_credentials.model) — voir provider_config.py.
+    effective_model = binding.model
+    if not effective_model and provider_row:
+        credential = db.execute(
+            select(ProviderCredential).where(
+                ProviderCredential.provider_id == provider_row.id,
+                ProviderCredential.project_id == binding.project_id,
+            )
+        ).scalar_one_or_none()
+        if credential is None and binding.project_id is not None:
+            credential = db.execute(
+                select(ProviderCredential).where(
+                    ProviderCredential.provider_id == provider_row.id,
+                    ProviderCredential.project_id.is_(None),
+                )
+            ).scalar_one_or_none()
+        effective_model = credential.model if credential else None
     return AgentAssignmentWithDetails(
         id=binding.id,
         project_id=binding.project_id,
         agent_id=agent_key,
         provider_code=provider_row.code if provider_row else "",
-        model=binding.model,
+        model=effective_model,
         enabled=binding.is_enabled,
         priority=binding.priority,
         agent=serialize_agent(agent) if agent else AgentInfo(agent_id=agent_key, name=agent_key, description="", category="other"),

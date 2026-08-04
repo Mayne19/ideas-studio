@@ -666,6 +666,7 @@ CREATE TABLE ai.provider_credentials (
   provider_id  uuid NOT NULL REFERENCES ai.providers(id) ON DELETE CASCADE,
   project_id   uuid REFERENCES core.projects(id) ON DELETE CASCADE,
   secret_ref   text NOT NULL,
+  model        text,  -- modèle par défaut de ce provider ; hérité par les agents sans modèle propre
   last_test_at timestamptz,
   last_test_ok boolean,
   created_at   timestamptz NOT NULL DEFAULT now()
@@ -696,7 +697,7 @@ CREATE TABLE ai.agent_bindings (
   agent_id    uuid NOT NULL REFERENCES ai.agents(id) ON DELETE CASCADE,
   provider_id uuid NOT NULL REFERENCES ai.providers(id) ON DELETE RESTRICT,
   project_id  uuid REFERENCES core.projects(id) ON DELETE CASCADE,
-  model       text NOT NULL,
+  model       text,  -- optionnel : hérite du modèle de ai.provider_credentials si absent
   priority    smallint NOT NULL DEFAULT 0,
   is_enabled  boolean NOT NULL DEFAULT true
 );

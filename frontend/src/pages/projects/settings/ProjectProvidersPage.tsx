@@ -13,6 +13,7 @@ type AIProviderConfig = {
   label: string
   api_key_configured: boolean
   base_url: string | null
+  model: string | null
   last_test_status: string | null
   last_test_error: string | null
   last_tested_at: string | null
@@ -35,12 +36,14 @@ type ProviderFormData = {
   provider: string
   label: string
   api_key: string
+  model: string
 }
 
 const emptyForm: ProviderFormData = {
   provider: '',
   label: '',
   api_key: '',
+  model: '',
 }
 
 type CatalogFormData = {
@@ -120,6 +123,7 @@ export default function ProjectProvidersPage() {
       provider: code,
       label: def?.label ?? code,
       api_key: '',
+      model: '',
     })
     setEditingId(null)
     setShowForm(true)
@@ -131,6 +135,7 @@ export default function ProjectProvidersPage() {
       provider: config.provider,
       label: config.label,
       api_key: '',
+      model: config.model ?? '',
     })
     setEditingId(config.id)
     setShowForm(true)
@@ -141,16 +146,21 @@ export default function ProjectProvidersPage() {
     setSaving(true)
     try {
       const apiKey = form.api_key.trim()
+      const model = form.model.trim()
       if (editingId) {
-        // AIProviderUpdate n'accepte que api_key côté backend v3 — le label et le
-        // provider sont fixés à la création (contrainte unique project_id+provider).
-        await api.patch(`/settings/ai-providers/${editingId}`, apiKey ? { api_key: apiKey } : {})
+        // AIProviderUpdate accepte api_key et model côté backend v3 — le label et
+        // le provider sont fixés à la création (contrainte unique project_id+provider).
+        const payload: Record<string, string> = {}
+        if (apiKey) payload.api_key = apiKey
+        payload.model = model
+        await api.patch(`/settings/ai-providers/${editingId}`, payload)
       } else {
         await api.post('/settings/ai-providers', {
           provider: form.provider,
           label: form.label || form.provider,
           project_id: projectId,
           api_key: apiKey || undefined,
+          model: model || undefined,
         })
       }
       setShowForm(false)
@@ -438,6 +448,7 @@ export default function ProjectProvidersPage() {
 
             <div className="flex flex-wrap gap-4 text-[12px] text-tertiary">
               <span>Clé API : {config.api_key_configured ? 'Configurée' : 'Non configurée'}</span>
+              <span>Modèle : {config.model || 'Non défini'}</span>
               {config.last_tested_at && <span>Dernier test : {new Date(config.last_tested_at).toLocaleString('fr-FR')}</span>}
             </div>
           </div>
@@ -530,6 +541,19 @@ export default function ProjectProvidersPage() {
                 connexion automatique à Ollama Cloud (ollama.com).
               </div>
             )}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[12px] font-medium text-secondary">Modèle</label>
+              <input
+                type="text"
+                value={form.model}
+                onChange={(e) => setForm({ ...form, model: e.target.value })}
+                placeholder="ex : gpt-5, gemini-2.5-flash, claude-sonnet-5..."
+                className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
+              />
+              <span className="text-[11px] text-tertiary">
+                Modèle utilisé à chaque appel de ce provider par les agents qui n'en définissent pas d'autre.
+              </span>
+            </div>
             <div className="flex items-center gap-2 pt-2">
               <button
                 onClick={handleSave}
