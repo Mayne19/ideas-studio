@@ -456,13 +456,18 @@ class SEOGenerationOrchestrator:
                 wc_min = editorial_profile.word_count_min
                 wc_max = editorial_profile.word_count_max
 
-        if editorial_profile:
-            if editorial_profile.reader_level:
-                self.context["reader_level"] = editorial_profile.reader_level
-            if editorial_profile.writing_style:
-                self.context["writing_style"] = editorial_profile.writing_style
-            if editorial_profile.tone:
-                self.context["tone"] = editorial_profile.tone
+        if editorial_profile and (editorial_profile.tone or editorial_profile.reader_level or editorial_profile.writing_style):
+            from app.services.agents.agent_services import adapt_editorial_style
+            style_adaptation = adapt_editorial_style(
+                editorial_profile.tone, editorial_profile.reader_level, editorial_profile.writing_style,
+                final_title, final_keyword, angle=editorial_angle.get("main_angle"),
+                db=self.db, project_id=self.project_id,
+            )
+            self.context["style_adaptation"] = style_adaptation
+            self._save(article.id, "style_adaptation", style_adaptation)
+            self.context["tone"] = style_adaptation.get("tone") or editorial_profile.tone
+            self.context["reader_level"] = style_adaptation.get("reader_level") or editorial_profile.reader_level
+            self.context["writing_style"] = style_adaptation.get("writing_style") or editorial_profile.writing_style
 
         # Passer la plage au prompt du writer
         if wc_min or wc_max:

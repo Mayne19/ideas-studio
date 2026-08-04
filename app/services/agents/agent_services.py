@@ -69,6 +69,63 @@ def fact_check_article(
         return {"status": "error", "message": str(exc), "fact_checks": [], "overall_risk": "unknown"}
 
 
+def adapt_editorial_style(
+    base_tone: str | None,
+    base_reader_level: str | None,
+    base_writing_style: str | None,
+    title: str,
+    keyword: str,
+    angle: str | None = None,
+    db=None,
+    project_id: str | None = None,
+) -> dict[str, Any]:
+    """Adapte le ton/niveau/style de base du projet au sujet précis de cet
+    article — jamais un remplacement, seulement un ajustement dans le même
+    esprit (un style "professionnel informationnel" reste professionnel et
+    informationnel, mais le niveau de détail/vocabulaire s'ajuste au sujet).
+    Repli sur les valeurs de base si aucun provider LLM n'est disponible :
+    contrairement au fact-checker, cet agent n'est jamais bloquant."""
+    base = {"tone": base_tone, "reader_level": base_reader_level, "writing_style": base_writing_style}
+    if not any(base.values()):
+        return {"status": "skipped", "message": "Aucun style de base défini sur le projet.", **base}
+
+    router = _get_router(db)
+    try:
+        provider = router.get_provider("style_guide_builder", project_id=project_id)
+    except Exception as exc:
+        logger.warning("Style adapter provider resolution failed: %s", exc)
+        return {"status": "skipped", "message": f"Provider indisponible : {exc}", **base}
+    if provider.is_mock:
+        return {"status": "skipped", "message": "Style adapter not configured (mock provider)", **base}
+
+    prompt = (
+        "Tu ajustes une consigne éditoriale de base au sujet précis d'un article, sans jamais "
+        "la trahir ni en changer l'esprit — seulement adapter le niveau de détail et le vocabulaire "
+        "quand le sujet l'exige (ex: un sujet technique dans un style 'accessible' reste accessible "
+        "mais peut nécessiter d'introduire un terme technique avec une explication courte).\n\n"
+        f"Style de base du projet :\n"
+        f"- Ton : {base_tone or 'non défini'}\n"
+        f"- Niveau du lecteur : {base_reader_level or 'non défini'}\n"
+        f"- Style d'écriture : {base_writing_style or 'non défini'}\n\n"
+        f"Article à rédiger :\n"
+        f"- Titre : {title}\n"
+        f"- Mot-clé : {keyword}\n"
+        f"- Angle éditorial : {angle or 'non précisé'}\n\n"
+        "Si le style de base convient déjà parfaitement à ce sujet, renvoie-le tel quel. "
+        "Réponds UNIQUEMENT avec un JSON valide :\n"
+        '{"tone": "...", "reader_level": "...", "writing_style": "...", '
+        '"adapted": true|false, "reasoning": "courte explication si adapted=true, sinon vide"}'
+    )
+    try:
+        result = provider.generate_json(prompt, schema_hint="json style adaptation object")
+        if isinstance(result, dict) and result.get("tone") and result.get("reader_level") and result.get("writing_style"):
+            return {"status": "success", **result}
+        return {"status": "error", "message": "Invalid response format", **base}
+    except Exception as exc:
+        logger.warning("Style adapter agent failed: %s", exc)
+        return {"status": "error", "message": str(exc), **base}
+
+
 def seo_optimize_content(
     content: str,
     title: str,

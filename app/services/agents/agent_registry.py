@@ -271,12 +271,13 @@ AGENTS: list[AgentDef] = [
     AgentDef(
         agent_id="style_guide_builder",
         name="Guide de style",
-        description="Prépare les consignes de style pour la rédaction",
+        description="Adapte le ton, le niveau et le style du projet au sujet précis de l'article",
         category=AgentCategory.creation,
         phase="writing",
         icon="book",
-        status=AgentStatus.not_implemented,
-        output_json_field=None,
+        implementation_ref="agent_services.adapt_editorial_style",
+        status=AgentStatus.active,
+        output_json_field="style_adaptation_json",
     ),
     AgentDef(
         agent_id="writer",
