@@ -3,7 +3,7 @@
 --
 -- Révision du v3 initial après confrontation au code réel et aux
 -- données de dev (md-datas/ideas_studio.db) et de prod. Voir
--- docs/schema-v3/CHANGELOG.md pour le détail de chaque changement.
+-- docs/SCHEMA-V3/CHANGELOG.md pour le détail de chaque changement.
 --
 -- Points structurants de cette révision :
 --   * Tous les libellés (`label`) sont en anglais, comme les `code`.

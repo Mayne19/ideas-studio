@@ -1,6 +1,6 @@
 # Changelog — révision v3 → v3.2
 
-Ce document liste tout ce qui a changé entre les trois artifacts d'origine (`refonte-schema-v3.sql`, `migration-bigbang-v3.sql`, `plan-migration-v3.md`) et cette révision, et pourquoi. Chaque point a été vérifié contre le code réel (`app/models`, `app/routers`, `app/services`) et contre un export de la base de dev (`md-datas/ideas_studio.db` : 15 users, 9 projects, 23 articles, 10 categories, 0 kanban_columns, 0 ai_provider_configs, 0 agent_assignments).
+Ce document liste tout ce qui a changé entre les trois artifacts d'origine (`REFONTE-SCHEMA-V3.sql`, `MIGRATION-BIGBANG-V3.sql`, `PLAN-MIGRATION-V3.md`) et cette révision, et pourquoi. Chaque point a été vérifié contre le code réel (`app/models`, `app/routers`, `app/services`) et contre un export de la base de dev (`md-datas/ideas_studio.db` : 15 users, 9 projects, 23 articles, 10 categories, 0 kanban_columns, 0 ai_provider_configs, 0 agent_assignments).
 
 ## v3.2 — cutover simplifié pour un petit volume réel
 
@@ -8,7 +8,7 @@ Confirmé : dev tourne sur SQLite (`.env` → `sqlite:///./md-datas/ideas_studio
 
 **Ce qui a changé** : la table `migration.id_map` générique + la fonction `migration.map_id(entité, ancien_id)` — dimensionnées pour un volume qu'on n'a pas, avec repli sur `gen_random_uuid()` et cast défensif — sont remplacées par une petite table temporaire par entité (`user_id_map`, `org_id_map`, `project_id_map`, `category_id_map`). Même principe (correspondance ancien id → nouveau uuid cohérente d'une table à l'autre), mais chaque correspondance peut être relue intégralement à l'œil avant de valider, vu qu'il n'y a que quelques dizaines de lignes au total. Le script reste transactionnel, rejouable sur une copie pour répétition, et conserve tous les contrôles de cohérence (`RAISE EXCEPTION`) et le pré-vol sur les 3 tables sans FK — ce sont trois `SELECT`, ils ne coûtent rien en temps même sur un petit volume et restent une assurance utile.
 
-**Ce qui n'a pas changé** : le schéma cible (`refonte-schema-v3.sql`) reste identique — RLS, partitionnement, catalogue d'agents synchronisé depuis le Python, etc. Le volume de données ne change rien à la complexité du schéma cible ni à l'ampleur du refactor applicatif (§2 du plan) : seule la *mécanique de copie des quelques lignes réelles* a été allégée.
+**Ce qui n'a pas changé** : le schéma cible (`REFONTE-SCHEMA-V3.sql`) reste identique — RLS, partitionnement, catalogue d'agents synchronisé depuis le Python, etc. Le volume de données ne change rien à la complexité du schéma cible ni à l'ampleur du refactor applicatif (§2 du plan) : seule la *mécanique de copie des quelques lignes réelles* a été allégée.
 
 **Précision apportée au plan** : la fenêtre de bascule (base + redémarrage) est désormais chiffrée séparément du refactor applicatif — environ 7-8 minutes une fois le code prêt, contre plusieurs jours pour le refactor lui-même. Ces deux durées ne dépendent pas des mêmes facteurs (l'une du volume de données, l'autre de l'ampleur de la refonte du schéma) et ne doivent pas être confondues dans la planification.
 

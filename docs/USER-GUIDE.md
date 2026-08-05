@@ -266,11 +266,12 @@ Pour enrichir les idées avec de vrais résultats de recherche (plutôt que des 
 
 | Provider | Description |
 |---|---|
-| **Google Custom Search** | API Google officielle, nécessite une clé API + un moteur de recherche personnalisé (« cx »). Limite gratuite : 100 requêtes/jour. |
+| **Brave Search** | API indépendante de Google, sans projet Google Cloud à configurer. Crédit mensuel gratuit puis facturation à l'usage très faible (~0,003-0,005 $/requête). Priorité par défaut si configurée. |
+| **Google Custom Search** | ⚠️ Google a déprécié la recherche « sur l'ensemble du web » pour les nouveaux moteurs de recherche personnalisés créés après cette dépréciation — un nouveau « cx » renvoie systématiquement une erreur 403, quelle que soit la configuration du projet Google Cloud (API activée, facturation activée...). Ne fonctionne que pour un « cx » créé avant cette dépréciation. Limite gratuite historique : 100 requêtes/jour. |
 | **SearXNG** | Instance de métamoteur auto-hébergée. |
 | **Mode démo (mock)** | Résultats fictifs, utilisé par défaut si rien n'est configuré. |
 
-⚠️ Sans configuration explicite, la génération d'idées tourne silencieusement en mode démo (résultats inventés). Si une clé Google est renseignée, elle est utilisée en priorité automatiquement.
+⚠️ Sans configuration explicite, la génération d'idées tourne silencieusement en mode démo (résultats inventés). Ordre de priorité automatique si plusieurs providers sont configurés : Brave Search, puis Google Custom Search, puis SearXNG.
 
 **À ne pas confondre** : ce provider sert à *trouver des sujets*. Un second système de recherche, indépendant, sert à l'**analyse concurrentielle** pendant la génération d'article complet (voir [§9](#générer-des-articles--lorchestrateur-seo)) — les deux se configurent séparément.
 
@@ -286,11 +287,21 @@ Depuis une idée, cliquez sur **Démarrer la rédaction**. Un seul mode de gén�
 |---|---|
 | **1. Analyse & stratégie** | Contexte du projet, stratégie de catégorie, découverte de l'idée, vérification de cannibalisation SEO, analyse d'intention, brief de recherche (avec évaluation de la qualité des sources et extraction d'enseignements si des sources ont été trouvées) |
 | **2. Brief éditorial** | Sélection des faits/preuves les plus fiables, brief de mots-clés, angle éditorial, plan de l'article, nouvelle vérification de cannibalisation sur le plan, plan d'images, plan de callouts, plan de FAQ, plan de liens internes et externes |
-| **3. Rédaction** | Génération du contenu HTML complet de l'article |
-| **4. Contrôle qualité linguistique & SEO** | Qualité de la langue, originalité, humanisation, lisibilité, EEAT, qualité éditoriale, données structurées, optimisation GEO (moteurs de réponse IA), checklist SEO finale, revue SEO agrégée |
+| **3. Rédaction** | Génération du contenu HTML complet de l'article, à partir d'un prompt qui cite un extrait d'article de référence comme modèle de style (rythme, voix, prise de position) et interdit explicitement les formulations génériques ("Dans l'univers numérique actuel...", superlatifs vides, tirets cadratins) |
+| **4. Contrôle qualité linguistique & SEO** | Qualité de la langue, originalité, humanisation, lisibilité, EEAT, présence humaine (détection de phrases génériques, régularité mécanique des paragraphes, absence de position tranchée), qualité éditoriale, données structurées, optimisation GEO (moteurs de réponse IA), checklist SEO finale, revue SEO agrégée |
 | **5. Révision par agents IA** *(si des agents sont configurés — [§14](#configuration-ia--providers--agents))* | Extraction des affirmations vérifiables, fact-checking, revue éditoriale, vérification de la rétention lecteur, revue d'engagement, optimisation SEO, notation qualité |
-| **6. Score & amélioration automatique** | Notation globale de l'article, puis jusqu'à 2 cycles d'amélioration ciblés automatiquement sur les points faibles détectés (EEAT, SEO, lisibilité, originalité, GEO) |
+| **6. Score & amélioration automatique** | Notation globale de l'article, puis jusqu'à 4 cycles d'amélioration ciblés automatiquement sur les points faibles détectés (EEAT, SEO, lisibilité, originalité, présence humaine, volume de mots hors plage) |
 | **7. Clôture** | Analyse des éventuelles erreurs rencontrées, rapport de génération final |
+
+### Sourcing des images
+
+Pour chaque section de l'article, un agent IA décide comment l'illustrer :
+
+- **Sujet abstrait ou technique** (ex: « Qu'est-ce que c'est ? », « robots.txt ») → aucune image n'est ajoutée plutôt qu'une image hors sujet.
+- **Outil ou marque identifiable** (ex: Canva, Figma, Shopify) → l'image est cherchée exclusivement sur le domaine officiel de cette marque, jamais sur une banque de photos générique ni un site concurrent.
+- **Sujet concret et photographiable** → recherche classique sur banque de photos (Unsplash).
+
+Les domaines concurrents à exclure systématiquement se configurent par projet (paramètres éditoriaux). Sans agent IA disponible pour cette décision, aucune image n'est proposée automatiquement.
 
 Certaines étapes sont conditionnelles (dépendent de la disponibilité de sources de recherche ou d'agents IA configurés) — le nombre exact d'étapes exécutées varie donc légèrement d'un article à l'autre. C'est normal.
 
@@ -317,12 +328,17 @@ Ouvrez un article puis cliquez sur **Analyser SEO** — les résultats s'affiche
 
 ### Scores
 
+Le score global pondère 5 signaux (SEO 30% · EEAT 20% · Lisibilité 17% · Originalité 18% · Présence humaine 15%) :
+
 | Score | Plage | Description |
 |---|---|---|
 | **SEO** | 0-100 | Positionnement mot-clé, meta, slug, structure |
 | **Lisibilité** | 0-100 | Longueur phrases/paragraphes, intro, sous-titres |
 | **Qualité** | 0-100 | Longueur article, conclusion, image de couverture |
 | **EEAT** | 0-100 | Liens externes, exemples/statistiques, actionnabilité |
+| **Originalité** | 0-100 | Similarité avec les sources, reformulation vs paraphrase |
+| **GEO** | 0-100 | Optimisation pour les moteurs de réponse IA (ChatGPT, Perplexity...) |
+| **Présence humaine** | 0-100 | Phrases d'ouverture génériques, tirets cadratins, superlatifs vides, régularité mécanique des paragraphes, position tranchée par section, conclusion qui résume au lieu de conclure. Publication bloquée si < 70. |
 
 ### Statut de préparation (Readiness)
 

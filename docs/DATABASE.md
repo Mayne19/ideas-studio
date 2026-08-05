@@ -1,7 +1,7 @@
 # Base de données — Ideas Studio
 
 > Référence technique complète du schéma PostgreSQL v3 (production : Supabase).
-> Source de vérité SQL : [`docs/schema-v3/refonte-schema-v3.sql`](schema-v3/refonte-schema-v3.sql)
+> Source de vérité SQL : [`docs/SCHEMA-V3/REFONTE-SCHEMA-V3.sql`](SCHEMA-V3/REFONTE-SCHEMA-V3.sql)
 > (DDL complet, 6 schémas, ~1000 lignes). Ce document en est la documentation
 > lisible, avec les diagrammes ER et la carte de dépendance applicative que le
 > SQL brut ne donne pas.
@@ -697,7 +697,7 @@ erDiagram
 
 ## 8. Sécurité — Row Level Security (RLS)
 
-**État réel au 2026-08-04 : RLS n'est PAS activé en production**, malgré le bloc RLS présent en fin de [`docs/schema-v3/refonte-schema-v3.sql`](schema-v3/refonte-schema-v3.sql) (lignes 961-1011). Vérifié empiriquement (`rowsecurity = true` sur 0 table). Le script d'activation réel et à jour est [`db/migration-v3/rls-a-activer-plus-tard.sql`](../db/migration-v3/rls-a-activer-plus-tard.sql), piloté par [`docs/schema-v3/plan-activation-rls.md`](schema-v3/plan-activation-rls.md) (audit complet des 31 routers, prérequis d'infra, procédure). Ne pas se fier au bloc RLS du DDL comme preuve que c'est actif.
+**État réel au 2026-08-04 : RLS n'est PAS activé en production**, malgré le bloc RLS présent en fin de [`docs/SCHEMA-V3/REFONTE-SCHEMA-V3.sql`](SCHEMA-V3/REFONTE-SCHEMA-V3.sql) (lignes 961-1011). Vérifié empiriquement (`rowsecurity = true` sur 0 table). Le script d'activation réel et à jour est [`db/migration-v3/rls-a-activer-plus-tard.sql`](../db/migration-v3/rls-a-activer-plus-tard.sql), piloté par [`docs/SCHEMA-V3/PLAN-ACTIVATION-RLS.md`](SCHEMA-V3/PLAN-ACTIVATION-RLS.md) (audit complet des 31 routers, prérequis d'infra, procédure). Ne pas se fier au bloc RLS du DDL comme preuve que c'est actif.
 
 **Tables prévues sous RLS** (politique `tenant_isolation`, `project_id = core.current_project_id()`) :
 
@@ -729,7 +729,7 @@ Cartographie construite lors de l'audit RLS (2026-08-04) : quelle partie du back
 2. Jobs planifiés (`app/services/worker.py`, `app/cli.py`) — boucle explicite par projet, contexte posé manuellement (câblé le 2026-08-04, voir historique git).
 3. Thread parallèle de rédaction (`app/services/production_queue.py:write_queued_article`) — session et contexte propres, thread dédié.
 
-Le détail fichier-par-fichier (31 routers passés en revue un par un) est dans [`docs/schema-v3/plan-activation-rls.md`](schema-v3/plan-activation-rls.md) §4 — ce tableau en est le résumé.
+Le détail fichier-par-fichier (31 routers passés en revue un par un) est dans [`docs/SCHEMA-V3/PLAN-ACTIVATION-RLS.md`](SCHEMA-V3/PLAN-ACTIVATION-RLS.md) §4 — ce tableau en est le résumé.
 
 ---
 
@@ -761,12 +761,12 @@ Trois tables à haut volume, partitionnées par mois (`PARTITION BY RANGE (occur
 
 Points de vigilance à tenir à jour — ne pas laisser ce document dériver comme les précédents (`db/migration-v3/02-donnees.sql` vs le script réellement exécuté, voir `db/migration-v3/archive/REPRENDRE-LA-MAIN.md`) :
 
-1. **RLS non actif malgré sa présence dans le DDL** — voir §8. Le bloc RLS de `refonte-schema-v3.sql` documente une *intention*, pas l'état réel.
+1. **RLS non actif malgré sa présence dans le DDL** — voir §8. Le bloc RLS de `REFONTE-SCHEMA-V3.sql` documente une *intention*, pas l'état réel.
 2. **`CLAUDE.md` liste encore un modèle `Idea` séparé** (table dédiée "Idées SEO / opportunités") — obsolète depuis la refonte v3 : les idées sont des `content.articles` avec un motif spécifique (§1). À corriger dans `CLAUDE.md`.
 3. **`analytics.traffic_events`/`ops.event_logs` sans FK `project_id`/`actor_id`** — voulu pour la performance d'écriture, mais signifie qu'aucune contrainte base n'empêche une valeur orpheline. À surveiller si des incohérences apparaissent en usage réel.
 4. **Partitions mensuelles non automatisées** — voir §11, échéance concrète début septembre 2026.
 5. **Schéma `legacy`** (ancien schéma plat pré-refonte, 25 tables) conservé comme filet de sécurité depuis la bascule du 2026-08-03 — prévu pour suppression après 1-2 semaines (`DROP SCHEMA legacy CASCADE`, non fait à la date de ce document, ne pas faire avant le 17/08/2026 environ).
-6. **`db/migration-v3/01-schema.sql` et `docs/schema-v3/refonte-schema-v3.sql` sont deux versions distinctes** de la même intention (v3.1 vs v3.1 révisée) — ce document s'appuie sur `refonte-schema-v3.sql` car c'est la version la plus proche du code actuel (`app/models/*.py`). Envisager d'archiver l'une des deux pour éviter la confusion qui a déjà eu lieu une fois sur `02-donnees.sql`.
+6. **`db/migration-v3/01-schema.sql` et `docs/SCHEMA-V3/REFONTE-SCHEMA-V3.sql` sont deux versions distinctes** de la même intention (v3.1 vs v3.1 révisée) — ce document s'appuie sur `REFONTE-SCHEMA-V3.sql` car c'est la version la plus proche du code actuel (`app/models/*.py`). Envisager d'archiver l'une des deux pour éviter la confusion qui a déjà eu lieu une fois sur `02-donnees.sql`.
 
 ---
 
@@ -774,9 +774,9 @@ Points de vigilance à tenir à jour — ne pas laisser ce document dériver com
 
 | Besoin | Fichier |
 |---|---|
-| DDL complet, exécutable | `docs/schema-v3/refonte-schema-v3.sql` |
-| Historique des décisions de conception du schéma v3 | `docs/schema-v3/CHANGELOG.md`, `docs/schema-v3/plan-migration-v3.md` |
-| Script de bascule des données (v2 → v3) réellement exécuté | `docs/schema-v3/migration-bigbang-v3.sql` |
-| Activer RLS : audit, prérequis, procédure | `docs/schema-v3/plan-activation-rls.md` |
+| DDL complet, exécutable | `docs/SCHEMA-V3/REFONTE-SCHEMA-V3.sql` |
+| Historique des décisions de conception du schéma v3 | `docs/SCHEMA-V3/CHANGELOG.md`, `docs/SCHEMA-V3/PLAN-MIGRATION-V3.md` |
+| Script de bascule des données (v2 → v3) réellement exécuté | `docs/SCHEMA-V3/MIGRATION-BIGBANG-V3.sql` |
+| Activer RLS : audit, prérequis, procédure | `docs/SCHEMA-V3/PLAN-ACTIVATION-RLS.md` |
 | Modèles SQLAlchemy (mapping ORM) | `app/models/{core,content,ai,analytics,ops,reference}.py` |
 | Résolution de session/tenancy côté code | `app/core/database.py`, `app/dependencies/auth.py` |

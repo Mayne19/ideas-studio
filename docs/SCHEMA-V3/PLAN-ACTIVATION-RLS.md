@@ -25,7 +25,7 @@ fois, proprement, que par étapes pendant qu'on découvre encore le périmètre.
 
 - **Rôle applicatif dédié** `app_user` (droits `SELECT/INSERT/UPDATE/DELETE`
   sur `core/content/ai/analytics/ops`, `SELECT` sur `ref`), créé par
-  `docs/schema-v3/refonte-schema-v3.sql` (lignes ~963-972). Pas encore
+  `docs/SCHEMA-V3/REFONTE-SCHEMA-V3.sql` (lignes ~963-972). Pas encore
   utilisé : la prod se connecte avec `postgres`.
 - **Script RLS prêt** : `db/migration-v3/rls-a-activer-plus-tard.sql`. Utilise
   `FORCE ROW LEVEL SECURITY` (neutralise l'exemption "propriétaire de table"),

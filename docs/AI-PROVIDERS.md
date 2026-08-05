@@ -285,6 +285,44 @@ OpenRouter permet de configurer des modèles différents pour chaque étape :
 
 ---
 
+## Providers de recherche web
+
+Distincts des providers LLM ci-dessus — utilisés pour la génération d'idées enrichies de vrais résultats de recherche, l'analyse concurrentielle SERP, et le sourcing d'images de marque. Configuration **au niveau serveur** (variables d'environnement), pas par projet.
+
+### Brave Search (recommandé)
+
+Indépendant de Google, aucun projet Google Cloud à configurer.
+
+```bash
+BRAVE_SEARCH_API_KEY=votre_clé
+```
+
+Obtenir une clé : https://api-dashboard.search.brave.com/. Crédit mensuel gratuit à l'inscription, puis facturation à l'usage très faible (~0,003-0,005 $/requête).
+
+### Google Custom Search
+
+```bash
+GOOGLE_SEARCH_API_KEY=votre_clé
+GOOGLE_SEARCH_CX=votre_moteur_id
+```
+
+⚠️ **Ne pas utiliser pour un nouveau moteur de recherche personnalisé.** Google a déprécié la recherche « sur l'ensemble du web » pour les moteurs créés après cette dépréciation — un nouveau `cx` renvoie systématiquement une erreur 403 (`This project does not have the access to Custom Search JSON API`), quelle que soit la configuration du projet Google Cloud (API activée, facturation activée, clé dans le bon projet). Fonctionne uniquement pour un `cx` créé avant la dépréciation. Limite gratuite historique : 100 requêtes/jour.
+
+### SearXNG
+
+```bash
+SEARXNG_URL=https://votre-instance-searxng.example.com
+SEARXNG_FORMAT=json
+```
+
+Instance auto-hébergée, illimitée, nécessite un serveur dédié.
+
+### Ordre de priorité
+
+Détection automatique dès qu'une clé est renseignée, sans avoir à changer de variable de mode : **Brave Search → Google Custom Search → SearXNG → mode démo (mock)**.
+
+---
+
 ## Configuration via le CMS
 
 ### Interface Providers
