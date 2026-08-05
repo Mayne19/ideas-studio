@@ -253,7 +253,7 @@ Chaque projet connecte ses propres clés API (**Paramètres → Providers**). Un
 
 ## Déploiement
 
-- **Backend** : Render (voir `render.yaml`)
+- **Backend** : Railway (voir `docs/DEPLOYMENT.md` — Render conservé comme alternative, voir `render.yaml`)
 - **Frontend** : Vercel
 - **Base de données** : PostgreSQL (Supabase en production)
 - **Stockage médias** : Supabase Storage (repli disque local si non configuré)

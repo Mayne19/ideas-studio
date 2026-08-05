@@ -8,9 +8,9 @@ Ce guide couvre le déploiement complet d'Ideas Studio : backend, frontend, base
 
 ### Serveur (backend)
 
-- Python 3.11 ou supérieur
+- Python 3.12
 - Pip et venv
-- Accès à une base de données (SQLite pour dev, PostgreSQL pour production)
+- Accès à une base PostgreSQL (schéma v3 : RLS, JSONB, ENUM natifs — requis en dev comme en prod, voir `docs/DATABASE.md`). SQLite n'est toléré que pour `APP_ENV=test`. En pratique : un projet Supabase.
 - Ollama (optionnel, recommandé pour l'IA locale)
 
 ### Domaine
@@ -65,15 +65,24 @@ OPENAI_API_KEY=sk-...
 # Mode auto : essaie OpenRouter > Ollama > OpenAI dans l'ordre
 DEFAULT_LLM_PROVIDER=auto
 
-# Recherche SERP (SearXNG auto-hébergé)
-DEFAULT_SEARCH_PROVIDER=searxng
-SEARXNG_URL=https://searxng.votredomaine.com
+# Recherche web (génération d'idées + analyse concurrentielle) — détection
+# automatique dès qu'une clé est renseignée, priorité Brave > Google > SearXNG
+BRAVE_SEARCH_API_KEY=              # Recommandé : crédit gratuit mensuel puis usage très faible
+# GOOGLE_SEARCH_API_KEY=           # Déprécié pour les nouveaux moteurs (cx) — repli si cx existant fonctionnel
+# GOOGLE_SEARCH_CX=
+# SEARXNG_URL=https://searxng.votredomaine.com   # Auto-hébergé, illimité
+
+# Stockage permanent des médias sur Supabase Storage (sinon repli disque local,
+# non persistant sur la plupart des PaaS — voir section Base de données)
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_STORAGE_BUCKET=ideas-media
 
 # Revalidation de cache blog
 BLOG_REVALIDATE_URL=https://votreblog.com/api/revalidate
 BLOG_REVALIDATE_SECRET=secret-partage
 
-# Répertoire d'upload
+# Répertoire d'upload (repli si Supabase Storage non configuré)
 UPLOAD_DIR=uploads
 ```
 
@@ -282,13 +291,6 @@ sudo systemctl enable postgresql
 ```bash
 sudo -u postgres psql -c "CREATE USER ideas_studio WITH PASSWORD 'mot-de-passe-securise';"
 sudo -u postgres psql -c "CREATE DATABASE ideas_studio OWNER ideas_studio;"
-```
-
-#### Migration depuis SQLite
-
-```bash
-# En développement
-python scripts/migrate_to_postgres.py
 ```
 
 #### URL de connexion
