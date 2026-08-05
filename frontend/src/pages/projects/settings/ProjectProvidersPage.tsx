@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { Plus, Trash2, TestTube, CheckCircle, XCircle, Loader2, Eye, EyeOff, Save, Settings, Star } from '@/components/ui/hugeIcons'
-import { api } from '@/api/client'
+import { api, friendlyApiErrorMessage } from '@/api/client'
 import { Card } from '@/components/ui/Card'
 import { useProject } from '@/context/ProjectContext'
 import { useAuth } from '@/context/AuthContext'
@@ -104,7 +104,7 @@ export default function ProjectProvidersPage() {
       setConfigs(data)
       setCatalog(catalogData)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur de chargement'
+      const msg = friendlyApiErrorMessage(err, 'Erreur de chargement')
       setError(msg)
       setConfigs([])
     } finally {
@@ -170,7 +170,7 @@ export default function ProjectProvidersPage() {
       setTestResult(null)
       await loadConfigs()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors de la sauvegarde'
+      const msg = friendlyApiErrorMessage(err, 'Erreur lors de la sauvegarde')
       alert(msg)
     } finally {
       setSaving(false)
@@ -183,7 +183,7 @@ export default function ProjectProvidersPage() {
       await api.delete(`/settings/ai-providers/${id}`)
       await loadConfigs()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors de la suppression'
+      const msg = friendlyApiErrorMessage(err, 'Erreur lors de la suppression')
       alert(msg)
     } finally {
       setDeleting(null)
@@ -196,7 +196,7 @@ export default function ProjectProvidersPage() {
       await api.patch(`/settings/ai-providers/${id}`, { is_default: true })
       await loadConfigs()
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Erreur lors de la définition du provider par défaut')
+      alert(friendlyApiErrorMessage(err, 'Erreur lors de la définition du provider par défaut'))
     } finally {
       setSettingDefault(null)
     }
@@ -210,7 +210,7 @@ export default function ProjectProvidersPage() {
       setTestResult({ id, status: result.status, message: result.message || (result.status === 'connected' ? 'Connexion réussie' : 'Erreur inconnue') })
       await loadConfigs()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur de test'
+      const msg = friendlyApiErrorMessage(err, 'Erreur de test')
       setTestResult({ id, status: 'error', message: msg })
     } finally {
       setTesting(null)
@@ -241,7 +241,7 @@ export default function ProjectProvidersPage() {
       setCatalogForm(emptyCatalogForm)
       await loadConfigs()
     } catch (err: unknown) {
-      setCatalogError(err instanceof Error ? err.message : "Erreur lors de l'ajout au catalogue")
+      setCatalogError(friendlyApiErrorMessage(err, "Erreur lors de l'ajout au catalogue"))
     } finally {
       setSavingCatalog(false)
     }
@@ -252,7 +252,7 @@ export default function ProjectProvidersPage() {
       await api.patch(`/settings/ai-providers/catalog/${entry.id}`, { is_enabled: !entry.is_enabled })
       await loadConfigs()
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Erreur lors de la mise à jour')
+      alert(friendlyApiErrorMessage(err, 'Erreur lors de la mise à jour'))
     }
   }
 
@@ -262,7 +262,7 @@ export default function ProjectProvidersPage() {
       await api.delete(`/settings/ai-providers/catalog/${entry.id}`)
       await loadConfigs()
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Erreur lors de la suppression')
+      alert(friendlyApiErrorMessage(err, 'Erreur lors de la suppression'))
     }
   }
 

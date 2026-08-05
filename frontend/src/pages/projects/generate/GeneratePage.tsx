@@ -4,7 +4,7 @@ import { AlertTriangle, Bot, CheckCircle, ChevronDown, ChevronUp, History, Loade
 import { listAIProviders } from '@/api/aiProviders'
 import { getPipelineLogs, getPipelineSettings, pipelineRunMessage, pipelineStatusLabel, triggerPipelineRun } from '@/api/pipeline'
 import { listArticles } from '@/api/articles'
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
 import type { AIProviderPublic } from '@/api/aiProviders'
 import type { PipelineLog, PipelineSettings } from '@/api/pipeline'
 import type { AgentAssignment, AgentInfo, Article } from '@/types'
@@ -135,6 +135,17 @@ export default function GeneratePage() {
     setOpenLogId(latestLogId)
   }, [sortedLogs])
 
+  // Rafraîchit automatiquement pendant qu'un run est en cours (statut
+  // "running" côté serveur, ou pendant l'attente du bouton "Lancer
+  // maintenant") — triggerPipelineRun() peut dépasser son timeout client
+  // (le pipeline continue de tourner côté serveur), et sans ce polling il
+  // fallait cliquer "Rafraîchir" manuellement pour voir le résultat final.
+  useEffect(() => {
+    if (runState !== 'running' && runningPipelineCount === 0) return
+    const interval = window.setInterval(() => setTick((value) => value + 1), 10000)
+    return () => window.clearInterval(interval)
+  }, [runState, runningPipelineCount])
+
   async function handleRunPipeline() {
     if (!projectId || runState === 'running' || runningPipelineCount > 0) return
     setRunState('running')
@@ -144,8 +155,19 @@ export default function GeneratePage() {
       setRunState(result.status === 'failed' ? 'error' : 'done')
       setRunSummary(pipelineRunMessage(result))
       setTick((value) => value + 1)
-    } catch {
+    } catch (err) {
+      // Un timeout client (ApiError 408, ou déconnexion pendant un
+      // redémarrage backend) ne veut pas dire que le pipeline a échoué :
+      // run_pipeline() continue de tourner côté serveur. Le polling
+      // automatique (runningPipelineCount) reprendra la main et affichera
+      // le vrai résultat dès qu'il apparaît dans les logs.
+      const isTimeout = err instanceof ApiError && err.status === 408
       setRunState('error')
+      setRunSummary(
+        isTimeout
+          ? "Le pipeline prend plus de temps que prévu — il continue de s'exécuter en arrière-plan, le résultat apparaîtra automatiquement ci-dessous."
+          : '',
+      )
     }
   }
 
@@ -277,7 +299,9 @@ export default function GeneratePage() {
       </div>
 
       {runState === 'error' && (
-        <div className="mb-4 rounded-[12px] border border-danger/20 bg-danger/5 px-4 py-3 text-[14px] text-danger">Le lancement manuel a échoué. Consultez l’historique ou les providers.</div>
+        <div className={`mb-4 rounded-[12px] border px-4 py-3 text-[14px] ${runSummary ? 'border-warning/20 bg-warning/5 text-warning' : 'border-danger/20 bg-danger/5 text-danger'}`}>
+          {runSummary || 'Le lancement manuel a échoué. Consultez l’historique ou les providers.'}
+        </div>
       )}
       {runState === 'done' && (
         <div className="mb-4 rounded-[12px] border border-success/20 bg-success/8 px-4 py-3 text-[14px] text-success">

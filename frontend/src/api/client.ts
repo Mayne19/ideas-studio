@@ -10,6 +10,20 @@ export class ApiError extends Error {
   }
 }
 
+/** Traduit une erreur d'appel API en message affichable — les échecs réseau
+ * bruts (fetch() qui rejette avant même d'obtenir une réponse HTTP : DNS,
+ * CORS, serveur injoignable pendant un redéploiement...) remontent avec le
+ * message natif du navigateur ("NetworkError when attempting to fetch
+ * resource.", "Failed to fetch"...), illisible et en anglais. */
+export function friendlyApiErrorMessage(err: unknown, fallback = 'Une erreur est survenue.'): string {
+  if (err instanceof ApiError) return err.message
+  if (err instanceof TypeError || (err instanceof Error && /networkerror|failed to fetch/i.test(err.message))) {
+    return 'Impossible de contacter le serveur. Vérifiez votre connexion et réessayez dans quelques instants (le backend est peut-être en cours de redémarrage).'
+  }
+  if (err instanceof Error) return err.message || fallback
+  return fallback
+}
+
 type RequestOptions = {
   method?: string
   body?: unknown

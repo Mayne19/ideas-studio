@@ -143,7 +143,14 @@ export function updatePipelineSettings(projectId: string, data: PipelineSettings
 }
 
 export function triggerPipelineRun(projectId: string): Promise<PipelineRunResult> {
-  return api.post<PipelineRunResult>(`/projects/${projectId}/pipeline/run`)
+  // run_pipeline() est synchrone côté backend (attend la génération complète
+  // des idées + articles avant de répondre) — le timeout par défaut de 25s
+  // du client HTTP est bien trop court : le fetch s'annule côté frontend
+  // (ApiError 408) alors que le pipeline continue de tourner et finit par
+  // réussir côté serveur quelques dizaines de secondes plus tard, d'où un
+  // "échec" affiché suivi de logs de succès qui n'apparaissent qu'au
+  // prochain rafraîchissement manuel.
+  return api.post<PipelineRunResult>(`/projects/${projectId}/pipeline/run`, undefined, { timeoutMs: 180000 })
 }
 
 export function getPipelineLogs(projectId: string, limit = 20): Promise<PipelineLog[]> {
