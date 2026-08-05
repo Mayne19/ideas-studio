@@ -84,6 +84,62 @@ def check_word_count_compliance(word_count: int, wc_min: int | None, wc_max: int
     return {"status": "within_range", "word_count": word_count, "target_min": wc_min, "target_max": wc_max}
 
 
+_GENERIC_OPENERS = (
+    "il est important de", "il est crucial de", "il est essentiel de",
+    "dans cette section", "dans cet article", "nous allons voir",
+    "force est de constater", "il va sans dire que", "de nos jours",
+    "il convient de noter",
+)
+_H2_GENERIC_FIRST_WORDS = ("il", "dans", "nous", "cette")
+
+
+def check_style_compliance(content: str) -> dict:
+    """Signaux de style mesurables mécaniquement (checklist qualité 90+
+    demandée par l'utilisateur) — ne corrige rien automatiquement, contraire-
+    ment aux garde-fous structurels : reformuler une phrase creuse ou varier
+    un rythme de paragraphe demande un jugement éditorial qu'une regex ne
+    peut pas fournir sans risquer de dégrader le texte. Sert à qualifier
+    l'article et, potentiellement, à nourrir une future itération
+    d'auto-amélioration ciblée sur le style plutôt que sur les scores SEO."""
+    if not content:
+        return {"status": "empty", "issues": []}
+
+    text_only = re.sub(r"<[^>]+>", " ", content)
+    issues: list[str] = []
+
+    if "—" in content:
+        issues.append("tiret_cadratin_present")
+
+    paragraphs = [p.strip() for p in re.findall(r"<p>(.*?)</p>", content, re.DOTALL) if re.sub(r"<[^>]+>", "", p).strip()]
+    lengths = [len(re.sub(r"<[^>]+>", "", p).split()) for p in paragraphs]
+    if len(lengths) >= 4:
+        long_run = 0
+        for length in lengths:
+            bucket = "short" if length <= 15 else "long"
+            long_run = long_run + 1 if bucket == "long" else 0
+            if long_run >= 4:
+                issues.append("paragraphes_longueur_uniforme")
+                break
+
+    for match in re.finditer(r"<h2[^>]*>(.*?)</h2>", content, re.IGNORECASE | re.DOTALL):
+        heading_text = re.sub(r"<[^>]+>", "", match.group(1)).strip().lower()
+        first_word = heading_text.split(" ", 1)[0] if heading_text else ""
+        if first_word in _H2_GENERIC_FIRST_WORDS:
+            issues.append(f"titre_section_generique:{heading_text[:40]}")
+
+    lower_text = text_only.lower()
+    for opener in _GENERIC_OPENERS:
+        if opener in lower_text:
+            issues.append(f"ouverture_generique:{opener}")
+
+    return {
+        "status": "checked",
+        "issues": issues,
+        "paragraph_count": len(paragraphs),
+        "issue_count": len(issues),
+    }
+
+
 def apply_structure_guards(content: str, title: str | None) -> str:
     """Point d'entrée unique : applique les corrections déterministes dans
     l'ordre (dédoublonnage H1 d'abord, puis cohérence de hiérarchie sur le

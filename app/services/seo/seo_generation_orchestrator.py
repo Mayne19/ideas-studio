@@ -915,6 +915,27 @@ class SEOGenerationOrchestrator:
             "- Ne crée PAS de section 'Conclusion', 'En résumé' ou 'Pour conclure' séparée",
             "- Termine l'article dans la dernière section du plan sans H2 supplémentaire",
             "- Si un résumé est utile, intègre-le dans la dernière section existante",
+            "",
+            "Règles de voix et de rythme (checklist qualité 90+) :",
+            "- Chaque phrase apporte une information nouvelle ou disparaît. Test : si on peut la "
+            "  supprimer sans rien perdre, elle n'a pas sa place.",
+            "- Zéro phrase d'ouverture de section générique. Interdits en début de section : "
+            "  'Il est important de', 'Dans cette section', 'Il est crucial de', 'Force est de constater', "
+            "  'Il va sans dire que'.",
+            "- Alterne la longueur des paragraphes : certains 5-8 lignes, d'autres une seule phrase "
+            "  pour marquer une idée forte. Ne jamais enchaîner plus de 3 paragraphes de longueur similaire.",
+            "- Au moins une position tranchée et assumée par section (pas juste énumérer des faits neutres) : "
+            "  dire ce qui ne marche pas, pour qui une option n'est pas adaptée, ou pourquoi tel choix "
+            "  est préférable dans un cas précis.",
+            "- Varie les connecteurs logiques : pas seulement 'mais'/'cependant', alterne avec 'pourtant', "
+            "  'à bien y réfléchir', 'ce qui signifie concrètement', 'tout compte fait', 'et c'est là que "
+            "  ça devient intéressant'.",
+            "- Dose le 'vous' : mélange avec des tournures impersonnelles et des phrases sans sujet direct, "
+            "  ne t'adresse pas au lecteur dans chaque phrase.",
+            "- La conclusion (dans la dernière section, jamais une section à part) ne résume pas ce qui "
+            "  précède et ne moralise pas ('l'essentiel est de', 'en conclusion'). Termine sur une image "
+            "  concrète, une conséquence pratique, ou une question ouverte.",
+            "- Le premier mot d'une section H2 n'est jamais 'Il', 'Dans', 'Nous', 'Cette'.",
         ]
 
         if self.context.get("word_count_range"):
@@ -1017,7 +1038,9 @@ class SEOGenerationOrchestrator:
 
         self._raise_if_cancelled(article)
 
-        from app.services.seo.content_structure_guard import apply_structure_guards, check_word_count_compliance
+        from app.services.seo.content_structure_guard import (
+            apply_structure_guards, check_style_compliance, check_word_count_compliance,
+        )
         content = apply_structure_guards(content, draft.title)
 
         image_sources = self.context.get("image_sources") or []
@@ -1039,6 +1062,16 @@ class SEOGenerationOrchestrator:
                 f"cible {word_count_check.get('target_min')}-{word_count_check.get('target_max')})",
                 level="warning", step="word_count_check",
             )
+
+        style_check = check_style_compliance(content)
+        self._save(article.id, "style_check", style_check)
+        if style_check.get("issue_count"):
+            self._log(
+                f"{style_check['issue_count']} signal(aux) de style détecté(s) : "
+                f"{', '.join(style_check['issues'][:5])}",
+                level="warning", step="style_check",
+            )
+
         self._ensure_slug(article, draft.title, draft.keyword)
 
         from app.services.seo.content_structure_guard import clean_meta_text
