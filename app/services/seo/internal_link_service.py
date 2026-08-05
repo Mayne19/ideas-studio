@@ -31,7 +31,14 @@ def build_internal_link_plan(
     exclude_article_id: str | None = None,
     limit: int = 5,
     cannibalization_hints: list[dict] | None = None,
+    editorial_tier: str | None = None,
 ) -> InternalLinkPlan:
+    """editorial_tier : tier de l'article en cours de génération
+    (voir article_editorial_tier_service.py). Un article "cluster" doit
+    obligatoirement lier le pillar de sa catégorie (bonus +50, dominant
+    sur le scoring lexical normal, plafonné à 18) ; un article "pillar" ne
+    lie jamais un autre pillar de la même catégorie (la hiérarchie reste
+    à plat, un pillar ne pointe pas vers un pair)."""
     plan = InternalLinkPlan()
 
     rows = db.execute(
@@ -50,6 +57,9 @@ def build_internal_link_plan(
 
     if exclude_article_id:
         rows = [r for r in rows if r[0].id != exclude_article_id]
+
+    if editorial_tier == "pillar":
+        rows = [r for r in rows if not (r[0].category_id == category_id and r[0].editorial_tier == "pillar")]
 
     normalized_keyword = normalize_text(keyword)
     scored = []
@@ -95,6 +105,16 @@ def build_internal_link_plan(
         if article.category_id and category_id and article.category_id == category_id:
             score += 3
 
+        is_category_pillar = (
+            editorial_tier == "cluster"
+            and article.editorial_tier == "pillar"
+            and article.category_id
+            and category_id
+            and article.category_id == category_id
+        )
+        if is_category_pillar:
+            score += 50
+
         if score > 0:
             cat_name = None
             if article.category_id:
@@ -103,22 +123,27 @@ def build_internal_link_plan(
                     category_names[article.category_id] = cat.name if cat else None
                 cat_name = category_names[article.category_id]
 
+            context_note = (
+                "Pillar de la catégorie — lien obligatoire (article de référence)"
+                if is_category_pillar
+                else (
+                    "Forte pertinence : même mot-clé principal"
+                    if score >= 10
+                    else "Pertinence moyenne : sujet connexe ou catégorie partagée"
+                )
+            )
             scored.append({
                 "target_article_id": article.id,
                 "target_url": f"/articles/{article.slug}",
                 "anchor_text": a_title_raw or "Article connexe",
                 "placement": "auto",
-                "reason": f"Pertinence {score}/10",
+                "reason": "Pillar de la catégorie" if is_category_pillar else f"Pertinence {score}/10",
                 "relevance_score": score,
                 "category": cat_name,
                 "context": {
                     "target_keyword": a_keyword_raw or "",
                     "target_excerpt": _extract_excerpt(article, a_title_raw, 140),
-                    "context_note": (
-                        "Forte pertinence : même mot-clé principal"
-                        if score >= 10
-                        else "Pertinence moyenne : sujet connexe ou catégorie partagée"
-                    ),
+                    "context_note": context_note,
                 },
             })
 
@@ -139,7 +164,8 @@ def build_internal_link_plan_dict(
     exclude_article_id: str | None = None,
     limit: int = 5,
     cannibalization_hints: list[dict] | None = None,
+    editorial_tier: str | None = None,
 ) -> dict:
     return asdict(build_internal_link_plan(
-        db, project_id, keyword, category_id, exclude_article_id, limit, cannibalization_hints
+        db, project_id, keyword, category_id, exclude_article_id, limit, cannibalization_hints, editorial_tier
     ))

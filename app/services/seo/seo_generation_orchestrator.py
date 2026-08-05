@@ -429,9 +429,13 @@ class SEOGenerationOrchestrator:
         self._step("FAQPlan")
 
         # 13. InternalLinkPlan
+        from app.services.seo.article_editorial_tier_service import resolve_editorial_tier
+        editorial_tier = resolve_editorial_tier(self.db, self.project_id, chosen_category, existing_article_id)
+        self.context["editorial_tier"] = editorial_tier
         internal_links = build_internal_link_plan_dict(
             self.db, self.project_id, final_keyword, chosen_category,
             cannibalization_hints=cannibalization_hints,
+            editorial_tier=editorial_tier,
         )
         self.context["internal_links"] = internal_links
         self._step("InternalLinkPlan")
@@ -463,6 +467,8 @@ class SEOGenerationOrchestrator:
             draft.angle = angle
             set_article_status(article, ArticleStatus.WRITING_IN_PROGRESS)
             article.updated_at = datetime.now(timezone.utc)
+            if not article.editorial_tier:
+                article.editorial_tier = editorial_tier
             self.db.flush()
         else:
             article = Article(
@@ -475,6 +481,7 @@ class SEOGenerationOrchestrator:
                 state_id=0,
                 priority=0,
                 opportunity_score=idea_discovery.get("opportunity_score", 0.5),
+                editorial_tier=editorial_tier,
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
             )

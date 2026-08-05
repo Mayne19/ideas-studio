@@ -89,6 +89,7 @@ class Article(Base):
     rejection_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     search_intent: Mapped[str | None] = mapped_column(Text, nullable=True)
     content_format: Mapped[str | None] = mapped_column(Text, nullable=True)
+    editorial_tier: Mapped[str | None] = mapped_column(Text, nullable=True)
     target_word_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     opportunity_score: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True)
     priority: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
