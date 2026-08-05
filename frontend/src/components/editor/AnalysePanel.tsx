@@ -36,6 +36,7 @@ const SCORE_TILES = [
   { key: 'Originalité', label: 'Originalité' },
   { key: 'GEO', label: 'GEO' },
   { key: 'EEAT', label: 'EEAT' },
+  { key: 'Présence humaine', label: 'Présence humaine' },
 ] as const
 
 type ScoreKey = typeof SCORE_TILES[number]['key']
@@ -59,6 +60,13 @@ function getGeoScoreFromArtifact(article: EditorArticle): number | null {
   return typeof score === 'number' && Number.isFinite(score) ? score : null
 }
 
+function getHumanPresenceScore(article: EditorArticle): number | null {
+  const report = getArtifact(article, 'human_presence_report')
+  if (!report) return null
+  const score = report.score
+  return typeof score === 'number' && Number.isFinite(score) ? score : null
+}
+
 function resolveScore(article: EditorArticle, brief: AnalysisBrief | SeoAnalysis | null, expertReview: SeoExpertReview | null, key: ScoreKey): number | null {
   switch (key) {
     case 'Synthèse': return finiteScore(article.latest_analysis?.global_score)
@@ -68,6 +76,7 @@ function resolveScore(article: EditorArticle, brief: AnalysisBrief | SeoAnalysis
     case 'Originalité': return getOriginalityScore(article)
     case 'GEO': return finiteScore(article.latest_analysis?.geo_score) ?? getGeoScoreFromArtifact(article)
     case 'EEAT': return finiteScore(brief?.eeat_score)
+    case 'Présence humaine': return getHumanPresenceScore(article)
   }
 }
 
@@ -131,16 +140,13 @@ const CALCULATION_TEXT: Record<string, string> = {
   Originalité: 'Le score Originalité est basé sur une analyse heuristique du contenu : similarité avec d\'autres sources, répétitions internes, formulations génériques, risque de paraphrase, et proximité avec du contenu existant.',
   GEO: 'Le score GEO (Generative Engine Optimization) évalue l\'adaptation du contenu aux moteurs de recherche génératifs : réponse directe aux questions, sections autonomes, définitions claires, contenu extractible, et structure adaptée aux LLM.',
   EEAT: 'Le score EEAT évalue l\'expertise, l\'autorité et la fiabilité du contenu : présence de liens externes vers des sources fiables, exemples concrets ou données chiffrées, contenu actionnable, et crédibilité éditoriale.',
-  Synthèse: 'Le score Global est une pondération des scores SEO, Qualité, Lisibilité, Originalité, GEO et EEAT. Il détermine si l\'article est prêt à être publié. Un score sous les seuils de validation bloque la publication.',
+  'Présence humaine': 'Le score Présence humaine détecte les signes d\'un texte écrit sans contrainte de style : ouvertures génériques, expressions usées, régularité mécanique des paragraphes, absence de marqueur de voix humaine ou de position assumée, conclusion qui résume au lieu de clore.',
+  Synthèse: 'Le score Global est une pondération de 6 signaux : SEO (27%), EEAT (18%), Lisibilité (15%), Originalité (16%), Présence humaine (14%) et Valeur ajoutée (10%, non affichée séparément). GEO et Qualité sont informatifs mais ne comptent pas dans ce calcul. Il détermine si l\'article est prêt à être publié.',
 }
 
 /* ─── Score synthesis card ──────────────────────────────────── */
 
-const SCORE_PAIRS: [ScoreKey, ScoreKey][] = [
-  ['SEO', 'GEO'],
-  ['Lisibilité', 'Originalité'],
-  ['EEAT', 'Qualité'],
-]
+const SECONDARY_SCORE_KEYS: ScoreKey[] = ['SEO', 'EEAT', 'Lisibilité', 'Originalité', 'Présence humaine', 'GEO', 'Qualité']
 
 const SCORE_LABEL: Record<ScoreKey, string> = {
   Synthèse: 'Global',
@@ -150,6 +156,7 @@ const SCORE_LABEL: Record<ScoreKey, string> = {
   Originalité: 'Originalité',
   GEO: 'GEO',
   EEAT: 'EEAT',
+  'Présence humaine': 'Présence humaine',
 }
 
 function ScoreSynthesisCard({
@@ -182,32 +189,28 @@ function ScoreSynthesisCard({
         </button>
       </div>
 
-      {/* Secondary scores — 2-column rows */}
-      <div className="flex flex-col gap-2">
-        {SCORE_PAIRS.map(([left, right]) => (
-          <div key={`${left}-${right}`} className="grid grid-cols-2 gap-2">
-            {[left, right].map((key) => {
-              const score = resolveScore(article, brief, expertReview, key)
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => onSelect(key)}
-                  className={`flex flex-col items-center gap-2 rounded-[12px] border px-2.5 py-3 text-center transition-colors ${
-                    selected === key ? 'border-border-strong bg-surface-soft' : 'border-border bg-transparent hover:bg-surface-soft'
-                  }`}
-                >
-                  <span className="block text-[10px] font-medium uppercase tracking-wide text-tertiary">{SCORE_LABEL[key]}</span>
-                  {score === null ? (
-                    <span className="flex h-12 w-12 items-center justify-center text-[16px] font-semibold text-tertiary">—</span>
-                  ) : (
-                    <Gauge showValue size="small" value={score} color={gaugeColor(score)} />
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        ))}
+      {/* Secondary scores — grille auto-flow 2 colonnes (nombre de tuiles variable) */}
+      <div className="grid grid-cols-2 gap-2">
+        {SECONDARY_SCORE_KEYS.map((key) => {
+          const score = resolveScore(article, brief, expertReview, key)
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => onSelect(key)}
+              className={`flex flex-col items-center gap-2 rounded-[12px] border px-2.5 py-3 text-center transition-colors ${
+                selected === key ? 'border-border-strong bg-surface-soft' : 'border-border bg-transparent hover:bg-surface-soft'
+              }`}
+            >
+              <span className="block text-[10px] font-medium uppercase tracking-wide text-tertiary">{SCORE_LABEL[key]}</span>
+              {score === null ? (
+                <span className="flex h-12 w-12 items-center justify-center text-[16px] font-semibold text-tertiary">—</span>
+              ) : (
+                <Gauge showValue size="small" value={score} color={gaugeColor(score)} />
+              )}
+            </button>
+          )
+        })}
       </div>
     </>
   )
@@ -221,18 +224,23 @@ type V2Report = { score?: number; signals?: Record<string, V2Signal>; flags?: st
 function getV2Report(article: EditorArticle, key: ScoreKey): V2Report | null {
   const raw: Record<string, unknown> | null = (() => {
     switch (key) {
-      case 'EEAT':        return getArtifact(article, 'eeat_checklist')
-      case 'Originalité': return getArtifact(article, 'originality_report')
-      case 'GEO':         return getArtifact(article, 'geo_optimization')
-      case 'Lisibilité':  return getArtifact(article, 'readability_report')
-      default:            return null
+      case 'EEAT':              return getArtifact(article, 'eeat_checklist')
+      case 'Originalité':       return getArtifact(article, 'originality_report')
+      case 'GEO':                return getArtifact(article, 'geo_optimization')
+      case 'Lisibilité':        return getArtifact(article, 'readability_report')
+      case 'Présence humaine':  return getArtifact(article, 'human_presence_report')
+      default:                  return null
     }
   })()
   if (!raw) return null
-  // Accepte toute version majeure "2.x" : la forme (signals/flags/explanation/
-  // confidence/status) est stable entre 2.1 et 2.2, seul le contenu du calcul
-  // change (ex: originality_service est passé en 2.2 pour le seuil des 500
-  // mots — un check strict sur '2.1' masquait alors tout le détail du score).
+  // human_presence_report est resté en version "1.0" (forme stable depuis
+  // toujours, jamais changée) — accepté sans condition. Les autres rapports
+  // acceptent toute version majeure "2.x" : la forme (signals/flags/
+  // explanation/confidence/status) est stable entre 2.1 et 2.2, seul le
+  // contenu du calcul change (ex: originality_service est passé en 2.2 pour
+  // le seuil des 500 mots — un check strict sur '2.1' masquait alors tout
+  // le détail du score).
+  if (key === 'Présence humaine') return raw as V2Report
   const isV2 = (v: unknown): v is string => typeof v === 'string' && v.startsWith('2.')
   const v2 = raw.v2 as V2Report | undefined
   return isV2(v2?.version) ? v2 : (isV2(raw.version as unknown) ? raw as V2Report : null)
@@ -242,7 +250,6 @@ const SIGNAL_LABELS: Record<string, string> = {
   external_links:    'Liens externes',
   cited_stats:       'Statistiques sourcées',
   heading_structure: 'Structure H2/H3',
-  author_bio:        'Bio auteur',
   nuance_markers:    'Marqueurs de nuance',
   heading_diversity: 'Diversité des titres',
   ai_generic_absence:'Absence de généricité IA',
@@ -259,10 +266,15 @@ const SIGNAL_LABELS: Record<string, string> = {
   paragraph_score:   'Longueur des paragraphes',
   passive_score:     'Voix active',
   transition_score:  'Transitions',
+  intro:             'Qualité de l\'introduction',
+  vocabulaire:       'Vocabulaire',
+  paragraphes:       'Variation des paragraphes',
+  marqueurs_humains: 'Marqueurs humains',
+  position_tranchee: 'Position tranchée',
+  conclusion:        'Conclusion',
 }
 
 const FLAG_LABELS: Record<string, string> = {
-  no_author_bio:                 'Pas de bio auteur',
   insufficient_external_links:   'Liens externes insuffisants',
   no_cited_statistics:           'Aucune statistique sourcée',
   no_nuance_markers:             'Pas de marqueurs de nuance',
@@ -277,6 +289,36 @@ const FLAG_LABELS: Record<string, string> = {
   sections_lack_direct_answers:  'Sections sans réponse directe',
   high_lix_difficult_reading:    'LIX élevé — lecture difficile',
   paragraph_length_issue:        'Longueur des paragraphes problématique',
+  intro_trop_longue:             'Introduction trop longue',
+  tiret_cadratin_present:        'Tiret cadratin présent',
+  paragraphes_longueur_uniforme: 'Paragraphes trop uniformes',
+  aucune_phrase_courte_de_rythme:'Aucune phrase courte de rythme',
+  aucun_marqueur_humain:         'Aucun marqueur de voix humaine',
+  marqueurs_humains_en_exces:    'Marqueurs humains en excès (trop mécanique)',
+}
+
+// Certains flags portent un suffixe dynamique ("intro_generique:il est
+// important de", "section_sans_position_tranchee:Titre H2...") — non
+// mappables un par un dans FLAG_LABELS. On matche sur le préfixe pour leur
+// donner un libellé lisible tout en gardant le détail après les deux points.
+const FLAG_PREFIX_LABELS: [string, string][] = [
+  ['intro_generique:', 'Ouverture générique'],
+  ['expression_usee:', 'Expression usée'],
+  ['superlatif_vide:', 'Superlatif vide'],
+  ['section_sans_position_tranchee:', 'Section sans position tranchée'],
+  ['conclusion_resume:', 'Conclusion qui résume au lieu de clore'],
+  ['aucun_angle_original:', 'Aucun angle original'],
+  ['phrase_remplissage:', 'Phrase de remplissage'],
+]
+
+function flagLabel(flag: string): string {
+  if (FLAG_LABELS[flag]) return FLAG_LABELS[flag]
+  const prefixed = FLAG_PREFIX_LABELS.find(([prefix]) => flag.startsWith(prefix))
+  if (prefixed) {
+    const detail = flag.slice(prefixed[0].length)
+    return detail ? `${prefixed[1]} : « ${detail} »` : prefixed[1]
+  }
+  return flag
 }
 
 function V2SignalsBreakdown({ report }: { report: V2Report }) {
@@ -294,7 +336,7 @@ function V2SignalsBreakdown({ report }: { report: V2Report }) {
           {report.flags.map((flag) => (
             <div key={flag} className="flex items-start gap-1.5 rounded-[8px] bg-warning/5 px-2.5 py-1.5">
               <AlertTriangle size={10} className="mt-0.5 shrink-0 text-warning" />
-              <span className="text-[12px] text-secondary">{FLAG_LABELS[flag] ?? flag}</span>
+              <span className="text-[12px] text-secondary">{flagLabel(flag)}</span>
             </div>
           ))}
         </div>

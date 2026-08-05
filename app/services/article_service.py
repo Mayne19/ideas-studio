@@ -153,8 +153,16 @@ def to_public_batch(db: Session, articles: list[Article]) -> list[ArticlePublic]
 
     scoring_artifacts_by_article = get_latest_artifacts_bulk(
         db, article_ids,
+        # Liste alignée sur celle que compute_global_score() charge par défaut
+        # (get_latest_artifacts, quand artifacts=None) — les 5 dernières clés
+        # servent à compute_value_added_score() : sans elles, value_added
+        # retombait systématiquement sur son socle de base (40/100, aucun
+        # bonus), même pour un article qui cite ses sources, intègre de la
+        # matière humaine, etc. Score affiché en liste Production plus bas
+        # que le score réel stocké par le pipeline à la génération.
         ["eeat_checklist", "readability_report", "originality_report", "geo_optimization",
-         "seo_final_checklist", "human_presence_report"],
+         "seo_final_checklist", "human_presence_report",
+         "production_brief", "human_insights", "editorial_angle", "external_links", "content_gaps"],
     )
     validation_artifacts_by_article = get_latest_artifacts_bulk(
         db, article_ids, ["originality_report", "sources", "estimated_cost", "fact_check_report"],

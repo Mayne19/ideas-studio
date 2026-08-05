@@ -56,12 +56,20 @@ def check_seo_final(
     external_links: list | None = None,
     images: list | None = None,
     has_structured_data: bool = False,
+    min_word_count: int | None = None,
 ) -> SEOFinalChecklist:
     report = SEOFinalChecklist()
     text = strip_html(content) if content else ""
     word_count = len(text.split())
     kw = (keyword or "").lower()
     internal_count, external_count = count_links_in_content(content)
+    # 800 mots par défaut seulement si aucune cible de format n'est fournie —
+    # une catégorie configurée en format "short" (word_count_min < 800, voir
+    # article_tier_service/format_expectations) ne pouvait jamais valider ce
+    # check, et l'auto-amélioration poussait alors le contenu au-delà du
+    # word_count_max de la catégorie pour tenter de le satisfaire, entrant en
+    # conflit avec sa propre correction de volume dans la même boucle.
+    depth_target = min_word_count if min_word_count is not None else 800
 
     checks = [
         {"name": "title_present", "label": "Titre présent", "pass": bool(title)},
@@ -69,7 +77,7 @@ def check_seo_final(
         {"name": "meta_title_present", "label": "Meta title présent", "pass": bool(meta_title)},
         {"name": "meta_description_present", "label": "Meta description présente", "pass": bool(meta_description)},
         {"name": "keyword_in_title", "label": "Mot-clé dans le titre", "pass": kw and title and kw in title.lower()},
-        {"name": "content_depth", "label": "Profondeur suffisante", "pass": word_count >= 800},
+        {"name": "content_depth", "label": "Profondeur suffisante", "pass": word_count >= depth_target},
         {"name": "keyword_in_intro", "label": "Mot-clé dans l'introduction", "pass": kw and content and (kw in content[:500].lower() if content else False)},
         {"name": "no_isolated_h3", "label": "Pas de H3 isolé", "pass": not detect_isolated_h3(content or "")},
         {"name": "structure_valid", "label": "Structure H2/H3 correcte", "pass": len(detect_h2_directly_followed_by_h3(content or "")) == 0},
@@ -110,9 +118,11 @@ def check_seo_final_dict(
     external_links: list | None = None,
     images: list | None = None,
     has_structured_data: bool = False,
+    min_word_count: int | None = None,
 ) -> dict:
     return asdict(check_seo_final(
         content, title, slug, meta_title, meta_description,
         keyword, faq_count, internal_links, external_links, images,
         has_structured_data=has_structured_data,
+        min_word_count=min_word_count,
     ))

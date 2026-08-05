@@ -231,10 +231,19 @@ def compute_originality_score(article: Any, project_articles: list[Any] | None =
     }
 
 
-def check_originality_dict(content: str | None, sources: list[str] | None = None) -> dict:
-    """Legacy compatibility wrapper."""
-    article = {"content": content or "", "sources_json": sources or []}
-    result = compute_originality_score(article)
+def check_originality_dict(
+    content: str | None, sources: list[str] | None = None,
+    project_articles: list[dict] | None = None, title: str | None = None,
+) -> dict:
+    """Wrapper appelé par l'orchestrateur. `project_articles` (optionnel) alimente
+    score_internal_uniqueness() — sans lui, ce signal (25% du score Originalité)
+    retombait systématiquement sur son repli neutre 75/100 (voir
+    score_internal_uniqueness: `if not project_articles: return 75.0`), incapable
+    de détecter un vrai doublon interne, quel que soit le contenu réel. `title`
+    alimente aussi l'empreinte comparée (_fingerprint) — sans lui, l'article
+    courant se comparait avec un titre vide face aux vrais titres des autres."""
+    article = {"content": content or "", "sources_json": sources or [], "title": title or ""}
+    result = compute_originality_score(article, project_articles or [])
     return {
         "heuristic_score": result["score"],
         "method": "heuristic",
