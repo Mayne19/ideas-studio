@@ -43,7 +43,8 @@ def _load_validation_context(
 
     if artifacts is None:
         artifacts = get_latest_artifacts(
-            db, article.id, ["originality_report", "sources", "estimated_cost", "fact_check_report"]
+            db, article.id,
+            ["originality_report", "sources", "estimated_cost", "fact_check_report", "article_review_report"],
         )
     if latest_run is _UNSET:
         latest_run = db.execute(
@@ -62,6 +63,7 @@ def _load_validation_context(
         "sources": artifacts.get("sources"),
         "estimated_cost": artifacts.get("estimated_cost"),
         "fact_check": artifacts.get("fact_check_report"),
+        "article_review": artifacts.get("article_review_report"),
         "workflow_failed": bool(latest_run and latest_run.status_reason_id == RunStatus.FAILED),
         "workflow_incomplete": bool(
             latest_run and latest_run.status_reason_id in (RunStatus.QUEUED, RunStatus.RUNNING)
@@ -226,6 +228,14 @@ def check_validation_thresholds(
         blocking_reasons.append(f"Score Originalite ({originality}) < 85")
     if human_presence is not None and human_presence < 70:
         blocking_reasons.append(f"Score Presence humaine ({human_presence}) < 70")
+
+    article_review = ctx.get("article_review")
+    if article_review and article_review.get("decision") == "REECRITURE":
+        blocking = article_review.get("blocking_triggered") or []
+        blocking_reasons.append(
+            f"Agent reviseur : REECRITURE requise (score {article_review.get('total_score')}, "
+            f"bloquant(s) : {', '.join(blocking) if blocking else 'score insuffisant'})"
+        )
 
     for w in warnings:
         if w["severity"] == "critical":

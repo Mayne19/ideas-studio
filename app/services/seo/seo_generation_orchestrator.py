@@ -954,6 +954,35 @@ class SEOGenerationOrchestrator:
             "- Contient au moins un moment de vraie surprise : une observation ou un angle qu'on ne "
             "  trouverait pas dans les 10 premiers résultats Google sur le même sujet.",
             "",
+            "Vocabulaire interdit (signature d'un texte généré par IA) :",
+            "- Transitions creuses à supprimer ou remplacer par un lien concret : 'En outre', 'De plus', "
+            "  'Par ailleurs', 'Néanmoins', 'Toutefois', 'Ainsi', 'Dès lors', 'En somme', 'En définitive', "
+            "  'D'autre part', 'À cet égard', 'En effet'/'Effectivement'/'Notamment' en début de "
+            "  paragraphe, 'De surcroît', 'Qui plus est'.",
+            "- Quantificateurs vagues à remplacer par un chiffre précis ou à supprimer : 'Nombreux', "
+            "  'Divers', 'Plusieurs' (si le nombre est connaissable), 'Multiples', 'Extrêmement', "
+            "  'Particulièrement', 'Fortement', 'Considérablement', 'Hautement', 'Grandement', "
+            "  'Véritablement', 'Absolument', 'Tout à fait'/'Certainement'/'Bien sûr' en début de phrase.",
+            "- Verbes corporatifs à remplacer par un verbe court et concret : 'Utiliser' → se servir de ; "
+            "  'Mettre en œuvre' → appliquer/faire/lancer ; 'Faciliter' → aider/rendre possible ; "
+            "  'Optimiser' → améliorer/accélérer ; 'Booster' → augmenter/renforcer ; "
+            "  'Adresser (un problème)' → résoudre/traiter ; 'Impacter' → affecter/changer ; "
+            "  'Générer (du trafic/des leads)' → attirer/produire.",
+            "- Buzzwords vides à supprimer ou préciser concrètement : 'Holistique', 'Transversal', "
+            "  'Structurant', 'Robuste', 'Paradigme', 'Synergie', 'Innovant' (sans précision), "
+            "  'Catalyseur', 'Levier' (au sens figuré systématique), 'Écosystème numérique', "
+            "  'Paysage numérique', 'Naviguer dans la complexité', 'Plonger dans un sujet'.",
+            "- Anglicismes structurels à éviter : 'Faire du sens' → avoir du sens ; "
+            "  'Adresser un problème' → résoudre/traiter ; 'Plonger dans' → explorer/examiner ; "
+            "  'Naviguer dans' → gérer/traverser ; 'Impacter positivement' → améliorer/renforcer.",
+            "- Structures de phrases à éviter : 'Non seulement X, mais aussi Y' (reformule en deux "
+            "  phrases distinctes) ; 3 phrases consécutives commençant par le même mot ou groupe de "
+            "  mots ('Cela...', 'Cette approche...') ; 'Premièrement... Deuxièmement... Enfin...' sur "
+            "  plusieurs sections (intègre dans la prose sans numérotation apparente) ; "
+            "  '[X] joue un rôle clé dans [Y]' (décris l'effet précis à la place) ; "
+            "  'Les études montrent que...'/'Les experts s'accordent à dire que...' sans source "
+            "  citée (cite la vraie étude ou reformule sans cette fausse précision).",
+            "",
             build_reference_examples_block(),
         ]
 
@@ -1099,6 +1128,17 @@ class SEOGenerationOrchestrator:
                 f"Présence humaine faible : {human_presence_report['score']}/100 "
                 f"({', '.join(human_presence_report['flags'][:5])})",
                 level="warning", step="human_presence_check",
+            )
+
+        from app.services.seo.article_reviewer_service import review_article
+        review_report = review_article(content, draft.word_count)
+        self._save(article.id, "article_review_report", review_report)
+        if review_report.get("decision") in ("REECRITURE", "REVISION_AUTOMATIQUE"):
+            self._log(
+                f"Agent réviseur : {review_report.get('decision')} "
+                f"(score {review_report.get('total_score')}/90, "
+                f"bloquants : {review_report.get('blocking_triggered') or 'aucun'})",
+                level="warning", step="article_review",
             )
 
         self._ensure_slug(article, draft.title, draft.keyword)
