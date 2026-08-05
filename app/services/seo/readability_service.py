@@ -8,11 +8,18 @@ from app.services.seo.helpers import strip_html
 
 
 TRANSITION_WORDS = [
+    # "de plus"/"en outre"/"par ailleurs"/"toutefois"/"néanmoins" et
+    # "en conclusion"/"pour conclure"/"en résumé" volontairement absents :
+    # le prompt du rédacteur (seo_generation_orchestrator._generate_content,
+    # règles de voix + vocabulaire interdit) les bannit explicitement comme
+    # "transitions creuses" ou ouvertures de conclusion interdites — les
+    # récompenser ici contredisait directement la consigne donnée au writer.
     "donc", "ainsi", "par conséquent", "c'est pourquoi", "de ce fait",
-    "de plus", "en outre", "également", "par ailleurs",
-    "cependant", "toutefois", "néanmoins", "en revanche",
-    "par exemple", "notamment", "ainsi que",
-    "en conclusion", "pour conclure", "en résumé", "finalement",
+    "également", "cependant", "en revanche", "pourtant",
+    "à bien y réfléchir", "ce qui signifie concrètement", "tout compte fait",
+    "en réalité", "pour être honnête", "paradoxalement", "curieusement",
+    "malgré tout", "autrement dit",
+    "par exemple", "notamment", "ainsi que", "finalement",
 ]
 
 PASSIVE_PATTERNS = [
@@ -77,15 +84,20 @@ def lix_to_score(lix: float) -> float:
 
 
 def score_paragraph_length(html_content: str) -> float:
+    """Barème aligné sur la règle absolue du prompt du rédacteur : paragraphes
+    de 1 à 4 phrases (cible 2-3), soit ~10-60 mots en français courant. Avant
+    ce fix, la fourchette 40-100 mots (plutôt 4-6 phrases) était notée au
+    maximum tandis que la cible réelle du writer (2-3 phrases courtes,
+    ~10-60 mots) plafonnait à 65/100 — le score pénalisait la structure
+    même que le writer est explicitement instruit de produire."""
     paragraphs = _extract_paragraphs(html_content)
     if not paragraphs:
         return 50.0
     avg = mean(_count_words(p) for p in paragraphs)
-    if avg < 20:       return 40.0
-    if avg < 40:       return 65.0
-    if avg <= 100:     return 100.0
-    if avg <= 150:     return 75.0
-    if avg <= 200:     return 50.0
+    if avg < 10:       return 70.0
+    if avg <= 60:      return 100.0
+    if avg <= 90:      return 75.0
+    if avg <= 130:     return 50.0
     return 20.0
 
 

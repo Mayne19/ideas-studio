@@ -171,6 +171,34 @@ class SEOGenerationOrchestrator:
     def _get(self, article_id: str, agent_key: str) -> dict | None:
         return get_latest_artifact(self.db, article_id, agent_key)
 
+    def _get_project_articles_for_originality(self, exclude_article_id: str | None) -> list[dict]:
+        """Fournit à originality_service.score_internal_uniqueness() de quoi
+        comparer réellement l'article contre les autres du projet — sans
+        cette liste, ce signal (25% du score Originalité) retombait toujours
+        sur son repli neutre 75/100, incapable de détecter un vrai doublon
+        interne. Statuts alignés sur cannibalization_service (articles
+        publiés ou en file, jamais archivés/rejetés), limité à 50 pour
+        borner le coût de la comparaison n-gram."""
+        rows = self.db.execute(
+            select(Article, ArticleRevision.title, ArticleRevision.body)
+            .join(ArticleRevision, ArticleRevision.id == Article.current_revision_id)
+            .where(
+                Article.project_id == self.project_id,
+                Article.status_reason_id.in_((
+                    ArticleStatus.PUBLISHED, ArticleStatus.DRAFT,
+                    ArticleStatus.DRAFT_READY, ArticleStatus.IDEA_PROPOSED,
+                    ArticleStatus.IDEA_PRIORITY,
+                )),
+            )
+            .order_by(Article.updated_at.desc())
+            .limit(50)
+        ).all()
+        return [
+            {"id": article.id, "title": title or "", "content": body or ""}
+            for article, title, body in rows
+            if article.id != exclude_article_id
+        ]
+
     def generate_full_article(
         self,
         preferred_title: str | None = None,
@@ -671,7 +699,8 @@ class SEOGenerationOrchestrator:
 
         # 17. OriginalityPass
         try:
-            originality = check_originality_dict(draft.content, sources_list)
+            project_articles = self._get_project_articles_for_originality(article.id)
+            originality = check_originality_dict(draft.content, sources_list, project_articles, draft.title)
             self._save(article.id, "originality_report", originality)
             self.tools_used.append("ngram_heuristic")
             self._step("OriginalityPass")
@@ -766,6 +795,7 @@ class SEOGenerationOrchestrator:
                 external_links=external_links.get("links", []) if isinstance(external_links, dict) else [],
                 images=image_plan_result.get("image_sources", []),
                 has_structured_data=has_sd,
+                min_word_count=self.context.get("word_count_min"),
             )
             self._save(article.id, "seo_final_checklist", seo_final)
             self._step("SEOFinalChecklist")
@@ -1667,10 +1697,13 @@ class SEOGenerationOrchestrator:
 
     def _recompute_quality_artifacts(self, article: Article, draft: _DraftArticle, sources_list: list[str]) -> None:
         """Recalcule et sauvegarde eeat_checklist/readability_report/originality_report/
-        seo_final_checklist/editorial_quality_report après une édition de contenu par
-        _auto_improve_score(). Sans ça, compute_global_score() relirait à chaque
-        itération les artifacts figés d'avant la boucle — la boucle "s'améliorerait"
-        contre une cible qui ne reflète jamais l'édition qu'elle vient de faire."""
+        seo_final_checklist/editorial_quality_report/human_presence_report/geo_optimization
+        après une édition de contenu par _auto_improve_score(). Sans ça, compute_global_score()
+        relirait à chaque itération les artifacts figés d'avant la boucle — la boucle
+        "s'améliorerait" contre une cible qui ne reflète jamais l'édition qu'elle vient de
+        faire. human_presence_report pèse 14% du score global : l'oubli initial de ce
+        recalcul laissait ce signal figé sur le tout premier contenu écrit, avant même la
+        passe de style et la passe qualité du writer."""
         content = draft.content or ""
 
         try:
@@ -1687,10 +1720,25 @@ class SEOGenerationOrchestrator:
             self._error("AutoImprove_recompute_readability", str(exc))
 
         try:
-            originality = check_originality_dict(content, sources_list)
+            project_articles = self._get_project_articles_for_originality(article.id)
+            originality = check_originality_dict(content, sources_list, project_articles, draft.title)
             self._save(article.id, "originality_report", originality)
         except Exception as exc:
             self._error("AutoImprove_recompute_originality", str(exc))
+
+        try:
+            from app.services.seo.human_presence_service import compute_human_presence_score
+            human_presence_report = compute_human_presence_score(content, draft.word_count)
+            self._save(article.id, "human_presence_report", human_presence_report)
+        except Exception as exc:
+            self._error("AutoImprove_recompute_human_presence", str(exc))
+
+        try:
+            from app.services.seo.geo_expert_service import compute_geo_score
+            geo_result = compute_geo_score(draft)
+            self._save(article.id, "geo_optimization", geo_result)
+        except Exception as exc:
+            self._error("AutoImprove_recompute_geo", str(exc))
 
         try:
             editorial_quality = check_editorial_quality_dict(content)
@@ -1716,10 +1764,84 @@ class SEOGenerationOrchestrator:
                 external_links=external_links_plan.get("links", []) if isinstance(external_links_plan, dict) else [],
                 images=image_sources,
                 has_structured_data=has_structured_data,
+                min_word_count=self.context.get("word_count_min"),
             )
             self._save(article.id, "seo_final_checklist", seo_final)
         except Exception as exc:
             self._error("AutoImprove_recompute_seo_final", str(exc))
+
+    # Traduit chaque flag heuristique détecté (eeat_checklist, readability_report,
+    # originality_report, human_presence_report) en une instruction actionnable
+    # pour la passe d'édition — évite de demander un texte générique identique à
+    # chaque itération alors que le vrai problème détecté est connu et précis.
+    # Les flags à suffixe dynamique (ex: "intro_generique:il est important de")
+    # sont matchés sur leur préfixe (avant les ":").
+    _SIGNAL_FLAG_INSTRUCTIONS: dict[str, tuple[str, dict[str, str]]] = {
+        'EEAT': ('eeat_checklist', {
+            'insufficient_external_links': "Ajoute au moins un lien externe vers une source fiable (étude, organisme officiel, média reconnu).",
+            'no_cited_statistics': "Ajoute au moins une statistique chiffrée avec sa source citée dans la même phrase (ex : 'Selon une étude de l'INSEE, 42%...').",
+            'no_nuance_markers': "Ajoute des marqueurs de nuance dans certaines sections : 'cependant', 'en revanche', 'cela dépend', 'contrairement à', 'bien que'.",
+            'weak_heading_structure': "Ajoute des sous-titres H3 pour structurer davantage les sections H2 les plus longues.",
+            'low_heading_diversity': "Varie le vocabulaire des titres H2/H3 : évite de répéter les mêmes mots d'un titre à l'autre.",
+        }),
+        'Lisibilité': ('readability_report', {
+            'high_lix_difficult_reading': "Raccourcis les phrases de plus de 25 mots. Simplifie le vocabulaire complexe.",
+            'paragraph_length_issue': "Coupe les paragraphes de plus de 150 mots en plusieurs paragraphes plus courts.",
+        }),
+        'Originalité': ('originality_report', {
+            'generic_ai_patterns_detected': "Remplace les formulations génériques par des angles uniques et un vocabulaire plus spécifique au sujet.",
+            'probable_internal_duplicate': "Réécris les passages qui ressemblent trop à d'autres articles déjà publiés sur ce projet — change l'angle, pas seulement les mots.",
+            'high_source_overlap': "Reformule davantage les passages proches des sources : angle et structure différents, pas seulement des synonymes.",
+            'no_sources_unverified': "Ajoute des sources vérifiables (études, statistiques sourcées) pour étayer les affirmations de l'article.",
+        }),
+        'Présence humaine': ('human_presence_report', {
+            'intro_trop_longue': "Raccourcis l'introduction : maximum 10% du volume total de l'article.",
+            'aucun_marqueur_humain': "Ajoute 1-2 marqueurs de voix humaine par section : 'honnêtement,', 'à bien y réfléchir,', 'pourtant,', 'en réalité'.",
+            'marqueurs_humains_en_exces': "Réduis le nombre de marqueurs de voix humaine : garde-en 1 à 2 par section maximum, pas plus.",
+            'paragraphes_longueur_uniforme': "Varie la longueur des paragraphes : alterne paragraphes courts et plus longs, jamais 4 paragraphes de longueur similaire à la suite.",
+            'aucune_phrase_courte_de_rythme': "Ajoute au moins une phrase très courte (moins de 8 mots) pour marquer une idée forte.",
+            'intro_generique': "Réécris l'ouverture générique détectée par une entrée directe dans le sujet, sans formule d'annonce.",
+            'expression_usee': "Remplace l'expression usée détectée par une formulation plus directe et concrète.",
+            'superlatif_vide': "Remplace le superlatif vide détecté par une description factuelle et précise.",
+            'tiret_cadratin_present': "Supprime tout tiret cadratin (—) et remplace-le par une virgule, un point-virgule ou une reformulation.",
+            'section_sans_position_tranchee': "Ajoute une position assumée dans la section citée : ce qui ne marche pas, pour qui ce n'est pas adapté, ou pourquoi un choix est préférable.",
+            'conclusion_resume': "Réécris la conclusion : ne résume pas ce qui précède, termine sur une image concrète ou une question ouverte.",
+        }),
+    }
+
+    def _build_improvement_instruction(self, article: Article, weakest_signal: str) -> str:
+        generic_fallback = {
+            'EEAT': "Enrichis cet article avec des données chiffrées sourcées, des exemples concrets et des liens vers des sources fiables.",
+            'SEO': "Améliore la structure et les métadonnées SEO de l'article.",
+            'Lisibilité': "Raccourcis les phrases trop longues et simplifie le vocabulaire complexe.",
+            'Originalité': "Remplace les formulations génériques par des angles uniques et des exemples propres à cet article.",
+            'Présence humaine': "Renforce la voix humaine : marqueurs de nuance, positions tranchées, ouvertures et conclusions non génériques.",
+        }.get(weakest_signal, "Améliore la qualité globale du texte.")
+
+        if weakest_signal == 'SEO':
+            report = self._get(article.id, "seo_final_checklist") or {}
+            # "Mot-clé dans le titre" exclu : cette passe ne modifie jamais le
+            # titre (règle impérative du prompt), demander cette correction à
+            # l'LLM ne peut donc jamais aboutir.
+            recos = [r for r in (report.get("recommendations") or []) if "titre" not in r.lower()]
+            if recos:
+                return generic_fallback + " Concrètement, corrige précisément : " + " ".join(recos)
+            return generic_fallback
+
+        entry = self._SIGNAL_FLAG_INSTRUCTIONS.get(weakest_signal)
+        if not entry:
+            return generic_fallback
+        artifact_key, flag_messages = entry
+        report = self._get(article.id, artifact_key) or {}
+        specific: list[str] = []
+        for flag in report.get("flags") or []:
+            base_flag = str(flag).split(":", 1)[0]
+            message = flag_messages.get(base_flag)
+            if message and message not in specific:
+                specific.append(message)
+        if not specific:
+            return generic_fallback
+        return generic_fallback + " Concrètement, dans cet article précis : " + " ".join(specific)
 
     def _auto_improve_score(self, draft: _DraftArticle, sources_list: list[str], max_iterations: int = 4):
         """Tant que global_score < AUTO_IMPROVE_SCORE_TARGET, améliore le signal le plus faible.
@@ -1737,28 +1859,6 @@ class SEOGenerationOrchestrator:
         from app.services.seo.content_structure_guard import check_word_count_compliance
 
         article = draft.article
-        IMPROVEMENT_INSTRUCTIONS = {
-            'EEAT': (
-                "Enrichis cet article avec des données chiffrées sourcées et des exemples concrets. "
-                "Ajoute au moins une statistique avec sa source et un exemple spécifique non mentionné."
-            ),
-            'SEO': (
-                "Optimise la densité du mot-clé cible dans les titres H2 et dans le corps du texte. "
-                "Assure-toi que le H1 et au moins un H2 contiennent le mot-clé principal."
-            ),
-            'Lisibilité': (
-                "Raccourcis les phrases de plus de 25 mots. Simplifie le vocabulaire complexe. "
-                "Vise des phrases directes, courtes et claires."
-            ),
-            'Originalité': (
-                "Remplace les formulations génériques par des angles uniques. "
-                "Supprime les introductions clichées. Ajoute une perspective distincte absente de l'article."
-            ),
-            'GEO': (
-                "Restructure les débuts de paragraphes pour qu'ils répondent directement à une question implicite. "
-                "Chaque section H2 doit s'ouvrir sur une réponse directe et autonome."
-            ),
-        }
 
         wc_min = self.context.get("word_count_min")
         wc_max = self.context.get("word_count_max")
@@ -1771,12 +1871,17 @@ class SEOGenerationOrchestrator:
                 break
 
             wc_check = check_word_count_compliance(draft.word_count, wc_min, wc_max)
+            # GEO volontairement absent : compute_global_score() ne le pondère pas
+            # dans global_score (SEO 27% · EEAT 18% · Lisibilité 15% · Originalité
+            # 16% · Présence humaine 14% · Valeur ajoutée 10% = 100%, voir
+            # scoring_service.py) — le cibler ici ferait dépenser des itérations
+            # sur un signal qui ne fait jamais avancer la cible de la boucle.
             signals = {
                 'EEAT': scoring.get("eeat_contrib"),
                 'SEO': scoring.get("seo_contrib"),
                 'Lisibilité': scoring.get("readability_contrib"),
                 'Originalité': scoring.get("originality_contrib"),
-                'GEO': scoring.get("geo_contrib"),
+                'Présence humaine': scoring.get("human_presence_contrib"),
             }
             valid_signals = {k: v for k, v in signals.items() if v is not None}
             if not valid_signals and wc_check["status"] not in ("under_minimum", "over_maximum"):
@@ -1793,7 +1898,7 @@ class SEOGenerationOrchestrator:
                 )
             else:
                 weakest_signal = min(valid_signals, key=valid_signals.get)
-                instruction = IMPROVEMENT_INSTRUCTIONS.get(weakest_signal, "Améliore la qualité globale du texte.")
+                instruction = self._build_improvement_instruction(article, weakest_signal)
 
             improve_prompt = (
                 f"Améliore ce contenu HTML en appliquant UNE SEULE modification ciblée.\n\n"

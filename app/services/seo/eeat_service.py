@@ -12,16 +12,28 @@ from app.services.seo.llm_budget import LLMBudgetManager
 
 
 NUANCE_MARKERS = [
-    "cependant", "toutefois", "néanmoins", "en revanche",
-    "d'un côté", "d'un autre côté", "il convient de nuancer",
-    "selon les cas", "cela dépend", "dans certaines situations",
-    "il faut distinguer", "en réalité", "contrairement à",
-    "à condition que", "bien que", "même si", "quoique",
+    # "toutefois"/"néanmoins" volontairement absents : le prompt du rédacteur
+    # (règles de voix, seo_generation_orchestrator._generate_content) les
+    # bannit explicitement comme "transitions creuses" — les récompenser ici
+    # contredisait directement la consigne donnée au writer, condamnant ce
+    # signal à rester bas quel que soit le nombre de passes d'amélioration.
+    # Liste alignée sur les connecteurs que le prompt encourage réellement.
+    "cependant", "en revanche", "pourtant", "à bien y réfléchir",
+    "curieusement", "malgré tout", "paradoxalement", "pour être honnête",
+    "tout compte fait", "d'un côté", "d'un autre côté",
+    "il convient de nuancer", "selon les cas", "cela dépend",
+    "dans certaines situations", "il faut distinguer", "en réalité",
+    "contrairement à", "à condition que", "bien que", "même si", "quoique",
 ]
 
 CITED_STAT_PATTERNS = [
+    # Chiffre suivi de sa source ("42% [...] selon une étude")
     re.compile(r"\d+[\.,]?\d*\s*%[^.]{0,80}?(selon|source|d'après|d'apres|étude|rapport|insee)", re.IGNORECASE),
     re.compile(r"\d+[\.,]?\d*\s*(millions?|milliards?|milliers?)[^.]{0,80}?(selon|source|d'après|d'apres)", re.IGNORECASE),
+    # Source suivie du chiffre ("Selon une étude de l'INSEE, 42%...") — tournure
+    # au moins aussi naturelle que l'inverse, absente de la version précédente
+    # qui ne cherchait la source qu'APRÈS le chiffre.
+    re.compile(r"(selon|source|d'après|d'apres|étude|rapport|insee)[^.]{0,80}?\d+[\.,]?\d*\s*(%|millions?|milliards?|milliers?)", re.IGNORECASE),
 ]
 
 
@@ -91,18 +103,6 @@ def score_faq(html_content: str, metadata: dict, fmt: FormatExpectations) -> flo
     return 100.0 if has_faq else 20.0
 
 
-def score_author_bio(author_bio: str | None, author_url: str | None) -> float:
-    if not author_bio:
-        return 0.0
-    bio = author_bio.strip()
-    if len(bio) < 50:
-        return 30.0
-    if len(bio) >= 150 and author_url:
-        return 100.0
-    if len(bio) >= 50:
-        return 70.0
-    return 30.0
-
 
 def score_nuance_markers(text: str, word_count: int) -> float:
     found = {m for m in NUANCE_MARKERS if m in text.lower()}
@@ -139,15 +139,11 @@ def compute_eeat_score(article: Any, project_domain: str = "", budget: LLMBudget
     if isinstance(article, dict):
         content = article.get("content") or ""
         metadata = article
-        author_bio = article.get("author_bio")
-        author_url = article.get("author_url")
     else:
         content = getattr(article, "content", None) or ""
         metadata = {
             "faq_json": getattr(article, "faq_json", None),
         }
-        author_bio = getattr(article, "author_bio", None)
-        author_url = getattr(article, "author_url", None)
 
     fmt_obj = get_expectations(article)
     fmt = get_format(article)
@@ -171,22 +167,24 @@ def compute_eeat_score(article: Any, project_domain: str = "", budget: LLMBudget
     s1 = score_external_links(content, project_domain, fmt_obj)
     s2 = score_cited_stats(text, fmt_obj)
     s3 = score_heading_structure(h2, h3, fmt_obj)
-    s4 = score_author_bio(author_bio, author_url)
     s5 = score_nuance_markers(text, word_count)
     s6 = score_heading_diversity(all_headings)
 
+    # author_bio (ex-15%) retiré du calcul : Article n'a pas de colonne
+    # author_bio/author_url (seulement author_name), donc ce signal valait
+    # 0/100 sur 100% des articles, sans lien avec la qualité réelle du
+    # contenu — un plafond artificiel qu'aucune édition ne pouvait lever.
+    # Poids des 5 signaux restants reponderés proportionnellement (ratio
+    # d'origine 25:20:20:10:10 conservé, total 100%).
     final_score = round(
-        s1 * 0.25
-        + s2 * 0.20
-        + s3 * 0.20
-        + s4 * 0.15
-        + s5 * 0.10
-        + s6 * 0.10
+        s1 * (5 / 17)
+        + s2 * (4 / 17)
+        + s3 * (4 / 17)
+        + s5 * (2 / 17)
+        + s6 * (2 / 17)
     )
 
     flags: list[str] = []
-    if s4 == 0:
-        flags.append("no_author_bio")
     if s1 < 50:
         flags.append("insufficient_external_links")
     if s2 < 50:
@@ -199,12 +197,11 @@ def compute_eeat_score(article: Any, project_domain: str = "", budget: LLMBudget
         flags.append("low_heading_diversity")
 
     signals = {
-        "external_links":    {"value": round(s1), "weight": 0.25, "contribution": round(s1 * 0.25, 1)},
-        "cited_stats":       {"value": round(s2), "weight": 0.20, "contribution": round(s2 * 0.20, 1)},
-        "heading_structure": {"value": round(s3), "weight": 0.20, "contribution": round(s3 * 0.20, 1)},
-        "author_bio":        {"value": round(s4), "weight": 0.15, "contribution": round(s4 * 0.15, 1)},
-        "nuance_markers":    {"value": round(s5), "weight": 0.10, "contribution": round(s5 * 0.10, 1)},
-        "heading_diversity": {"value": round(s6), "weight": 0.10, "contribution": round(s6 * 0.10, 1)},
+        "external_links":    {"value": round(s1), "weight": round(5 / 17, 4), "contribution": round(s1 * 5 / 17, 1)},
+        "cited_stats":       {"value": round(s2), "weight": round(4 / 17, 4), "contribution": round(s2 * 4 / 17, 1)},
+        "heading_structure": {"value": round(s3), "weight": round(4 / 17, 4), "contribution": round(s3 * 4 / 17, 1)},
+        "nuance_markers":    {"value": round(s5), "weight": round(2 / 17, 4), "contribution": round(s5 * 2 / 17, 1)},
+        "heading_diversity": {"value": round(s6), "weight": round(2 / 17, 4), "contribution": round(s6 * 2 / 17, 1)},
     }
 
     strengths = [k for k, v in signals.items() if v["value"] >= 75]
