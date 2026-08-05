@@ -81,7 +81,25 @@ UPLOAD_DIR=uploads
 
 ## Backend — Déploiement
 
-### Option A : Render
+### Option A : Railway (actuel, recommandé)
+
+1. Créez un compte sur [Railway](https://railway.app), connectez le dépôt GitHub.
+2. **Variables d'environnement** : onglet **Variables** du service → bouton **Raw Editor** pour coller tout en une fois au format `CLÉ=valeur`.
+3. **Start command explicite requis** : le builder par défaut de Railway (Railpack, successeur de Nixpacks) ne détecte pas automatiquement la commande de démarrage pour ce projet. Sans ça, le déploiement échoue avec `No start command detected`.
+   Aller dans **Settings → Deploy → Custom Start Command** :
+   ```bash
+   uvicorn app.main:app --host 0.0.0.0 --port $PORT
+   ```
+4. **Domaine public** : par défaut le service n'est pas exposé. Aller dans **Settings → Networking → Public Networking → Generate Domain**, port `8080` (valeur par défaut de `$PORT`, à ajuster seulement si les Deploy Logs montrent un port différent au démarrage d'Uvicorn). Railway fournit une URL du type `xxxx.up.railway.app`.
+5. Tester `https://VOTRE-URL.up.railway.app/health` avant de brancher le frontend.
+6. Côté Vercel, pointer `VITE_API_URL` vers cette URL et redéployer (Vite grave la variable au build, un changement seul ne suffit pas).
+
+> **Playwright / Patchright** : le build command par défaut ne lance pas `playwright install chromium` / `patchright install chromium` (contrairement à `render.yaml`). Tant que seules les routes standard sont utilisées, ce n'est pas bloquant. Si une fonctionnalité qui scrape/rend une page (`eeat_service.py`, `geo_expert_service.py`, `originality_service.py`, `idea_engine.py`) échoue avec une erreur liée à Chromium introuvable, ajouter dans **Settings → Build → Custom Build Command** :
+> ```bash
+> pip install -r requirements.txt && python -m playwright install --with-deps chromium && python -m patchright install chromium
+> ```
+
+### Option B : Render (alternative)
 
 1. Créez un compte sur [Render](https://render.com)
 2. Connectez votre dépôt GitHub/GitLab
@@ -90,27 +108,15 @@ UPLOAD_DIR=uploads
    - **Runtime** : Python 3
    - **Build Command** :
      ```bash
-     python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt
+     pip install -r requirements.txt && python -m playwright install chromium && python -m patchright install chromium
      ```
    - **Start Command** :
      ```bash
-     ./venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
+     uvicorn app.main:app --host 0.0.0.0 --port $PORT
      ```
    - **Health Check Path** : `/health`
 4. Ajoutez toutes les variables d'environnement dans la section **Environment Variables**
 5. Déployez
-
-### Option B : Railway
-
-1. Créez un compte sur [Railway](https://railway.app)
-2. Connectez votre dépôt
-3. Créez un nouveau projet depuis le dépôt
-4. Railway détecte automatiquement Python
-5. Ajoutez les variables d'environnement dans le dashboard
-6. La commande par défaut fonctionne :
-   ```bash
-   python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
-   ```
 
 ### Option C : Serveur VPS (manuel)
 
@@ -255,7 +261,13 @@ Dans le dashboard Vercel :
 
 ## Base de données
 
-### PostgreSQL (Recommandé pour production)
+### Supabase (actuel, recommandé)
+
+La base de production tourne sur [Supabase](https://supabase.com) (PostgreSQL managé), indépendamment de l'hébergeur du backend (Render, Railway ou autre) — il suffit de renseigner `DATABASE_URL` avec la chaîne de connexion fournie par Supabase dans les variables d'environnement du service backend. Aucune installation locale, aucun lien avec le choix d'hébergeur du serveur applicatif.
+
+Le stockage des médias peut aussi passer par **Supabase Storage** au lieu du disque local du serveur : renseigner `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` et `SUPABASE_STORAGE_BUCKET` (voir `app/services/storage_service.py`). Sans ces variables, l'upload retombe sur le disque local du serveur (`UPLOAD_DIR`), qui n'est pas persistant sur la plupart des PaaS.
+
+### PostgreSQL auto-hébergé (alternative, déploiement VPS manuel)
 
 #### Installation
 
