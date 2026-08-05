@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import re
+from urllib.parse import urlparse
+
 from app.schemas.seo_workflow import SEOFinalChecklist, asdict
 from app.services.seo.helpers import (
     strip_html,
@@ -8,6 +10,38 @@ from app.services.seo.helpers import (
     detect_isolated_h3,
     detect_h2_directly_followed_by_h3,
 )
+
+_ANCHOR_RE = re.compile(r"<a\b[^>]*\bhref\s*=\s*[\"']([^\"']+)[\"'][^>]*>", re.IGNORECASE | re.DOTALL)
+
+
+def count_links_in_content(content: str | None) -> tuple[int, int]:
+    """Compte les liens réellement insérés dans le contenu HTML.
+
+    Retourne (liens_internes, liens_externes) :
+    - interne = lien relatif vers une autre page du site (/articles/..., /blog/...)
+    - externe = lien absolu (http/https) vers un domaine autre que le site courant.
+
+    Le checklist SEO valide désormais les liens *dans l'article* et non plus
+    le simple fait qu'un plan de maillage ait été calculé (un plan calculé
+    mais jamais injecté dans le contenu ne compte pas)."""
+    if not content:
+        return 0, 0
+    internal = 0
+    external = 0
+    for href in _ANCHOR_RE.findall(content):
+        href = (href or "").strip()
+        if not href:
+            continue
+        lowered = href.lower()
+        if lowered.startswith(("http://", "https://")):
+            parsed = urlparse(href)
+            host = (parsed.hostname or "").lower()
+            if host.endswith((".ideas-studio", "ideas-studio")):
+                continue
+            external += 1
+        elif href.startswith("/"):
+            internal += 1
+    return internal, external
 
 
 def check_seo_final(
@@ -27,6 +61,7 @@ def check_seo_final(
     text = strip_html(content) if content else ""
     word_count = len(text.split())
     kw = (keyword or "").lower()
+    internal_count, external_count = count_links_in_content(content)
 
     checks = [
         {"name": "title_present", "label": "Titre présent", "pass": bool(title)},
@@ -39,8 +74,8 @@ def check_seo_final(
         {"name": "no_isolated_h3", "label": "Pas de H3 isolé", "pass": not detect_isolated_h3(content or "")},
         {"name": "structure_valid", "label": "Structure H2/H3 correcte", "pass": len(detect_h2_directly_followed_by_h3(content or "")) == 0},
         {"name": "faq_valid", "label": "FAQ valide (2-6 questions)", "pass": faq_count == 0 or (2 <= faq_count <= 6)},
-        {"name": "internal_links", "label": "Liens internes", "pass": bool(internal_links)},
-        {"name": "external_links", "label": "Liens externes", "pass": bool(external_links)},
+        {"name": "internal_links", "label": "Liens internes", "pass": internal_count >= 1},
+        {"name": "external_links", "label": "Liens externes", "pass": external_count >= 1},
         {"name": "images_alt", "label": "Images avec alt", "pass": images is None or len(images) == 0 or all(i.get("alt_text") for i in images if i.get("image_url"))},
         {"name": "structured_data", "label": "Données structurées", "pass": has_structured_data},
     ]

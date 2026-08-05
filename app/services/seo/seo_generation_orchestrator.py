@@ -1038,7 +1038,9 @@ class SEOGenerationOrchestrator:
             "- Pas de H2 suivi directement par H3 (mets une phrase entre les deux)",
             "- Jamais de saut de niveau de titre (ex: H2 suivi directement de H4 sans H3 entre les deux)",
             "- Introduction courte et efficace (2-3 phrases max)",
-            "- Après l'introduction, insère un callout résumé (blockquote HTML) récapitulant les 2-3 points clés en 1-2 phrases",
+            "- Après l'introduction, insère un callout résumé (blockquote HTML) récapitulant les 2-3 points clés en 1-2 phrases max. "
+            "CE CALLOUT DOIT ÊTRE COURT : 1-2 phrases brèves qui donnent directement les réponses clés, "
+            "jamais un paragraphe développé ni un mini-article.",
             "- Début qui satisfait rapidement l'intention du lecteur",
             "- Ton humain, direct, concret, pas de texte robotique",
             "- N'utilise JAMAIS le tiret cadratin (—). "
@@ -1093,9 +1095,19 @@ class SEOGenerationOrchestrator:
             "  'Complet', 'Puissant', 'Révolutionnaire', 'Innovant' utilisés comme adjectif générique, "
             "  et les expressions usées 'Le contenu est roi', 'Dans le paysage numérique actuel', "
             "  'Passer à la vitesse supérieure', 'Sortir du lot', 'Se démarquer de la concurrence'.",
-            "- Alterne la longueur des paragraphes : certains 5-8 lignes, d'autres une seule phrase "
-            "  pour marquer une idée forte. Ne jamais enchaîner plus de 3 paragraphes de longueur similaire. "
-            "  Une phrase courte isolée après une idée importante crée un effet de choc voulu.",
+            "- RÈGLE ABSOLUE — paragraphes COURTS : chaque paragraphe fait 1 à 4 phrases maximum "
+            "  (cible : 2-3 phrases). Dès qu'un paragraphe atteint 5 phrases, coupe-le en deux. "
+            "  Une phrase isolée est permise pour marquer une idée forte (effet de choc). "
+            "  Jamais de pavé dense de 5 phrases ou plus.",
+            "- RÈGLE ABSOLUE — plusieurs paragraphes par section : chaque section H2 contient au "
+            "  minimum 2 paragraphes, généralement 3 à 5. Ne condense jamais une section entière "
+            "  en un seul bloc, même court.",
+            "- Ne jamais enchaîner plus de 3 paragraphes de longueur similaire : alterne les rythmes "
+            "  (un court, deux moyens, un long, un percutant d'une phrase...).",
+            "- L'article doit se lire naturellement et agréablement à voix haute : phrases fluides, "
+            "  rythme varié, transitions discrètes. Réponds court et direct sur le sujet : chaque "
+            "  section répond à la question annoncée par son titre sans détour, chaque idée tient "
+            "  en 1-2 phrases, rien n'est développé pour remplir de la place.",
             "- Au moins une position tranchée et assumée par section (pas juste énumérer des faits neutres) : "
             "  dire ce qui ne marche pas, pour qui une option n'est pas adaptée, ou pourquoi tel choix "
             "  est préférable dans un cas précis.",
@@ -1226,6 +1238,35 @@ class SEOGenerationOrchestrator:
                 "Utilise le vocabulaire naturel de ces utilisateurs. L'article doit sembler écrit par "
                 "quelqu'un qui connaît vraiment le sujet et les vraies préoccupations des lecteurs."
             )
+
+        # === MAILLAGE OBLIGATOIRE ===
+        internal_links_plan = self.context.get("internal_links") or {}
+        internal_link_items = internal_links_plan.get("links") if isinstance(internal_links_plan, dict) else []
+        if internal_link_items:
+            prompt_parts.append("\n=== MAILLAGE INTERNE OBLIGATOIRE ===")
+            prompt_parts.append("Intègre ces liens internes vers d'autres articles publiés du projet, de façon naturelle, "
+                               "sur une phrase ou une ancre qui a du sens dans le texte :")
+            for link in internal_link_items[:3]:
+                anchor = (link.get("anchor_text") or "Article connexe").strip()
+                url = link.get("target_url") or ""
+                ctx = (link.get("context") or {}).get("target_excerpt", "")
+                prompt_parts.append(f"- Ancre suggérée : « {anchor} » → URL : {url} | Contexte : {ctx[:120]}")
+            prompt_parts.append("Format : <a href='URL' rel='nofollow'>texte d'ancre naturel dans la phrase</a>")
+            prompt_parts.append("Ne crée JAMAIS de lien interne fictif : utilise uniquement les URLs listées.")
+
+        external_links_plan = self.context.get("external_links") or {}
+        external_link_items = external_links_plan.get("links") if isinstance(external_links_plan, dict) else []
+        if external_link_items:
+            prompt_parts.append("\n=== MAILLAGE EXTERNE OBLIGATOIRE ===")
+            prompt_parts.append("Intègre ces liens externes vers des sources d'autorité, en les plaçant sur la phrase "
+                               "qui s'appuie sur l'information (1 à 3 liens externes dans l'article, pas plus) :")
+            for link in external_link_items[:4]:
+                url = link.get("url") or ""
+                anchor = (link.get("anchor_text") or "Source").strip()
+                reason = link.get("reason") or ""
+                prompt_parts.append(f"- {url} | Ancre suggérée : « {anchor} » | {reason}")
+            prompt_parts.append("Format : <a href='URL' target='_blank' rel='nofollow'>texte d'ancre naturel</a>")
+            prompt_parts.append("Chaque lien externe doit être entouré d'une phrase qui justifie sa présence.")
 
         content_prompt = "\n".join(prompt_parts)
 
@@ -1417,29 +1458,10 @@ class SEOGenerationOrchestrator:
         except Exception as exc:
             self._error("AutoScoring", str(exc))
 
-        # Notifier que l'article est prêt à valider
-        try:
-            from app.services.notification_service import create_notification
-            latest_score = self.db.execute(
-                select(ArticleScore.global_score)
-                .where(ArticleScore.article_id == article.id)
-                .order_by(ArticleScore.evaluated_at.desc())
-                .limit(1)
-            ).scalar()
-            create_notification(
-                db=self.db,
-                project_id=article.project_id,
-                title="Article prêt à valider",
-                message=f'"{draft.title}" a été rédigé et scoré. Score global : {latest_score or "—"}.',
-                level="success",
-                type="article_ready",
-                link=f"/projects/{article.project_id}/production?tab=validate",
-            )
-        except Exception:
-            pass
-
         # Cycle d'auto-amélioration si score insuffisant
         self._raise_if_cancelled(article)
+        current_score = None
+        final_score = None
         try:
             current_score = self.db.execute(
                 select(ArticleScore.global_score)
@@ -1448,9 +1470,43 @@ class SEOGenerationOrchestrator:
                 .limit(1)
             ).scalar()
             if current_score is not None and current_score < AUTO_IMPROVE_SCORE_TARGET:
-                self._auto_improve_score(draft, max_iterations=4)
+                self._auto_improve_score(draft, max_iterations=8)
+
+            # Vérification finale après auto-improvement
+            final_score = self.db.execute(
+                select(ArticleScore.global_score)
+                .where(ArticleScore.article_id == article.id)
+                .order_by(ArticleScore.evaluated_at.desc())
+                .limit(1)
+            ).scalar()
         except Exception as exc:
             self._error("AutoImprove", str(exc))
+            final_score = final_score if final_score is not None else current_score
+
+        # Notifier que l'article est prêt à valider, quel que soit le score
+        # atteint : _auto_improve_score() vise déjà AUTO_IMPROVE_SCORE_TARGET
+        # mais s'arrête après max_iterations sans garantie de l'atteindre
+        # (score composé de 6 signaux pondérés) — bloquer la publication à ce
+        # seuil laisserait des articles dans WRITING_IN_PROGRESS sans aucune
+        # notification ni retry automatique.
+        set_article_status(article, ArticleStatus.DRAFT_READY)
+        article.updated_at = datetime.now(timezone.utc)
+        self.db.flush()
+
+        try:
+            from app.services.notification_service import create_notification
+            create_notification(
+                db=self.db,
+                project_id=article.project_id,
+                title="Article prêt à valider",
+                message=f'"{draft.title}" a été rédigé et optimisé. Score final : {final_score if final_score is not None else "—"}.',
+                level="success",
+                type="article_ready",
+                link=f"/projects/{article.project_id}/production?tab=validate",
+            )
+        except Exception:
+            pass
+
 
     def _persist_revision(self, draft: _DraftArticle) -> ArticleRevision:
         article = draft.article
