@@ -338,8 +338,8 @@ AGENTS: list[AgentDef] = [
         phase="writing",
         requires_external_api=True,
         icon="image",
-        implementation_ref="image_sourcing_adapter",
-        status=AgentStatus.partial,
+        implementation_ref="agent_services.plan_section_images",
+        status=AgentStatus.active,
         output_json_field="image_plan_json",
     ),
     AgentDef(

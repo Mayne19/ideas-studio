@@ -357,7 +357,7 @@ class SEOGenerationOrchestrator:
             )
 
         # 10. ImagePlan
-        image_plan_result = build_image_plan_dict(final_keyword, outline)
+        image_plan_result = build_image_plan_dict(final_keyword, outline, db=self.db, project_id=self.project_id)
         self.context["image_plan"] = image_plan_result.get("image_plan", {})
         self.context["image_sources"] = image_plan_result.get("image_sources", [])
         self._step("ImagePlan")

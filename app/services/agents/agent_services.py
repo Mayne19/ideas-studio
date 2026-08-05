@@ -450,3 +450,62 @@ def extract_main_keyword(title: str, db=None, project_id: str | None = None) -> 
     except Exception as exc:
         logger.warning("Keyword extraction agent failed: %s", exc)
         return {"status": "error", "message": str(exc), "keyword": None}
+
+
+def plan_section_images(
+    section_headings: list[str],
+    article_keyword: str,
+    db=None,
+    project_id: str | None = None,
+) -> dict[str, Any]:
+    """Décide, pour chaque section H2, si une image a du sens et comment la
+    trouver — une recherche Unsplash sur un titre de section abstrait
+    ("Qu'est-ce que c'est ?", "Comment choisir ?") ou technique
+    ("robots.txt", "API REST") renvoie systématiquement des photos sans
+    rapport, Unsplash n'ayant aucune photo pour des concepts non visuels.
+
+    Pour chaque section, trois issues possibles :
+    - "skip" : sujet trop abstrait/technique, aucune image ne serait pertinente
+    - "brand" : la section parle d'un outil/marque identifiable (ex: Canva,
+      Figma, Shopify) — chercher une image sur le domaine officiel de cette
+      marque plutôt qu'une banque de photos générique
+    - "stock" : sujet concret et photographiable (personnes, lieux, objets
+      physiques) — une recherche Unsplash classique est pertinente
+    """
+    router = _get_router(db)
+    try:
+        provider = router.get_provider("media_planner", project_id=project_id)
+    except Exception as exc:
+        logger.warning("Image planning provider resolution failed: %s", exc)
+        return {"status": "skipped", "message": f"Provider indisponible : {exc}", "sections": []}
+    if provider.is_mock:
+        return {"status": "skipped", "message": "Image planning not configured (mock provider)", "sections": []}
+
+    headings_list = "\n".join(f"{i + 1}. {h}" for i, h in enumerate(section_headings))
+    prompt = (
+        f"Mot-clé principal de l'article : {article_keyword}\n\n"
+        f"Titres de section (H2) :\n{headings_list}\n\n"
+        "Pour CHAQUE section, décide comment illustrer son sujet :\n"
+        "- \"skip\" : le sujet est abstrait, structurel ou technique (une question générique, une étape "
+        "numérotée, un concept non photographiable comme du code ou un protocole) — aucune image "
+        "pertinente n'existe sur une banque de photos.\n"
+        "- \"brand\" : la section évoque un outil, un logiciel ou une marque identifiable qui a son "
+        "propre site web (ex: Canva, Figma, Shopify, WordPress, Notion) — précise le nom exact de la "
+        "marque et son nom de domaine officiel (ex: 'canva.com', jamais un site tiers ou un concurrent).\n"
+        "- \"stock\" : le sujet est concret et photographiable (une personne au travail, un objet, un "
+        "lieu, une scène réelle) — précise une requête de recherche d'image en anglais, précise et "
+        "visuelle (pas juste le titre de section).\n\n"
+        "Réponds UNIQUEMENT avec un JSON valide :\n"
+        '{"sections": [{"heading": "...", "decision": "skip|brand|stock", '
+        '"brand_name": "..." (si brand), "brand_domain": "..." (si brand), '
+        '"stock_query": "..." (si stock)}]}'
+    )
+    try:
+        result = provider.generate_json(prompt, schema_hint="json image plan object")
+        sections = result.get("sections") if isinstance(result, dict) else None
+        if isinstance(sections, list):
+            return {"status": "success", "sections": sections}
+        return {"status": "error", "message": "Invalid response format", "sections": []}
+    except Exception as exc:
+        logger.warning("Image planning agent failed: %s", exc)
+        return {"status": "error", "message": str(exc), "sections": []}
