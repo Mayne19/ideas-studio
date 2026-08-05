@@ -45,6 +45,7 @@ def _to_public(credential: ProviderCredential, provider_row: Provider) -> AIProv
         api_key_configured=bool(credential.secret_ref),
         base_url=provider_row.base_url,
         model=credential.model,
+        is_default=credential.is_default,
         last_test_status="connected" if credential.last_test_ok else ("error" if credential.last_test_ok is False else None),
         last_test_error=None,
         last_tested_at=credential.last_test_at,
@@ -122,6 +123,23 @@ def update_provider(
         credential.secret_ref = encrypt_secret(data.api_key) or ""
     if data.model is not None:
         credential.model = data.model
+    if data.is_default is True:
+        # Un seul is_default=true par project_id (index unique partiel côté
+        # DB) — on désactive explicitement les autres credentials du même
+        # scope plutôt que de compter uniquement sur la contrainte, pour
+        # avoir un message d'erreur clair si jamais elle est violée ailleurs.
+        other_defaults = db.execute(
+            select(ProviderCredential).where(
+                ProviderCredential.project_id == credential.project_id,
+                ProviderCredential.id != credential.id,
+                ProviderCredential.is_default.is_(True),
+            )
+        ).scalars().all()
+        for other in other_defaults:
+            other.is_default = False
+        credential.is_default = True
+    elif data.is_default is False:
+        credential.is_default = False
 
     db.commit()
     db.refresh(credential)

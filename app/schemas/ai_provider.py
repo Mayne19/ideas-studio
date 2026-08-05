@@ -14,6 +14,7 @@ class AIProviderCreate(BaseModel):
 class AIProviderUpdate(BaseModel):
     api_key: Optional[str] = None
     model: Optional[str] = None
+    is_default: Optional[bool] = None
 
 
 class AIProviderPublic(BaseModel):
@@ -24,6 +25,7 @@ class AIProviderPublic(BaseModel):
     api_key_configured: bool = False
     base_url: Optional[str] = None
     model: Optional[str] = None
+    is_default: bool = False
     last_test_status: Optional[str] = None
     last_test_error: Optional[str] = None
     last_tested_at: Optional[datetime] = None

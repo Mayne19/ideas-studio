@@ -96,21 +96,33 @@ def resolve_binding_for_agent(db: Session, agent_row_id: str, project_id: str | 
 
 
 def resolve_default_provider(db: Session, project_id: str | None) -> ResolvedProviderConfig | None:
-    """Provider par défaut : premier ai.provider_credentials disponible pour
-    le projet (puis global), en préférant le provider le mieux classé parmi
-    les bindings existants s'il y en a, sinon la première credential trouvée."""
+    """Provider par défaut : la credential explicitement marquée is_default
+    pour le projet (puis globale si aucune credential projet n'est marquée).
+
+    Choix explicite uniquement — jamais de pioche arbitraire parmi plusieurs
+    credentials d'un même projet (ancien bug : sans ORDER BY, une requête
+    SQL pouvait retourner Anthropic ou Gemini de façon imprévisible quand
+    les deux étaient configurés). Si rien n'est marqué is_default, retourne
+    None plutôt que de deviner : l'appelant retombe alors sur les providers
+    assignés par agent (AgentBinding) ou les variables d'environnement."""
     if project_id is not None:
         cred = db.execute(
-            select(ProviderCredential).where(ProviderCredential.project_id == project_id)
-        ).scalars().first()
+            select(ProviderCredential).where(
+                ProviderCredential.project_id == project_id,
+                ProviderCredential.is_default.is_(True),
+            )
+        ).scalar_one_or_none()
         if cred is not None:
             provider_row = db.get(Provider, cred.provider_id)
             if provider_row is not None and provider_row.is_enabled:
                 return _to_config(provider_row, cred, cred.model, cred.id)
 
     cred = db.execute(
-        select(ProviderCredential).where(ProviderCredential.project_id.is_(None))
-    ).scalars().first()
+        select(ProviderCredential).where(
+            ProviderCredential.project_id.is_(None),
+            ProviderCredential.is_default.is_(True),
+        )
+    ).scalar_one_or_none()
     if cred is not None:
         provider_row = db.get(Provider, cred.provider_id)
         if provider_row is not None and provider_row.is_enabled:

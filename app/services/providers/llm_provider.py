@@ -3,8 +3,6 @@ import logging
 import threading
 from abc import ABC, abstractmethod
 
-from sqlalchemy.exc import SQLAlchemyError
-
 logger = logging.getLogger(__name__)
 
 
@@ -407,15 +405,31 @@ def get_llm_provider(project_id: str | None = None) -> LLMProvider:
                 )
                 return None
 
-            if provider.is_available():
+            try:
+                available = provider.is_available()
+            except Exception:
+                logger.warning(
+                    "Provider DB '%s' (config %s) : vérification de disponibilité a levé une exception "
+                    "(clé invalide, réseau, timeout...) — repli sur les variables d'environnement au lieu "
+                    "de faire planter tout l'appelant (ex: run_pipeline).",
+                    config.provider, config.id, exc_info=True,
+                )
+                return None
+            if available:
                 return provider
             logger.warning(
                 "Provider DB '%s' (config %s) trouvé mais indisponible (is_available=false) — repli sur les variables d'environnement.",
                 config.provider, config.id,
             )
             return None
-        except SQLAlchemyError:
-            logger.warning("Lecture du provider DB échouée — repli sur les variables d'environnement.", exc_info=True)
+        except Exception:
+            # N'importe quelle erreur ici (DB, réseau, décryptage de clé...) ne
+            # doit jamais remonter jusqu'à l'appelant : get_llm_provider() est
+            # utilisé par run_pipeline hors de tout contexte d'agent précis, une
+            # exception non catchée ici faisait planter tout le run du pipeline
+            # (critical_failure) même quand agent_router aurait pu réussir avec
+            # un autre provider correctement assigné par agent.
+            logger.warning("Résolution du provider DB par défaut échouée — repli sur les variables d'environnement.", exc_info=True)
             return None
         finally:
             db.close()

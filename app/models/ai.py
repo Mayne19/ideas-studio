@@ -51,6 +51,13 @@ class ProviderCredential(Base):
     # Modèle utilisé par défaut à chaque appel de ce provider — voir
     # AgentBinding.model : un agent sans modèle explicite hérite de celui-ci.
     model: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Choix explicite de l'utilisateur, jamais déduit automatiquement (pas de
+    # "première clé créée" ni de tri implicite) — un seul is_default=true par
+    # projet, voir index partiel dans la migration. resolve_default_provider()
+    # ne retourne QUE cette ligne, jamais une credential piochée au hasard.
+    # Les agents avec un AgentBinding restent inchangés : ils utilisent leur
+    # provider assigné, indépendamment de is_default.
+    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     last_test_at: Mapped[datetime | None] = mapped_column(nullable=True)
     last_test_ok: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=_now)
