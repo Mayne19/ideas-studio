@@ -429,16 +429,20 @@ export default function ProjectProvidersPage() {
                 </p>
               </div>
               <div className="flex items-center gap-1">
-                {!config.is_default && (
-                  <button
-                    onClick={() => handleSetDefault(config.id)}
-                    disabled={settingDefault === config.id}
-                    className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
-                    title="Définir comme provider par défaut du projet"
-                  >
-                    {settingDefault === config.id ? <Loader2 size={13} className="animate-spin" /> : <Star size={13} />}
-                  </button>
-                )}
+                <button
+                  onClick={() => !config.is_default && handleSetDefault(config.id)}
+                  disabled={config.is_default || settingDefault === config.id}
+                  className={`flex h-7 w-7 items-center justify-center rounded-[8px] transition-colors ${
+                    config.is_default
+                      ? 'text-warning cursor-default'
+                      : 'text-tertiary hover:bg-surface-soft hover:text-primary'
+                  }`}
+                  title={config.is_default ? 'Provider par défaut du projet' : 'Définir comme provider par défaut du projet'}
+                >
+                  {settingDefault === config.id
+                    ? <Loader2 size={13} className="animate-spin" />
+                    : <Star size={13} className={config.is_default ? 'fill-current' : 'fill-none'} />}
+                </button>
                 <button
                   onClick={() => handleTest(config.id)}
                   disabled={testing === config.id}
