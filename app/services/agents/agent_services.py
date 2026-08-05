@@ -53,7 +53,7 @@ def fact_check_article(
         f"les affirmations factuelles qui pourraient être inexactes, exagérées ou non étayées.\n\n"
         f"Titre : {title}\n"
         f"Mot-clé : {keyword or 'N/A'}\n\n"
-        f"Contenu :\n{content[:5000]}\n\n"
+        f"Contenu :\n{content}\n\n"
         "Réponds UNIQUEMENT avec un JSON valide :\n"
         '{"fact_checks": [{"claim": "...", "verdict": "accurate|questionable|inaccurate|unsupported", '
         '"explanation": "...", "confidence": 0.0-1.0}], '
@@ -93,7 +93,7 @@ def extract_claims(
         "statistiques, dates, faits attribuables à une source, comparaisons quantifiées. "
         "Ignore les opinions, conseils génériques et tournures rhétoriques.\n\n"
         f"Titre : {title}\n\n"
-        f"Contenu :\n{content[:5000]}\n\n"
+        f"Contenu :\n{content}\n\n"
         "Réponds UNIQUEMENT avec un JSON valide :\n"
         '{"claims": [{"text": "affirmation exacte extraite du texte", "type": "statistic|date|fact|comparison", '
         '"verifiable": true|false}]}'
@@ -512,7 +512,7 @@ def run_quality_gate(
         "mot-clé, originalité, et crédibilité éditoriale.\n\n"
         f"Titre : {title}\n"
         f"Mot-clé : {keyword or 'N/A'}\n\n"
-        f"Contenu :\n{content[:6000]}\n\n"
+        f"Contenu :\n{content}\n\n"
         "Réponds UNIQUEMENT avec un JSON valide :\n"
         '{"quality_grade": "A|B|C|D", '
         '"decision": "pass|minor_fixes|rewrite", '
