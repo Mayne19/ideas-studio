@@ -773,6 +773,12 @@ class SEOGenerationOrchestrator:
             self._error("SEOFinalChecklist", str(exc))
             seo_final = None
 
+        # 21b. AutoScoring + auto-amélioration — seulement maintenant que eeat_checklist,
+        # readability_report, originality_report et seo_final_checklist existent tous
+        # (étapes 16-21 ci-dessus) : compute_global_score() ne peut évaluer et améliorer
+        # SEO/EEAT/lisibilité/originalité que s'ils sont déjà en base.
+        self._score_and_improve(article, draft, sources_list)
+
         # 22. SEOReview (aggregated)
         try:
             seo_review = build_aggregated_seo_review(
@@ -1465,75 +1471,12 @@ class SEOGenerationOrchestrator:
         set_article_status(article, ArticleStatus.DRAFT_READY)
         article.updated_at = datetime.now(timezone.utc)
         self.db.flush()
-
-        # AutoScoring post-génération
-        try:
-            from app.services.seo.seo_review_service import run_and_store_seo_review
-            run_and_store_seo_review(self.db, article)
-            from app.services.scoring_service import compute_global_score
-            scoring = compute_global_score(self.db, article.id, article=article)
-            self.db.add(ArticleScore(
-                article_id=article.id,
-                revision_id=article.current_revision_id,
-                global_score=scoring.get("global_score"),
-                seo_score=scoring.get("seo_contrib"),
-                eeat_score=scoring.get("eeat_contrib"),
-                readability_score=scoring.get("readability_contrib"),
-                geo_score=scoring.get("geo_contrib"),
-            ))
-            self.db.flush()
-            self._step("AutoScoring")
-        except Exception as exc:
-            self._error("AutoScoring", str(exc))
-
-        # Cycle d'auto-amélioration si score insuffisant
-        self._raise_if_cancelled(article)
-        current_score = None
-        final_score = None
-        try:
-            current_score = self.db.execute(
-                select(ArticleScore.global_score)
-                .where(ArticleScore.article_id == article.id)
-                .order_by(ArticleScore.evaluated_at.desc())
-                .limit(1)
-            ).scalar()
-            if current_score is not None and current_score < AUTO_IMPROVE_SCORE_TARGET:
-                self._auto_improve_score(draft, max_iterations=8)
-
-            # Vérification finale après auto-improvement
-            final_score = self.db.execute(
-                select(ArticleScore.global_score)
-                .where(ArticleScore.article_id == article.id)
-                .order_by(ArticleScore.evaluated_at.desc())
-                .limit(1)
-            ).scalar()
-        except Exception as exc:
-            self._error("AutoImprove", str(exc))
-            final_score = final_score if final_score is not None else current_score
-
-        # Notifier que l'article est prêt à valider, quel que soit le score
-        # atteint : _auto_improve_score() vise déjà AUTO_IMPROVE_SCORE_TARGET
-        # mais s'arrête après max_iterations sans garantie de l'atteindre
-        # (score composé de 6 signaux pondérés) — bloquer la publication à ce
-        # seuil laisserait des articles dans WRITING_IN_PROGRESS sans aucune
-        # notification ni retry automatique.
-        set_article_status(article, ArticleStatus.DRAFT_READY)
-        article.updated_at = datetime.now(timezone.utc)
-        self.db.flush()
-
-        try:
-            from app.services.notification_service import create_notification
-            create_notification(
-                db=self.db,
-                project_id=article.project_id,
-                title="Article prêt à valider",
-                message=f'"{draft.title}" a été rédigé et optimisé. Score final : {final_score if final_score is not None else "—"}.',
-                level="success",
-                type="article_ready",
-                link=f"/projects/{article.project_id}/production?tab=validate",
-            )
-        except Exception:
-            pass
+        # AutoScoring + auto-amélioration : volontairement PAS ici. compute_global_score()
+        # a besoin de eeat_checklist/readability_report/originality_report/seo_final_checklist,
+        # qui ne sont calculés et sauvegardés qu'aux étapes 16-21 de generate_full_article(),
+        # après le retour de cette méthode. Voir _score_and_improve(), appelée une fois ces
+        # artifacts disponibles — sinon la boucle ne voit que présence humaine + valeur ajoutée
+        # et ne peut rien améliorer sur SEO/EEAT/lisibilité/originalité (bug historique).
 
     def _fix_blocking_structural_issues(self, content: str, draft: _DraftArticle, review_report: dict) -> str:
         """Corrige les critères bloquants de la grille de révision à 10 critères
@@ -1643,7 +1586,142 @@ class SEOGenerationOrchestrator:
         self.db.flush()
         return revision
 
-    def _auto_improve_score(self, draft: _DraftArticle, max_iterations: int = 4):
+    def _score_and_improve(self, article: Article, draft: _DraftArticle, sources_list: list[str]) -> None:
+        """Calcule le score global puis lance l'auto-amélioration si besoin.
+
+        Doit être appelée seulement une fois que eeat_checklist, readability_report,
+        originality_report et seo_final_checklist existent déjà (étapes 16-21 de
+        generate_full_article) — jamais depuis _generate_content(), où ces artifacts
+        n'existent pas encore : compute_global_score() ne verrait alors que présence
+        humaine et valeur ajoutée, incapable d'évaluer ou d'améliorer SEO/EEAT/
+        lisibilité/originalité (bug historique : la boucle tournait dans le vide)."""
+        try:
+            from app.services.seo.seo_review_service import run_and_store_seo_review
+            run_and_store_seo_review(self.db, article)
+            from app.services.scoring_service import compute_global_score
+            scoring = compute_global_score(self.db, article.id, article=article)
+            quality_report = self._get(article.id, "editorial_quality_report") or {}
+            self.db.add(ArticleScore(
+                article_id=article.id,
+                revision_id=article.current_revision_id,
+                global_score=scoring.get("global_score"),
+                seo_score=scoring.get("seo_contrib"),
+                eeat_score=scoring.get("eeat_contrib"),
+                readability_score=scoring.get("readability_contrib"),
+                geo_score=scoring.get("geo_contrib"),
+                quality_score=quality_report.get("score"),
+            ))
+            self.db.flush()
+            self._step("AutoScoring")
+        except Exception as exc:
+            self._error("AutoScoring", str(exc))
+
+        # Cycle d'auto-amélioration si score insuffisant
+        self._raise_if_cancelled(article)
+        current_score = None
+        final_score = None
+        try:
+            current_score = self.db.execute(
+                select(ArticleScore.global_score)
+                .where(ArticleScore.article_id == article.id)
+                .order_by(ArticleScore.evaluated_at.desc())
+                .limit(1)
+            ).scalar()
+            if current_score is not None and current_score < AUTO_IMPROVE_SCORE_TARGET:
+                self._auto_improve_score(draft, sources_list, max_iterations=8)
+
+            # Vérification finale après auto-improvement
+            final_score = self.db.execute(
+                select(ArticleScore.global_score)
+                .where(ArticleScore.article_id == article.id)
+                .order_by(ArticleScore.evaluated_at.desc())
+                .limit(1)
+            ).scalar()
+        except Exception as exc:
+            self._error("AutoImprove", str(exc))
+            final_score = final_score if final_score is not None else current_score
+
+        # Notifier que l'article est prêt à valider, quel que soit le score
+        # atteint : _auto_improve_score() vise déjà AUTO_IMPROVE_SCORE_TARGET
+        # mais s'arrête après max_iterations sans garantie de l'atteindre
+        # (score composé de 6 signaux pondérés) — bloquer la publication à ce
+        # seuil laisserait des articles dans WRITING_IN_PROGRESS sans aucune
+        # notification ni retry automatique.
+        set_article_status(article, ArticleStatus.DRAFT_READY)
+        article.updated_at = datetime.now(timezone.utc)
+        self.db.flush()
+
+        try:
+            from app.services.notification_service import create_notification
+            create_notification(
+                db=self.db,
+                project_id=article.project_id,
+                title="Article prêt à valider",
+                message=f'"{draft.title}" a été rédigé et optimisé. Score final : {final_score if final_score is not None else "—"}.',
+                level="success",
+                type="article_ready",
+                link=f"/projects/{article.project_id}/production?tab=validate",
+            )
+        except Exception:
+            pass
+
+    def _recompute_quality_artifacts(self, article: Article, draft: _DraftArticle, sources_list: list[str]) -> None:
+        """Recalcule et sauvegarde eeat_checklist/readability_report/originality_report/
+        seo_final_checklist/editorial_quality_report après une édition de contenu par
+        _auto_improve_score(). Sans ça, compute_global_score() relirait à chaque
+        itération les artifacts figés d'avant la boucle — la boucle "s'améliorerait"
+        contre une cible qui ne reflète jamais l'édition qu'elle vient de faire."""
+        content = draft.content or ""
+
+        try:
+            eeat = check_eeat_dict(content, sources_list, draft.author_name)
+            self._save(article.id, "eeat_checklist", eeat)
+        except Exception as exc:
+            self._error("AutoImprove_recompute_eeat", str(exc))
+
+        try:
+            from app.services.seo.readability_service import compute_readability_score
+            readability_result = compute_readability_score(draft)
+            self._save(article.id, "readability_report", readability_result)
+        except Exception as exc:
+            self._error("AutoImprove_recompute_readability", str(exc))
+
+        try:
+            originality = check_originality_dict(content, sources_list)
+            self._save(article.id, "originality_report", originality)
+        except Exception as exc:
+            self._error("AutoImprove_recompute_originality", str(exc))
+
+        try:
+            editorial_quality = check_editorial_quality_dict(content)
+            self._save(article.id, "editorial_quality_report", editorial_quality)
+        except Exception as exc:
+            self._error("AutoImprove_recompute_editorial_quality", str(exc))
+
+        try:
+            internal_links_plan = self.context.get("internal_links") or {}
+            external_links_plan = self.context.get("external_links") or {}
+            image_sources = self.context.get("image_sources") or []
+            faq_count = len(draft.faq) if isinstance(draft.faq, list) else 0
+            has_structured_data = bool(self._get(article.id, "structured_data"))
+            seo_final = check_seo_final_dict(
+                content=content,
+                title=draft.title,
+                slug=article.slug,
+                meta_title=draft.meta_title,
+                meta_description=draft.meta_description,
+                keyword=draft.keyword,
+                faq_count=faq_count,
+                internal_links=internal_links_plan.get("links", []) if isinstance(internal_links_plan, dict) else [],
+                external_links=external_links_plan.get("links", []) if isinstance(external_links_plan, dict) else [],
+                images=image_sources,
+                has_structured_data=has_structured_data,
+            )
+            self._save(article.id, "seo_final_checklist", seo_final)
+        except Exception as exc:
+            self._error("AutoImprove_recompute_seo_final", str(exc))
+
+    def _auto_improve_score(self, draft: _DraftArticle, sources_list: list[str], max_iterations: int = 4):
         """Tant que global_score < AUTO_IMPROVE_SCORE_TARGET, améliore le signal le plus faible.
 
         Utilise compute_global_score() (même source de vérité que le score
@@ -1761,8 +1839,14 @@ class SEOGenerationOrchestrator:
                     self.db.flush()
 
                     try:
+                        # Recalcule eeat/readability/originality/seo_final/qualité sur le
+                        # contenu qu'on vient d'éditer — sinon compute_global_score() ci-
+                        # dessous relit les artifacts d'avant cette itération et la boucle
+                        # "s'améliore" contre une cible figée qui ignore l'édition faite.
+                        self._recompute_quality_artifacts(article, draft, sources_list)
                         run_and_store_seo_review(self.db, article)
                         rescored = compute_global_score(self.db, article.id, article=article)
+                        quality_report = self._get(article.id, "editorial_quality_report") or {}
                         self.db.add(ArticleScore(
                             article_id=article.id,
                             revision_id=article.current_revision_id,
@@ -1771,6 +1855,7 @@ class SEOGenerationOrchestrator:
                             eeat_score=rescored.get("eeat_contrib"),
                             readability_score=rescored.get("readability_contrib"),
                             geo_score=rescored.get("geo_contrib"),
+                            quality_score=quality_report.get("score"),
                         ))
                         self.db.flush()
                     except Exception as score_exc:

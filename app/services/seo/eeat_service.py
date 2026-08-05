@@ -191,6 +191,12 @@ def compute_eeat_score(article: Any, project_domain: str = "", budget: LLMBudget
         flags.append("insufficient_external_links")
     if s2 < 50:
         flags.append("no_cited_statistics")
+    if s5 < 50:
+        flags.append("no_nuance_markers")
+    if s3 < 50:
+        flags.append("weak_heading_structure")
+    if s6 < 50:
+        flags.append("low_heading_diversity")
 
     signals = {
         "external_links":    {"value": round(s1), "weight": 0.25, "contribution": round(s1 * 0.25, 1)},
