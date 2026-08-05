@@ -25,6 +25,26 @@
 
 ## Décisions enregistrées
 
+### [DEC-011] — Migration de l'hébergement backend de Render vers Railway
+
+- **Date** : 2026-08-05
+- **Domaine** : architecture
+- **Problème** : Le service Render (plan basique) souffrait de mises en veille et d'un CPU partagé limité, causant des lenteurs perceptibles (login, requêtes générales).
+- **Options étudiées** :
+  - Option A : Passer Render en plan Starter/Standard payant (7 $ à 25 $/mois, pas de palier intermédiaire)
+  - Option B : Migrer vers Railway (Hobby, 5 $/mois minimum, pas de mise en veille forcée)
+  - Option C : VPS (Hetzner) + Coolify — coût le plus bas mais setup et maintenance à la charge de l'équipe
+- **Décision retenue** : Option B — migration vers Railway
+- **Justification** : La base (Supabase Postgres) et le stockage média (Supabase Storage) sont déjà externalisés et indépendants de l'hébergeur du backend — seule la couche de calcul (FastAPI/Uvicorn) migre. Coût inférieur à Render Starter, pas de spin-down, migration à faible effort (pas de changement de code, juste infra).
+- **Conséquences** :
+  - (+) Plus de lenteur liée au cold-start du service web
+  - (+) Aucune donnée à migrer (Supabase inchangé)
+  - (-) Le builder par défaut de Railway (Railpack) ne détecte pas la commande de démarrage automatiquement pour ce projet — `Custom Start Command` à configurer manuellement (voir `docs/DEPLOYMENT.md`)
+  - (-) Contrairement à `render.yaml`, le build Railway n'installe pas Playwright/Patchright par défaut — à ajouter si les fonctionnalités de scraping SEO sont utilisées en prod
+- **Révisable** : Oui — si l'usage/coût Railway grimpe significativement, réévaluer Hetzner + Coolify
+
+---
+
 ### [DEC-001] — SQLite en développement, PostgreSQL en production
 
 - **Date** : 2026-06 (Jour 1)
