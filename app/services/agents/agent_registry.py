@@ -424,6 +424,17 @@ AGENTS: list[AgentDef] = [
         status=AgentStatus.active,
         output_json_field="reader_retention_report_json",
     ),
+    AgentDef(
+        agent_id="originality_angle_judge",
+        name="Juge d'originalité d'angle",
+        description="Juge si l'article contient un angle absent des résultats Google habituels",
+        category=AgentCategory.review,
+        phase="seo",
+        icon="sparkles",
+        implementation_ref="agent_services.judge_surprise_moment",
+        status=AgentStatus.active,
+        output_json_field="surprise_moment_report_json",
+    ),
     # ═══════════════════════════════════════════════════════════════════════
     # Phase 7 — Quality Control
     # ═══════════════════════════════════════════════════════════════════════

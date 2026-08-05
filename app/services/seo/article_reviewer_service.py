@@ -111,17 +111,24 @@ def score_forbidden_absence(content: str) -> tuple[float, list[str]]:
     return 100.0, []
 
 
-# ── Critère 8 — Moment de surprise (JUGEMENT NÉCESSAIRE, pas heuristique fiable) ──
+# ── Critère 8 — Moment de surprise (jugement LLM, pas d'heuristique fiable) ──
 
-def score_surprise_moment(content: str) -> tuple[float | None, list[str]]:
+def score_surprise_moment(
+    content: str, title: str = "", keyword: str = "", db=None, project_id: str | None = None,
+) -> tuple[float | None, list[str]]:
     """Contrairement aux 9 autres critères, "une observation absente des 10
     premiers résultats Google" ne peut pas être vérifié par une regex — ça
-    demande soit une vraie recherche web comparative, soit un jugement LLM,
-    soit un humain. Retourne None plutôt qu'un faux score pour ne jamais
-    donner une fausse impression de fiabilité sur ce point précis
-    (voir agent_services.check_reader_retention pour l'équivalent LLM
-    déjà existant si un jugement automatisé est souhaité ici)."""
-    return None, ["jugement_humain_requis"]
+    demande un jugement sur le fond. Délègue à agent_services.judge_surprise_
+    moment (LLM) ; si le provider est indisponible, retourne None plutôt
+    qu'un faux score, pour ne jamais donner une fausse impression de
+    fiabilité sur ce point précis (les 10 points restent alors hors du
+    total plutôt que comptés comme 0 — voir review_article)."""
+    from app.services.agents.agent_services import judge_surprise_moment
+    result = judge_surprise_moment(content, title, keyword, db=db, project_id=project_id)
+    if result.get("status") != "success" or result.get("score") is None:
+        return None, ["jugement_llm_indisponible"]
+    flags = [] if result["score"] > 0 else [f"aucun_angle_original:{result.get('reasoning', '')[:80]}"]
+    return result["score"], flags
 
 
 _CRITERIA_WEIGHTS = {
@@ -139,10 +146,17 @@ _CRITERIA_WEIGHTS = {
 _BLOCKING_CRITERIA = {"introduction", "position_tranchee", "moment_surprise", "absence_interdictions"}
 
 
-def review_article(content: str | None, word_count: int | None = None) -> dict:
+def review_article(
+    content: str | None, word_count: int | None = None,
+    *, title: str = "", keyword: str = "", db=None, project_id: str | None = None,
+) -> dict:
     """Point d'entrée de l'agent réviseur — grille de scoring à 10 critères
     (100 points) + décision de publication, format aligné sur le rapport
-    de révision demandé (docs/guide_formation_ia.md Partie 4)."""
+    de révision demandé (docs/GUIDE-FORMATION-IA.md Partie 4).
+
+    title/keyword/db/project_id sont optionnels et servent uniquement au
+    critère "moment de surprise" (jugement LLM) — sans eux, ce critère
+    reste non noté (10 points hors du total) plutôt que d'échouer."""
     if not content or len(strip_html(content).strip()) < 50:
         return {
             "status": "empty", "total_score": None, "decision": "REECRITURE",
@@ -158,7 +172,7 @@ def review_article(content: str | None, word_count: int | None = None) -> dict:
     marker_score, marker_flags = score_human_markers(content)
     vous_score, vous_flags = score_vous_dosage(content)
     connector_score, connector_flags = score_connector_variety(content)
-    surprise_score, surprise_flags = score_surprise_moment(content)
+    surprise_score, surprise_flags = score_surprise_moment(content, title, keyword, db=db, project_id=project_id)
     conclusion_score, conclusion_flags = score_conclusion(content, wc)
     forbidden_score, forbidden_flags = score_forbidden_absence(content)
 

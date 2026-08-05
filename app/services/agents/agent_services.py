@@ -509,3 +509,46 @@ def plan_section_images(
     except Exception as exc:
         logger.warning("Image planning agent failed: %s", exc)
         return {"status": "error", "message": str(exc), "sections": []}
+
+
+def judge_surprise_moment(content: str, title: str, keyword: str, db=None, project_id: str | None = None) -> dict[str, Any]:
+    """Juge si l'article contient au moins une observation, formulation ou
+    angle absent des 10 premiers résultats Google sur le même sujet —
+    critère "moment de surprise" de la grille de scoring (article_reviewer_
+    service.py). Aucune heuristique par mots-clés ne peut vérifier ça
+    fiablement (ça demanderait une vraie recherche comparative), un LLM
+    avec de bonnes connaissances générales sur le sujet peut au moins
+    juger si l'angle est du contenu générique déjà vu partout ou une vraie
+    prise de recul. Reste une approximation, pas une recherche réelle
+    (contrairement à SerpAdapter qui, lui, interroge un vrai moteur)."""
+    router = _get_router(db)
+    try:
+        provider = router.get_provider("originality_angle_judge", project_id=project_id)
+    except Exception as exc:
+        logger.warning("Surprise moment judge provider resolution failed: %s", exc)
+        return {"status": "skipped", "message": f"Provider indisponible : {exc}", "score": None}
+    if provider.is_mock:
+        return {"status": "skipped", "message": "Surprise moment judge not configured (mock provider)", "score": None}
+
+    prompt = (
+        f"Titre : {title}\nMot-clé : {keyword}\n\n"
+        f"Contenu :\n{content[:6000]}\n\n"
+        "Sur la base de tes connaissances générales sur ce sujet, cet article contient-il au moins "
+        "une observation, formulation ou angle qu'on ne trouverait PAS dans un article générique "
+        "typique sur ce même sujet (le genre de contenu qu'on trouve dans les 10 premiers résultats "
+        "d'une recherche Google) ? Cherche une vraie prise de position, une observation contre-"
+        "intuitive, un exemple concret inhabituel — pas juste une reformulation d'un savoir déjà "
+        "largement diffusé.\n\n"
+        "Réponds UNIQUEMENT avec un JSON valide :\n"
+        '{"has_surprise_moment": true|false, "excerpt": "extrait qui illustre le moment de surprise, '
+        'ou vide si aucun", "reasoning": "justification en une phrase"}'
+    )
+    try:
+        result = provider.generate_json(prompt, schema_hint="json surprise judgment object")
+        if isinstance(result, dict) and "has_surprise_moment" in result:
+            score = 100.0 if result["has_surprise_moment"] else 0.0
+            return {"status": "success", "score": score, **result}
+        return {"status": "error", "message": "Invalid response format", "score": None}
+    except Exception as exc:
+        logger.warning("Surprise moment judge agent failed: %s", exc)
+        return {"status": "error", "message": str(exc), "score": None}

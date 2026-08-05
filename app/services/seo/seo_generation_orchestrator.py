@@ -1131,7 +1131,10 @@ class SEOGenerationOrchestrator:
             )
 
         from app.services.seo.article_reviewer_service import review_article
-        review_report = review_article(content, draft.word_count)
+        review_report = review_article(
+            content, draft.word_count,
+            title=draft.title, keyword=draft.keyword, db=self.db, project_id=self.project_id,
+        )
         self._save(article.id, "article_review_report", review_report)
         if review_report.get("decision") in ("REECRITURE", "REVISION_AUTOMATIQUE"):
             self._log(
