@@ -320,7 +320,6 @@ class SEOGenerationOrchestrator:
                 exclude_article_id=existing_article_id,
             )
             self.context["content_gaps"] = content_gaps
-            self._save(article.id, "content_gaps", content_gaps)
             self._step(
                 f"ContentGap — {content_gaps.get('total_gaps', 0)} manques détectés "
                 f"({content_gaps.get('status', 'unknown')})"
@@ -520,6 +519,7 @@ class SEOGenerationOrchestrator:
         self._save(article.id, "internal_links", internal_links)
         self._save(article.id, "external_links", external_links)
         self._save(article.id, "human_insights", self.context.get("human_insights") or {})
+        self._save(article.id, "content_gaps", self.context.get("content_gaps") or {})
 
         # Plage de mots : catégorie (prioritaire) puis profil éditorial projet
         wc_min, wc_max = None, None
@@ -1382,6 +1382,20 @@ class SEOGenerationOrchestrator:
                 level="warning", step="article_review",
             )
 
+        # Le verdict de l'agent réviseur n'était auparavant qu'informatif : un
+        # REECRITURE ne déclenchait qu'un warning, le pipeline continuait tel
+        # quel vers DRAFT_READY. Les 10 critères de cette grille (ouvertures
+        # génériques, position tranchée, moment de surprise, interdictions
+        # stylistiques...) ne sont pas non plus couverts par les 5 signaux
+        # pondérés de _auto_improve_score (SEO/EEAT/lisibilité/originalité/GEO).
+        # Un critère bloquant déclenche donc désormais une passe corrective
+        # ciblée avant de poursuivre.
+        if review_report.get("blocking_triggered"):
+            content = self._fix_blocking_structural_issues(content, draft, review_report)
+            draft.content = content
+            draft.word_count = calculate_word_count(content)
+            draft.reading_time_minutes = calculate_reading_time_minutes(draft.word_count)
+
         from app.services.seo.article_tier_service import compute_volume_tiers
         volume_tiers = compute_volume_tiers(content)
         self._save(article.id, "volume_tiers", volume_tiers)
@@ -1521,6 +1535,80 @@ class SEOGenerationOrchestrator:
         except Exception:
             pass
 
+    def _fix_blocking_structural_issues(self, content: str, draft: _DraftArticle, review_report: dict) -> str:
+        """Corrige les critères bloquants de la grille de révision à 10 critères
+        (article_reviewer_service.review_article) avant de poursuivre le pipeline.
+        Ces critères (ouverture générique, absence de position tranchée, absence
+        de moment de surprise, tiret cadratin/superlatifs interdits) ciblent
+        précisément les "tells" d'un texte généré par IA — sans cette passe, un
+        verdict REECRITURE n'avait aucun effet sur le contenu publié."""
+        blocking = review_report.get("blocking_triggered") or []
+        if not blocking:
+            return content
+
+        criteria = review_report.get("criteria") or {}
+        instruction_map = {
+            "introduction": (
+                "Réécris l'introduction : 2-3 phrases maximum, aucune formule générique "
+                "('Dans l'univers numérique actuel', 'Il est important de', 'Dans cet article, "
+                "nous allons voir', etc.), entre directement dans le vif du sujet."
+            ),
+            "position_tranchee": (
+                "Ajoute au moins une position tranchée et assumée dans chaque section H2 : dis "
+                "ce qui ne marche pas, pour qui une option n'est pas adaptée, ou pourquoi un "
+                "choix est préférable dans un cas précis. N'énumère pas que des faits neutres."
+            ),
+            "moment_surprise": (
+                "Ajoute au moins une observation ou un angle réellement surprenant, qu'on ne "
+                "trouverait pas dans les 10 premiers résultats Google sur ce sujet."
+            ),
+            "absence_interdictions": (
+                "Supprime tout tiret cadratin (—, remplace par une virgule ou reformule), toute "
+                "ouverture de section générique, et tout superlatif vide ('Ultime', "
+                "'Incontournable', 'Essentiel', 'Révolutionnaire', etc.)."
+            ),
+        }
+        instructions = []
+        for key in blocking:
+            flags = (criteria.get(key) or {}).get("flags") or []
+            line = instruction_map.get(key, f"Corrige le critère '{key}'.")
+            if flags:
+                line += f" Signaux détectés : {', '.join(str(f) for f in flags[:5])}."
+            instructions.append(f"- {line}")
+
+        fix_prompt = (
+            "Cet article a échoué à la grille de révision éditoriale sur des critères bloquants. "
+            "Corrige UNIQUEMENT les points suivants, sans rien changer d'autre (garde le plan, "
+            "les faits, les liens, les données, les images) :\n\n"
+            + "\n".join(instructions)
+            + "\n\nRègles impératives :\n"
+            "- Conserve exactement la structure HTML (H2, H3, p, ul, li, blockquote, table)\n"
+            "- Retourne le HTML COMPLET de l'article corrigé, du début à la fin (jamais un "
+            "extrait ou un résumé), sans explication, sans backticks\n\n"
+            f"Contenu :\n{content}"
+        )
+        try:
+            editor_llm = self._get_agent_provider("editor", self.llm)
+            if editor_llm.is_mock:
+                return content
+            original_word_count = calculate_word_count(content)
+            fixed = editor_llm.generate_text(fix_prompt)
+            if not fixed or len(fixed) < 200:
+                return content
+            from app.services.seo.content_structure_guard import apply_structure_guards
+            fixed = apply_structure_guards(fixed, draft.title)
+            if calculate_word_count(fixed) < original_word_count * 0.75:
+                self._error(
+                    "StructuralFixPass",
+                    "Réponse rejetée : volume trop réduit par rapport à l'original "
+                    "(troncature probable) — contenu original conservé.",
+                )
+                return content
+            self._step(f"StructuralFixPass — critères corrigés : {', '.join(blocking)}")
+            return fixed
+        except Exception as exc:
+            self._error("StructuralFixPass", str(exc))
+            return content
 
     def _persist_revision(self, draft: _DraftArticle) -> ArticleRevision:
         article = draft.article
@@ -1635,8 +1723,9 @@ class SEOGenerationOrchestrator:
                 "Règles impératives :\n"
                 "- Conserve exactement la structure HTML (balises H1, H2, H3, p, ul, li)\n"
                 "- Ne change pas le titre principal (H1)\n"
-                "- Retourne uniquement le HTML amélioré, sans explication, sans backticks\n\n"
-                f"Contenu :\n{(draft.content or '')[:6000]}"
+                "- Retourne le HTML COMPLET de l'article amélioré (toutes les sections, du début à la "
+                "fin), sans explication, sans backticks : jamais un extrait ou un résumé\n\n"
+                f"Contenu :\n{draft.content or ''}"
             )
 
             try:
@@ -1645,12 +1734,27 @@ class SEOGenerationOrchestrator:
                 editor_llm = self._get_agent_provider("editor", self.llm)
                 if editor_llm.is_mock:
                     break
+                original_word_count = draft.word_count
                 improved = editor_llm.generate_text(improve_prompt)
                 if improved and len(improved) > 200:
                     from app.services.seo.content_structure_guard import apply_structure_guards
                     improved = apply_structure_guards(improved, draft.title)
+                    improved_word_count = calculate_word_count(improved)
+                    # Garde-fou anti-troncature : une passe ciblée (EEAT/SEO/lisibilité/
+                    # originalité/GEO) ne doit jamais faire perdre l'essentiel du texte —
+                    # un modèle qui répond par un extrait au lieu de l'article complet ne
+                    # doit jamais écraser draft.content. Exception assumée : la correction
+                    # de volume "over_maximum", où raccourcir est le but explicite.
+                    shrink_expected = weakest_signal == "Volume" and wc_check["status"] == "over_maximum"
+                    if not shrink_expected and improved_word_count < original_word_count * 0.75:
+                        self._error(
+                            f"AutoImprove_{weakest_signal}_iter{iteration + 1}",
+                            f"Réponse rejetée : {improved_word_count} mots contre {original_word_count} "
+                            "avant la passe (troncature probable) — contenu original conservé.",
+                        )
+                        continue
                     draft.content = improved
-                    draft.word_count = calculate_word_count(improved)
+                    draft.word_count = improved_word_count
                     draft.reading_time_minutes = calculate_reading_time_minutes(draft.word_count)
                     self._persist_revision(draft)
                     article.updated_at = datetime.now(timezone.utc)
