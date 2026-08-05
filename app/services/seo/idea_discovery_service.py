@@ -49,6 +49,26 @@ def discover_ideas(
         ).all()
     }
 
+    # Matière humaine réelle (Reddit, People Also Ask, Google Autocomplete,
+    # StackOverflow, Quora, YouTube, Twitter/Nitter) — jusqu'ici cette
+    # extraction n'était appelée qu'à la rédaction de l'article
+    # (seo_generation_orchestrator.py), après que le sujet soit déjà choisi
+    # par le LLM sans aucune donnée réelle sur ce que les internautes
+    # cherchent vraiment. Récupérée une seule fois pour tout le lot (même
+    # sujet source), pas par idée. Le mot-clé de recherche est context_hint
+    # s'il existe, sinon la catégorie choisie par la stratégie — jamais une
+    # recherche sans sujet, qui ne renverrait rien d'exploitable.
+    human_insights: dict | None = None
+    insights_topic = context_hint or (category_strategy or {}).get("chosen_category_name")
+    if insights_topic and not llm.is_mock:
+        try:
+            from app.services.seo.human_insights_service import extract_human_insights
+            human_insights = extract_human_insights(
+                keyword=insights_topic, project_id=project_id, language=project_language,
+            )
+        except Exception:
+            human_insights = None
+
     for i in range(count):
         try:
             title = f"Idée #{i + 1}: {context_hint or 'Sujet SEO'}"
@@ -69,6 +89,32 @@ def discover_ideas(
                         direction = "en hausse" if trend["trend_score"] > 1.2 else "stable ou en baisse" if trend["trend_score"] < 0.8 else "stable"
                         trend_hint = f"Tendance estimée sur ce sujet : {direction} (proxy, pas une mesure officielle).\n"
 
+                # Matière humaine réelle piochée par idée : chaque idée du lot pioche
+                # dans une tranche différente des questions/points de friction
+                # remontés (Reddit, PAA, Autocomplete, StackOverflow, Quora, YouTube,
+                # Twitter) pour éviter que les 5 idées convergent vers le même
+                # insight — jamais de contenu inventé si l'extraction a échoué.
+                human_insights_hint = ""
+                if human_insights and human_insights.get("status") == "completed":
+                    questions = human_insights.get("questions", [])
+                    pain_points = human_insights.get("pain_points", [])
+                    real_examples = human_insights.get("real_examples", [])
+                    picked = []
+                    if questions:
+                        picked.append(f"Vraie question posée par des internautes : \"{questions[i % len(questions)]}\"")
+                    if pain_points:
+                        picked.append(f"Vraie frustration remontée : \"{pain_points[i % len(pain_points)]}\"")
+                    if real_examples:
+                        picked.append(f"Exemple réel partagé : \"{real_examples[i % len(real_examples)]}\"")
+                    if picked:
+                        human_insights_hint = (
+                            "Matière humaine réelle disponible sur ce sujet (Reddit, People Also Ask, "
+                            "Google Autocomplete, StackOverflow, Quora, YouTube) :\n"
+                            + "\n".join(f"- {p}" for p in picked)
+                            + "\nBase ton idée sur cette vraie demande plutôt que sur une supposition "
+                            "générique — c'est ce que les internautes cherchent réellement en ce moment.\n"
+                        )
+
                 # Format de titre imposé au coup par coup (choisi selon l'index pour
                 # forcer la variété plutôt que de laisser le LLM retomber sur son
                 # patron par défaut "[Sujet] : Le Guide [Superlatif] pour [Cible]",
@@ -88,6 +134,7 @@ def discover_ideas(
                     f"Contexte : {context_hint or 'aucun'}.\n"
                     f"{trend_hint}"
                     f"Contexte SERP :\n{serp_context}\n\n"
+                    f"{human_insights_hint}"
                     f"Format de titre imposé : {title_format}\n"
                     "Interdits dans le titre : 'Ultime', 'Incontournable', 'Essentiel', 'Complet', "
                     "'Puissant', 'Booster', 'Révolutionnaire', 'Exhaustif', 'Guide complet pour', "
