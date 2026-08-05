@@ -229,8 +229,13 @@ function getV2Report(article: EditorArticle, key: ScoreKey): V2Report | null {
     }
   })()
   if (!raw) return null
+  // Accepte toute version majeure "2.x" : la forme (signals/flags/explanation/
+  // confidence/status) est stable entre 2.1 et 2.2, seul le contenu du calcul
+  // change (ex: originality_service est passé en 2.2 pour le seuil des 500
+  // mots — un check strict sur '2.1' masquait alors tout le détail du score).
+  const isV2 = (v: unknown): v is string => typeof v === 'string' && v.startsWith('2.')
   const v2 = raw.v2 as V2Report | undefined
-  return v2?.version === '2.1' ? v2 : (raw.version === '2.1' ? raw as V2Report : null)
+  return isV2(v2?.version) ? v2 : (isV2(raw.version as unknown) ? raw as V2Report : null)
 }
 
 const SIGNAL_LABELS: Record<string, string> = {
@@ -260,6 +265,9 @@ const FLAG_LABELS: Record<string, string> = {
   no_author_bio:                 'Pas de bio auteur',
   insufficient_external_links:   'Liens externes insuffisants',
   no_cited_statistics:           'Aucune statistique sourcée',
+  no_nuance_markers:             'Pas de marqueurs de nuance',
+  weak_heading_structure:        'Structure de titres faible',
+  low_heading_diversity:         'Titres peu variés',
   no_sources_unverified:         'Aucune source fournie — score non vérifié',
   high_source_overlap:           'Fort chevauchement avec les sources',
   generic_ai_patterns_detected:  'Patterns IA génériques détectés',
