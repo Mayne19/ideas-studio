@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { Plus, Trash2, TestTube, CheckCircle, XCircle, Loader2, Eye, EyeOff, Save, Settings } from '@/components/ui/hugeIcons'
+import { Plus, Trash2, TestTube, CheckCircle, XCircle, Loader2, Eye, EyeOff, Save, Settings, Star } from '@/components/ui/hugeIcons'
 import { api } from '@/api/client'
 import { Card } from '@/components/ui/Card'
 import { useProject } from '@/context/ProjectContext'
@@ -14,6 +14,7 @@ type AIProviderConfig = {
   api_key_configured: boolean
   base_url: string | null
   model: string | null
+  is_default: boolean
   last_test_status: string | null
   last_test_error: string | null
   last_tested_at: string | null
@@ -84,6 +85,7 @@ export default function ProjectProvidersPage() {
   const [testResult, setTestResult] = useState<{ id: string; status: string; message: string } | null>(null)
   const [showKeys, setShowKeys] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [settingDefault, setSettingDefault] = useState<string | null>(null)
 
   // Gestion du catalogue global (admin plateforme uniquement)
   const [catalogManagerOpen, setCatalogManagerOpen] = useState(false)
@@ -188,6 +190,18 @@ export default function ProjectProvidersPage() {
     }
   }
 
+  async function handleSetDefault(id: string) {
+    setSettingDefault(id)
+    try {
+      await api.patch(`/settings/ai-providers/${id}`, { is_default: true })
+      await loadConfigs()
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Erreur lors de la définition du provider par défaut')
+    } finally {
+      setSettingDefault(null)
+    }
+  }
+
   async function handleTest(id: string) {
     setTesting(id)
     setTestResult(null)
@@ -282,7 +296,9 @@ export default function ProjectProvidersPage() {
       <div className="rounded-[14px] border border-accent/20 bg-accent/5 px-4 py-3">
         <p className="text-[12px] text-secondary leading-snug">
           Un provider ici correspond à une clé API pour une plateforme donnée. Le modèle utilisé par chaque agent
-          se choisit dans Paramètres → Agents, pas ici.
+          se choisit dans Paramètres → Agents, pas ici. Le provider marqué « Par défaut » (étoile) est utilisé pour
+          « Tester le pipeline » et pour tout agent sans assignation spécifique — les agents assignés explicitement
+          dans Paramètres → Agents utilisent toujours leur propre provider, indépendamment de ce choix.
         </p>
       </div>
 
@@ -395,6 +411,12 @@ export default function ProjectProvidersPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <p className="text-[14px] font-medium text-primary">{config.label}</p>
+                  {config.is_default && (
+                    <span className="flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">
+                      <Star size={10} />
+                      Par défaut
+                    </span>
+                  )}
                   {config.last_test_status === 'connected' && (
                     <span className="rounded-full bg-success/8 px-2 py-0.5 text-[10px] font-medium text-success">Connecté</span>
                   )}
@@ -407,6 +429,16 @@ export default function ProjectProvidersPage() {
                 </p>
               </div>
               <div className="flex items-center gap-1">
+                {!config.is_default && (
+                  <button
+                    onClick={() => handleSetDefault(config.id)}
+                    disabled={settingDefault === config.id}
+                    className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-surface-soft hover:text-primary transition-colors"
+                    title="Définir comme provider par défaut du projet"
+                  >
+                    {settingDefault === config.id ? <Loader2 size={13} className="animate-spin" /> : <Star size={13} />}
+                  </button>
+                )}
                 <button
                   onClick={() => handleTest(config.id)}
                   disabled={testing === config.id}
