@@ -34,6 +34,7 @@ from app.services.seo.keyword_brief_service import build_keyword_brief_dict
 from app.services.seo.editorial_angle_service import define_editorial_angle_dict
 from app.services.seo.article_outline_planner import build_outline_dict
 from app.services.seo.image_plan_service import build_image_plan_dict
+from app.services.seo.writing_reference_examples import build_reference_examples_block
 from app.services.seo.callout_plan_service import build_callout_plan_dict
 from app.services.seo.faq_plan_service import build_faq_plan_dict, generate_faq_list
 from app.services.seo.internal_link_service import build_internal_link_plan_dict
@@ -917,25 +918,43 @@ class SEOGenerationOrchestrator:
             "- Si un résumé est utile, intègre-le dans la dernière section existante",
             "",
             "Règles de voix et de rythme (checklist qualité 90+) :",
+            "- L'introduction ne dépasse jamais 10% du volume total et entre dans le vif en 2-3 phrases : "
+            "  pas de contexte, pas de définition du sujet, pas d'annonce du plan.",
             "- Chaque phrase apporte une information nouvelle ou disparaît. Test : si on peut la "
             "  supprimer sans rien perdre, elle n'a pas sa place.",
-            "- Zéro phrase d'ouverture de section générique. Interdits en début de section : "
-            "  'Il est important de', 'Dans cette section', 'Il est crucial de', 'Force est de constater', "
-            "  'Il va sans dire que'.",
+            "- Zéro phrase d'ouverture générique, ni en intro ni en début de section. Interdits : "
+            "  'Dans l'univers numérique actuel', 'Il est important de', 'Dans cette section', "
+            "  'Il est crucial de', 'Force est de constater', 'Il va sans dire que', 'Dans un monde où', "
+            "  'À l'heure/l'ère du digital', 'Nombreux sont ceux qui', 'Nous allons voir dans cet article'.",
+            "- Interdits dans tout le texte : les superlatifs vides 'Ultime', 'Incontournable', 'Essentiel', "
+            "  'Complet', 'Puissant', 'Révolutionnaire', 'Innovant' utilisés comme adjectif générique, "
+            "  et les expressions usées 'Le contenu est roi', 'Dans le paysage numérique actuel', "
+            "  'Passer à la vitesse supérieure', 'Sortir du lot', 'Se démarquer de la concurrence'.",
             "- Alterne la longueur des paragraphes : certains 5-8 lignes, d'autres une seule phrase "
-            "  pour marquer une idée forte. Ne jamais enchaîner plus de 3 paragraphes de longueur similaire.",
+            "  pour marquer une idée forte. Ne jamais enchaîner plus de 3 paragraphes de longueur similaire. "
+            "  Une phrase courte isolée après une idée importante crée un effet de choc voulu.",
             "- Au moins une position tranchée et assumée par section (pas juste énumérer des faits neutres) : "
             "  dire ce qui ne marche pas, pour qui une option n'est pas adaptée, ou pourquoi tel choix "
             "  est préférable dans un cas précis.",
+            "- Place 1 à 2 marqueurs de voix humaine par section, jamais plus (au-delà, c'est aussi "
+            "  mécanique que zéro), et jamais toujours au même endroit de la phrase : "
+            "  'Honnêtement,', 'À bien y réfléchir,', 'Curieusement,', 'Pourtant,' en début ; "
+            "  'et ce n'est pas anodin', 'ce que peu de gens réalisent' en milieu ; "
+            "  'c'est bien dommage', 'et c'est presque toujours vrai' en fin.",
             "- Varie les connecteurs logiques : pas seulement 'mais'/'cependant', alterne avec 'pourtant', "
-            "  'à bien y réfléchir', 'ce qui signifie concrètement', 'tout compte fait', 'et c'est là que "
-            "  ça devient intéressant'.",
+            "  'à bien y réfléchir', 'ce qui signifie concrètement', 'tout compte fait', 'en réalité', "
+            "  'pour être honnête', 'et c'est là que ça devient intéressant'.",
             "- Dose le 'vous' : mélange avec des tournures impersonnelles et des phrases sans sujet direct, "
             "  ne t'adresse pas au lecteur dans chaque phrase.",
             "- La conclusion (dans la dernière section, jamais une section à part) ne résume pas ce qui "
-            "  précède et ne moralise pas ('l'essentiel est de', 'en conclusion'). Termine sur une image "
-            "  concrète, une conséquence pratique, ou une question ouverte.",
+            "  précède, ne commence jamais par 'En conclusion', 'Pour résumer', 'Nous avons vu que', et ne "
+            "  liste pas les points déjà traités. Termine sur une image concrète, une conséquence "
+            "  pratique, ou une question ouverte qui laisse une tension.",
             "- Le premier mot d'une section H2 n'est jamais 'Il', 'Dans', 'Nous', 'Cette'.",
+            "- Contient au moins un moment de vraie surprise : une observation ou un angle qu'on ne "
+            "  trouverait pas dans les 10 premiers résultats Google sur le même sujet.",
+            "",
+            build_reference_examples_block(),
         ]
 
         if self.context.get("word_count_range"):
@@ -1070,6 +1089,16 @@ class SEOGenerationOrchestrator:
                 f"{style_check['issue_count']} signal(aux) de style détecté(s) : "
                 f"{', '.join(style_check['issues'][:5])}",
                 level="warning", step="style_check",
+            )
+
+        from app.services.seo.human_presence_service import compute_human_presence_score
+        human_presence_report = compute_human_presence_score(content, draft.word_count)
+        self._save(article.id, "human_presence_report", human_presence_report)
+        if human_presence_report.get("score") is not None and human_presence_report["score"] < 70:
+            self._log(
+                f"Présence humaine faible : {human_presence_report['score']}/100 "
+                f"({', '.join(human_presence_report['flags'][:5])})",
+                level="warning", step="human_presence_check",
             )
 
         self._ensure_slug(article, draft.title, draft.keyword)

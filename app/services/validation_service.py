@@ -201,6 +201,7 @@ def check_validation_thresholds(
     quality = scoring["quality_contrib"]
     geo = scoring["geo_contrib"]
     originality = scoring["originality_contrib"]
+    human_presence = scoring.get("human_presence_contrib")
 
     ctx = dict(precomputed_context) if precomputed_context is not None else _load_validation_context(db, article)
     if planned_publish_at is not None:
@@ -223,6 +224,8 @@ def check_validation_thresholds(
         blocking_reasons.append(f"Score GEO ({geo}) < 80")
     if originality is not None and originality < 85:
         blocking_reasons.append(f"Score Originalite ({originality}) < 85")
+    if human_presence is not None and human_presence < 70:
+        blocking_reasons.append(f"Score Presence humaine ({human_presence}) < 70")
 
     for w in warnings:
         if w["severity"] == "critical":

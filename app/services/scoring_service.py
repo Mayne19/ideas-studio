@@ -56,13 +56,15 @@ def compute_global_score(
     if artifacts is None:
         artifacts = get_latest_artifacts(
             db, article_id,
-            ["eeat_checklist", "readability_report", "originality_report", "geo_optimization", "seo_final_checklist"],
+            ["eeat_checklist", "readability_report", "originality_report", "geo_optimization",
+             "seo_final_checklist", "human_presence_report"],
         )
     eeat_json = artifacts.get("eeat_checklist")
     readability_json = artifacts.get("readability_report")
     originality_report = artifacts.get("originality_report")
     geo_json = artifacts.get("geo_optimization")
     seo_json = artifacts.get("seo_final_checklist")
+    human_presence_json = artifacts.get("human_presence_report")
 
     # seo_score n'est jamais peuplé directement sur article_scores par un agent
     # dédié (contrairement à eeat/readability/geo) : il vient toujours de
@@ -91,22 +93,32 @@ def compute_global_score(
         originality = _to_float(v2.get("score")) if v2 else _to_float(originality_report.get("heuristic_score"))
 
     geo = _to_float(geo_json.get("geo_score")) if geo_json else None
+    human_presence = _to_float(human_presence_json.get("score")) if human_presence_json else None
 
     present: list[float] = []
     weights: list[int] = []
 
+    # v2.2 — ajout Présence humaine (15%) : détecte spécifiquement les
+    # phrases génériques, tirets cadratins, régularité mécanique des
+    # paragraphes et absence de position tranchée — signaux qu'aucun des 4
+    # scores existants ne capture directement (voir human_presence_service.py,
+    # issu du guide de rédaction éditorial checklist qualité 90+). Poids
+    # repris sur SEO/EEAT/Lisibilité/Originalité pour garder un total à 100%.
     if seo is not None:
         present.append(seo)
-        weights.append(35)
+        weights.append(30)
     if eeat is not None:
         present.append(eeat)
-        weights.append(25)
+        weights.append(20)
     if readability is not None:
         present.append(readability)
-        weights.append(20)
+        weights.append(17)
     if originality is not None:
         present.append(originality)
-        weights.append(20)
+        weights.append(18)
+    if human_presence is not None:
+        present.append(human_presence)
+        weights.append(15)
 
     total_weight = sum(weights)
     global_score: float | None = None
@@ -144,6 +156,7 @@ def compute_global_score(
             if eeat is None: missing.append("EEAT")
             if readability is None: missing.append("Lisibilité")
             if originality is None: missing.append("Originalité")
+            if human_presence is None: missing.append("Présence humaine")
             incomplete_reason = f"Scores manquants : {', '.join(missing)}"
 
     return {
@@ -156,8 +169,9 @@ def compute_global_score(
         "originality_contrib": originality,
         "geo_contrib": geo,
         "quality_contrib": quality,
+        "human_presence_contrib": human_presence,
         "content_format": get_format(article) if article is not None else None,
-        "scoring_note": "Scoring v2.1 — SEO×35% · EEAT×25% · Lisibilité×20% · Originalité×20%. Volume non noté.",
+        "scoring_note": "Scoring v2.2 — SEO×30% · EEAT×20% · Lisibilité×17% · Originalité×18% · Présence humaine×15%. Volume non noté.",
     }
 
 
