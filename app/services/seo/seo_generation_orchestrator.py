@@ -276,6 +276,15 @@ class SEOGenerationOrchestrator:
                 serp_results=serp_sources,
                 language=getattr(self.project, "language", "fr") or "fr",
             )
+            if not human_insights.get("total_insights", 0):
+                from app.services.human_insights_lite_service import extract_human_insights_lite
+                human_insights = extract_human_insights_lite(
+                    keyword=final_keyword,
+                    serp_results=serp_sources,
+                    language=getattr(self.project, "language", "fr") or "fr",
+                )
+                if human_insights.get("total_insights", 0):
+                    self.tools_used.append("human_insights_lite")
             self.context["human_insights"] = human_insights
             self._step(
                 f"HumanInsights — {human_insights.get('total_insights', 0)} insights "
@@ -283,7 +292,42 @@ class SEOGenerationOrchestrator:
             )
         except Exception as exc:
             self._error("HumanInsights", str(exc))
-            self.context["human_insights"] = {}
+            try:
+                from app.services.human_insights_lite_service import extract_human_insights_lite
+                human_insights = extract_human_insights_lite(
+                    keyword=final_keyword,
+                    serp_results=research_brief.get("sources_consulted", []),
+                    language=getattr(self.project, "language", "fr") or "fr",
+                )
+                self.context["human_insights"] = human_insights
+                self.tools_used.append("human_insights_lite")
+                self._step(f"HumanInsightsLite — {human_insights.get('total_insights', 0)} insights")
+            except Exception as lite_exc:
+                self._error("HumanInsightsLite", str(lite_exc))
+                self.context["human_insights"] = {}
+
+        # 6d. ContentGap — manques éditoriaux détectés en croisant insights
+        # humains, angles concurrents et articles déjà publiés par le projet
+        try:
+            from app.services.seo.content_gap_service import identify_content_gaps
+            content_gaps = identify_content_gaps(
+                final_keyword,
+                final_title,
+                research_brief=research_brief,
+                human_insights=self.context.get("human_insights"),
+                db=self.db,
+                project_id=self.project_id,
+                exclude_article_id=existing_article_id,
+            )
+            self.context["content_gaps"] = content_gaps
+            self._save(article.id, "content_gaps", content_gaps)
+            self._step(
+                f"ContentGap — {content_gaps.get('total_gaps', 0)} manques détectés "
+                f"({content_gaps.get('status', 'unknown')})"
+            )
+        except Exception as exc:
+            self._error("ContentGap", str(exc))
+            self.context["content_gaps"] = {}
 
         # 7. KeywordBrief
         keyword_brief = build_keyword_brief_dict(
@@ -317,12 +361,17 @@ class SEOGenerationOrchestrator:
         self._step("EditorialAngle")
 
         # 9. ArticleOutline
+        from app.core.config import settings as app_settings
         outline = build_outline_dict(
             final_title, final_keyword, intent_analysis, research_brief,
-            keyword_brief, editorial_angle, article_type
+            keyword_brief, editorial_angle, article_type,
+            outline_planner_mode=app_settings.OUTLINE_PLANNER_MODE,
+            db=self.db,
+            project_id=self.project_id,
         )
         self.context["outline"] = outline
-        self._step("ArticleOutline")
+        self.context["outline_planner_mode"] = app_settings.OUTLINE_PLANNER_MODE
+        self._step(f"ArticleOutline ({app_settings.OUTLINE_PLANNER_MODE})")
 
         # 9b. CannibalizationCheckOutline (after plan)
         cannibalization_outline = check_cannibalization_dict(
@@ -503,6 +552,35 @@ class SEOGenerationOrchestrator:
             self.context["word_count_min"] = wc_min
             self.context["word_count_max"] = wc_max
 
+        # 14c. ProductionBrief — verrouille le brief consolidé du writer
+        try:
+            from app.services.production_brief_service import build_production_brief
+            production_brief = build_production_brief(
+                keyword=final_keyword,
+                title=final_title,
+                category_name=category_name,
+                project_context=self.context.get("project_context"),
+                intent_analysis=intent_analysis,
+                keyword_brief=keyword_brief,
+                research_brief=research_brief,
+                evidence_pack=self.context.get("evidence_pack"),
+                editorial_angle=editorial_angle,
+                outline=outline,
+                human_insights=self.context.get("human_insights"),
+                content_gaps=self.context.get("content_gaps"),
+                word_count_range=self.context.get("word_count_range"),
+                audience=audience,
+                tone=self.context.get("tone"),
+                reader_level=self.context.get("reader_level"),
+                writing_style=self.context.get("writing_style"),
+            )
+            self.context["production_brief"] = production_brief
+            self._save(article.id, "production_brief", production_brief)
+            self._step("ProductionBrief")
+        except Exception as exc:
+            self._error("ProductionBrief", str(exc))
+            self.context["production_brief"] = None
+
         # Infer content_format from target_word_count if not already set
         if not article.content_format:
             from app.services.seo.format_expectations import infer_format
@@ -560,6 +638,14 @@ class SEOGenerationOrchestrator:
             except Exception:
                 pass
             return article
+
+        # 15b. HumanInsightsUsageGuard — vérifie que la matière humaine réelle
+        # a effectivement nourri le contenu (pas seulement été incluse dans le
+        # prompt). Non bloquant : avertit si le writer l'a ignorée.
+        try:
+            self._verify_human_insights_usage(draft.content)
+        except Exception as exc:
+            self._error("HumanInsightsUsageGuard", str(exc))
 
         sources_list = [
             s.get("snippet", "") or s.get("text", "") or str(s)
@@ -717,66 +803,25 @@ class SEOGenerationOrchestrator:
         except Exception as exc:
             self._error("FactCheckPass", str(exc))
 
-        # 20c. EditorialReview (LLM-based)
+        # 20c. QualityGate (LLM-based) — UN SEUL juge consolide la revue
+        # éditoriale, la rétention, l'engagement et la notation qualité en une
+        # seule décision (quality_grade). Évite les avis contradictoires de
+        # juges séparés évaluant le même texte.
         try:
             if self.agent_router is not None:
-                from app.services.agents.agent_services import editorial_review
-                review_data = editorial_review(draft.content or "", draft.title, draft.keyword, db=self.db, project_id=self.project_id)
-                editorial_quality_report = self._get(article.id, "editorial_quality_report") or {}
-                editorial_quality_report["llm_review"] = review_data
-                self._save(article.id, "editorial_quality_report", editorial_quality_report)
-                self._step("EditorialReview")
-        except Exception as exc:
-            self._error("EditorialReview", str(exc))
-
-        # 20c-2. ReaderRetentionCheck (LLM-based)
-        try:
-            if self.agent_router is not None:
-                from app.services.agents.agent_services import check_reader_retention
-                retention = check_reader_retention(draft.content or "", draft.title, db=self.db, project_id=self.project_id)
-                self._save(article.id, "reader_retention_report", retention)
-                self._step("ReaderRetentionCheck")
-        except Exception as exc:
-            self._error("ReaderRetentionCheck", str(exc))
-
-        # 20c-3. EngagementReview (LLM-based)
-        try:
-            if self.agent_router is not None:
-                from app.services.agents.agent_services import improve_engagement
-                engagement = improve_engagement(draft.content or "", draft.title, db=self.db, project_id=self.project_id)
-                self._save(article.id, "engagement_report", engagement)
-                self._step("EngagementReview")
-        except Exception as exc:
-            self._error("EngagementReview", str(exc))
-
-        # 20d. SEOOptimizerPass (LLM-based)
-        try:
-            if self.agent_router is not None:
-                from app.services.agents.agent_services import seo_optimize_content
-                seo_opt = seo_optimize_content(
+                from app.services.agents.agent_services import run_quality_gate
+                gate = run_quality_gate(
                     draft.content or "", draft.title, draft.keyword,
-                    meta_title=draft.meta_title, meta_description=draft.meta_description,
-                    db=self.db,
-                    project_id=self.project_id,
+                    db=self.db, project_id=self.project_id,
                 )
-                seo_final_checklist = self._get(article.id, "seo_final_checklist") or {}
-                seo_final_checklist["llm_optimizations"] = seo_opt
-                self._save(article.id, "seo_final_checklist", seo_final_checklist)
-                self._step("SEOOptimizerPass")
-        except Exception as exc:
-            self._error("SEOOptimizerPass", str(exc))
-
-        # 20e. QualityRating (LLM-based)
-        try:
-            if self.agent_router is not None:
-                from app.services.agents.agent_services import quality_rate_article
-                quality = quality_rate_article(draft.content or "", draft.title, draft.keyword, db=self.db, project_id=self.project_id)
                 editorial_quality_report = self._get(article.id, "editorial_quality_report") or {}
-                editorial_quality_report["llm_quality_rating"] = quality
+                editorial_quality_report["llm_review"] = gate
+                if gate.get("quality_grade") and gate["quality_grade"] != "unknown":
+                    editorial_quality_report["quality_grade"] = gate["quality_grade"]
                 self._save(article.id, "editorial_quality_report", editorial_quality_report)
-                self._step("QualityRatingPass")
+                self._step(f"QualityGate — grade {gate.get('quality_grade', 'unknown')}")
         except Exception as exc:
-            self._error("QualityRatingPass", str(exc))
+            self._error("QualityGate", str(exc))
 
         # 23. GenerationReport
         self._finalize_report(article, draft, category_name, intent_analysis, research_brief, keyword_brief, outline, faq_plan, callout_plan, image_plan_result)
@@ -832,6 +877,77 @@ class SEOGenerationOrchestrator:
         provider = self._get_agent_provider(agent_id)
         return provider.generate_text(prompt, **kwargs)
 
+    def _write_pass(self, prompt: str, agent_id: str, article, temperature: float, step: str) -> str:
+        """Une passe d'écriture/révision via le provider d'un agent donné.
+        Retourne le texte brut ; lève GenerationFailedError si le provider
+        est mock ou ne produit rien (chaque passe est bloquante)."""
+        if self.agent_router is not None:
+            from app.services.agents.agent_router import call_agent
+            content, result = call_agent(
+                agent_id,
+                "generate_text",
+                prompt,
+                db=self.db,
+                project_id=self.project_id,
+                article_id=article.id,
+                temperature=temperature,
+            )
+            if result.status != "success":
+                raise GenerationFailedError(result.error or f"L'agent {agent_id} a échoué.")
+        else:
+            provider = self._get_agent_provider(agent_id, self.llm)
+            if provider.is_mock:
+                raise GenerationFailedError(f"Provider non configuré pour l'agent {agent_id}.")
+            content = provider.generate_text(prompt, temperature=temperature)
+        if not content or not content.strip():
+            raise GenerationFailedError(f"L'agent {agent_id} n'a pas retourné de contenu exploitable.")
+        self._step(step)
+        return content
+
+    def _verify_human_insights_usage(self, content: str) -> None:
+        """Garde-fou non bloquant : si des insights humains réels étaient
+        disponibles avant la rédaction, on vérifie que le contenu généré les
+        réutilise effectivement (source URL ou fragment textuel). Un article
+        qui ignore totalement cette matière retombe dans du générique."""
+        insights = self.context.get("human_insights") or {}
+        if not insights or insights.get("total_insights", 0) == 0:
+            return
+
+        content_lower = (content or "").lower()
+        sourced = [
+            i for i in insights.get("all_insights", [])
+            if isinstance(i, dict) and i.get("source_url")
+        ]
+        source_urls = {str(i.get("source_url", "")).lower() for i in sourced}
+        questions = insights.get("questions") or []
+        pain_points = insights.get("pain_points") or []
+
+        def _fragment_used(fragment: str) -> bool:
+            fragment = fragment.strip().lower()
+            if len(fragment) < 20:
+                return False
+            for token in fragment.split()[:5]:
+                if token not in content_lower:
+                    return False
+            return True
+
+        used_url = any(url in content_lower for url in source_urls if url)
+        used_text = any(_fragment_used(q) for q in questions[:15]) or any(
+            _fragment_used(p) for p in pain_points[:15]
+        )
+
+        if not used_url and not used_text:
+            self._log(
+                f"{len(insights.get('all_insights', []))} insights humains étaient disponibles "
+                f"mais aucun n'a été intégré au contenu (ni URL source, ni reformulation visible).",
+                level="warning",
+                step="HumanInsightsUsageGuard",
+            )
+            self.limitations.append("human_insights_ignored: insights humains non réutilisés dans le contenu")
+        else:
+            self._step("HumanInsightsUsageGuard")
+            self.tools_used.append("human_insights_usage")
+
     def _generate_content(self, draft: _DraftArticle, outline: dict, keyword_brief: dict, include_callouts: bool | None, include_faq: bool | None = None):
         article = draft.article
         self._raise_if_cancelled(article)
@@ -849,21 +965,68 @@ class SEOGenerationOrchestrator:
 
         outline_sections = outline.get("sections", [])
 
-        prompt_parts = [
-            f"Rédige un article de blog SEO en français, complet et utile.",
-            f"Titre : {draft.title}",
-            f"Mot-clé principal : {draft.keyword}",
-            f"Mot(s)-clé(s) secondaire(s) : {', '.join(keyword_brief.get('secondary_keywords', []))}",
-            f"Intention de recherche : {article.search_intent or 'informational'}",
-            f"Angle éditorial : {draft.angle or 'Informatif et pratique'}",
-            f"Audience : {draft.audience or 'Grand public'}",
-        ]
+        production_brief = self.context.get("production_brief")
+        if production_brief:
+            from app.services.production_brief_service import production_brief_to_text
+            brief_block = production_brief_to_text(production_brief)
+            if brief_block:
+                prompt_parts = [brief_block, "", "Règles d'écriture :", ""]
+                prompt_parts += [
+                    f"Rédige un article de blog SEO en français, complet et utile.",
+                    f"Titre : {draft.title}",
+                    f"Mot-clé principal : {draft.keyword}",
+                    f"Mot(s)-clé(s) secondaire(s) : {', '.join(keyword_brief.get('secondary_keywords', []))}",
+                    f"Intention de recherche : {article.search_intent or 'informational'}",
+                    f"Angle éditorial : {draft.angle or 'Informatif et pratique'}",
+                    f"Audience : {draft.audience or 'Grand public'}",
+                ]
+            else:
+                prompt_parts = [
+                    f"Rédige un article de blog SEO en français, complet et utile.",
+                    f"Titre : {draft.title}",
+                    f"Mot-clé principal : {draft.keyword}",
+                    f"Mot(s)-clé(s) secondaire(s) : {', '.join(keyword_brief.get('secondary_keywords', []))}",
+                    f"Intention de recherche : {article.search_intent or 'informational'}",
+                    f"Angle éditorial : {draft.angle or 'Informatif et pratique'}",
+                    f"Audience : {draft.audience or 'Grand public'}",
+                ]
+        else:
+            prompt_parts = [
+                f"Rédige un article de blog SEO en français, complet et utile.",
+                f"Titre : {draft.title}",
+                f"Mot-clé principal : {draft.keyword}",
+                f"Mot(s)-clé(s) secondaire(s) : {', '.join(keyword_brief.get('secondary_keywords', []))}",
+                f"Intention de recherche : {article.search_intent or 'informational'}",
+                f"Angle éditorial : {draft.angle or 'Informatif et pratique'}",
+                f"Audience : {draft.audience or 'Grand public'}",
+            ]
         if self.context.get("tone"):
             prompt_parts.append(f"Ton éditorial : {self.context['tone']}")
         if self.context.get("reader_level"):
             prompt_parts.append(f"Niveau du lecteur : {self.context['reader_level']}")
         if self.context.get("writing_style"):
             prompt_parts.append(f"Style d'écriture : {self.context['writing_style']}")
+        project_context = self.context.get("project_context") or {}
+        used_angles = project_context.get("used_angles") or []
+        used_examples = project_context.get("used_examples") or []
+        if used_angles:
+            prompt_parts.append(
+                "Angles éditoriaux déjà utilisés sur ce projet (À ÉVITER — trouve un angle différent) : "
+                + "; ".join(used_angles[:8])
+            )
+        if used_examples:
+            prompt_parts.append(
+                "Exemples déjà exploités sur ce projet (À NE PAS RÉPÉTER) : "
+                + "; ".join(used_examples[:6])
+            )
+        style_adaptation = self.context.get("style_adaptation") or {}
+        style_guide = style_adaptation.get("style_guide")
+        if style_guide and isinstance(style_guide, dict):
+            guide_rules = style_guide.get("rules") or []
+            if guide_rules:
+                prompt_parts.append("Guide de style (règles à respecter) :")
+                prompt_parts.extend(f"- {rule}" for rule in guide_rules)
+                prompt_parts.append("")
         prompt_parts += [
             "",
             "Règles strictes :",
@@ -1065,24 +1228,44 @@ class SEOGenerationOrchestrator:
             )
 
         content_prompt = "\n".join(prompt_parts)
-        if self.agent_router is not None:
-            from app.services.agents.agent_router import call_agent
-            content, result = call_agent(
-                "writer",
-                "generate_text",
-                content_prompt,
-                db=self.db,
-                project_id=self.project_id,
-                article_id=article.id,
-                temperature=0.7,
-            )
-            if result.status != "success":
-                raise GenerationFailedError(result.error or "La rédaction par agent a échoué.")
-        else:
-            content = writer_llm.generate_text(content_prompt, temperature=0.7)
 
-        if not content or not content.strip():
-            raise GenerationFailedError("Le provider IA n'a pas retourné de contenu exploitable pour la rédaction.")
+        # ── Pass 1 — Foundation (temp 0.7) ─────────────────────────────────
+        # Rédige l'article complet depuis le brief. Temperatura haute pour
+        # la générosité et la richesse de la matière première.
+        content = self._write_pass(content_prompt, "writer", article, 0.7, "WritingPass_Foundation")
+
+        self._raise_if_cancelled(article)
+
+        # ── Pass 2 — Style (temp 0.5) ──────────────────────────────────────
+        # Passe de cohérence stylistique : voix, rythme, transitions, marqueurs
+        # humains. Plus froide : elle affine, elle n'invente pas de nouveau fond.
+        style_prompt = (
+            "Affine le style de cet article de blog : corrige les formulations "
+            "robotiques, varie les longueurs de phrases, renforce la voix humaine, "
+            "rends les transitions naturelles. Ne change ni le plan, ni les faits, "
+            "ni les données, ni les liens. Règle absolue : pas de tiret cadratin (—), "
+            "remplace-le par une virgule, un point-virgule ou une reformulation.\n\n"
+            "Retourne UNIQUEMENT le HTML complet amélioré, sans explication, sans backticks.\n\n"
+            f"Contenu :\n{content}"
+        )
+        content = self._write_pass(style_prompt, "writer", article, 0.5, "WritingPass_Style")
+
+        self._raise_if_cancelled(article)
+
+        # ── Pass 3 — QualityGate (temp 0.3) ────────────────────────────────
+        # Passe finale froide : suppression des redondances, des phrases creuses,
+        # vérification de la densité du mot-clé et de la conformité aux règles.
+        gate_prompt = (
+            "Passe de contrôle qualité finale sur cet article. Corrige : les phrases "
+            "redondantes ou creuses, les répétitions de mots rapprochées, les ouvertures "
+            "génériques, les superlatifs vides, le mot-clé sur-optimisé (densité max 2%). "
+            "Ne change ni le plan, ni les faits, ni les données, ni les liens. "
+            "Règle absolue : pas de tiret cadratin (—), remplace-le par une virgule, "
+            "un point-virgule ou une reformulation.\n\n"
+            "Retourne UNIQUEMENT le HTML complet nettoyé, sans explication, sans backticks.\n\n"
+            f"Contenu :\n{content}"
+        )
+        content = self._write_pass(gate_prompt, "writer", article, 0.3, "WritingPass_QualityGate")
 
         self._raise_if_cancelled(article)
 
@@ -1143,6 +1326,15 @@ class SEOGenerationOrchestrator:
                 f"bloquants : {review_report.get('blocking_triggered') or 'aucun'})",
                 level="warning", step="article_review",
             )
+
+        from app.services.seo.article_tier_service import compute_volume_tiers
+        volume_tiers = compute_volume_tiers(content)
+        self._save(article.id, "volume_tiers", volume_tiers)
+        self._log(
+            f"Volumétrie : tier {volume_tiers['article_tier']} ({volume_tiers['article_words']} mots), "
+            f"{sum(1 for s in volume_tiers['sections'] if s['section_tier'] == 'deep')} sections approfondies",
+            level="info", step="volume_tiers",
+        )
 
         self._ensure_slug(article, draft.title, draft.keyword)
 
@@ -1637,7 +1829,7 @@ class SEOGenerationOrchestrator:
                 tools_not_configured=self.tools_not_configured,
                 adapters_status=adapters_status,
                 word_count=draft.word_count,
-                reading_time_minutes=draft.reading_time_minutes or 1,
+                reading_time_minutes=draft.reading_time_minutes,
                 steps_completed=self.steps_completed,
                 errors=self.errors,
                 limitations=self.limitations,

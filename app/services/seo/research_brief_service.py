@@ -26,7 +26,7 @@ def build_research_brief(
         ]
         return brief
 
-    results = serp_adapter.search(keyword, limit=5)
+    results = serp_adapter.search(keyword, limit=12)
     if not results:
         brief.research_status = "not_available"
         brief.limitations = ["SERP returned no results"]
@@ -78,7 +78,7 @@ def build_research_brief(
         [lk.get("url", "") for lk in external_links_discovered[:10] if lk.get("url")]
     )
 
-    brief.limitations.append("SERP research used limited results (5 URLs max)")
+    brief.limitations.append("SERP research used limited results (12 URLs max)")
     return brief
 
 

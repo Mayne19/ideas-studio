@@ -54,6 +54,7 @@ def build_image_plan(
         if not isinstance(section, dict):
             continue
         decision = section.get("decision")
+        section_heading = section.get("heading") or ""
 
         if decision == "brand":
             brand_domain = (section.get("brand_domain") or "").strip().lower()
@@ -78,6 +79,7 @@ def build_image_plan(
             if r.get("source_name") and _is_competitor_domain(r["source_name"], competitor_domains):
                 continue
             seen_urls.add(r["image_url"])
+            r["section_heading"] = section_heading
             plan.images.append(r)
             sources.append(r)
             break
@@ -121,7 +123,7 @@ def build_image_plan_dict(
     return {"image_plan": asdict(plan), "image_sources": sources}
 
 
-_H2_RE = re.compile(r"(</h2>)", re.IGNORECASE)
+_H2_RE = re.compile(r"<h2[^>]*>(.*?)</h2>", re.IGNORECASE | re.DOTALL)
 
 
 def _image_html(source: dict) -> str:
@@ -136,11 +138,17 @@ def _image_html(source: dict) -> str:
     return f'<img src="{source.get("image_url")}" alt="{alt}">'
 
 
+def _normalize_heading(heading: str) -> str:
+    return re.sub(r"<[^>]+>", "", heading).strip().lower().rstrip("?")
+
+
 def insert_images_in_content(content: str, image_sources: list[dict]) -> str:
-    """Insère une image après chaque section H2, dans l'ordre, jusqu'à
-    épuisement des images disponibles. Accepte les images libres de droits
-    Unsplash (free_with_attribution) et les images de marque sourcées sur un
-    domaine officiel (official_source, cf. plan_section_images)."""
+    """Insère chaque image à la fin de la section H2 à laquelle elle a été
+    planifiée (appariement par titre de section). Une image sans correspondance
+    de section est insérée après la première section sans image. Accepte les
+    images libres de droits Unsplash (free_with_attribution) et les images de
+    marque sourcées sur un domaine officiel (official_source, cf.
+    plan_section_images)."""
     usable = [
         s for s in image_sources
         if s.get("image_url") and s.get("usage_rights_status") in ("free_with_attribution", "official_source")
@@ -148,12 +156,37 @@ def insert_images_in_content(content: str, image_sources: list[dict]) -> str:
     if not usable or not content:
         return content
 
-    remaining = list(usable)
+    pending = list(usable)
+
+    def _match_image(html_heading: str) -> dict | None:
+        target = _normalize_heading(html_heading)
+        for idx, source in enumerate(pending):
+            planned = _normalize_heading(source.get("section_heading") or "")
+            if planned and (planned in target or target in planned):
+                return pending.pop(idx)
+        return None
+
+    inserted = False
 
     def _replace(match: re.Match) -> str:
-        if not remaining:
-            return match.group(0)
-        source = remaining.pop(0)
-        return match.group(0) + _image_html(source)
+        nonlocal inserted
+        section = match.group(0)
+        source = _match_image(match.group(1))
+        if source is None:
+            return section
+        return section + _image_html(source)
 
-    return _H2_RE.sub(_replace, content)
+    content = _H2_RE.sub(_replace, content)
+    inserted = True
+
+    # Images restantes (section planifiée absente du contenu final) : réparties
+    # après les sections sans image, dans l'ordre.
+    if pending:
+        def _fill(match: re.Match) -> str:
+            if not pending:
+                return match.group(0)
+            return match.group(0) + _image_html(pending.pop(0))
+
+        content = _H2_RE.sub(_fill, content)
+
+    return content

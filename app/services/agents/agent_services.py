@@ -108,6 +108,30 @@ def extract_claims(
         return {"status": "error", "message": str(exc), "claims": []}
 
 
+def _format_source_for_evidence(source: dict) -> str:
+    """Format a source for the evidence pack builder prompt, embedding the
+    quality computed by source_quality_service.validate_sources."""
+    url = source.get("url", "")
+    label = source.get("title") or source.get("snippet") or url
+    quality_check = source.get("quality_check") or {}
+    if quality_check.get("skipped"):
+        quality = "unknown"
+    else:
+        quality = quality_check.get("quality") or "unknown"
+    return f"- {url} : {label} (qualité: {quality})"
+
+
+def _quality_for_url(url: str, sources: list[dict]) -> str:
+    """Look up the quality_check quality computed for a given source URL."""
+    for source in sources:
+        if source.get("url") == url:
+            quality_check = source.get("quality_check") or {}
+            if quality_check.get("skipped"):
+                return "unknown"
+            return quality_check.get("quality") or "unknown"
+    return "unknown"
+
+
 def build_evidence_pack(
     keyword: str,
     title: str,
@@ -137,21 +161,29 @@ def build_evidence_pack(
         return {"status": "skipped", "message": "Evidence pack builder not configured (mock provider)", "evidence_items": []}
 
     sources_text = "\n".join(
-        f"- {s.get('url', '')} : {s.get('title', s.get('snippet', ''))}" for s in external_links[:10]
+        _format_source_for_evidence(s) for s in external_links[:12]
     )
     prompt = (
         "À partir de ces sources trouvées pour préparer un article, sélectionne les faits et "
-        "données les plus fiables et pertinents à citer, avec leur source d'origine. Ignore les "
-        "sources peu fiables ou hors-sujet.\n\n"
+        "données les plus fiables et pertinents à citer, avec leur source d'origine. Chaque source "
+        "est annotée avec sa qualité (high/medium/low/unknown : accessibilité et longueur du contenu). "
+        "Privilégie systématiquement les sources de qualité 'high', et ignore les sources de qualité "
+        "'low' ainsi que les sources hors-sujet. Un fait doit toujours citer une source de qualité "
+        "élevée ou moyenne.\n\n"
         f"Titre : {title}\n"
         f"Mot-clé : {keyword}\n\n"
         f"Sources disponibles :\n{sources_text}\n\n"
         "Réponds UNIQUEMENT avec un JSON valide :\n"
-        '{"evidence_items": [{"fact": "...", "source_url": "...", "reliability": "high|medium|low"}]}'
+        '{"evidence_items": [{"fact": "...", "source_url": "...", "reliability": "high|medium|low", '
+        '"source_quality": "high|medium|low|unknown"}]}'
     )
     try:
         result = provider.generate_json(prompt, schema_hint="json evidence pack object")
         if isinstance(result, dict) and "evidence_items" in result:
+            items = result.get("evidence_items") or []
+            for item in items:
+                if "source_quality" not in item:
+                    item["source_quality"] = _quality_for_url(item.get("source_url", ""), external_links)
             return {"status": "success", **result}
         return {"status": "error", "message": "Invalid response format", "evidence_items": []}
     except Exception as exc:
@@ -174,19 +206,24 @@ def adapt_editorial_style(
     esprit (un style "professionnel informationnel" reste professionnel et
     informationnel, mais le niveau de détail/vocabulaire s'ajuste au sujet).
     Repli sur les valeurs de base si aucun provider LLM n'est disponible :
-    contrairement au fact-checker, cet agent n'est jamais bloquant."""
+    contrairement au fact-checker, cet agent n'est jamais bloquant.
+    Le repli déterministe s'appuie sur 3 templates de style complets
+    (accessible, professionnel, technique) avec auto-détection du template
+    le plus proche du style de base du projet."""
     base = {"tone": base_tone, "reader_level": base_reader_level, "writing_style": base_writing_style}
     if not any(base.values()):
         return {"status": "skipped", "message": "Aucun style de base défini sur le projet.", **base}
+
+    fallback_guide = build_style_guide_fallback(base_tone, base_reader_level, base_writing_style, title, keyword, angle)
 
     router = _get_router(db)
     try:
         provider = router.get_provider("style_guide_builder", project_id=project_id)
     except Exception as exc:
         logger.warning("Style adapter provider resolution failed: %s", exc)
-        return {"status": "skipped", "message": f"Provider indisponible : {exc}", **base}
+        return {"status": "skipped", "message": f"Provider indisponible : {exc}", **fallback_guide}
     if provider.is_mock:
-        return {"status": "skipped", "message": "Style adapter not configured (mock provider)", **base}
+        return {"status": "skipped", "message": "Style adapter not configured (mock provider)", **fallback_guide}
 
     prompt = (
         "Tu ajustes une consigne éditoriale de base au sujet précis d'un article, sans jamais "
@@ -209,11 +246,114 @@ def adapt_editorial_style(
     try:
         result = provider.generate_json(prompt, schema_hint="json style adaptation object")
         if isinstance(result, dict) and result.get("tone") and result.get("reader_level") and result.get("writing_style"):
-            return {"status": "success", **result}
-        return {"status": "error", "message": "Invalid response format", **base}
+            result["status"] = "success"
+            result["style_guide"] = fallback_guide.get("style_guide")
+            result["template_used"] = fallback_guide.get("template_used")
+            return result
+        return {"status": "error", "message": "Invalid response format", **fallback_guide}
     except Exception as exc:
         logger.warning("Style adapter agent failed: %s", exc)
-        return {"status": "error", "message": str(exc), **base}
+        return {"status": "error", "message": str(exc), **fallback_guide}
+
+
+STYLE_GUIDE_TEMPLATES: dict[str, dict] = {
+    "accessible": {
+        "label": "Accessible & conversationnel",
+        "rules": [
+            "Phrases courtes (10-20 mots), un seul verbe fort par phrase",
+            "Vocabulaire courant, chaque terme technique est défini dès sa première occurrence",
+            "Tutoiement ou 'vous' chaleureux, jamais de jargon non expliqué",
+            "Analogies et exemples concrets tirés de la vie courante",
+            "Métaphores visuelles simples pour les concepts abstraits",
+            "Intro en 2-3 phrases qui promet un bénéfice concret au lecteur",
+        ],
+    },
+    "professionnel": {
+        "label": "Professionnel & informationnel",
+        "rules": [
+            "Phrases de 15-30 mots, rythme soutenu mais clair",
+            "Vocabulaire précis du domaine sans excès de jargon",
+            "Structure argumentative : fait, conséquence, recommandation",
+            "Chiffres, exemples et cas réels pour crédibiliser chaque affirmation",
+            "Ton neutre et confiant, position tranchée argumentée",
+            "Transitions logiques implicites, pas de remplissage",
+        ],
+    },
+    "technique": {
+        "label": "Technique & expert",
+        "rules": [
+            "Phrases de 20-35 mots, dense et précise, sans approximation",
+            "Terminologie exacte du domaine, définie en note si nécessaire",
+            "Détails d'implémentation, benchmarks, données chiffrées sourcées",
+            "Hiérarchie claire : concept → mécanisme → application → limites",
+            "Aucune généralité : chaque affirmation est étayée",
+            "Précision avant lisibilité, mais jamais de phrases impraticables",
+        ],
+    },
+}
+
+_STYLE_TEMPLATE_KEYWORDS = {
+    "accessible": [
+        "accessible", "conversationnel", "grand public", "simple", "débutant",
+        "débutants", "vulgarisé", "vulgarisée", "familier", "grands débutants",
+        "pédagogique", "pédagogie",
+    ],
+    "professionnel": [
+        "professionnel", "professionnelle", "informationnel", "informationnelle",
+        "business", "entreprise", "corporate", "neutre", "sérieux", "b2b",
+        "market", "marketing", "journalistique",
+    ],
+    "technique": [
+        "technique", "expert", "expertise", "avancé", "avancée", "spécialisé",
+        "spécialisée", "technicité", "code", "dev", "ingénieur", "scientifique",
+        "deep", "geek", "cac40",
+    ],
+}
+
+
+def _detect_style_template(base_tone: str | None, base_writing_style: str | None, base_reader_level: str | None) -> str:
+    """Auto-détection du template de style le plus proche du style de base."""
+    haystack = " ".join(
+        w.lower() for w in (base_tone or "", base_writing_style or "", base_reader_level or "") if w
+    )
+    if not haystack:
+        return "professionnel"
+    best_template = "professionnel"
+    best_score = 0
+    for template, keywords in _STYLE_TEMPLATE_KEYWORDS.items():
+        score = sum(1 for kw in keywords if kw in haystack)
+        if score > best_score:
+            best_score = score
+            best_template = template
+    return best_template
+
+
+def build_style_guide_fallback(
+    base_tone: str | None,
+    base_reader_level: str | None,
+    base_writing_style: str | None,
+    title: str,
+    keyword: str,
+    angle: str | None = None,
+) -> dict[str, Any]:
+    """Repli déterministe : choisit le template de style (3 disponibles) le
+    plus proche du style de base du projet et produit un guide de style
+    actionnable injectable dans le prompt du writer. Toujours disponible,
+    sans dépendance LLM."""
+    template = _detect_style_template(base_tone, base_writing_style, base_reader_level)
+    guide = STYLE_GUIDE_TEMPLATES[template]
+    return {
+        "status": "fallback",
+        "tone": base_tone or guide["label"],
+        "reader_level": base_reader_level or "",
+        "writing_style": base_writing_style or guide["label"],
+        "template_used": template,
+        "style_guide": {
+            "label": guide["label"],
+            "rules": guide["rules"],
+            "subject": {"title": title, "keyword": keyword, "angle": angle},
+        },
+    }
 
 
 def seo_optimize_content(
@@ -343,6 +483,56 @@ def quality_rate_article(
         return {"status": "error", "message": str(exc), "dimensions": {}, "overall_score": None}
 
 
+def run_quality_gate(
+    content: str,
+    title: str,
+    keyword: str | None = None,
+    db=None,
+    project_id: str | None = None,
+) -> dict[str, Any]:
+    """Juge qualité UNIQUE : un seul appel LLM consolide la revue éditoriale,
+    la rétention lecteur, l'engagement et la notation qualité en une seule
+    décision (quality_grade). Remplace la multiplication de juges séparés qui
+    évaluaient le même texte avec des prompts différents et produisaient des
+    avis contradictoires. Repli déterministe si le provider est indisponible."""
+    router = _get_router(db)
+    provider = router.get_provider("quality_gate", project_id=project_id)
+    if provider.is_mock:
+        return {
+            "status": "skipped",
+            "message": "Quality gate not configured (mock provider)",
+            "quality_grade": "unknown",
+            "decision": "skip",
+        }
+
+    prompt = (
+        "Tu es le juge qualité unique d'un article de blog. Tu rends UNE seule "
+        "décision consolidée en couvrant : structure et clarté, grammaire et style, "
+        "accroche et engagement, rétention du lecteur, complétude par rapport au "
+        "mot-clé, originalité, et crédibilité éditoriale.\n\n"
+        f"Titre : {title}\n"
+        f"Mot-clé : {keyword or 'N/A'}\n\n"
+        f"Contenu :\n{content[:6000]}\n\n"
+        "Réponds UNIQUEMENT avec un JSON valide :\n"
+        '{"quality_grade": "A|B|C|D", '
+        '"decision": "pass|minor_fixes|rewrite", '
+        '"score": 0.0-1.0, '
+        '"strengths": ["..."], "weaknesses": ["..."], '
+        '"blocking_issues": ["..."], '
+        '"summary": "..."}\n'
+        "Grille : A = prêt à publier (≥0.85), B = corrections mineures (0.70-0.84), "
+        "C = révision nécessaire (0.55-0.69), D = réécriture (≤0.54)."
+    )
+    try:
+        result = provider.generate_json(prompt, schema_hint="json quality gate object")
+        if isinstance(result, dict) and result.get("quality_grade"):
+            return {"status": "success", **result}
+        return {"status": "error", "message": "Invalid response format", "quality_grade": "unknown", "decision": "rewrite"}
+    except Exception as exc:
+        logger.warning("Quality gate agent failed: %s", exc)
+        return {"status": "error", "message": str(exc), "quality_grade": "unknown", "decision": "rewrite"}
+
+
 def check_reader_retention(
     content: str,
     title: str,
@@ -387,35 +577,106 @@ def improve_engagement(
     db=None,
     project_id: str | None = None,
 ) -> dict[str, Any]:
-    """Évalue et propose des améliorations d'accroche/engagement — ne modifie
-    jamais le contenu directement, propose des suggestions à appliquer."""
+    """Évalue et améliore l'accroche/engagement en réécrivant par section :
+    l'éditeur d'engagement reçoit chaque section (H2 + son contenu) et renvoie
+    une version réécrite de cette section avec une meilleure accroche, de
+    meilleures transitions et des fins de section qui retiennent l'attention.
+    Le contenu hors section (intro, blocs HTML divers) est conservé tel quel.
+    Ne retourne jamais de texte partiel : si une section n'est pas réécrite
+    correctement, l'original est conservé à la place."""
     router = _get_router(db)
     try:
         provider = router.get_provider("engagement_editor", project_id=project_id)
     except Exception as exc:
         logger.warning("Engagement editor provider resolution failed: %s", exc)
-        return {"status": "skipped", "message": f"Provider indisponible : {exc}", "suggestions": []}
+        return {"status": "skipped", "message": f"Provider indisponible : {exc}", "suggestions": [], "rewritten_sections": [], "content": content}
     if provider.is_mock:
-        return {"status": "skipped", "message": "Engagement editor not configured (mock provider)", "suggestions": []}
+        return {"status": "skipped", "message": "Engagement editor not configured (mock provider)", "suggestions": [], "rewritten_sections": [], "content": content}
 
-    prompt = (
-        "Évalue la capacité de cet article à capter et retenir l'attention du lecteur : accroche "
-        "d'introduction, transitions entre sections, appels à l'action, questions rhétoriques bien "
-        "placées. Propose des suggestions concrètes d'amélioration sans réécrire le texte.\n\n"
-        f"Titre : {title}\n\n"
-        f"Contenu :\n{content[:5000]}\n\n"
-        "Réponds UNIQUEMENT avec un JSON valide :\n"
-        '{"engagement_score": 0.0-1.0, "suggestions": [{"location": "...", "suggestion": "..."}], '
-        '"hook_quality": "strong|adequate|weak"}'
-    )
-    try:
-        result = provider.generate_json(prompt, schema_hint="json engagement object")
-        if isinstance(result, dict) and "suggestions" in result:
-            return {"status": "success", **result}
-        return {"status": "error", "message": "Invalid response format", "suggestions": []}
-    except Exception as exc:
-        logger.warning("Engagement editor agent failed: %s", exc)
-        return {"status": "error", "message": str(exc), "suggestions": []}
+    import re
+    section_pattern = re.compile(r"(<h2[^>]*>.*?</h2>)(.*?)(?=<h2[^>]*>|$)", re.IGNORECASE | re.DOTALL)
+    sections = list(section_pattern.finditer(content))
+    section_rewrites: dict[int, str] = {}
+    rewritten_meta: list[dict] = []
+
+    def _rewrite_section(match: "re.Match") -> str | None:
+        prompt = (
+            "Améliore l'accroche, les transitions et la fin de CETTE section d'article pour retenir "
+            "l'attention du lecteur. Réécris la section en conservant strictement le sens, les faits "
+            "et le vocabulaire spécifique. N'invente JAMAIS de chiffres, de citations, d'études ou de "
+            "liens. Garde les balises HTML identiques (h3, p, ul, ol, blockquote, table, strong, em). "
+            "Rends la section entière (titre H2 + contenu) en HTML valide.\n\n"
+            f"Titre de l'article : {title}\n\n"
+            f"Section à réécrire :\n{match.group(0)[:4000]}\n\n"
+            "Réponds UNIQUEMENT avec un JSON valide :\n"
+            '{"rewritten_section": "...HTML complet de la section...", '
+            '"improvements": "brève liste des améliorations apportées"}'
+        )
+        try:
+            result = provider.generate_json(prompt, schema_hint="json section rewrite object")
+            rewritten = result.get("rewritten_section") if isinstance(result, dict) else None
+            if isinstance(rewritten, str) and "<h2" in rewritten and len(rewritten) > len(match.group(0)) * 0.3:
+                return rewritten
+        except Exception as exc:
+            logger.warning("Engagement editor section rewrite failed: %s", exc)
+        return None
+
+    if not sections:
+        prompt = (
+            "Évalue la capacité de cet article à capter et retenir l'attention du lecteur : accroche "
+            "d'introduction, transitions entre paragraphes, appels à l'action, questions rhétoriques bien "
+            "placées. Rends une version réécrite du contenu avec une meilleure accroche, sans jamais "
+            "inventer de chiffres, de citations ou de faits.\n\n"
+            f"Titre : {title}\n\n"
+            f"Contenu :\n{content[:5000]}\n\n"
+            "Réponds UNIQUEMENT avec un JSON valide :\n"
+            '{"engagement_score": 0.0-1.0, "rewritten_content": "...HTML complet...", '
+            '"hook_quality": "strong|adequate|weak"}'
+        )
+        try:
+            result = provider.generate_json(prompt, schema_hint="json engagement object")
+            if isinstance(result, dict) and result.get("rewritten_content"):
+                return {
+                    "status": "success",
+                    "engagement_score": result.get("engagement_score"),
+                    "hook_quality": result.get("hook_quality"),
+                    "content": result["rewritten_content"],
+                    "rewritten_sections": [{"index": 0, "rewritten": True}],
+                    "rewritten_count": 1,
+                    "suggestions": ["Contenu intégral réécrit pour améliorer l'engagement"],
+                }
+            return {"status": "error", "message": "Invalid response format", "suggestions": [], "rewritten_sections": [], "content": content}
+        except Exception as exc:
+            logger.warning("Engagement editor agent failed: %s", exc)
+            return {"status": "error", "message": str(exc), "suggestions": [], "rewritten_sections": [], "content": content}
+
+    for index, match in enumerate(sections):
+        rewritten = _rewrite_section(match)
+        if rewritten:
+            section_rewrites[index] = rewritten
+        rewritten_meta.append({"index": index, "heading": match.group(1), "rewritten": bool(rewritten)})
+
+    if not section_rewrites:
+        return {"status": "error", "message": "No section rewritten", "suggestions": [], "rewritten_sections": rewritten_meta, "content": content}
+
+    parts = []
+    last_end = 0
+    for i, m in enumerate(sections):
+        parts.append(content[last_end:m.start()])
+        parts.append(section_rewrites.get(i, m.group(0)))
+        last_end = m.end()
+    parts.append(content[last_end:])
+    new_content = "".join(parts)
+
+    return {
+        "status": "success",
+        "engagement_score": None,
+        "hook_quality": None,
+        "content": new_content,
+        "rewritten_sections": rewritten_meta,
+        "rewritten_count": len(section_rewrites),
+        "suggestions": [f"{len(section_rewrites)} section(s) réécrite(s) pour améliorer l'engagement"],
+    }
 
 
 def extract_main_keyword(title: str, db=None, project_id: str | None = None) -> dict[str, Any]:

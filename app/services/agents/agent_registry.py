@@ -240,9 +240,22 @@ AGENTS: list[AgentDef] = [
         category=AgentCategory.strategy,
         phase="strategy",
         icon="clipboard",
-        implementation_ref="project_context_service",
+        implementation_ref="production_brief_service",
+        requires_llm=False,
         status=AgentStatus.active,
         output_json_field="production_brief_json",
+    ),
+    AgentDef(
+        agent_id="gap_identifier",
+        name="Identification des manques",
+        description="Croise insights humains, angles concurrents et contenu existant du projet pour détecter les manques éditoriaux",
+        category=AgentCategory.strategy,
+        phase="strategy",
+        requires_llm=False,
+        icon="layers",
+        implementation_ref="content_gap_service",
+        status=AgentStatus.heuristic,
+        output_json_field="content_gap_json",
     ),
     # ═══════════════════════════════════════════════════════════════════════
     # Phase 4 — Cost Estimation

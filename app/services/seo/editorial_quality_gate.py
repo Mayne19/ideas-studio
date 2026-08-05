@@ -101,6 +101,15 @@ def check_editorial_quality(content: str | None) -> EditorialQualityReport:
     total = max(1, len(checks))
     report.score = round((passed / total) * 100, 1)
 
+    if report.score >= 90:
+        report.quality_grade = "A"
+    elif report.score >= 75:
+        report.quality_grade = "B"
+    elif report.score >= 55:
+        report.quality_grade = "C"
+    else:
+        report.quality_grade = "D"
+
     if report.failed_checks:
         report.manual_review_needed = True
 

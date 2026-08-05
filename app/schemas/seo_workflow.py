@@ -27,6 +27,8 @@ class ProjectContext:
     draft_articles_count: int = 0
     recent_topics: list[str] = field(default_factory=list)
     known_keywords: list[str] = field(default_factory=list)
+    used_angles: list[str] = field(default_factory=list)
+    used_examples: list[str] = field(default_factory=list)
     editorial_notes: str | None = None
     target_audience: str | None = None
     pipeline_settings: dict | None = None
@@ -75,6 +77,8 @@ class IntentAnalysis:
     recommended_angle: str = ""
     first_block_goal: str = ""
     article_type: str = "evergreen_information"
+    intent_scores: dict = field(default_factory=dict)
+    commercial_intent_score: float = 0.0
 
 
 @dataclass
@@ -216,6 +220,7 @@ class EditorialQualityReport:
     recommendations: list[str] = field(default_factory=list)
     auto_fixes_applied: list[str] = field(default_factory=list)
     manual_review_needed: bool = False
+    quality_grade: str = ""
 
 
 @dataclass
@@ -269,7 +274,7 @@ class GenerationReport:
     tools_not_configured: list[str] = field(default_factory=list)
     adapters_status: dict = field(default_factory=dict)
     word_count: int = 0
-    reading_time_minutes: int = 0
+    reading_time_minutes: int | None = None
     steps_completed: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     limitations: list[str] = field(default_factory=list)

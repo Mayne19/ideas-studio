@@ -51,6 +51,8 @@ def build_project_context(db: Session, project_id: str) -> ProjectContext:
 
     recent_topics = []
     known_keywords = []
+    used_angles: list[str] = []
+    used_examples: list[str] = []
     for a in sorted(published, key=lambda x: x.published_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)[:20]:
         rev = revisions_by_article.get(a.id)
         if rev and rev.title:
@@ -62,6 +64,25 @@ def build_project_context(db: Session, project_id: str) -> ProjectContext:
         kw = primary_keyword_by_article.get(a.id)
         if kw and kw not in known_keywords:
             known_keywords.append(kw)
+
+    # Angles et exemples déjà utilisés sur le projet (depuis les artifacts) —
+    # évite de réutiliser un angle éditorial ou un exemple déjà exploité dans
+    # un article publié ou en cours (FIX 24).
+    for a in published + drafts:
+        from app.services.seo.artifacts import get_latest_artifact
+        angle = get_latest_artifact(db, a.id, "editorial_angle")
+        if isinstance(angle, dict):
+            main_angle = angle.get("main_angle")
+            if main_angle and main_angle not in used_angles:
+                used_angles.append(str(main_angle))
+            differentiation = angle.get("differentiation")
+            if differentiation and str(differentiation) not in used_angles:
+                used_angles.append(str(differentiation))
+        insights = get_latest_artifact(db, a.id, "human_insights")
+        if isinstance(insights, dict):
+            for ex in (insights.get("real_examples") or [])[:4]:
+                if isinstance(ex, str) and ex not in used_examples:
+                    used_examples.append(ex)
 
     pipeline = db.get(Pipeline, project_id)
     pipeline_settings = None
@@ -108,6 +129,8 @@ def build_project_context(db: Session, project_id: str) -> ProjectContext:
         draft_articles_count=len(drafts),
         recent_topics=recent_topics,
         known_keywords=known_keywords,
+        used_angles=used_angles[:20],
+        used_examples=used_examples[:20],
         editorial_notes=editorial_notes,
         target_audience=profile.audience if profile else None,
         pipeline_settings=pipeline_settings,

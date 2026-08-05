@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.core.utils import calculate_reading_time_minutes, calculate_word_count
 from app.schemas.seo_workflow import GenerationReport, asdict
 
 
@@ -41,6 +42,13 @@ def build_generation_report(
     cost_breakdown_json: list[dict] | None = None,
     cost_warnings: list[str] | None = None,
 ) -> GenerationReport:
+    # FIX 26 — métriques cohérentes : le temps de lecture est toujours dérivé
+    # du word_count réel, jamais pris tel quel depuis l'appelant (qui peut
+    # passer 0 ou une valeur orpheline). Un article vide (0 mot) a des
+    # métriques à None plutôt qu'un temps de lecture bidon de 1 minute.
+    word_count = max(int(word_count or 0), 0)
+    reading_time_minutes = calculate_reading_time_minutes(word_count) if word_count > 0 else None
+
     report = GenerationReport(
         provider=provider,
         model=model,

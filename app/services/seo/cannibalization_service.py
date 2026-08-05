@@ -104,13 +104,17 @@ def check_section_cannibalization(
     project_id: str,
     outline: dict,
     exclude_article_id: str | None = None,
-    similarity_threshold: float = 0.6,
+    similarity_threshold: float = 0.4,
 ) -> dict:
     """Compare les H2/H3 du plan proposé (outline) aux plans déjà publiés/en
     cours du projet — la vérification titre/mot-clé de check_cannibalization
     ne détecte pas deux articles différents qui traitent en réalité les mêmes
-    sous-sujets. Similarité = mots communs / mots du plus court des deux
-    headings normalisés (Jaccard simplifié, aucune dépendance externe)."""
+    sous-sujets. Similarité = combinaison de deux métriques complémentaires,
+    sans aucune dépendance externe :
+      - Jaccard (intersection / union) des ensembles de mots normalisés ;
+      - cosinus des fréquences de mots (pondère les répétitions).
+    Une paire est retenue si Jaccard ≥ seuil (défaut 0.4) ET cosinus ≥ 0.5,
+    pour réduire les faux positifs des titres courts partageant un mot banal."""
     from app.services.seo.artifacts import get_latest_artifacts_bulk
 
     proposed_headings = [
@@ -144,12 +148,27 @@ def check_section_cannibalization(
         ).all()
     }
 
-    def _similarity(a: str, b: str) -> float:
-        words_a, words_b = set(a.split()), set(b.split())
-        if not words_a or not words_b:
-            return 0.0
-        shorter = min(len(words_a), len(words_b))
-        return len(words_a & words_b) / shorter
+    def _token_counts(a: str) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for word in a.split():
+            counts[word] = counts.get(word, 0) + 1
+        return counts
+
+    def _similarity(a: str, b: str) -> tuple[float, float]:
+        """Retourne (jaccard, cosinus) sur les mots normalisés."""
+        counts_a, counts_b = _token_counts(a), _token_counts(b)
+        union = set(counts_a) | set(counts_b)
+        if not union:
+            return 0.0, 0.0
+        intersection_size = sum(min(counts_a.get(w, 0), counts_b.get(w, 0)) for w in union)
+        union_size = max(sum(counts_a.values()) + sum(counts_b.values()) - intersection_size, 1)
+        jaccard = intersection_size / union_size
+
+        dot = sum(counts_a.get(w, 0) * counts_b.get(w, 0) for w in union)
+        norm_a = sum(v * v for v in counts_a.values()) ** 0.5
+        norm_b = sum(v * v for v in counts_b.values()) ** 0.5
+        cosine = dot / (norm_a * norm_b) if norm_a and norm_b else 0.0
+        return jaccard, cosine
 
     overlaps: list[dict] = []
     for article_id, artifacts in outlines_by_article.items():
@@ -166,9 +185,14 @@ def check_section_cannibalization(
             for existing in existing_headings:
                 if not existing:
                     continue
-                score = _similarity(proposed, existing)
-                if score >= similarity_threshold:
-                    matched_pairs.append({"proposed": proposed, "existing": existing, "score": round(score, 2)})
+                jaccard, cosine = _similarity(proposed, existing)
+                if jaccard >= similarity_threshold and cosine >= 0.5:
+                    matched_pairs.append({
+                        "proposed": proposed,
+                        "existing": existing,
+                        "jaccard": round(jaccard, 2),
+                        "cosine": round(cosine, 2),
+                    })
         if matched_pairs:
             overlaps.append({
                 "article_id": article_id,

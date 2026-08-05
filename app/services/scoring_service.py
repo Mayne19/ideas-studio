@@ -33,6 +33,51 @@ def _latest_article_score(db: Session, article_id: str) -> ArticleScore | None:
 _UNSET = object()
 
 
+def compute_value_added_score(artifacts: dict) -> tuple[float, list[str]]:
+    """Score « valeur ajoutée » (v2.3) — heuristique 100% déterministe.
+
+    Mesure si l'article apporte plus que la simple paraphrase d'une source :
+    citations de sources validées, matière humaine réelle intégrée, angle
+    différenciant, liens externes et manques de contenu couverts.
+    """
+    flags: list[str] = []
+    score = 40.0  # socle : un article bien écrit apporte déjà de la valeur
+
+    brief = artifacts.get("production_brief") or {}
+    insights = artifacts.get("human_insights") or {}
+    angle = artifacts.get("editorial_angle") or {}
+    external_links = artifacts.get("external_links") or {}
+    gaps = artifacts.get("content_gaps") or {}
+
+    evidence_items = brief.get("evidence_items") or []
+    if evidence_items:
+        score += 15.0
+        flags.append("sources_validees_citees")
+
+    insights_total = insights.get("total_insights") or 0
+    if insights.get("questions") or insights.get("pain_points"):
+        score += 15.0
+        flags.append("matiere_humaine_integree")
+    elif insights_total:
+        score += 8.0
+        flags.append("insights_parsiellement_integres")
+
+    if angle.get("differentiation") or angle.get("main_angle"):
+        score += 10.0
+        flags.append("angle_differencie")
+
+    links = external_links.get("links") or external_links.get("items") or []
+    if links:
+        score += 10.0
+        flags.append("liens_externes_contextuels")
+
+    if gaps.get("suggestions") and gaps.get("status") == "gaps_found":
+        score += 10.0
+        flags.append("gaps_contenu_couverts")
+
+    return min(score, 100.0), flags
+
+
 def compute_global_score(
     db: Session, article_id: str, article=None,
     *, latest_score: "ArticleScore | None" = _UNSET, artifacts: dict | None = None,
@@ -57,7 +102,9 @@ def compute_global_score(
         artifacts = get_latest_artifacts(
             db, article_id,
             ["eeat_checklist", "readability_report", "originality_report", "geo_optimization",
-             "seo_final_checklist", "human_presence_report"],
+             "seo_final_checklist", "human_presence_report",
+             "production_brief", "human_insights", "editorial_angle",
+             "external_links", "content_gaps"],
         )
     eeat_json = artifacts.get("eeat_checklist")
     readability_json = artifacts.get("readability_report")
@@ -65,6 +112,7 @@ def compute_global_score(
     geo_json = artifacts.get("geo_optimization")
     seo_json = artifacts.get("seo_final_checklist")
     human_presence_json = artifacts.get("human_presence_report")
+    value_added, value_added_flags = compute_value_added_score(artifacts)
 
     # seo_score n'est jamais peuplé directement sur article_scores par un agent
     # dédié (contrairement à eeat/readability/geo) : il vient toujours de
@@ -98,27 +146,27 @@ def compute_global_score(
     present: list[float] = []
     weights: list[int] = []
 
-    # v2.2 — ajout Présence humaine (15%) : détecte spécifiquement les
-    # phrases génériques, tirets cadratins, régularité mécanique des
-    # paragraphes et absence de position tranchée — signaux qu'aucun des 4
-    # scores existants ne capture directement (voir human_presence_service.py,
-    # issu du guide de rédaction éditorial checklist qualité 90+). Poids
-    # repris sur SEO/EEAT/Lisibilité/Originalité pour garder un total à 100%.
+    # v2.3 — ajout Valeur ajoutée (10%) : mesure si l'article apporte plus
+    # qu'une paraphrase (sources validées, matière humaine réelle, angle
+    # différenciant, liens contextuels, gaps couverts). Poids repris
+    # proportionnellement sur les 5 composantes existantes pour garder 100%.
     if seo is not None:
         present.append(seo)
-        weights.append(30)
+        weights.append(27)
     if eeat is not None:
         present.append(eeat)
-        weights.append(20)
+        weights.append(18)
     if readability is not None:
         present.append(readability)
-        weights.append(17)
+        weights.append(15)
     if originality is not None:
         present.append(originality)
-        weights.append(18)
+        weights.append(16)
     if human_presence is not None:
         present.append(human_presence)
-        weights.append(15)
+        weights.append(14)
+    present.append(value_added)
+    weights.append(10)
 
     total_weight = sum(weights)
     global_score: float | None = None
@@ -148,7 +196,7 @@ def compute_global_score(
         if not incomplete_reason:
             incomplete_reason = "Originalité non vérifiée"
 
-    if len(present) < 2:
+    if len(present) < 3:
         global_score_valid = False
         if not incomplete_reason:
             missing = []
@@ -170,8 +218,10 @@ def compute_global_score(
         "geo_contrib": geo,
         "quality_contrib": quality,
         "human_presence_contrib": human_presence,
+        "value_added_contrib": value_added,
+        "value_added_flags": value_added_flags,
         "content_format": get_format(article) if article is not None else None,
-        "scoring_note": "Scoring v2.2 — SEO×30% · EEAT×20% · Lisibilité×17% · Originalité×18% · Présence humaine×15%. Volume non noté.",
+        "scoring_note": "Scoring v2.3 — SEO×27% · EEAT×18% · Lisibilité×15% · Originalité×16% · Présence humaine×14% · Valeur ajoutée×10%. Volume non noté.",
     }
 
 

@@ -142,7 +142,10 @@ def compute_originality_score(article: Any, project_articles: list[Any] | None =
     fmt_obj = get_expectations(article)
     fmt = get_format(article)
 
-    if not content or len(content.strip()) < 50:
+    text = strip_html(content)
+    word_count = len(text.split())
+
+    if not content or len(content.strip()) < 50 or word_count < 500:
         return {
             "score": 50,
             "confidence": "low",
@@ -150,12 +153,15 @@ def compute_originality_score(article: Any, project_articles: list[Any] | None =
             "content_format": fmt,
             "status": "unverified",
             "signals": {},
-            "flags": ["no_content"],
-            "explanation": "Contenu insuffisant pour évaluer l'originalité.",
-            "version": "2.1",
+            "flags": ["insufficient_content"] if word_count < 500 else ["no_content"],
+            "explanation": (
+                f"Contenu insuffisant pour évaluer l'originalité ({word_count} mots — "
+                "500 mots minimum requis pour une vérification fiable)."
+                if word_count < 500
+                else "Contenu insuffisant pour évaluer l'originalité."
+            ),
+            "version": "2.2",
         }
-
-    text = strip_html(content)
 
     sources: list[str] = []
     if isinstance(sources_json, dict):
@@ -221,7 +227,7 @@ def compute_originality_score(article: Any, project_articles: list[Any] | None =
         "signals": signals,
         "flags": flags,
         "explanation": f"Originalité {fmt} : " + "; ".join(explanation_parts) + ".",
-        "version": "2.1",
+        "version": "2.2",
     }
 
 

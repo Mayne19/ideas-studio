@@ -16,6 +16,12 @@ MONITORING_INTERVALS = [
     timedelta(days=180),
 ]
 
+_VOLATILITY_REVIEW_DELAYS = {
+    "high": timedelta(days=30),
+    "medium": timedelta(days=60),
+    "low": timedelta(days=90),
+}
+
 _ACTIVE_MONITORING_STATUSES = (ArticleStatus.IMPROVEMENT_IN_PROGRESS, ArticleStatus.IMPROVEMENT_READY)
 
 
@@ -145,6 +151,76 @@ def _build_improvement_proposal(diagnosis: dict) -> dict:
     return proposal
 
 
+def _compute_volatility(db: Session, article: Article) -> dict:
+    """Estime la volatilité du sujet de l'article (0-100) à partir des signaux
+    disponibles — sans nouvelle colonne DB :
+    - difficulté du mot-clé principal (sujets concurrentiels = plus volatils) ;
+    - volume de recherche (sujets à fort volume = saisonniers, plus volatils) ;
+    - variance de trafic Search Console (artifacts) si dispo ;
+    - ancienneté de l'article (les sujets récents bougent plus vite).
+    Retourne un score + un niveau et le délai de re-revue associé (30/60/90 j)."""
+    difficulty = None
+    volume = None
+    try:
+        from app.models.content import ArticleKeyword, Keyword
+        from app.models.reference import KeywordRole
+        row = db.execute(
+            select(Keyword.difficulty, Keyword.volume)
+            .join(ArticleKeyword, ArticleKeyword.keyword_id == Keyword.id)
+            .where(
+                ArticleKeyword.article_id == article.id,
+                ArticleKeyword.role == KeywordRole.PRIMARY,
+            )
+            .limit(1)
+        ).first()
+        if row:
+            difficulty, volume = row
+    except Exception:
+        logger.debug("Volatility: keyword lookup failed", exc_info=True)
+
+    metrics = get_latest_artifact(db, article.id, "search_console_metrics")
+    traffic_variance = 0.0
+    if isinstance(metrics, dict):
+        series = metrics.get("series") or metrics.get("trend") or []
+        clicks = [float(s.get("clicks", 0)) for s in series if isinstance(s, dict)]
+        if len(clicks) >= 3:
+            mean = sum(clicks) / len(clicks)
+            traffic_variance = (sum((c - mean) ** 2 for c in clicks) / len(clicks)) ** 0.5
+            traffic_variance = min(traffic_variance / (mean + 1.0), 1.0) * 100
+
+    score = 0.0
+    if difficulty is not None:
+        score += min(float(difficulty) / 100.0, 1.0) * 40
+    if volume is not None:
+        score += min(volume / 10000.0, 1.0) * 20
+    score += traffic_variance * 0.30
+    if article.published_at:
+        age_days = (datetime.now(timezone.utc) - article.published_at).days
+        if age_days < 30:
+            score += 15
+        elif age_days < 90:
+            score += 5
+
+    score = min(score, 100.0)
+    if score >= 60:
+        level, delay = "high", _VOLATILITY_REVIEW_DELAYS["high"]
+    elif score >= 30:
+        level, delay = "medium", _VOLATILITY_REVIEW_DELAYS["medium"]
+    else:
+        level, delay = "low", _VOLATILITY_REVIEW_DELAYS["low"]
+
+    return {
+        "volatility_score": round(score),
+        "volatility_level": level,
+        "review_delay_days": delay.days,
+        "signals": {
+            "keyword_difficulty": round(float(difficulty), 1) if difficulty is not None else None,
+            "keyword_volume": volume,
+            "traffic_variance": round(traffic_variance, 1),
+        },
+    }
+
+
 def analyze_article_for_improvement(db: Session, article_id: str) -> Article | None:
     """Analyze a published article and create an improvement proposal if needed."""
     article = db.get(Article, article_id)
@@ -153,10 +229,12 @@ def analyze_article_for_improvement(db: Session, article_id: str) -> Article | N
 
     diagnosis = _build_performance_diagnosis(db, article)
     proposal = _build_improvement_proposal(diagnosis)
+    volatility = _compute_volatility(db, article)
 
     save_artifact(db, article.id, "performance_diagnosis", diagnosis)
     save_artifact(db, article.id, "improvement_proposal", proposal)
-    article.next_review_at = datetime.now(timezone.utc) + timedelta(days=90)
+    save_artifact(db, article.id, "volatility_assessment", volatility)
+    article.next_review_at = datetime.now(timezone.utc) + timedelta(days=volatility["review_delay_days"])
 
     revision = article.current_revision
     log_step(

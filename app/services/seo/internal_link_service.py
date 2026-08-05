@@ -1,11 +1,26 @@
 from __future__ import annotations
 
+import re
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.models.content import Article, ArticleKeyword, ArticleRevision, Category, Keyword, KeywordRole
 from app.models.reference import ArticleStatus
 from app.schemas.seo_workflow import InternalLinkPlan, asdict
-from app.services.seo.helpers import normalize_text
+from app.services.seo.helpers import normalize_text, strip_html
+
+
+def _extract_excerpt(article: Article, revision_title: str | None, max_chars: int = 140) -> str:
+    """Petit extrait textuel de l'article cible pour contextualiser le lien."""
+    rev = article.current_revision
+    body = ""
+    if rev is not None:
+        body = rev.body or ""
+    text = strip_html(body)
+    text = re.sub(r"\s+", " ", text).strip()
+    if text:
+        return text[:max_chars] + ("…" if len(text) > max_chars else "")
+    return revision_title or ""
 
 
 def build_internal_link_plan(
@@ -46,6 +61,8 @@ def build_internal_link_plan(
             aid = hint.get("article_id")
             if aid:
                 hint_ids.add(aid)
+                target = db.get(Article, aid)
+                hint_excerpt = _extract_excerpt(target, hint.get("title"), 140) if target else ""
                 # Add hint entries directly with high relevance
                 scored.append({
                     "target_article_id": aid,
@@ -55,6 +72,11 @@ def build_internal_link_plan(
                     "reason": "section overlap detected",
                     "relevance_score": 20,
                     "category": hint.get("category"),
+                    "context": {
+                        "target_keyword": hint.get("keyword") or "",
+                        "target_excerpt": hint_excerpt,
+                        "context_note": "Section complémentaire — utile pour le maillage sur ce sous-sujet",
+                    },
                 })
 
     category_names: dict[str, str] = {}
@@ -89,6 +111,15 @@ def build_internal_link_plan(
                 "reason": f"Pertinence {score}/10",
                 "relevance_score": score,
                 "category": cat_name,
+                "context": {
+                    "target_keyword": a_keyword_raw or "",
+                    "target_excerpt": _extract_excerpt(article, a_title_raw, 140),
+                    "context_note": (
+                        "Forte pertinence : même mot-clé principal"
+                        if score >= 10
+                        else "Pertinence moyenne : sujet connexe ou catégorie partagée"
+                    ),
+                },
             })
 
     scored.sort(key=lambda x: x["relevance_score"], reverse=True)

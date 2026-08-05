@@ -231,9 +231,9 @@ def review_article(
     # un article dont ce seul critère n'a pas pu être vérifié automatiquement.
     if blocking_triggered:
         decision = "REECRITURE"
-    elif total_score >= 80:
+    elif total_score >= 75:
         decision = "APPROUVE"
-    elif total_score >= 65:
+    elif total_score >= 70:
         decision = "REVISION_AUTOMATIQUE"
     else:
         decision = "REECRITURE"
