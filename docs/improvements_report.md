@@ -1,7 +1,10 @@
 # RAPPORT D'AMÉLIORATIONS IDEAS STUDIO
 
-> Pipeline de génération SEO — révision du 2026-08-05.
-> 24 corrections implémentées sur les 25 prévues (FIX 25 « topic selector perf » exclu volontairement).
+> Pipeline de génération SEO — révision du 2026-08-05, complétée le même jour.
+> **26/26 fixes du plan initial implémentés** (FIX 1-26, y compris FIX 25 « topic
+> selector perf », initialement exclu puis fait sur demande explicite).
+> Une extension hors plan initial (hiérarchie éditoriale pillar/cluster) a
+> été ajoutée par la suite — voir « Hors plan initial » ci-dessous.
 
 ---
 
@@ -167,11 +170,33 @@ Le pipeline de génération SEO d'Ideas Studio souffrait de **quatre fragilités
 - `build_project_context()` : collecte les angles/différenciations (artifact `editorial_angle`) et exemples réels (artifact `human_insights`) des articles publiés + brouillons.
 - Prompt du writer : blocs « Angles éditoriaux déjà utilisés (À ÉVITER) » et « Exemples déjà exploités (À NE PAS RÉPÉTER) ».
 
+### FIX 25 — Performance réelle dans le choix de catégorie (topic_selector)
+`app/services/seo/category_strategy_service.py` + `app/schemas/seo_workflow.py`
+- `_compute_category_performance()` : moyenne CTR + trafic organique (clics) des articles **publiés** de la catégorie, à partir de l'artifact `search_console_metrics` par article (agrégé via `get_latest_artifacts_bulk`, même pattern anti-N+1 que `to_public_batch`). Aucune table `analytics.search_metrics_daily` peuplée dans ce projet — l'artifact est la seule source de trafic réellement alimentée (déjà utilisée par `monitoring_agent._compute_volatility`).
+- `_performance_score_adjustment()` : CTR > 5% → **+15** ; CTR < 1% → **-10** ; trafic > 1000 → **+10** ; trafic < 100 → **-5**. **0 si une métrique est indisponible** — le scoring priorité/fréquence/saturation existant reste inchangé sans données, aucune régression pour les projets sans Search Console connecté.
+- `CategoryStrategy` : + `avg_ctr`, `avg_organic_traffic`, `performance_score_adjustment` pour audit du choix.
+- Initialement exclu du lot du 2026-08-05 sans raison technique documentée (juste marqué « exclu volontairement ») ; implémenté sur demande explicite du même jour.
+
 ### FIX 26 — Métriques invalides dans le rapport
 `app/services/seo/generation_report_service.py` + `app/schemas/seo_workflow.py`
 - `reading_time_minutes` toujours **dérivé du word_count réel** (jamais pris tel quel de l'appelant) ; `None` quand l'article est vide (0 mot).
 - `GenerationReport.reading_time_minutes` : `int | None`.
 - L'orchestrateur ne force plus `or 1`.
+
+---
+
+## Hors plan initial — hiérarchie éditoriale pillar/cluster
+
+Ajout demandé séparément le 2026-08-05, sans numéro dans le plan FIX 1-26
+initial (à ne pas confondre avec `article_tier_service.py` / FIX 22, qui
+calcule un tier de **volumétrie** — micro/short/medium/long/pillar selon
+le nombre de mots — non persisté, stocké en artifact `volume_tiers`).
+
+`app/services/seo/article_editorial_tier_service.py` (nouveau) + `app/models/content.py` + `alembic/versions/v3_0002_editorial_tier.py` + `app/services/seo/internal_link_service.py` + `app/services/seo/seo_generation_orchestrator.py`
+- Nouveau champ `Article.editorial_tier` (`pillar` | `cluster`, nullable) — colonne réelle, migration `v3_0002`.
+- `resolve_editorial_tier()` : le premier article publié ou en file d'une catégorie devient son `pillar` ; les suivants sont `cluster`. Ne réassigne jamais le tier d'un article déjà marqué (une régénération ne peut pas transformer un pillar existant en cluster ou inversement).
+- `build_internal_link_plan()` : un article `cluster` reçoit un bonus **+50** sur le lien vers le pillar de sa catégorie (dominant sur le scoring lexical normal, plafonné à 18, donc toujours en tête du plan) ; un article `pillar` **exclut** systématiquement les autres pillars de sa catégorie de ses candidats de liens (hiérarchie plate, pas de pillar-vers-pillar).
+- Câblé dans l'orchestrateur juste avant la phase 13 (InternalLinkPlan) ; le pillar n'est trouvable comme cible que s'il est déjà **publié** (cohérent avec le filtre existant qui ne lie jamais vers du contenu non publié).
 
 ---
 
@@ -183,6 +208,8 @@ Le pipeline de génération SEO d'Ideas Studio souffrait de **quatre fragilités
 | `app/services/human_insights_lite_service.py` | FIX 5 | Insights humains en repli (Autocomplete + PAA + forums) |
 | `app/services/production_brief_service.py` | FIX 10 | Brief de production consolidé pour le writer |
 | `app/services/seo/article_tier_service.py` | FIX 22 | Volumétrie article + par section |
+| `app/services/seo/article_editorial_tier_service.py` | Hors plan | Hiérarchie éditoriale pillar/cluster |
+| `alembic/versions/v3_0002_editorial_tier.py` | Hors plan | Migration `Article.editorial_tier` |
 
 ## Fichiers modifiés
 
@@ -204,9 +231,11 @@ Le pipeline de génération SEO d'Ideas Studio souffrait de **quatre fragilités
 - `app/services/monitoring_agent.py` (FIX 19)
 - `app/services/seo/external_link_service.py` (FIX 20)
 - `app/services/seo/image_plan_service.py` (FIX 21)
-- `app/services/seo/internal_link_service.py` (FIX 23)
+- `app/services/seo/internal_link_service.py` (FIX 23, hors plan : pillar/cluster)
 - `app/services/seo/project_context_service.py` (FIX 24)
+- `app/services/seo/category_strategy_service.py` (FIX 25)
 - `app/services/seo/generation_report_service.py` (FIX 26)
+- `app/models/content.py` (hors plan : `Article.editorial_tier`)
 
 ---
 
@@ -238,6 +267,8 @@ Aucun test unitaire service n'existe pour ces chemins (uniquement `tests/e2e` et
 8. **Liens externes** : vérifier l'absence de params `utm_` et de domaines placeholders.
 9. **Rapport** : `reading_time_minutes` dérivé du word_count ; `None` pour un article vide.
 10. **E2E** : `cd tests/e2e && npm test` pour valider les parcours critiques.
+11. **Topic selector performance** : publier 2 catégories avec des `search_console_metrics` distincts (une CTR>5%/trafic>1000, une CTR<1%/trafic<100) → `compute_category_strategy` doit préférer la première à priorité égale ; une catégorie sans aucune métrique doit garder son score inchangé.
+12. **Pillar/cluster** : générer un premier article dans une catégorie vide → `editorial_tier="pillar"` ; générer un second article dans la même catégorie → `editorial_tier="cluster"` et son `internal_links` doit contenir le pillar en position 0 avec `relevance_score >= 50` ; régénérer le pillar → son plan ne doit jamais lister un autre pillar de la même catégorie.
 
 ## Risques
 
@@ -246,10 +277,12 @@ Aucun test unitaire service n'existe pour ces chemins (uniquement `tests/e2e` et
 - **FIX 13 (500 mots)** : un article volontairement court (< 500 mots) sera toujours marqué `unverified` en originalité — comportement voulu, mais `scoring_service` bloque le score global dans ce cas (règle déjà existante).
 - **FIX 19 (volatilité)** : le score dépend de la difficulté/volume du mot-clé principal ; sans mot-clé associé, il repose sur la variance de trafic et l'ancienneté (repli « low » à 90 jours).
 - **FIX 22 (tiers)** : sans colonne DB, les tiers sont recalculés à chaque génération à partir du contenu — aucune persistance historique, c'est un instantané.
+- **FIX 25 (performance topic_selector)** : dépend entièrement de l'artifact `search_console_metrics` par article, qui n'existe que si Search Console est connecté et que le monitoring l'a déjà écrit au moins une fois — sur un projet neuf ou sans intégration Search Console, l'ajustement reste à 0 pour toutes les catégories (comportement voulu, pas un bug).
+- **Pillar/cluster** : le pillar n'est éligible comme cible de lien que s'il est **publié** — un cluster généré avant que le pillar de sa catégorie soit publié n'aura donc pas ce lien forcé tant que le pillar n'est pas en ligne (comportement voulu, cohérent avec le filtre `PUBLISHED` existant sur tout `internal_link_service.py`).
 - **Régressions de prompts** : les réécritures de prompts (writer 3 passes, style guide, quality gate) changent la sortie observée — valider par des articles de référence avant mise en prod.
 
 ## Périmètre exclu
 
-- **FIX 25 (topic selector performance)** : exclu volontairement.
 - **Callout résumé d'introduction** : instruction retirée du prompt du writer (le callout bloquait le rendu TipTap) — non implémenté.
-- **Migration DB** : les FIX 19 et 22 fonctionnent **sans colonne dédiée** (`volatility_score`, `article_tier`). Une migration Alembic serait nécessaire uniquement pour une persistance historique ou un filtrage en base.
+- **Migration DB pour les tiers de volumétrie** : FIX 19 et 22 fonctionnent **sans colonne dédiée** (`volatility_score`, `article_tier` de volumétrie). Une migration Alembic serait nécessaire uniquement pour une persistance historique ou un filtrage en base. À ne pas confondre avec `Article.editorial_tier` (pillar/cluster), qui lui a sa propre colonne réelle depuis la migration `v3_0002`.
+- **Hiérarchie pillar/cluster à plusieurs niveaux** : le modèle actuel reste à deux niveaux plats (1 pillar par catégorie, N clusters). Pas de sous-clusters ni de pillar transverse à plusieurs catégories.
