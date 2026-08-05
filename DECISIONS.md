@@ -25,6 +25,25 @@
 
 ## Décisions enregistrées
 
+### [DEC-012] — Abandon de SQLite en développement, PostgreSQL obligatoire (schéma v3)
+
+- **Date** : 2026-08 (refonte schéma v3, commit `8524f50f`)
+- **Domaine** : architecture
+- **Problème** : `[DEC-001]` autorisait SQLite en dev pour un démarrage sans infrastructure. Après la refonte vers le schéma v3 (schémas Postgres nommés, RLS, JSONB, ENUM natifs, partitionnement), SQLite tolérait silencieusement un schéma que le code ne décrivait plus — l'app semblait fonctionner en dev contre une structure de données obsolète, masquant des régressions qui n'apparaissaient qu'en production.
+- **Options étudiées** :
+  - Option A : Garder SQLite en dev, accepter le risque de divergence de schéma
+  - Option B : Interdire SQLite hors tests (validateur Pydantic sur `DATABASE_URL`)
+- **Décision retenue** : Option B — `app/core/config.py` rejette toute `DATABASE_URL` non-PostgreSQL sauf en `APP_ENV=test`
+- **Justification** : Un schéma v3 avec RLS/JSONB/partitionnement n'a de sens que sur PostgreSQL ; SQLite ne peut plus servir de proxy fidèle. Mieux vaut échouer au démarrage que de laisser tourner une app contre un schéma incohérent.
+- **Conséquences** :
+  - (+) Impossible de développer localement contre un schéma désynchronisé du code
+  - (+) Dev et prod utilisent le même moteur (Supabase), plus de divergence de comportement JSON/case-sensitivity mentionnée en `[DEC-001]`
+  - (-) Développement local nécessite désormais un accès Postgres (Supabase ou instance locale), plus de démarrage zéro-dépendance
+  - (-) `[DEC-001]` est de fait supersédée — conservée ci-dessous pour l'historique, mais son "Décision retenue" ne reflète plus l'état réel du code
+- **Révisable** : Non — schéma v3 est l'architecture de données actuelle
+
+---
+
 ### [DEC-011] — Migration de l'hébergement backend de Render vers Railway
 
 - **Date** : 2026-08-05

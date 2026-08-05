@@ -13,8 +13,8 @@ Il permet à des équipes éditoriales de gérer projets, articles, idées, pipe
 - Backend : API REST FastAPI (Python 3.12)
 - Frontend : SPA React 19 (Vite 8 + TypeScript 6 + TailwindCSS 4)
 - IA : multi-provider (Ollama, OpenRouter, OpenAI, Gemini, Mistral)
-- Base : SQLite (dev) / PostgreSQL (prod)
-- Déploiement cible : Render (backend) + Vercel (frontend)
+- Base : PostgreSQL uniquement (schéma v3 : schémas nommés, RLS, JSONB, ENUM natifs, partitionnement), hébergée sur Supabase — y compris en développement. SQLite conservé uniquement pour `APP_ENV=test`.
+- Déploiement cible : Railway (backend) + Vercel (frontend)
 
 ---
 
@@ -283,10 +283,12 @@ Copier `.env.example` → `.env` et adapter :
 
 ```bash
 APP_ENV=development
-DATABASE_URL=sqlite:///./ideas_studio.db
+DATABASE_URL=postgresql://user:password@host:5432/ideas_studio
 SECRET_KEY=<générer avec secrets.token_urlsafe(48)>
 DEFAULT_LLM_PROVIDER=ollama   # ou openrouter, openai, gemini, mock
 ```
+
+`DATABASE_URL` doit pointer vers PostgreSQL même en développement (schéma v3 : RLS, JSONB, ENUM natifs — voir `docs/DATABASE.md`). SQLite n'est toléré que pour `APP_ENV=test`, sinon `app/core/config.py` refuse de démarrer. En pratique, pointez vers un projet Supabase (dev ou partagé) plutôt que vers un Postgres local.
 
 Les migrations Alembic s'exécutent **automatiquement au démarrage** (sauf en mode `test`).
 
