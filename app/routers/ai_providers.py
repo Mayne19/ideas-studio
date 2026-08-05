@@ -125,9 +125,13 @@ def update_provider(
         credential.model = data.model
     if data.is_default is True:
         # Un seul is_default=true par project_id (index unique partiel côté
-        # DB) — on désactive explicitement les autres credentials du même
-        # scope plutôt que de compter uniquement sur la contrainte, pour
-        # avoir un message d'erreur clair si jamais elle est violée ailleurs.
+        # DB). SQLAlchemy regroupe les UPDATE de plusieurs objets modifiés
+        # dans le même flush() en un executemany() sans garantir l'ordre
+        # d'exécution entre eux — désactiver l'ancien défaut et activer le
+        # nouveau dans le même flush pouvait donc violer transitoirement la
+        # contrainte unique (les deux is_default=true en même temps le temps
+        # que Postgres traite le batch). flush() intermédiaire pour forcer
+        # la désactivation avant l'activation.
         other_defaults = db.execute(
             select(ProviderCredential).where(
                 ProviderCredential.project_id == credential.project_id,
@@ -137,6 +141,8 @@ def update_provider(
         ).scalars().all()
         for other in other_defaults:
             other.is_default = False
+        if other_defaults:
+            db.flush()
         credential.is_default = True
     elif data.is_default is False:
         credential.is_default = False
