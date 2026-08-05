@@ -47,6 +47,9 @@ class CategoryStrategy:
     saturation_risk: str = "low"
     underfed: bool = False
     saturated: bool = False
+    avg_ctr: float | None = None
+    avg_organic_traffic: float | None = None
+    performance_score_adjustment: float = 0.0
     limitations: list[str] = field(default_factory=list)
 
 
