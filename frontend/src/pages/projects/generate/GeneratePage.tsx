@@ -116,7 +116,13 @@ export default function GeneratePage() {
   const successCount = successPipelineLogs.length
   const partialCount = sortedLogs.filter((log) => isLogPartial(log.status)).length
   const runningPipelineCount = sortedLogs.filter((log) => log.status === 'running').length
-  const activeProvider = activeProviders[0]
+  // Le provider par défaut (is_default, choisi dans Paramètres → Providers)
+  // prime toujours — activeProviders[0] n'a aucun ordre garanti (dépend de
+  // l'ordre de retour de l'API), ce n'est ni le défaut ni ce que les agents
+  // utilisent réellement. Repli sur le premier configuré uniquement si
+  // aucun défaut n'est encore choisi, pour ne pas afficher "Aucun" alors
+  // qu'un provider existe.
+  const activeProvider = activeProviders.find((provider) => provider.is_default) ?? activeProviders[0]
   const activeProviderLabel = activeProvider?.label ?? 'Aucun'
   const activeProviderModelLabel = activeProvider?.model || (activeProvider ? 'Non défini' : 'Aucun')
   const pipelineLabel = pipeline?.enabled ? 'Actif' : 'Inactif'
