@@ -69,12 +69,32 @@ def discover_ideas(
                         direction = "en hausse" if trend["trend_score"] > 1.2 else "stable ou en baisse" if trend["trend_score"] < 0.8 else "stable"
                         trend_hint = f"Tendance estimée sur ce sujet : {direction} (proxy, pas une mesure officielle).\n"
 
+                # Format de titre imposé au coup par coup (choisi selon l'index pour
+                # forcer la variété plutôt que de laisser le LLM retomber sur son
+                # patron par défaut "[Sujet] : Le Guide [Superlatif] pour [Cible]",
+                # observé systématiquement sans cette contrainte.
+                title_formats = [
+                    "une question directe que se pose vraiment le lecteur (ex: 'Pourquoi votre site vitrine ne génère aucun client ?')",
+                    "une affirmation tranchée ou contre-intuitive (ex: 'Le CMS que la plupart des entrepreneurs choisissent pour les mauvaises raisons')",
+                    "un chiffre concret et spécifique (ex: '6 erreurs de copywriting qui font fuir vos visiteurs avant la première phrase')",
+                    "un angle qui déconseille une pratique populaire ou révèle une idée reçue fausse",
+                    "une situation précise vécue par le lecteur plutôt qu'une cible générique (ex: 'vous avez du trafic mais zéro contact', 'votre site existe depuis 2 ans mais ne convertit pas')",
+                ]
+                title_format = title_formats[i % len(title_formats)]
+
                 prompt = (
                     f"Génère une idée d'article SEO originale en langue '{project_language}'.\n"
                     f"Audience cible : {project_audience or 'grand public'}.\n"
                     f"Contexte : {context_hint or 'aucun'}.\n"
                     f"{trend_hint}"
                     f"Contexte SERP :\n{serp_context}\n\n"
+                    f"Format de titre imposé : {title_format}\n"
+                    "Interdits dans le titre : 'Ultime', 'Incontournable', 'Essentiel', 'Complet', "
+                    "'Puissant', 'Booster', 'Guide complet pour', ainsi que toute structure "
+                    "'[Sujet] : Le Guide [Superlatif] pour [Cible]'.\n"
+                    "L'idée ne doit pas se contenter de couvrir un sujet : elle doit contredire une "
+                    "idée reçue, révéler quelque chose que les articles concurrents n'osent pas dire, "
+                    "ou partir d'une situation concrète vécue par un lecteur francophone réel.\n\n"
                     'Réponds en JSON : {"title": "...", "keyword": "...", "angle": "...", "search_intent": "informational|commercial"}'
                 )
                 idea_data = llm.generate_json(
