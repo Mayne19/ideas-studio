@@ -17,6 +17,16 @@ from app.services.agents.agent_registry import get_agent, resolve_agent_id, agen
 logger = logging.getLogger(__name__)
 
 
+class AgentProviderAssignmentError(ProviderUnavailableError):
+    """Un provider est explicitement assigné à cet agent (AgentBinding) mais
+    sa construction a échoué (clé indéchiffrable, config invalide...).
+
+    Ne doit JAMAIS déclencher un repli silencieux vers le provider par
+    défaut du projet ou global : l'utilisateur a choisi cette clé pour cet
+    agent précis, un échec doit être visible et concret, pas masqué par une
+    bascule vers une autre clé qu'il n'a pas choisie pour cet agent."""
+
+
 @dataclass
 class AgentCallResult:
     agent_id: str
@@ -91,12 +101,19 @@ class AgentRouter:
                 if agent_row is not None:
                     config = resolve_binding_for_agent(self._db, agent_row.id, project_id)
                     if config is not None:
-                        return self._build_provider(config)
+                        # Provider explicitement assigné à cet agent : un
+                        # échec de construction ici ne doit jamais basculer
+                        # silencieusement vers le défaut du projet ou global
+                        # (voir AgentProviderAssignmentError) — c'est CETTE
+                        # clé que l'utilisateur a choisie pour cet agent.
+                        return self._build_provider(config, strict=True)
 
                 if project_id is not None:
                     default_config = resolve_default_provider(self._db, project_id)
                     if default_config is not None:
-                        return self._build_provider(default_config)
+                        return self._build_provider(default_config, strict=False)
+            except AgentProviderAssignmentError:
+                raise
             except Exception:
                 logger.warning("AgentRouter: DB lookup failed for %s", agent_id, exc_info=True)
 
@@ -108,14 +125,23 @@ class AgentRouter:
 
         return None
 
-    def _build_provider(self, config) -> LLMProvider | None:
+    def _build_provider(self, config, strict: bool = False) -> LLMProvider | None:
         from app.services.providers.llm_provider import build_provider_from_config
 
         try:
-            return build_provider_from_config(config)
+            provider = build_provider_from_config(config)
         except Exception as exc:
+            if strict:
+                raise AgentProviderAssignmentError(
+                    f"Provider '{config.provider}' assigné à cet agent : construction impossible ({exc})."
+                ) from exc
             logger.warning("AgentRouter: could not build provider %s: %s", config.provider, exc)
             return None
+        if provider is None and strict:
+            raise AgentProviderAssignmentError(
+                f"Provider '{config.provider}' assigné à cet agent : clé API absente ou indéchiffrable."
+            )
+        return provider
 
     def _build_from_env(self, provider_name: str, agent_id: str) -> LLMProvider | None:
         from app.services.providers.llm_provider import get_llm_provider
@@ -168,11 +194,25 @@ def call_agent(
 ) -> tuple[str, AgentCallResult]:
     """Call an agent and return (response_text, call_result)."""
     router = get_agent_router(db)
-    provider = router.get_provider(agent_id, project_id=project_id)
     start = time.perf_counter()
     error: str | None = None
     status = "success"
     response = ""
+
+    try:
+        provider = router.get_provider(agent_id, project_id=project_id)
+    except ProviderUnavailableError as e:
+        # Inclut AgentProviderAssignmentError : un agent avec un provider
+        # explicitement assigné qui échoue à se construire (clé invalide...)
+        # doit remonter comme status=error avec le message concret, jamais
+        # comme une exception qui casse l'appelant — call_agent() retourne
+        # toujours un tuple, jamais ne lève (pattern établi de ce module).
+        duration_ms = int((time.perf_counter() - start) * 1000)
+        result = AgentCallResult(
+            agent_id=agent_id, provider_name="unknown", status="error", error=str(e),
+            duration_ms=duration_ms,
+        )
+        return f"[Agent {agent_id} unavailable: {e}]", result
 
     try:
         if method == "generate_text":

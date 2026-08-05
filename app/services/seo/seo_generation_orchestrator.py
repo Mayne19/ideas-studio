@@ -873,9 +873,16 @@ class SEOGenerationOrchestrator:
             raise WritingCancelledError(f"Annulation demandée pour l'article {article.id}")
 
     def _get_agent_provider(self, agent_id: str, fallback: LLMProvider | None = None) -> LLMProvider:
+        from app.services.agents.agent_router import AgentProviderAssignmentError
         if self.agent_router is not None:
             try:
                 return self.agent_router.get_provider(agent_id, project_id=self.project_id)
+            except AgentProviderAssignmentError:
+                # Un provider est explicitement assigné à cet agent mais sa
+                # construction a échoué (clé invalide/indéchiffrable) : ne
+                # jamais basculer silencieusement sur le fallback global,
+                # l'erreur doit être visible telle quelle pour cet agent.
+                raise
             except Exception:
                 pass
         return fallback or self.llm
