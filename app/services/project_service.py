@@ -237,7 +237,16 @@ def update_project(db: Session, project: Project, data: ProjectUpdate) -> dict:
             profile = EditorialProfile(project_id=project.id, version=1, is_active=True)
             db.add(profile)
         for field, value in profile_updates.items():
-            setattr(profile, field, value)
+            # rules/constraints sont des JSONB libres, partagés par plusieurs
+            # fonctionnalités (assistant éditorial, domaines concurrents, etc.) :
+            # un setattr direct écraserait silencieusement les clés déjà
+            # stockées par une autre source. On fusionne au lieu de remplacer.
+            if field in ("rules", "constraints") and isinstance(value, dict):
+                merged = dict(getattr(profile, field) or {})
+                merged.update(value)
+                setattr(profile, field, merged)
+            else:
+                setattr(profile, field, value)
 
     if site_url is not None or revalidate_url is not None or ga4_property_id is not None or ga4_service_account_json is not None:
         from app.core.security import encrypt_secret

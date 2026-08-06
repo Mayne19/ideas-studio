@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Sparkles, Check, Loader2, AlertCircle, Wand2, Info } from '@/components/ui/hugeIcons'
 import { suggestEditorialSetup, updateProject } from '@/api/projects'
 import type { EditorialSuggestion } from '@/api/projects'
+import { listCategories, createCategory } from '@/api/categories'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import Textarea from '@/components/ui/Textarea'
@@ -52,7 +53,24 @@ export default function EditorialSetupAssistant({ projectId, open, onClose, onAp
       await updateProject(projectId, {
         audience: form.audience || undefined,
         tone: form.tone || undefined,
+        rules: {
+          description: form.description || undefined,
+          positioning: form.positioning || undefined,
+          main_keywords: form.main_keywords.length ? form.main_keywords : undefined,
+          seo_rules: form.seo_writing_guidelines || undefined,
+        },
       })
+
+      if (form.recommended_categories.length) {
+        const existing = await listCategories(projectId)
+        const existingNames = new Set(existing.map((c) => c.name.trim().toLowerCase()))
+        for (const name of form.recommended_categories) {
+          if (!existingNames.has(name.trim().toLowerCase())) {
+            await createCategory(projectId, { name })
+          }
+        }
+      }
+
       setApplied(true)
       setTimeout(() => {
         onApplied()
