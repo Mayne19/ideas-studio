@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select
@@ -85,17 +83,14 @@ def get_project_member(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> MemberView:
-    if current_user.is_staff:
-        virtual = ProjectMember(
-            project_id=project_id,
-            user_id=current_user.id,
-            role_id=MemberRole.OWNER,
-            state_id=0,
-            status_reason_id=MembershipStatus.ACTIVE,
-            created_at=datetime.now(timezone.utc),
-        )
-        set_current_project_id(project_id)
-        return MemberView(virtual, "owner")
+    """Un utilisateur n'a accès qu'aux projets dont il est explicitement
+    membre — is_staff ne donne plus jamais d'accès virtuel cross-projet
+    (ancien comportement retiré : il fabriquait un ProjectMember owner
+    fictif sur N'IMPORTE QUEL project_id, contraire au modèle voulu où
+    le créateur d'un projet est owner de CE projet et rien d'autre).
+    is_staff reste utilisé ailleurs uniquement pour le catalogue de
+    providers IA partagé au niveau plateforme (ai_providers.py,
+    ai_agents.py), qui ne touche aucune donnée de projet."""
     member = db.execute(
         select(ProjectMember).where(
             ProjectMember.user_id == current_user.id,

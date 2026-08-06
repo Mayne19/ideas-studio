@@ -1,9 +1,14 @@
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 from app.models.core import User
 from app.schemas.auth import RegisterRequest
 from app.schemas.user import UserUpdate
 from app.core.security import hash_password, verify_password
+
+# Clé arbitraire distincte de _MIGRATION_ADVISORY_LOCK_KEY (app/main.py) —
+# même mécanisme pg_advisory_lock, pour un usage différent (voir
+# _is_first_user_atomic ci-dessous).
+_FIRST_USER_ADVISORY_LOCK_KEY = 727272
 
 
 def get_user_by_email(db: Session, email: str) -> User | None:
@@ -15,8 +20,22 @@ def get_user_by_username(db: Session, username: str) -> User | None:
     return db.execute(select(User).where(User.username == clean)).scalar_one_or_none()
 
 
+def _is_first_user_atomic(db: Session) -> bool:
+    """Le premier compte inscrit reçoit is_staff=True (bootstrap admin sans
+    interface d'invitation dédiée — voir app/routers/ai_agents.py:21).
+
+    Sans verrou, deux POST /auth/register concurrents sur une base vide
+    peuvent tous deux voir "aucun utilisateur" (SELECT ... LIMIT 1 sous
+    READ COMMITTED, l'isolation par défaut ici) et devenir staff tous les
+    deux. pg_advisory_lock sérialise ce check-and-decide au niveau process,
+    le verrou est libéré automatiquement à la fin de la transaction
+    (session-level lock, cohérent avec le commit() de create_user)."""
+    db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _FIRST_USER_ADVISORY_LOCK_KEY})
+    return db.execute(select(User.id).limit(1)).scalar_one_or_none() is None
+
+
 def create_user(db: Session, data: RegisterRequest) -> User:
-    is_first_user = db.execute(select(User.id).limit(1)).scalar_one_or_none() is None
+    is_first_user = _is_first_user_atomic(db)
     name = data.name or f"{data.first_name or ''} {data.last_name or ''}".strip()
     kwargs = {
         "first_name": data.first_name or (name.split(" ")[0] if name else None),

@@ -543,10 +543,10 @@ const CHAPTERS: Chapter[] = [
       </ul>
 
       <h2 id="admin-plateforme" class="mt-12">Administrateur plateforme</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le drapeau <strong class="text-primary">is_staff</strong> sur un compte utilisateur donne accès à tous les projets (avec un rôle Owner virtuel) et à la configuration système. Il est attribué automatiquement au tout premier utilisateur créé sur l'instance, puis géré manuellement.</p>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">Le drapeau <strong class="text-primary">is_staff</strong> sur un compte utilisateur donne uniquement accès à la gestion du catalogue de plateformes IA partagé (providers disponibles pour tous les projets) — il ne donne <strong class="text-primary">aucun accès</strong> aux projets des autres utilisateurs. Chaque projet reste strictement cloisonné : seuls les membres explicitement ajoutés (owner, admin, editor, designer, viewer) y ont accès. is_staff est attribué automatiquement au tout premier utilisateur créé sur l'instance, puis géré manuellement.</p>
 
       <h2 id="providers-agents-acces" class="mt-12">Providers et agents : qui peut accéder</h2>
-      <p class="mt-3 text-[15px] leading-relaxed text-secondary">La configuration des providers et agents est réservée au owner du projet, aux admins du projet, et aux comptes <code class="text-accent">is_staff</code>. Les editors, designers et viewers voient un message "Admin access required" s'ils tentent d'accéder à ces pages.</p>
+      <p class="mt-3 text-[15px] leading-relaxed text-secondary">La configuration des providers et agents d'un projet est réservée au owner et aux admins de ce projet. Les editors, designers et viewers voient un message "Admin access required" s'ils tentent d'accéder à ces pages. Les comptes <code class="text-accent">is_staff</code> voient en plus le catalogue de plateformes IA partagé, mais n'ont pas d'accès automatique aux projets des autres.</p>
       <p class="mt-3 text-[15px] leading-relaxed text-secondary">Cette restriction garantit que les clés API et la configuration IA restent sous le contrôle des responsables du projet.</p>
 
       <h2 id="bonnes-pratiques" class="mt-12">Bonnes pratiques</h2>
@@ -743,7 +743,7 @@ const CHAPTERS: Chapter[] = [
       <p class="mt-2 text-[15px] leading-relaxed text-secondary">Créez une clé API sur <a href="https://aistudio.google.com/apikey" class="text-accent hover:underline" target="_blank" rel="noopener noreferrer">Google AI Studio</a>, ajoutez un provider Gemini dans Paramètres / Providers, collez la clé, et cliquez sur Tester. Si la connexion est réussie, le provider est prêt pour la génération.</p>
 
       <h3 id="acces-providers-agents" class="mt-8">Qui peut gérer les providers et agents ?</h3>
-      <p class="mt-2 text-[15px] leading-relaxed text-secondary">Le owner du projet, les admins projet et les comptes <code class="text-accent">is_staff</code>. Les editors, designers et viewers n'ont pas accès à ces pages de configuration.</p>
+      <p class="mt-2 text-[15px] leading-relaxed text-secondary">Le owner du projet et les admins de ce projet. Les editors, designers et viewers n'ont pas accès à ces pages de configuration. Les comptes <code class="text-accent">is_staff</code> voient en plus le catalogue de plateformes IA partagé, mais n'ont pas d'accès automatique aux projets des autres utilisateurs.</p>
 
       <h3 id="diagnostic-donnees" class="mt-8">Comment diagnostiquer des données absentes dans les dashboards ?</h3>
       <p class="mt-2 text-[15px] leading-relaxed text-secondary">Vérifiez que le domaine est renseigné (Paramètres / Général), que le snippet est installé, et qu'il y a eu des visites dans la période sélectionnée. Utilisez le bouton Rafraîchir pour recharger les données.</p>
