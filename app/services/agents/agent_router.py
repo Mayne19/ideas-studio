@@ -80,6 +80,14 @@ class AgentRouter:
             from app.services.providers.llm_provider import get_llm_provider
             provider = get_llm_provider()
 
+        # Enveloppe dans FallbackLLMProvider : un échec de l'appel réel (503
+        # "high demand", timeout) sur ce provider tente un autre provider déjà
+        # configuré pour ce projet avant d'abandonner. Transparent pour tous
+        # les appelants (agent_services.py et consorts font provider.generate_text/
+        # generate_json directement sur l'objet retourné ici).
+        from app.services.providers.llm_provider import FallbackLLMProvider
+        provider = FallbackLLMProvider(provider, project_id)
+
         self._cache[cache_key] = provider
         return provider
 

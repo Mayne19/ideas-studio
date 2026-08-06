@@ -110,6 +110,59 @@ class MockLLMProvider(LLMProvider):
         return True
 
 
+class FallbackLLMProvider(LLMProvider):
+    """Enveloppe transparente autour d'un provider résolu (agent_router.get_provider
+    / get_llm_provider) : un échec de l'APPEL RÉEL (503 "high demand", timeout,
+    rate-limit — pas un problème de construction/clé, qui reste géré séparément
+    et n'est jamais masqué, voir AgentProviderAssignmentError) déclenche une
+    unique tentative sur un autre provider déjà configuré pour ce projet, avant
+    d'abandonner. Les dizaines d'appelants qui font provider.generate_text(...)
+    ou provider.generate_json(...) directement (agent_services.py,
+    article_outline_planner.py, keyword_brief_service.py, etc.) en bénéficient
+    tous automatiquement, sans aucun changement de leur côté : ils reçoivent
+    déjà cet objet via router.get_provider(), pas le provider brut."""
+
+    def __init__(self, primary: LLMProvider, project_id: str | None):
+        self._primary = primary
+        self._project_id = project_id
+        self.is_mock = primary.is_mock
+        self.provider_name = primary.provider_name
+        self.model_name = primary.model_name
+        self.last_usage = primary.last_usage
+
+    def _sync_from(self, active: LLMProvider) -> None:
+        self.provider_name = active.provider_name
+        self.model_name = active.model_name
+        self.last_usage = active.last_usage
+
+    def _with_fallback(self, call):
+        try:
+            result = call(self._primary)
+            self._sync_from(self._primary)
+            return result
+        except ProviderUnavailableError as primary_error:
+            try:
+                fallback = get_llm_provider(project_id=self._project_id, exclude_provider_name=self._primary.provider_name)
+            except ProviderUnavailableError:
+                raise primary_error
+            logger.warning(
+                "Provider %s indisponible (%s) — repli sur %s.",
+                self._primary.provider_name, primary_error, fallback.provider_name,
+            )
+            result = call(fallback)
+            self._sync_from(fallback)
+            return result
+
+    def generate_text(self, prompt: str, system: str | None = None, temperature: float = 0.7) -> str:
+        return self._with_fallback(lambda p: p.generate_text(prompt, system=system, temperature=temperature))
+
+    def generate_json(self, prompt: str, schema_hint: str | None = None):
+        return self._with_fallback(lambda p: p.generate_json(prompt, schema_hint=schema_hint))
+
+    def is_available(self) -> bool:
+        return self._primary.is_available()
+
+
 class OllamaLLMProvider(LLMProvider):
     """Uses a local Ollama instance for generation — free, no API key needed."""
     is_mock: bool = False
@@ -374,7 +427,13 @@ def build_provider_from_config(config) -> LLMProvider | None:
     return None
 
 
-def get_llm_provider(project_id: str | None = None) -> LLMProvider:
+def get_llm_provider(project_id: str | None = None, exclude_provider_name: str | None = None) -> LLMProvider:
+    """`exclude_provider_name` : utilisé par FallbackLLMProvider pour un repli
+    après échec transitoire d'un appel réel (503/timeout) sur un provider déjà
+    résolu. Écarte ce provider de toutes les chaînes de résolution ci-dessous
+    plutôt que de le retenter à l'identique. N'affecte jamais la sélection
+    normale (None par défaut) : aucun changement de comportement pour les
+    appelants existants."""
     from app.core.config import settings
     from app.services.providers.openai_provider import OpenAILLMProvider
     from app.services.providers.openrouter_provider import OpenRouterLLMProvider
@@ -396,6 +455,8 @@ def get_llm_provider(project_id: str | None = None) -> LLMProvider:
         try:
             config = resolve_default_provider(db, project_id)
             if not config:
+                return None
+            if exclude_provider_name and config.provider == exclude_provider_name:
                 return None
             provider = build_provider_from_config(config)
             if provider is None:
@@ -435,7 +496,7 @@ def get_llm_provider(project_id: str | None = None) -> LLMProvider:
             db.close()
 
     def _try_openrouter() -> LLMProvider | None:
-        if not settings.OPENROUTER_API_KEY:
+        if exclude_provider_name == "openrouter" or not settings.OPENROUTER_API_KEY:
             return None
         provider = OpenRouterLLMProvider(
             api_key=settings.OPENROUTER_API_KEY,
@@ -450,6 +511,8 @@ def get_llm_provider(project_id: str | None = None) -> LLMProvider:
         return None
 
     def _try_ollama() -> LLMProvider | None:
+        if exclude_provider_name == "ollama":
+            return None
         base_url = settings.OLLAMA_BASE_URL or settings.OLLAMA_URL or "http://127.0.0.1:11434"
         if not base_url:
             return None
@@ -464,7 +527,7 @@ def get_llm_provider(project_id: str | None = None) -> LLMProvider:
         return None
 
     def _try_openai() -> LLMProvider | None:
-        if not settings.OPENAI_API_KEY:
+        if exclude_provider_name == "openai" or not settings.OPENAI_API_KEY:
             return None
         provider = OpenAILLMProvider(
             api_key=settings.OPENAI_API_KEY,
@@ -511,6 +574,8 @@ def get_llm_provider(project_id: str | None = None) -> LLMProvider:
         return _raise_or_raise("Ollama configuré mais indisponible.")
 
     if requested == "gemini":
+        if exclude_provider_name == "gemini":
+            return _raise_or_raise("Gemini exclu de ce repli (déjà en échec pour cet appel).")
         if not settings.GEMINI_API_KEY:
             raise ProviderUnavailableError(
                 "GEMINI_API_KEY non configurée. Ajoute GEMINI_API_KEY dans le .env ou les variables Render."
