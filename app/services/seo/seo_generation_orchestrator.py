@@ -77,6 +77,58 @@ AUTO_IMPROVE_SCORE_TARGET = 90
 # devant un écran (voir generateArticle() côté frontend, timeout aligné).
 AUTO_IMPROVE_TIME_BUDGET_SECONDS = 150
 
+# Checks du checklist seo_final_checklist (seo_final_checklist_service.check_seo_final)
+# considérés comme bloquants pour le référencement de base — le reste dégrade
+# le score mais n'empêche pas l'article d'être fondamentalement indexable.
+_SEO_FINAL_CRITICAL_CHECKS = {"title_present", "meta_title_present", "meta_description_present", "content_depth"}
+
+
+def _seo_final_checklist_to_issues(seo_final: dict) -> list[dict]:
+    """Convertit les checks échoués de seo_final_checklist (calculé sur le
+    contenu réel du brouillon, cf. étape 21 de generate_full_article) en
+    SeoIssue affichables. Sans ça, l'ArticleScore créé ici après génération
+    porte un seo_score < 100 réel et détaillé (14 checks nommés) mais avec
+    `issues` vide : l'éditeur affiche un score imparfait sans jamais dire
+    lequel des 14 checks a échoué ni quoi corriger."""
+    issues = []
+    for check in seo_final.get("checks", []):
+        if check.get("pass"):
+            continue
+        name = check.get("name", "")
+        label = check.get("label", name)
+        issues.append({
+            "type": name,
+            "category": "seo",
+            "severity": "critical" if name in _SEO_FINAL_CRITICAL_CHECKS else "warning",
+            "message": f"{label} — non validé.",
+            "suggestion": f"Ajoutez/améliorez : {label}.",
+            "section": "",
+            "auto_fix_available": False,
+        })
+    return issues
+
+
+_EDITORIAL_QUALITY_SEVERITY_MAP = {"error": "critical", "critical": "critical", "warning": "warning", "info": "info"}
+
+
+def _editorial_quality_report_to_issues(quality_report: dict) -> list[dict]:
+    """Même logique que _seo_final_checklist_to_issues, pour editorial_quality_gate
+    (checks de forme éditoriale : H5/H6, gras abusif, traces IA, etc.), dont le
+    score alimente aussi l'ArticleScore créé ici sans jamais exposer le détail."""
+    issues = []
+    for item in quality_report.get("issues", []):
+        message = item.get("message", "")
+        issues.append({
+            "type": item.get("check", ""),
+            "category": "quality",
+            "severity": _EDITORIAL_QUALITY_SEVERITY_MAP.get(item.get("severity"), "warning"),
+            "message": message,
+            "suggestion": message.replace("Échec : ", "Corriger : ") if message else "",
+            "section": "",
+            "auto_fix_available": False,
+        })
+    return issues
+
 
 class _DraftArticle:
     """Support de rédaction en mémoire — content.articles/article_revisions
@@ -1641,6 +1693,7 @@ class SEOGenerationOrchestrator:
             from app.services.scoring_service import compute_global_score
             scoring = compute_global_score(self.db, article.id, article=article)
             quality_report = self._get(article.id, "editorial_quality_report") or {}
+            seo_final = self._get(article.id, "seo_final_checklist") or {}
             self.db.add(ArticleScore(
                 article_id=article.id,
                 revision_id=article.current_revision_id,
@@ -1650,6 +1703,7 @@ class SEOGenerationOrchestrator:
                 readability_score=scoring.get("readability_contrib"),
                 geo_score=scoring.get("geo_contrib"),
                 quality_score=quality_report.get("score"),
+                issues=_seo_final_checklist_to_issues(seo_final) + _editorial_quality_report_to_issues(quality_report),
             ))
             self.db.flush()
             self._step("AutoScoring")
@@ -1970,6 +2024,7 @@ class SEOGenerationOrchestrator:
                         run_and_store_seo_review(self.db, article)
                         rescored = compute_global_score(self.db, article.id, article=article)
                         quality_report = self._get(article.id, "editorial_quality_report") or {}
+                        seo_final = self._get(article.id, "seo_final_checklist") or {}
                         self.db.add(ArticleScore(
                             article_id=article.id,
                             revision_id=article.current_revision_id,
@@ -1979,6 +2034,7 @@ class SEOGenerationOrchestrator:
                             readability_score=rescored.get("readability_contrib"),
                             geo_score=rescored.get("geo_contrib"),
                             quality_score=quality_report.get("score"),
+                            issues=_seo_final_checklist_to_issues(seo_final) + _editorial_quality_report_to_issues(quality_report),
                         ))
                         self.db.flush()
                     except Exception as score_exc:

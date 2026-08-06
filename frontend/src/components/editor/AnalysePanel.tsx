@@ -340,14 +340,12 @@ function V2SignalsBreakdown({ report }: { report: V2Report }) {
 
   // Les "flags" backend ne couvrent que des seuils étroits et spécifiques à
   // chaque service (ex. GEO ne flag "no_structured_data" que si le score est
-  // à 0 pile) : un signal médiocre (40-74/100) qui tire le score global vers
-  // le bas peut donc n'apparaître nulle part ailleurs qu'une barre de couleur,
-  // sans jamais être nommé comme un problème. On dérive ici "ce qui ne va pas"
-  // directement des valeurs de signaux (même seuil que la couleur des barres
-  // ci-dessous), pour garantir qu'aucune faiblesse ne reste invisible même
-  // quand le backend n'a pas prévu de flag dédié pour elle.
+  // à 0 pile) : un signal en dessous de 100 mais sans flag dédié ne
+  // ressortait donc que comme une barre de couleur, jamais nommé comme un
+  // problème. Tant qu'un signal n'est pas à 100/100, on le liste explicitement
+  // ici — c'est la seule façon de savoir ce qui manque pour progresser.
   const weakSignals = Object.entries(signals)
-    .filter(([, s]) => s.value < 75)
+    .filter(([, s]) => s.value < 100)
     .sort(([, a], [, b]) => a.value - b.value)
 
   return (
