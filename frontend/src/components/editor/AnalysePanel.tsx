@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import {
-  AlertCircle, AlertTriangle, Info, RefreshCw, CheckCircle,
+  AlertCircle, AlertTriangle, Info, RefreshCw, CheckCircle, XCircle,
   HelpCircle, Download,
 } from '@/components/ui/hugeIcons'
 import { analyzeArticle, readyCheck, runSeoExpertReview } from '@/api/seo'
@@ -164,6 +164,75 @@ function reviewCheckLabel(check: string): string {
   if (REVIEW_CHECK_LABELS[check]) return REVIEW_CHECK_LABELS[check]
   const base = check.includes('_') ? check.slice(check.indexOf('_') + 1) : check
   return REVIEW_CHECK_LABELS[base] ?? check
+}
+
+// Contrôles de editorial_quality_gate (app/services/seo/editorial_quality_gate.py).
+// Le rapport stocke seulement les noms techniques dans passed_checks/failed_checks
+// (pas les labels) — on remappe ici vers des libellés lisibles.
+const QUALITY_CHECK_LABELS: Record<string, string> = {
+  no_h5_h6: 'Pas de H5/H6',
+  no_isolated_h3: 'Pas de H3 isolé',
+  no_h2_followed_by_h3: 'H2 non suivi directement par H3',
+  no_french_title_case: 'Pas de Title Case artificiel en français',
+  no_long_dashes: 'Pas de tirets longs',
+  no_abusive_bold: 'Pas de gras abusif',
+  list_length_ok: 'Listes de longueur raisonnable',
+  ai_phrases_minimal: 'Pas de traces IA évidentes',
+}
+
+function qualityCheckLabel(name: string): string {
+  return QUALITY_CHECK_LABELS[name] ?? name
+}
+
+// Liste binaire verte/rouge affichée pour chaque tuile de score. Une seule
+// structure pour tous les scores : la donnée vient du checklist réel quand il
+// existe (seo_final_checklist, editorial_quality_report), sinon des signaux
+// v2, sinon d'une dérivation par mots-clés sur les issues.
+type ChecklistItem = { label: string; pass: boolean }
+
+function checklistItems(report: Record<string, unknown>): ChecklistItem[] {
+  const checks = report.checks
+  if (!Array.isArray(checks)) return []
+  const items: ChecklistItem[] = []
+  for (const c of checks) {
+    if (typeof c !== 'object' || c === null) continue
+    const item = c as Record<string, unknown>
+    const label = typeof item.label === 'string' ? item.label : (typeof item.name === 'string' ? item.name : '')
+    if (!label) continue
+    items.push({ label, pass: Boolean(item.pass) })
+  }
+  return items
+}
+
+function keywordChecklist(
+  categoryIssues: SeoIssue[],
+  keywords: { kw: string; label: string }[],
+  expertReview: SeoExpertReview | null,
+  score: number | null,
+): ChecklistItem[] {
+  const items: ChecklistItem[] = [
+    ...deriveWhatWorks(categoryIssues, keywords).map((label) => ({ label, pass: true })),
+    ...deriveWhatFails(categoryIssues, keywords).map((label) => ({ label, pass: false })),
+  ]
+  const existing = new Set(items.map((c) => c.label))
+  for (const check of expertReview?.passed_checks ?? []) {
+    const label = reviewCheckLabel(check)
+    if (!existing.has(label)) {
+      items.push({ label, pass: true })
+      existing.add(label)
+    }
+  }
+  for (const check of expertReview?.failed_checks ?? []) {
+    const label = reviewCheckLabel(check)
+    if (!existing.has(label)) {
+      items.push({ label, pass: false })
+      existing.add(label)
+    }
+  }
+  if (items.length === 0 && categoryIssues.length === 0 && score !== null && score > 0) {
+    items.push({ label: 'Tous les contrôles sont validés pour ce critère', pass: true })
+  }
+  return items
 }
 
 /* ─── Calculation text per score type ───────────────────────── */
@@ -373,16 +442,6 @@ function V2SignalsBreakdown({ report }: { report: V2Report }) {
   const signals = report.signals ?? {}
   if (Object.keys(signals).length === 0) return null
 
-  // Les "flags" backend ne couvrent que des seuils étroits et spécifiques à
-  // chaque service (ex. GEO ne flag "no_structured_data" que si le score est
-  // à 0 pile) : un signal en dessous de 100 mais sans flag dédié ne
-  // ressortait donc que comme une barre de couleur, jamais nommé comme un
-  // problème. Tant qu'un signal n'est pas à 100/100, on le liste explicitement
-  // ici — c'est la seule façon de savoir ce qui manque pour progresser.
-  const weakSignals = Object.entries(signals)
-    .filter(([, s]) => s.value < 100)
-    .sort(([, a], [, b]) => a.value - b.value)
-
   return (
     <div className="flex flex-col gap-2">
       {report.explanation && (
@@ -397,24 +456,6 @@ function V2SignalsBreakdown({ report }: { report: V2Report }) {
               <span className="text-[12px] text-secondary">{flagLabel(flag)}</span>
             </div>
           ))}
-        </div>
-      )}
-
-      {weakSignals.length > 0 && (
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-danger mb-1.5">
-            Ce qui ne va pas ({weakSignals.length})
-          </p>
-          <div className="flex flex-col gap-1">
-            {weakSignals.map(([key, signal]) => (
-              <div key={key} className="flex items-start gap-1.5 rounded-[8px] bg-danger/5 px-2.5 py-1.5">
-                <AlertCircle size={10} className="mt-0.5 shrink-0 text-danger" />
-                <span className="text-[12px] text-secondary">
-                  {SIGNAL_LABELS[key] ?? key} — {Math.round(signal.value)}/100 (pèse {Math.round(signal.weight * 100)}% du score)
-                </span>
-              </div>
-            ))}
-          </div>
         </div>
       )}
 
@@ -476,54 +517,59 @@ function ScoreDetailPanel({
 
   const v2Report = getV2Report(article, selected)
 
-  let whatWorks: string[] = []
-  let whatFails: string[] = []
+  let checklist: ChecklistItem[] = []
   if (selected === 'Synthèse') {
     if (readiness) {
-      if (readiness.can_publish) whatWorks.push('Tous les seuils de validation sont atteints')
-      if (readiness.global_score_valid) whatWorks.push('Score global validé')
+      checklist.push({ label: 'Tous les seuils de validation sont atteints', pass: readiness.can_publish })
+      checklist.push({ label: 'Score global validé', pass: readiness.global_score_valid ?? false })
     }
-    if (expertReview?.passed_checks?.length) {
-      whatWorks.push(`${expertReview.passed_checks.length} contrôles SEO Expert validés`)
+    for (const issue of readiness?.blocking_issues ?? []) {
+      checklist.push({ label: issue.message, pass: false })
     }
-    if (readiness) {
-      for (const issue of readiness.blocking_issues ?? []) {
-        whatFails.push(issue.message)
-      }
-      for (const w of readiness.critical_warnings ?? []) {
-        if (!whatFails.includes(w.message)) whatFails.push(w.message)
-      }
+    for (const w of readiness?.critical_warnings ?? []) {
+      if (!checklist.some((c) => c.label === w.message)) checklist.push({ label: w.message, pass: false })
     }
-    if (expertReview?.failed_checks?.length) {
-      whatFails.push(...expertReview.failed_checks.map(reviewCheckLabel))
+    for (const check of expertReview?.passed_checks ?? []) {
+      checklist.push({ label: reviewCheckLabel(check), pass: true })
+    }
+    for (const check of expertReview?.failed_checks ?? []) {
+      checklist.push({ label: reviewCheckLabel(check), pass: false })
     }
   } else if (v2Report) {
-    // v2.1 experts: derive "what works" from signal scores
-    const signals = v2Report.signals ?? {}
-    whatWorks = Object.entries(signals)
-      .filter(([, s]) => s.value >= 75)
-      .map(([k]) => SIGNAL_LABELS[k] ?? k)
+    // v2 experts: une ligne par signal, verte si >= 75/100, rouge sinon —
+    // les signaux les plus bas en premier pour faire ressortir ce qui manque.
+    checklist = Object.entries(v2Report.signals ?? {})
+      .sort(([, a], [, b]) => a.value - b.value)
+      .map(([k, s]) => ({
+        label: `${SIGNAL_LABELS[k] ?? k} — ${Math.round(s.value)}/100`,
+        pass: s.value >= 75,
+      }))
     if (v2Report.status === 'original' || v2Report.status === 'adds_value') {
-      whatWorks.push('Contenu original vérifié')
+      checklist.push({ label: 'Contenu original vérifié', pass: true })
     }
-    if (score !== null && score >= 70 && whatWorks.length === 0) {
-      whatWorks.push('Tous les signaux sont satisfaisants')
+  } else if (selected === 'SEO') {
+    // Source exacte du score affiché : seo_final_checklist (14 checks).
+    const report = getArtifact(article, 'seo_final_checklist')
+    const items = report ? checklistItems(report) : []
+    checklist = items.length > 0 ? items : keywordChecklist(categoryIssues, keywordsMap[selected] ?? [], expertReview, score)
+  } else if (selected === 'Qualité') {
+    // checklist éditorial (editorial_quality_gate, 8 checks). Note : le chiffre
+    // affiché vient de l'heuristique seo_analyzer, pas de ce rapport — la liste
+    // reste informative.
+    const report = getArtifact(article, 'editorial_quality_report')
+    if (report) {
+      const passed = Array.isArray(report.passed_checks) ? (report.passed_checks as string[]) : []
+      const failed = Array.isArray(report.failed_checks) ? (report.failed_checks as string[]) : []
+      checklist = [
+        ...passed.map((name) => ({ label: qualityCheckLabel(name), pass: true })),
+        ...failed.map((name) => ({ label: qualityCheckLabel(name), pass: false })),
+      ]
+    } else {
+      checklist = keywordChecklist(categoryIssues, keywordsMap[selected] ?? [], expertReview, score)
     }
   } else {
     const keywords = keywordsMap[selected]
-    if (keywords) whatWorks = deriveWhatWorks(categoryIssues, keywords)
-    if (keywords) whatFails = deriveWhatFails(categoryIssues, keywords)
-    if (expertReview?.passed_checks?.length) {
-      const allPassed = expertReview.passed_checks.map(reviewCheckLabel)
-      whatWorks = [...new Set([...allPassed, ...whatWorks])]
-    }
-    if (expertReview?.failed_checks?.length) {
-      const allFailed = expertReview.failed_checks.map(reviewCheckLabel)
-      whatFails = [...new Set([...allFailed, ...whatFails])]
-    }
-    if (whatWorks.length === 0 && whatFails.length === 0 && categoryIssues.length === 0 && score !== null && score > 0) {
-      whatWorks.push('Tous les contrôles sont validés pour ce critère')
-    }
+    checklist = keywords ? keywordChecklist(categoryIssues, keywords, expertReview, score) : []
   }
 
   const globalContributors = selected === 'Synthèse'
@@ -548,28 +594,21 @@ function ScoreDetailPanel({
 
       <div className="flex flex-col gap-3">
 
-        {whatWorks.length > 0 && (
+        {checklist.length > 0 && (
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-success mb-1.5">Ce qui fonctionne</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-tertiary mb-1.5">
+              Vérifications ({checklist.filter((c) => c.pass).length}/{checklist.length} validées)
+            </p>
             <div className="flex flex-col gap-1">
-              {whatWorks.map((item, i) => (
-                <div key={i} className="flex items-start gap-1.5 text-[12px]">
-                  <CheckCircle size={11} className="mt-0.5 shrink-0 text-success" />
-                  <span className="text-secondary">{item}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {whatFails.length > 0 && (
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-danger mb-1.5">Ce qui ne fonctionne pas</p>
-            <div className="flex flex-col gap-1">
-              {whatFails.map((item, i) => (
-                <div key={i} className="flex items-start gap-1.5 rounded-[8px] bg-danger/5 px-2.5 py-1.5 text-[12px]">
-                  <AlertCircle size={11} className="mt-0.5 shrink-0 text-danger" />
-                  <span className="text-secondary">{item}</span>
+              {checklist.map((item, i) => (
+                <div
+                  key={i}
+                  className={`flex items-start gap-1.5 rounded-[8px] px-2.5 py-1.5 ${item.pass ? 'bg-success/5' : 'bg-danger/5'}`}
+                >
+                  {item.pass
+                    ? <CheckCircle size={11} className="mt-0.5 shrink-0 text-success" />
+                    : <XCircle size={11} className="mt-0.5 shrink-0 text-danger" />}
+                  <span className="text-[12px] text-secondary">{item.label}</span>
                 </div>
               ))}
             </div>
@@ -641,7 +680,7 @@ function ScoreDetailPanel({
           </div>
         )}
 
-        {!hasProblems && !hasActions && whatWorks.length === 0 && whatFails.length === 0 && (
+        {!hasProblems && !hasActions && checklist.length === 0 && (
           <div className="flex items-center gap-2 rounded-[10px] bg-surface-soft px-3 py-2.5 text-[12px] text-tertiary">
             <HelpCircle size={12} className="shrink-0" />
             <span>Lancez une analyse pour obtenir les détails de ce score.</span>
