@@ -155,9 +155,11 @@ export type GenerateArticleResponse = {
 }
 
 export function generateArticle(projectId: string, payload: GenerateArticleRequest = {}): Promise<GenerateArticleResponse> {
-  // Génération synchrone côté backend, avec un cycle d'auto-amélioration
-  // qui peut faire plusieurs allers-retours LLM sur l'article complet —
-  // largement au-delà du timeout par défaut de 25s (voir client.ts). Aligné
-  // sur triggerPipelineRun(), qui a le même besoin (voir pipeline.ts).
-  return api.post<GenerateArticleResponse>(`/projects/${projectId}/articles/generate`, payload, { timeoutMs: 180000 })
+  // Génération synchrone côté backend : 4 passes de rédaction séquentielles
+  // puis un cycle d'auto-amélioration budgété à 900s (AUTO_IMPROVE_TIME_BUDGET_SECONDS,
+  // voir seo_generation_orchestrator.py — dimensionné contre le pire cas réel
+  // d'un appel Gemini, jusqu'à 630s). 180s ne suffit plus : le pipeline entier
+  // peut légitimement dépasser cette durée sans que la génération ait échoué.
+  // Aligné sur triggerPipelineRun(), qui a le même besoin (voir pipeline.ts).
+  return api.post<GenerateArticleResponse>(`/projects/${projectId}/articles/generate`, payload, { timeoutMs: 1200000 })
 }

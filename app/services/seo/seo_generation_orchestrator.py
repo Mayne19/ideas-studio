@@ -68,14 +68,19 @@ class WritingCancelledError(RuntimeError):
 AUTO_IMPROVE_SCORE_TARGET = 90
 
 # Budget de temps maximum (secondes) pour l'ensemble du cycle d'auto-amélioration.
-# Depuis que la boucle voit enfin les vrais signaux SEO/EEAT/lisibilité/
-# originalité (elle tournait auparavant presque toujours à vide), chaque
-# itération envoie l'article complet à un LLM et attend une réécriture
-# complète — un run de génération peut désormais légitimement prendre
-# plusieurs minutes. Ce budget évite qu'il ne s'étende indéfiniment sur un
-# provider lent, au-delà de ce qu'un utilisateur attend raisonnablement
-# devant un écran (voir generateArticle() côté frontend, timeout aligné).
-AUTO_IMPROVE_TIME_BUDGET_SECONDS = 150
+# Le budget doit être dimensionné contre le pire cas réel d'un seul appel LLM,
+# pas contre son timeout nominal : run_with_deadline() (llm_provider.py) calcule
+# une deadline absolue = timeout_seconds * (max_retries + 1) + 30, pour couvrir
+# un cas déjà observé en production (appel Gemini resté suspendu 22+ minutes
+# sans jamais lever d'erreur httpx). Pour Gemini (GEMINI_TIMEOUT_SECONDS=300,
+# max_retries=1, voir gemini_provider.py) : 300*2+30 = 630s pour un seul appel.
+# Avec l'ancien budget de 150s, ce test (évalué entre deux itérations, jamais
+# pendant un appel en cours) empêchait quasi systématiquement les itérations
+# 2 à 4 de seulement démarrer dès qu'un appel avait pris plus de 150s — la
+# boucle n'avait alors jamais l'occasion réelle d'atteindre AUTO_IMPROVE_SCORE_TARGET
+# même quand le contenu en avait besoin. 900s couvre un appel au pire cas (630s)
+# plus une marge pour qu'une seconde itération ait une vraie chance de démarrer.
+AUTO_IMPROVE_TIME_BUDGET_SECONDS = 900
 
 # Checks du checklist seo_final_checklist (seo_final_checklist_service.check_seo_final)
 # considérés comme bloquants pour le référencement de base — le reste dégrade
@@ -1884,7 +1889,12 @@ class SEOGenerationOrchestrator:
                 .limit(1)
             ).scalar()
             if current_score is not None and current_score < AUTO_IMPROVE_SCORE_TARGET:
-                self._auto_improve_score(draft, sources_list, max_iterations=4)
+                # 6, pas 4 : avec le garde-fou anti-régression (une réécriture qui fait
+                # reculer le score global est annulée), une itération de plus ne coûte
+                # jamais de qualité, seulement du temps si le budget le permet. 5 signaux
+                # pondérés (EEAT/SEO/Lisibilité/Originalité/Présence humaine) à couvrir
+                # au moins une fois chacun, plus une marge pour retenter un signal annulé.
+                self._auto_improve_score(draft, sources_list, max_iterations=6)
 
             # Vérification finale après auto-improvement
             final_score = self.db.execute(
@@ -2094,7 +2104,7 @@ class SEOGenerationOrchestrator:
             )
         return instruction
 
-    def _auto_improve_score(self, draft: _DraftArticle, sources_list: list[str], max_iterations: int = 4):
+    def _auto_improve_score(self, draft: _DraftArticle, sources_list: list[str], max_iterations: int = 6):
         """Tant que global_score < AUTO_IMPROVE_SCORE_TARGET, améliore le signal le plus faible.
 
         Utilise compute_global_score() (même source de vérité que le score
