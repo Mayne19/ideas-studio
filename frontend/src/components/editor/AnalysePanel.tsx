@@ -131,6 +131,41 @@ function deriveWhatWorks(issues: SeoIssue[], keywords: { kw: string; label: stri
     .map(({ label }) => label)
 }
 
+// Miroir de deriveWhatWorks : les exigences mécaniques dont un issue de la
+// catégorie signale l'absence. Sans cette inversion, une tuile ne montrait que
+// "ce qui fonctionne" (déduit par absence de message) sans jamais nommer ce qui
+// manque réellement.
+function deriveWhatFails(issues: SeoIssue[], keywords: { kw: string; label: string }[]): string[] {
+  const messages = issues.map((i) => i.message.toLowerCase())
+  return keywords
+    .filter(({ kw }) => messages.some((m) => m.includes(kw)))
+    .map(({ label }) => label)
+}
+
+// Contrôles de l'audit SEO Expert (seo_review_service.review_article_with_
+// knowledge_pack) : les noms techniques sont peu lisibles tels quels pour un
+// humain. Map partagée pour les contrôles passés ET échoués.
+const REVIEW_CHECK_LABELS: Record<string, string> = {
+  title_present: 'Titre présent',
+  slug_present: 'Slug présent',
+  meta_description_present: 'Meta description présente',
+  content_depth: 'Longueur de contenu suffisante (800+ mots)',
+  first_h2_answers_intent: 'Le premier H2 répond à l\'intention',
+  no_isolated_h3: 'Pas de H3 isolé',
+  faq_count_valid: 'FAQ entre 2 et 6 questions',
+  sources_for_sensitive_topics: 'Sources présentes sur sujets sensibles',
+  no_keyword_stuffing: 'Pas de sur-optimisation du mot-clé',
+  readability_ok: 'Lisibilité correcte (phrases courtes)',
+  basic_eeat_signals: 'Signaux EEAT de base présents',
+  not_too_generic_or_ai_sounding: 'Contenu pas trop générique ou trop IA',
+}
+
+function reviewCheckLabel(check: string): string {
+  if (REVIEW_CHECK_LABELS[check]) return REVIEW_CHECK_LABELS[check]
+  const base = check.includes('_') ? check.slice(check.indexOf('_') + 1) : check
+  return REVIEW_CHECK_LABELS[base] ?? check
+}
+
 /* ─── Calculation text per score type ───────────────────────── */
 
 const CALCULATION_TEXT: Record<string, string> = {
@@ -442,6 +477,7 @@ function ScoreDetailPanel({
   const v2Report = getV2Report(article, selected)
 
   let whatWorks: string[] = []
+  let whatFails: string[] = []
   if (selected === 'Synthèse') {
     if (readiness) {
       if (readiness.can_publish) whatWorks.push('Tous les seuils de validation sont atteints')
@@ -449,6 +485,17 @@ function ScoreDetailPanel({
     }
     if (expertReview?.passed_checks?.length) {
       whatWorks.push(`${expertReview.passed_checks.length} contrôles SEO Expert validés`)
+    }
+    if (readiness) {
+      for (const issue of readiness.blocking_issues ?? []) {
+        whatFails.push(issue.message)
+      }
+      for (const w of readiness.critical_warnings ?? []) {
+        if (!whatFails.includes(w.message)) whatFails.push(w.message)
+      }
+    }
+    if (expertReview?.failed_checks?.length) {
+      whatFails.push(...expertReview.failed_checks.map(reviewCheckLabel))
     }
   } else if (v2Report) {
     // v2.1 experts: derive "what works" from signal scores
@@ -465,11 +512,16 @@ function ScoreDetailPanel({
   } else {
     const keywords = keywordsMap[selected]
     if (keywords) whatWorks = deriveWhatWorks(categoryIssues, keywords)
+    if (keywords) whatFails = deriveWhatFails(categoryIssues, keywords)
     if (expertReview?.passed_checks?.length) {
-      const allPassed = expertReview.passed_checks
+      const allPassed = expertReview.passed_checks.map(reviewCheckLabel)
       whatWorks = [...new Set([...allPassed, ...whatWorks])]
     }
-    if (whatWorks.length === 0 && categoryIssues.length === 0 && score !== null && score > 0) {
+    if (expertReview?.failed_checks?.length) {
+      const allFailed = expertReview.failed_checks.map(reviewCheckLabel)
+      whatFails = [...new Set([...allFailed, ...whatFails])]
+    }
+    if (whatWorks.length === 0 && whatFails.length === 0 && categoryIssues.length === 0 && score !== null && score > 0) {
       whatWorks.push('Tous les contrôles sont validés pour ce critère')
     }
   }
@@ -503,6 +555,20 @@ function ScoreDetailPanel({
               {whatWorks.map((item, i) => (
                 <div key={i} className="flex items-start gap-1.5 text-[12px]">
                   <CheckCircle size={11} className="mt-0.5 shrink-0 text-success" />
+                  <span className="text-secondary">{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {whatFails.length > 0 && (
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-danger mb-1.5">Ce qui ne fonctionne pas</p>
+            <div className="flex flex-col gap-1">
+              {whatFails.map((item, i) => (
+                <div key={i} className="flex items-start gap-1.5 rounded-[8px] bg-danger/5 px-2.5 py-1.5 text-[12px]">
+                  <AlertCircle size={11} className="mt-0.5 shrink-0 text-danger" />
                   <span className="text-secondary">{item}</span>
                 </div>
               ))}
@@ -575,7 +641,7 @@ function ScoreDetailPanel({
           </div>
         )}
 
-        {!hasProblems && !hasActions && whatWorks.length === 0 && (
+        {!hasProblems && !hasActions && whatWorks.length === 0 && whatFails.length === 0 && (
           <div className="flex items-center gap-2 rounded-[10px] bg-surface-soft px-3 py-2.5 text-[12px] text-tertiary">
             <HelpCircle size={12} className="shrink-0" />
             <span>Lancez une analyse pour obtenir les détails de ce score.</span>
