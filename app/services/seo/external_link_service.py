@@ -54,12 +54,37 @@ def _clean_anchor(anchor: str) -> str:
     return anchor
 
 
+def _get_competitor_domains(db, project_id: str | None) -> set[str]:
+    """Domaines à ne jamais proposer comme lien externe — lus depuis
+    editorial_profiles.rules.competitor_domains (même champ JSON libre que
+    image_plan_service.py, configurable par projet sans migration)."""
+    if db is None or not project_id:
+        return set()
+    try:
+        from app.models.core import Project
+        project = db.get(Project, project_id)
+        profile = project.active_editorial_profile if project else None
+        domains = (profile.rules or {}).get("competitor_domains", []) if profile else []
+        return {d.strip().lower() for d in domains if isinstance(d, str) and d.strip()}
+    except Exception:
+        return set()
+
+
+def _is_competitor_domain(url: str, competitor_domains: set[str]) -> bool:
+    if not competitor_domains:
+        return False
+    lowered = url.lower()
+    return any(comp in lowered for comp in competitor_domains)
+
+
 def build_external_link_plan(
     keyword: str,
     research_brief: dict | None = None,
     project_id: str | None = None,
+    db=None,
 ) -> ExternalLinkPlan:
     plan = ExternalLinkPlan()
+    competitor_domains = _get_competitor_domains(db, project_id)
 
     research = research_brief or {}
     sources = research.get("sources_consulted", [])
@@ -77,7 +102,7 @@ def build_external_link_plan(
         if not isinstance(src, dict):
             continue
         url = _clean_url(src.get("url", ""))
-        if not url or url in seen_urls:
+        if not url or url in seen_urls or _is_competitor_domain(url, competitor_domains):
             continue
         seen_urls.add(url)
         quality_check = src.get("quality_check", {})
@@ -98,7 +123,7 @@ def build_external_link_plan(
     # Add discovered external links (deduplicated)
     for url in discovered_urls:
         clean_url = _clean_url(url)
-        if not clean_url or clean_url in seen_urls:
+        if not clean_url or clean_url in seen_urls or _is_competitor_domain(clean_url, competitor_domains):
             continue
         seen_urls.add(clean_url)
         # Validate via Scrapling only if configured
@@ -141,5 +166,6 @@ def build_external_link_plan_dict(
     keyword: str,
     research_brief: dict | None = None,
     project_id: str | None = None,
+    db=None,
 ) -> dict:
-    return asdict(build_external_link_plan(keyword, research_brief, project_id))
+    return asdict(build_external_link_plan(keyword, research_brief, project_id, db))

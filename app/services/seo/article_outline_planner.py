@@ -83,6 +83,15 @@ def _build_outline_with_llm(
         "(ce que le lecteur y gagne)\n"
         "- Pas de section 'Conclusion' : l'article se termine dans la dernière section\n"
         "- Si une FAQ est utile, signale faq_planned=true\n"
+        "- Varie la structure syntaxique des titres H2 : question, affirmation directe, "
+        "verbe d'action, comparaison. Ne répète jamais le même patron sur deux sections "
+        "consécutives.\n"
+        "- Différencie chaque titre H2 des angles concurrents identifiés ci-dessus, pas "
+        "seulement dans le sujet traité mais dans la formulation même du titre : évite "
+        "toute reprise proche d'un intitulé concurrent.\n"
+        "- Si un sujet de section nécessite plus de 400 mots pour être traité "
+        "correctement, découpe-la en 2 à 3 sous-sections H3 (level=3) plutôt qu'une "
+        "seule section H2 dense.\n"
         "Réponds UNIQUEMENT avec un JSON valide :\n"
         '{"h1": titre, "intro_goal": "...", "first_block_goal": "...", '
         '"sections": [{"heading": "...", "level": 2, "purpose": "...", '

@@ -478,7 +478,7 @@ class SEOGenerationOrchestrator:
         self._step("InternalLinkPlan")
 
         # 14. ExternalLinkPlan
-        external_links = build_external_link_plan_dict(final_keyword, research_brief, project_id=self.project_id)
+        external_links = build_external_link_plan_dict(final_keyword, research_brief, project_id=self.project_id, db=self.db)
         self.context["external_links"] = external_links
         self._step("ExternalLinkPlan")
 
@@ -1173,12 +1173,12 @@ class SEOGenerationOrchestrator:
             "  est préférable dans un cas précis.",
             "- Place 1 à 2 marqueurs de voix humaine par section, jamais plus (au-delà, c'est aussi "
             "  mécanique que zéro), et jamais toujours au même endroit de la phrase : "
-            "  'Honnêtement,', 'À bien y réfléchir,', 'Curieusement,', 'Pourtant,' en début ; "
+            "  'Curieusement,' en début ; "
             "  'et ce n'est pas anodin', 'ce que peu de gens réalisent' en milieu ; "
             "  'c'est bien dommage', 'et c'est presque toujours vrai' en fin.",
-            "- Varie les connecteurs logiques : pas seulement 'mais'/'cependant', alterne avec 'pourtant', "
-            "  'à bien y réfléchir', 'ce qui signifie concrètement', 'tout compte fait', 'en réalité', "
-            "  'pour être honnête', 'et c'est là que ça devient intéressant'.",
+            "- Varie les connecteurs logiques : pas seulement 'mais'/'cependant', alterne avec "
+            "  'ce qui signifie concrètement', 'tout compte tenu', 'cela dit', "
+            "  'et c'est là que ça devient intéressant'.",
             "- Dose le 'vous' : mélange avec des tournures impersonnelles et des phrases sans sujet direct, "
             "  ne t'adresse pas au lecteur dans chaque phrase.",
             "- La conclusion (dans la dernière section, jamais une section à part) ne résume pas ce qui "
@@ -1193,7 +1193,10 @@ class SEOGenerationOrchestrator:
             "- Transitions creuses à supprimer ou remplacer par un lien concret : 'En outre', 'De plus', "
             "  'Par ailleurs', 'Néanmoins', 'Toutefois', 'Ainsi', 'Dès lors', 'En somme', 'En définitive', "
             "  'D'autre part', 'À cet égard', 'En effet'/'Effectivement'/'Notamment' en début de "
-            "  paragraphe, 'De surcroît', 'Qui plus est'.",
+            "  paragraphe, 'De surcroît', 'Qui plus est', 'Honnêtement', 'En réalité', 'Pourtant' en "
+            "  début de phrase, 'À bien y réfléchir'.",
+            "- Jamais de connecteur de transition en début de paragraphe si un connecteur a déjà été "
+            "  utilisé dans les 3 phrases précédentes : espace-les, ne les enchaîne pas.",
             "- Quantificateurs vagues à remplacer par un chiffre précis ou à supprimer : 'Nombreux', "
             "  'Divers', 'Plusieurs' (si le nombre est connaissable), 'Multiples', 'Extrêmement', "
             "  'Particulièrement', 'Fortement', 'Considérablement', 'Hautement', 'Grandement', "
