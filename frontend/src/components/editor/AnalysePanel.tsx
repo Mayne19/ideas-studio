@@ -146,6 +146,19 @@ const CALCULATION_TEXT: Record<string, string> = {
 
 /* ─── Score synthesis card ──────────────────────────────────── */
 
+// Pondération réelle de compute_global_score() (scoring_service.py) : SEO 27%,
+// EEAT 18%, Lisibilité 15%, Originalité 16%, Présence humaine 14%, Valeur
+// ajoutée 10% (non affichée séparément dans l'éditeur, donc exclue du
+// classement ci-dessous — pas de tuile pour la montrer). GEO et Qualité sont
+// volontairement absents : compute_global_score() ne les pondère pas.
+const GLOBAL_SCORE_WEIGHTS: Partial<Record<ScoreKey, number>> = {
+  SEO: 0.27,
+  EEAT: 0.18,
+  Lisibilité: 0.15,
+  Originalité: 0.16,
+  'Présence humaine': 0.14,
+}
+
 const SECONDARY_SCORE_KEYS: ScoreKey[] = ['SEO', 'EEAT', 'Lisibilité', 'Originalité', 'Présence humaine', 'GEO', 'Qualité']
 
 const SCORE_LABEL: Record<ScoreKey, string> = {
@@ -325,6 +338,18 @@ function V2SignalsBreakdown({ report }: { report: V2Report }) {
   const signals = report.signals ?? {}
   if (Object.keys(signals).length === 0) return null
 
+  // Les "flags" backend ne couvrent que des seuils étroits et spécifiques à
+  // chaque service (ex. GEO ne flag "no_structured_data" que si le score est
+  // à 0 pile) : un signal médiocre (40-74/100) qui tire le score global vers
+  // le bas peut donc n'apparaître nulle part ailleurs qu'une barre de couleur,
+  // sans jamais être nommé comme un problème. On dérive ici "ce qui ne va pas"
+  // directement des valeurs de signaux (même seuil que la couleur des barres
+  // ci-dessous), pour garantir qu'aucune faiblesse ne reste invisible même
+  // quand le backend n'a pas prévu de flag dédié pour elle.
+  const weakSignals = Object.entries(signals)
+    .filter(([, s]) => s.value < 75)
+    .sort(([, a], [, b]) => a.value - b.value)
+
   return (
     <div className="flex flex-col gap-2">
       {report.explanation && (
@@ -339,6 +364,24 @@ function V2SignalsBreakdown({ report }: { report: V2Report }) {
               <span className="text-[12px] text-secondary">{flagLabel(flag)}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {weakSignals.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-danger mb-1.5">
+            Ce qui ne va pas ({weakSignals.length})
+          </p>
+          <div className="flex flex-col gap-1">
+            {weakSignals.map(([key, signal]) => (
+              <div key={key} className="flex items-start gap-1.5 rounded-[8px] bg-danger/5 px-2.5 py-1.5">
+                <AlertCircle size={10} className="mt-0.5 shrink-0 text-danger" />
+                <span className="text-[12px] text-secondary">
+                  {SIGNAL_LABELS[key] ?? key} — {Math.round(signal.value)}/100 (pèse {Math.round(signal.weight * 100)}% du score)
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -433,6 +476,16 @@ function ScoreDetailPanel({
     }
   }
 
+  const globalContributors = selected === 'Synthèse'
+    ? (Object.entries(GLOBAL_SCORE_WEIGHTS) as [ScoreKey, number][])
+        .map(([key, weight]) => {
+          const s = resolveScore(article, brief, expertReview, key)
+          return s === null ? null : { key, score: s, weight, impact: weight * (100 - s) }
+        })
+        .filter((x): x is { key: ScoreKey; score: number; weight: number; impact: number } => x !== null && x.score < 100)
+        .sort((a, b) => b.impact - a.impact)
+    : []
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-start gap-4">
@@ -453,6 +506,24 @@ function ScoreDetailPanel({
                 <div key={i} className="flex items-start gap-1.5 text-[12px]">
                   <CheckCircle size={11} className="mt-0.5 shrink-0 text-success" />
                   <span className="text-secondary">{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {globalContributors.length > 0 && (
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-danger mb-1.5">
+              Ce qui pèse le plus sur le score global
+            </p>
+            <div className="flex flex-col gap-1">
+              {globalContributors.map(({ key, score: s, weight }) => (
+                <div key={key} className="flex items-start gap-1.5 rounded-[8px] bg-danger/5 px-2.5 py-1.5">
+                  <AlertCircle size={10} className="mt-0.5 shrink-0 text-danger" />
+                  <span className="text-[12px] text-secondary">
+                    {SCORE_LABEL[key]} — {Math.round(s)}/100 (poids {Math.round(weight * 100)}% du score global)
+                  </span>
                 </div>
               ))}
             </div>
