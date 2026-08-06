@@ -1142,7 +1142,23 @@ class SEOGenerationOrchestrator:
 
         if not checklist:
             return ""
-        lines = ["", "Checklist de vérification mécanique (à respecter absolument) :"]
+        # "Vérifie ces points" seul laisse le modèle survoler la liste sans
+        # vraiment statuer sur chacun — demander un oui/non explicite par point
+        # (en interne, avant la réponse finale) force un vrai passage en revue
+        # plutôt qu'une lecture en diagonale. Le raisonnement lui-même n'est
+        # jamais retourné : seule la consigne de sortie (HTML uniquement)
+        # compte pour le parsing en aval, inchangée.
+        lines = [
+            "",
+            "Avant de répondre, vérifie ce texte point par point ci-dessous. Pour "
+            "chaque point, détermine mentalement s'il est déjà respecté (oui/non) "
+            "dans le texte que tu vas renvoyer. Pour chaque point répondu \"non\", "
+            "corrige-le silencieusement avant de produire ta réponse finale. Ne "
+            "montre jamais ce raisonnement point par point dans ta réponse — "
+            "uniquement le HTML final corrigé.",
+            "",
+            "Points à vérifier un par un :",
+        ]
         lines += [f"- {item}" for item in checklist]
         return "\n".join(lines)
 
@@ -2045,6 +2061,36 @@ class SEOGenerationOrchestrator:
         }),
     }
 
+    # Checks seo_final_checklist volontairement exclus du complément ci-dessous :
+    # keyword_in_title (cette passe ne touche jamais le titre) et les 4 checks
+    # déjà couverts par un signal dédié du score global (content_depth ->
+    # Volume, keyword_in_intro/faq_valid -> rédaction initiale, pas une
+    # correction ciblée pertinente ici).
+    _SEO_CHECKLIST_SUPPLEMENT_EXCLUDED = {"keyword_in_title", "content_depth"}
+
+    def _pending_seo_checklist_gaps(self, article: Article, max_items: int = 3) -> str:
+        """Un check seo_final_checklist en échec (ex: aucun lien externe dans
+        le texte) peut rester non corrigé plusieurs itérations si SEO n'est
+        jamais le signal agrégé le plus faible du moment — la boucle ne cible
+        que ce signal-là par tour. Ce complément, ajouté à l'instruction de
+        n'importe quel autre signal, garantit que ces points structurels
+        simples (souvent une correction courte, peu susceptible d'entrer en
+        conflit avec la correction principale demandée) ne restent pas oubliés
+        indéfiniment. Retourne une chaîne vide si rien de pertinent."""
+        report = self._get(article.id, "seo_final_checklist") or {}
+        failed_labels = [
+            check.get("label", check.get("name", ""))
+            for check in report.get("checks", [])
+            if not check.get("pass") and check.get("name") not in self._SEO_CHECKLIST_SUPPLEMENT_EXCLUDED
+        ]
+        if not failed_labels:
+            return ""
+        return (
+            " Par ailleurs, tant que tu y es, corrige aussi ces points structurels "
+            "restés en échec sans changer par ailleurs le fond du texte : "
+            + ", ".join(failed_labels[:max_items]) + "."
+        )
+
     def _build_improvement_instruction(self, article: Article, weakest_signal: str) -> str:
         generic_fallback = {
             'EEAT': "Enrichis cet article avec des données chiffrées sourcées, des exemples concrets et des liens vers des sources fiables.",
@@ -2167,8 +2213,16 @@ class SEOGenerationOrchestrator:
                 weakest_signal = min(valid_signals, key=valid_signals.get)
                 instruction = self._build_improvement_instruction(article, weakest_signal)
 
+            # Ratisse aussi les checks structurels SEO restés en échec même
+            # quand ce n'est pas SEO le signal ciblé ce tour-ci — sans ce
+            # complément, un point comme "aucun lien externe" peut ne jamais
+            # être corrigé si SEO n'est jamais le signal le plus faible.
+            if weakest_signal not in ("SEO", "Volume"):
+                instruction += self._pending_seo_checklist_gaps(article)
+
             improve_prompt = (
-                f"Améliore ce contenu HTML en appliquant UNE SEULE modification ciblée.\n\n"
+                f"Améliore ce contenu HTML en suivant précisément l'instruction ci-dessous, "
+                "sans rien changer d'autre au texte.\n\n"
                 f"Instruction : {instruction}\n\n"
                 "Règles impératives :\n"
                 "- Conserve exactement la structure HTML (balises H1, H2, H3, p, ul, li)\n"
