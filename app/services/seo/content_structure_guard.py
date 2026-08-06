@@ -195,6 +195,33 @@ def apply_structure_guards(content: str, title: str | None) -> str:
     return content
 
 
+def inject_missing_external_links(content: str, external_links_plan: dict | None) -> str:
+    """Complète le maillage externe : si un lien du plan (construit en amont par
+    external_link_service) n'apparaît nulle part dans le contenu, on l'ajoute
+    sous forme d'un paragraphe neutre en fin d'article. Garde-fou mécanique
+    (comme strip_duplicate_h1/fix_heading_hierarchy) : pas d'insertion
+    "intelligente" par mot-clé — un ajout en fin d'article est préférable à un
+    placement incohérent. Ne modifie rien si le contenu ou le plan est vide."""
+    if not content or not external_links_plan:
+        return content
+    links = external_links_plan.get("links") or []
+    missing = [l for l in links if isinstance(l, dict) and l.get("url") and l["url"] not in content]
+    if not missing:
+        return content
+    additions = []
+    for link in missing[:2]:  # cap à 2, pas de saturation
+        anchor = (link.get("anchor_text") or "cette source").strip()
+        additions.append(
+            f'<p>Pour aller plus loin, voir <a href="{link["url"]}" '
+            f'target="_blank" rel="nofollow">{anchor}</a>.</p>'
+        )
+    insertion_point = content.rfind("</p>")
+    if insertion_point == -1:
+        return content + "".join(additions)
+    insertion_point += len("</p>")
+    return content[:insertion_point] + "".join(additions) + content[insertion_point:]
+
+
 _MARKDOWN_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
 _PARENTHETICAL_NOTE_RE = re.compile(r"\s*\([^)]*\bcaractères?\b[^)]*\)\s*$", re.IGNORECASE)
 

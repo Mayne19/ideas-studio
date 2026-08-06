@@ -68,14 +68,19 @@ class WritingCancelledError(RuntimeError):
 AUTO_IMPROVE_SCORE_TARGET = 90
 
 # Budget de temps maximum (secondes) pour l'ensemble du cycle d'auto-amélioration.
-# Depuis que la boucle voit enfin les vrais signaux SEO/EEAT/lisibilité/
-# originalité (elle tournait auparavant presque toujours à vide), chaque
-# itération envoie l'article complet à un LLM et attend une réécriture
-# complète — un run de génération peut désormais légitimement prendre
-# plusieurs minutes. Ce budget évite qu'il ne s'étende indéfiniment sur un
-# provider lent, au-delà de ce qu'un utilisateur attend raisonnablement
-# devant un écran (voir generateArticle() côté frontend, timeout aligné).
-AUTO_IMPROVE_TIME_BUDGET_SECONDS = 150
+# Le budget doit être dimensionné contre le pire cas réel d'un seul appel LLM,
+# pas contre son timeout nominal : run_with_deadline() (llm_provider.py) calcule
+# une deadline absolue = timeout_seconds * (max_retries + 1) + 30, pour couvrir
+# un cas déjà observé en production (appel Gemini resté suspendu 22+ minutes
+# sans jamais lever d'erreur httpx). Pour Gemini (GEMINI_TIMEOUT_SECONDS=300,
+# max_retries=1, voir gemini_provider.py) : 300*2+30 = 630s pour un seul appel.
+# Avec l'ancien budget de 150s, ce test (évalué entre deux itérations, jamais
+# pendant un appel en cours) empêchait quasi systématiquement les itérations
+# 2 à 4 de seulement démarrer dès qu'un appel avait pris plus de 150s — la
+# boucle n'avait alors jamais l'occasion réelle d'atteindre AUTO_IMPROVE_SCORE_TARGET
+# même quand le contenu en avait besoin. 900s couvre un appel au pire cas (630s)
+# plus une marge pour qu'une seconde itération ait une vraie chance de démarrer.
+AUTO_IMPROVE_TIME_BUDGET_SECONDS = 900
 
 # Checks du checklist seo_final_checklist (seo_final_checklist_service.check_seo_final)
 # considérés comme bloquants pour le référencement de base — le reste dégrade
@@ -1073,6 +1078,74 @@ class SEOGenerationOrchestrator:
         self._step(step)
         return content
 
+    def _build_checklist_verification_block(self) -> str:
+        """Checklist de vérification mécanique pour la passe QualityGate (Pass 3,
+        gate_prompt). Les passes précédentes corrigent la prose (logique, style,
+        redondance), pas la conformité aux exigences mécaniques (plage de mots,
+        liens du plan réellement présents, statistique sourcée) — cette checklist
+        les rend explicites au modèle dans le même appel LLM, sans coût
+        supplémentaire. Construite dynamiquement depuis self.context ; ne plante
+        jamais sur un contexte incomplet (chaîne vide si rien de pertinent)."""
+        checklist: list[str] = []
+
+        wc_min = self.context.get("word_count_min")
+        wc_max = self.context.get("word_count_max")
+        if wc_min or wc_max:
+            target = " et ".join(
+                p for p in (
+                    f"minimum {wc_min} mots" if wc_min else "",
+                    f"maximum {wc_max} mots" if wc_max else "",
+                ) if p
+            )
+            checklist.append(
+                f"Respecte la plage de mots : {target}. Compte les mots du HTML "
+                "final que tu renvoies ; coupe les passages les moins utiles si tu "
+                "dépasses le maximum, développe une section pertinente si tu es "
+                "sous le minimum."
+            )
+
+        external_plan = self.context.get("external_links") or {}
+        external_links = (external_plan.get("links") or []) if isinstance(external_plan, dict) else []
+        external_urls = [
+            str(link.get("url", "")).strip()
+            for link in external_links if isinstance(link, dict) and link.get("url")
+        ]
+        if external_urls:
+            checklist.append(
+                "Chaque lien externe du plan doit apparaître réellement dans le HTML "
+                "(balise <a href='...'>). URLs attendues : "
+                + ", ".join(external_urls[:4])
+                + ". Vérifie-les une à une ; si un lien est absent, place-le sur la "
+                "phrase qui s'appuie sur cette source."
+            )
+
+        internal_plan = self.context.get("internal_links") or {}
+        internal_links = (internal_plan.get("links") or []) if isinstance(internal_plan, dict) else []
+        internal_urls = [
+            str(link.get("target_url", "")).strip()
+            for link in internal_links if isinstance(link, dict) and link.get("target_url")
+        ]
+        if internal_urls:
+            checklist.append(
+                "Chaque lien interne du plan doit apparaître réellement dans le HTML. "
+                "URLs attendues : "
+                + ", ".join(internal_urls[:3])
+                + ". Si un lien est absent, insère-le naturellement sur une phrase "
+                "connexe."
+            )
+
+        checklist.append(
+            "L'article contient au moins une statistique chiffrée (un nombre précis) "
+            "avec sa source citée dans la même phrase (ex : « 67 % des ... selon "
+            "l'étude X »)."
+        )
+
+        if not checklist:
+            return ""
+        lines = ["", "Checklist de vérification mécanique (à respecter absolument) :"]
+        lines += [f"- {item}" for item in checklist]
+        return "\n".join(lines)
+
     def _verify_human_insights_usage(self, content: str) -> None:
         """Garde-fou non bloquant : si des insights humains réels étaient
         disponibles avant la rédaction, on vérifie que le contenu généré les
@@ -1505,8 +1578,9 @@ class SEOGenerationOrchestrator:
             "génériques, les superlatifs vides, le mot-clé sur-optimisé (densité max 2%). "
             "Ne change ni le plan, ni les faits, ni les données, ni les liens. "
             "Règle absolue : pas de tiret cadratin (—), remplace-le par une virgule, "
-            "un point-virgule ou une reformulation.\n\n"
-            "Retourne UNIQUEMENT le HTML complet nettoyé, sans explication, sans backticks.\n\n"
+            "un point-virgule ou une reformulation."
+            + self._build_checklist_verification_block()
+            + "\n\nRetourne UNIQUEMENT le HTML complet nettoyé, sans explication, sans backticks.\n\n"
             f"Contenu :\n{content}"
         )
         content = self._write_pass(gate_prompt, "writer", article, 0.3, "WritingPass_QualityGate")
@@ -1515,8 +1589,10 @@ class SEOGenerationOrchestrator:
 
         from app.services.seo.content_structure_guard import (
             apply_structure_guards, check_style_compliance, check_word_count_compliance,
+            inject_missing_external_links,
         )
         content = apply_structure_guards(content, draft.title)
+        content = inject_missing_external_links(content, self.context.get("external_links"))
 
         image_sources = self.context.get("image_sources") or []
         if image_sources:
@@ -1813,7 +1889,12 @@ class SEOGenerationOrchestrator:
                 .limit(1)
             ).scalar()
             if current_score is not None and current_score < AUTO_IMPROVE_SCORE_TARGET:
-                self._auto_improve_score(draft, sources_list, max_iterations=4)
+                # 6, pas 4 : avec le garde-fou anti-régression (une réécriture qui fait
+                # reculer le score global est annulée), une itération de plus ne coûte
+                # jamais de qualité, seulement du temps si le budget le permet. 5 signaux
+                # pondérés (EEAT/SEO/Lisibilité/Originalité/Présence humaine) à couvrir
+                # au moins une fois chacun, plus une marge pour retenter un signal annulé.
+                self._auto_improve_score(draft, sources_list, max_iterations=6)
 
             # Vérification finale après auto-improvement
             final_score = self.db.execute(
@@ -2023,7 +2104,7 @@ class SEOGenerationOrchestrator:
             )
         return instruction
 
-    def _auto_improve_score(self, draft: _DraftArticle, sources_list: list[str], max_iterations: int = 4):
+    def _auto_improve_score(self, draft: _DraftArticle, sources_list: list[str], max_iterations: int = 6):
         """Tant que global_score < AUTO_IMPROVE_SCORE_TARGET, améliore le signal le plus faible.
 
         Utilise compute_global_score() (même source de vérité que le score
@@ -2099,6 +2180,15 @@ class SEOGenerationOrchestrator:
                 f"Contenu :\n{draft.content or ''}"
             )
 
+            # Snapshot avant la tentative : une réécriture peut améliorer le
+            # signal ciblé tout en dégradant un autre. Si le rescoring montre une
+            # régression du score global, on restaure ce snapshot exact (contenu,
+            # compteurs, révision) au lieu de garder une passe qui fait reculer.
+            previous_content = draft.content
+            previous_word_count = draft.word_count
+            previous_reading_time = draft.reading_time_minutes
+            previous_revision_id = article.current_revision_id
+
             try:
                 # Passe par l'agent editor : le provider configuré pour la révision
                 # doit aussi piloter les retouches automatiques.
@@ -2139,6 +2229,12 @@ class SEOGenerationOrchestrator:
                         self._recompute_quality_artifacts(article, draft, sources_list)
                         run_and_store_seo_review(self.db, article)
                         rescored = compute_global_score(self.db, article.id, article=article)
+                        new_score = rescored.get("global_score")
+                        # Réécriture acceptée uniquement si le score global progresse
+                        # réellement : un None (score non confirmé) est traité comme une
+                        # régression par prudence. La ligne ArticleScore ci-dessous est
+                        # écrite quand même : elle garde la trace d'audit de la tentative.
+                        is_regression = new_score is None or (current_score is not None and new_score < current_score)
                         quality_report = self._get(article.id, "editorial_quality_report") or {}
                         seo_final = self._get(article.id, "seo_final_checklist") or {}
                         self.db.add(ArticleScore(
@@ -2153,10 +2249,32 @@ class SEOGenerationOrchestrator:
                             issues=_seo_final_checklist_to_issues(seo_final) + _editorial_quality_report_to_issues(quality_report),
                         ))
                         self.db.flush()
+
+                        if is_regression:
+                            # Revert déterministe : pas de _persist_revision() ici — la
+                            # révision précédente existe déjà, on repointe juste
+                            # current_revision_id dessus. On recalcule les artifacts sur
+                            # le contenu redevenu courant, sinon l'itération suivante
+                            # lirait des artifacts incohérents avec draft.content.
+                            draft.content = previous_content
+                            draft.word_count = previous_word_count
+                            draft.reading_time_minutes = previous_reading_time
+                            article.current_revision_id = previous_revision_id
+                            article.updated_at = datetime.now(timezone.utc)
+                            self.db.flush()
+                            self._recompute_quality_artifacts(article, draft, sources_list)
+                            run_and_store_seo_review(self.db, article)
+                            self._log(
+                                f"Réécriture rejetée (score {new_score} < {current_score}) — "
+                                "retour au contenu précédent.",
+                                level="warning",
+                                step=f"AutoImprove_{weakest_signal}_iter{iteration + 1}_reverted",
+                            )
+                        else:
+                            self._step(f"AutoImprove_{weakest_signal}_iter{iteration + 1}")
                     except Exception as score_exc:
                         self._error(f"AutoImprove_rescore_{iteration}", str(score_exc))
 
-                    self._step(f"AutoImprove_{weakest_signal}_iter{iteration + 1}")
             except Exception as exc:
                 self._error(f"AutoImprove_{weakest_signal}_iter{iteration + 1}", str(exc))
                 break
