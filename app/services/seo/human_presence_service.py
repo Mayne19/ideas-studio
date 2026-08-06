@@ -42,12 +42,17 @@ WORN_EXPRESSIONS = (
 )
 
 HUMAN_MARKERS = (
-    "honnêtement", "à bien y réfléchir", "curieusement", "sincèrement",
-    "pourtant", "et ce n'est pas anodin", "et ce n'est pas une exagération",
+    # "honnêtement", "pourtant", "en réalité", "à bien y réfléchir",
+    # "pour être honnête" volontairement absents : le prompt du rédacteur les
+    # bannit comme transitions creuses (liste noire "Vocabulaire interdit") —
+    # les récompenser ici comme marqueurs de voix humaine contredirait la
+    # consigne donnée au writer.
+    "curieusement", "sincèrement",
+    "et ce n'est pas anodin", "et ce n'est pas une exagération",
     "et c'est normal", "ce que peu de gens réalisent",
     "vous l'avez peut-être", "c'est bien dommage", "croyez-moi",
     "et c'est presque toujours vrai", "tout compte fait",
-    "pour être honnête", "en réalité", "malgré tout",
+    "malgré tout",
 )
 
 CONCLUSION_STARTERS = (
@@ -183,7 +188,7 @@ def score_section_positions(content: str) -> tuple[float, list[str]]:
     # tournure de contraste — heuristique volontairement permissive : un
     # faux négatif (section réellement tranchée non détectée) est préférable
     # à un faux positif qui pénaliserait à tort un bon article.
-    opinion_markers = ("mais si ", "en réalité", "ce n'est pas ", "pas parce que", "c'est probablement le signal")
+    opinion_markers = ("mais si ", "en pratique", "ce n'est pas ", "pas parce que", "c'est probablement le signal")
     sections_without_position = []
     for heading, text in real_sections:
         lowered = text.lower()

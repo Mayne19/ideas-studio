@@ -73,11 +73,14 @@ def score_vous_dosage(content: str) -> tuple[float, list[str]]:
 
 
 # ── Critère 7 — Connecteurs variés ──────────────────────────────────────
+# Aligné sur les connecteurs que le prompt du writer encourage réellement :
+# "pourtant", "à bien y réfléchir", "en réalité", "pour être honnête" sont
+# désormais bannis (liste noire du prompt) et ne doivent plus être récompensés.
 
 _VARIED_CONNECTORS = (
-    "pourtant", "à bien y réfléchir", "autrement dit", "tout compte fait",
-    "paradoxalement", "en réalité", "pour être honnête", "curieusement",
-    "malgré tout", "ce qui signifie concrètement",
+    "ce qui signifie concrètement", "tout compte tenu", "cela dit",
+    "autrement dit", "tout compte fait", "paradoxalement", "curieusement",
+    "malgré tout", "contrairement à", "et c'est là que ça devient intéressant",
 )
 
 
@@ -101,7 +104,10 @@ def score_forbidden_absence(content: str) -> tuple[float, list[str]]:
     style_check = check_style_compliance(content)
     blocking_issues = [
         i for i in style_check.get("issues", [])
-        if i == "tiret_cadratin_present" or i.startswith("ouverture_generique:")
+        if i == "tiret_cadratin_present"
+        or i.startswith("ouverture_generique:")
+        or i.startswith("transition_creuse:")
+        or i == "empilement_transitions"
     ]
     _, vocab_flags = score_vocabulary(content)
     superlative_flags = [f for f in vocab_flags if f.startswith("superlatif_vide:")]

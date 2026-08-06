@@ -10,6 +10,19 @@ import re
 
 _H_TAG_RE = re.compile(r"<h([1-6])\b[^>]*>(.*?)</h\1>", re.IGNORECASE | re.DOTALL)
 
+# Connecteurs de transition bannis par le prompt du writer (liste "Vocabulaire
+# interdit", seo_generation_orchestrator._generate_content) : les récompenser
+# dans un score (marqueurs de voix humaine, nuance EEAT, variété des connecteurs)
+# contredirait directement la consigne donnée au rédacteur. Liste unique partagée
+# par content_structure_guard, human_presence_service, eeat_service et
+# article_reviewer_service pour rester synchronisée avec le prompt.
+TRANSITION_BLACKLIST = (
+    "en outre", "de plus", "par ailleurs", "néanmoins", "toutefois",
+    "ainsi", "dès lors", "en somme", "en définitive", "d'autre part",
+    "à cet égard", "en effet", "effectivement", "notamment", "de surcroît",
+    "qui plus est", "honnêtement", "en réalité", "pourtant", "à bien y réfléchir",
+)
+
 
 def strip_duplicate_h1(content: str, title: str | None) -> str:
     """Le titre de l'article vit déjà dans son propre champ (draft.title) —
@@ -131,6 +144,39 @@ def check_style_compliance(content: str) -> dict:
     for opener in _GENERIC_OPENERS:
         if opener in lower_text:
             issues.append(f"ouverture_generique:{opener}")
+
+    # Connecteurs de transition bannis en début de phrase/paragraphe — le prompt
+    # du writer les interdit ("Vocabulaire interdit"), les détecter ici permet
+    # au réviseur (score_forbidden_absence) de les rendre bloquants, sans quoi
+    # l'article pourrait passer toutes les passes de score en les conservant.
+    transition_pattern = (
+        "(" + "|".join(re.escape(c) for c in TRANSITION_BLACKLIST) + r")(?:[,:]|\.|!|\?)"
+    )
+    found_transitions: list[str] = []
+    # début de texte ou après une ponctuation forte (phrase) — re.MULTILINE pour
+    # couvrir aussi les débuts de ligne issus de la suppression des balises
+    for match in re.finditer(r"(?:^|[.!?]\s+)\s*" + transition_pattern, text_only, re.IGNORECASE | re.MULTILINE):
+        found_transitions.append(match.group(1).lower())
+    # ouverture directe d'un paragraphe HTML (le writer est contraint à <p>)
+    for match in re.finditer(r"<p[^>]*>\s*" + transition_pattern, content, re.IGNORECASE):
+        found_transitions.append(match.group(1).lower())
+    for connector in sorted(set(found_transitions)):
+        issues.append(f"transition_creuse:{connector}")
+
+    # Empilement : 2 phrases consécutives ouvertes par un connecteur banni (le
+    # prompt interdit déjà tout connecteur de transition si un autre a été
+    # utilisé dans les 3 phrases précédentes).
+    sentences = [s.strip() for s in re.split(r"[.!?]+", text_only) if s.strip()]
+    transition_run = 0
+    for sentence in sentences:
+        first_three = " ".join(sentence.split()[:3]).lower()
+        if any(first_three.startswith(conn) for conn in TRANSITION_BLACKLIST):
+            transition_run += 1
+            if transition_run >= 2:
+                issues.append("empilement_transitions")
+                break
+        else:
+            transition_run = 0
 
     return {
         "status": "checked",

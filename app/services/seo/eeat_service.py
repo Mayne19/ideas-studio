@@ -12,17 +12,18 @@ from app.services.seo.llm_budget import LLMBudgetManager
 
 
 NUANCE_MARKERS = [
-    # "toutefois"/"néanmoins" volontairement absents : le prompt du rédacteur
+    # "toutefois"/"néanmoins"/"pourtant"/"à bien y réfléchir"/"pour être
+    # honnête"/"en réalité" volontairement absents : le prompt du rédacteur
     # (règles de voix, seo_generation_orchestrator._generate_content) les
     # bannit explicitement comme "transitions creuses" — les récompenser ici
     # contredisait directement la consigne donnée au writer, condamnant ce
     # signal à rester bas quel que soit le nombre de passes d'amélioration.
     # Liste alignée sur les connecteurs que le prompt encourage réellement.
-    "cependant", "en revanche", "pourtant", "à bien y réfléchir",
-    "curieusement", "malgré tout", "paradoxalement", "pour être honnête",
+    "cependant", "en revanche",
+    "curieusement", "malgré tout", "paradoxalement",
     "tout compte fait", "d'un côté", "d'un autre côté",
     "il convient de nuancer", "selon les cas", "cela dépend",
-    "dans certaines situations", "il faut distinguer", "en réalité",
+    "dans certaines situations", "il faut distinguer",
     "contrairement à", "à condition que", "bien que", "même si", "quoique",
 ]
 
@@ -73,11 +74,21 @@ def _detect_faq(html_content: str, metadata: dict) -> bool:
 
 
 def score_external_links(html_content: str, project_domain: str, fmt: FormatExpectations) -> float:
+    """Note les liens externes de l'article en pondérant la fiabilité du
+    domaine cité — un lien vers une source faible (réseau social, page de
+    recherche type reddit.com/search, forum) n'apporte pas la même crédibilité
+    EEAT qu'un lien vers une étude officielle. La classification par domaine
+    (strong/neutral/weak) vient de source_quality_service (étape 6b du
+    pipeline), pas d'une logique parallèle : un domaine classé faible là-bas
+    l'est aussi ici. Poids : strong ×1.25, neutral ×1.0, weak ×0.25.
+    L'ancien repli qui pénalisait Wikipedia à ×0.5 est supprimé — le domaine
+    est désormais classé par sa vraie fiabilité (Wikipedia = source forte)."""
+    from app.services.seo.source_quality_service import classify_source_quality
+
     links = _extract_links(html_content)
     external = [l for l in links if not _is_internal(l, project_domain) and l.startswith("http")]
-    wikipedia = sum(1 for l in external if "wikipedia.org" in l)
-    other = len(external) - wikipedia
-    effective = other + (wikipedia * 0.5)
+    weights = {"strong": 1.25, "neutral": 1.0, "weak": 0.25}
+    effective = sum(weights[classify_source_quality(url)] for url in external)
     return normalize_to_format(effective, fmt.min_external_links, fmt.ideal_external_links)
 
 

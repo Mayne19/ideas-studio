@@ -133,12 +133,17 @@ def build_external_link_plan(
                 continue
             quality = check.get("quality", "unknown")
             word_count = check.get("word_count", 0)
+            # Ancre réelle : titre de la page cible plutôt que l'URL brute — un
+            # lien externe dont l'ancre est l'URL nue (point 3 du pipeline) est
+            # inexploitable pour un maillage naturel.
+            anchor = _clean_anchor(check.get("title") or clean_url)
         else:
             quality = "unknown"
             word_count = 0
+            anchor = _clean_anchor(clean_url)
         candidate_links.append({
             "url": clean_url,
-            "anchor_text": clean_url,
+            "anchor_text": anchor,
             "placement": "auto",
             "reason": "Lien découvert chez un concurrent",
             "source_reliability": quality,
@@ -146,9 +151,34 @@ def build_external_link_plan(
             "word_count": word_count,
         })
 
-    # Sort: prefer higher word_count (more content-rich sources)
-    candidate_links.sort(key=lambda x: x.get("word_count", 0), reverse=True)
-    plan.links = candidate_links[:8]
+    # URLs précises : une source à l'URL racine (ex: https://domaine.fr) est un
+    # lien paresseux qui n'apporte rien de précis au lecteur — on privilégie les
+    # URLs profondes (chemin significatif) et on diversifie les domaines (max 2
+    # liens par domaine) pour que le maillage externe renvoie vers des pages
+    # précises, pas vers trois pages du même site.
+    def _path_depth(url: str) -> int:
+        try:
+            return len([s for s in urlparse(url).path.split("/") if s])
+        except Exception:
+            return 0
+
+    def _domain_of(url: str) -> str:
+        try:
+            return (urlparse(url).hostname or "").lstrip("www.")
+        except Exception:
+            return ""
+
+    domain_counts: dict[str, int] = {}
+    diversified: list[dict] = []
+    for link in sorted(candidate_links, key=lambda x: (x.get("word_count", 0), _path_depth(x.get("url", ""))), reverse=True):
+        domain = _domain_of(link.get("url", ""))
+        if domain_counts.get(domain, 0) >= 2:
+            continue
+        domain_counts[domain] = domain_counts.get(domain, 0) + 1
+        diversified.append(link)
+        if len(diversified) >= 8:
+            break
+    plan.links = diversified
 
     if not plan.links:
         plan.limitations = [

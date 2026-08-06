@@ -147,7 +147,52 @@ def score_semantic_density(text: str, target_keyword: str | None, related_terms:
     return round((covered / max(len(related_terms), 1)) * 100)
 
 
-def compute_geo_score(article: Any) -> dict:
+def trace_evidence_usage(text: str, evidence_items: list[dict]) -> tuple[float, list[dict]]:
+    """Trace quels éléments du dossier de preuves (evidence pack) sont
+    réellement intégrés au contenu — point 12 du pipeline : un dossier typé
+    et chiffré qui n'arrive jamais dans l'article ne sert à rien. Chaque item
+    est marqué used/unused selon que sa figure ou un fragment distinctif de
+    son fait apparaît dans le texte. Heuristique permissive (un faux négatif
+    sur un item reformulé est préférable à un faux positif qui prétendrait
+    qu'un fait absent est présent)."""
+    if not evidence_items:
+        return 100.0, []
+    text_lower = text.lower()
+    traced: list[dict] = []
+    used_count = 0
+    for item in evidence_items:
+        if not isinstance(item, dict):
+            continue
+        fact = str(item.get("fact", ""))
+        figure = str(item.get("figure", ""))
+        used = False
+        if figure and len(figure) >= 3:
+            # Chiffre : présent presque tel quel ("42%" / "42,5%")
+            if figure.lower() in text_lower:
+                used = True
+            else:
+                compact = re.sub(r"\s+", "", figure)
+                if compact and compact.lower() in text_lower.replace(" ", ""):
+                    used = True
+        if not used and fact:
+            # Fragment distinctif : les 4 premiers mots significatifs du fait
+            tokens = [w for w in re.findall(r"[a-zA-ZÀ-ÿ]{5,}", fact.lower())][:4]
+            if len(tokens) >= 3 and all(t in text_lower for t in tokens):
+                used = True
+        if used:
+            used_count += 1
+        traced.append({
+            "fact": fact[:100],
+            "figure": figure,
+            "source_url": item.get("source_url", ""),
+            "type": item.get("type"),
+            "used": used,
+        })
+    ratio = used_count / max(len(traced), 1)
+    return round(ratio * 100), traced
+
+
+def compute_geo_score(article: Any, evidence_pack: dict | None = None) -> dict:
     if isinstance(article, dict):
         content = article.get("content") or ""
         keyword = article.get("keyword") or ""
@@ -180,13 +225,17 @@ def compute_geo_score(article: Any) -> dict:
     s5 = score_summaries(text)
     s6 = score_semantic_density(text, keyword)
 
+    evidence_items = (evidence_pack or {}).get("evidence_items") or []
+    s7, traced_evidence = trace_evidence_usage(text, evidence_items)
+
     final_score = round(
         s1 * 0.25
         + s2 * 0.20
         + s3 * 0.20
         + s4 * 0.15
         + s5 * 0.10
-        + s6 * 0.10
+        + s6 * 0.05
+        + s7 * 0.05
     )
 
     flags: list[str] = []
@@ -196,6 +245,8 @@ def compute_geo_score(article: Any) -> dict:
         flags.append("no_summary_block")
     if s1 < 40:
         flags.append("sections_lack_direct_answers")
+    if evidence_items and s7 < 50:
+        flags.append("evidence_pack_underused")
 
     signals = {
         "direct_answers":    {"value": round(s1), "weight": 0.25, "contribution": round(s1 * 0.25, 1)},
@@ -203,7 +254,8 @@ def compute_geo_score(article: Any) -> dict:
         "structured_data":   {"value": round(s3), "weight": 0.20, "contribution": round(s3 * 0.20, 1)},
         "named_entities":    {"value": round(s4), "weight": 0.15, "contribution": round(s4 * 0.15, 1)},
         "summary_blocks":    {"value": round(s5), "weight": 0.10, "contribution": round(s5 * 0.10, 1)},
-        "semantic_density":  {"value": round(s6), "weight": 0.10, "contribution": round(s6 * 0.10, 1)},
+        "semantic_density":  {"value": round(s6), "weight": 0.05, "contribution": round(s6 * 0.05, 1)},
+        "evidence_usage":    {"value": round(s7), "weight": 0.05, "contribution": round(s7 * 0.05, 1)},
     }
 
     available = sum(1 for v in [s1, s2, s4, s5, s6] if v is not None)
@@ -226,5 +278,6 @@ def compute_geo_score(article: Any) -> dict:
         "flags": flags,
         "explanation": explanation,
         "geo_score": final_score,
-        "version": "2.1",
+        "traced_evidence": traced_evidence,
+        "version": "2.2",
     }

@@ -27,10 +27,10 @@ from app.services.seo.helpers import safe_json_dump, safe_json_load
 from app.services.seo.project_context_service import build_project_context_dict
 from app.services.seo.category_strategy_service import compute_category_strategy_dict
 from app.services.seo.cannibalization_service import check_cannibalization_dict, check_section_cannibalization
-from app.services.seo.intent_analysis_service import analyze_intent_dict
+from app.services.seo.intent_analysis_service import analyze_intent_dict, refine_intent_with_research
 from app.services.seo.research_brief_service import build_research_brief_dict
 from app.services.seo.source_quality_service import validate_sources
-from app.services.seo.keyword_brief_service import build_keyword_brief_dict
+from app.services.seo.keyword_brief_service import build_keyword_brief_dict, refine_keyword_brief_with_research
 from app.services.seo.editorial_angle_service import define_editorial_angle_dict
 from app.services.seo.article_outline_planner import build_outline_dict
 from app.services.seo.image_plan_service import build_image_plan_dict
@@ -302,6 +302,30 @@ class SEOGenerationOrchestrator:
             "confidence_score": 0.5,
             "limitations": self.limitations.copy(),
         }
+        # 3b. IdeaGenerator — sans titre ni mot-clé fournis, on tente une vraie
+        # découverte d'idée (LLM + SERP + tendances, idea_discovery_service) au
+        # lieu de rédiger sur un dict statique. Le repli reste le dict ci-dessus
+        # si le provider ou la recherche sont indisponibles (point 10 du
+        # pipeline : idea_generator réel).
+        if not preferred_title and not keyword:
+            try:
+                from app.services.seo.idea_discovery_service import discover_ideas_dict
+                ideas = discover_ideas_dict(
+                    self.db, self.project_id, self.llm, self.search, count=5,
+                    context_hint=context_hint,
+                    project_audience=audience or project_context.get("target_audience"),
+                    project_language=getattr(self.project, "language", "fr") or "fr",
+                    category_strategy=category_strategy,
+                )
+                if ideas:
+                    idea_discovery = dict(ideas[0])
+                    idea_discovery.setdefault("limitations", self.limitations.copy())
+                    if idea_discovery.get("real_research_used"):
+                        self.tools_used.append("idea_research")
+                else:
+                    self.limitations.append("IdeaGenerator: aucune idée générée, repli statique")
+            except Exception as exc:
+                self._error("IdeaGenerator", str(exc))
         self.context["idea_discovery"] = idea_discovery
         self._step("IdeaDiscovery")
 
@@ -418,6 +442,24 @@ class SEOGenerationOrchestrator:
             self._error("ContentGap", str(exc))
             self.context["content_gaps"] = {}
 
+        # 6e. IntentAnalysisRefine — l'analyse heuristique de l'étape 5 n'utilisait
+        # que des marqueurs lexicaux du titre ; une fois la SERP réelle collectée
+        # (research_brief), on l'affine avec un jugement LLM sur les vraies pages
+        # concurrentes (point 9 du pipeline : intent_analysis réel).
+        try:
+            intent_analysis = refine_intent_with_research(
+                intent_analysis, final_title, final_keyword, research_brief,
+                db=self.db, project_id=self.project_id,
+            )
+            self.context["intent_analysis"] = intent_analysis
+            self._step("IntentAnalysisRefine")
+        except Exception as exc:
+            self._error("IntentAnalysisRefine", str(exc))
+
+        # L'agent d'intention peut avoir corrigé le type d'article : le plan
+        # (étape 9) et la FAQ doivent lire la version affinée, pas l'ancienne.
+        article_type = intent_analysis.get("article_type", "evergreen_information")
+
         # 7. KeywordBrief
         keyword_brief = build_keyword_brief_dict(
             final_keyword,
@@ -428,6 +470,21 @@ class SEOGenerationOrchestrator:
         )
         self.context["keyword_brief"] = keyword_brief
         self._step("KeywordBrief")
+
+        # 7a. KeywordResearch — vrai enrichissement LLM du brief à partir des
+        # résultats SERP réels : mots-clés secondaires, variantes longue traîne,
+        # questions et entités réellement présents dans les pages classées
+        # (point 8 du pipeline : keyword_research réel, remplace les variantes
+        # stéréotypées de l'heuristique).
+        try:
+            keyword_brief = refine_keyword_brief_with_research(
+                keyword_brief, final_keyword, research_brief, intent_analysis,
+                db=self.db, project_id=self.project_id,
+            )
+            self.context["keyword_brief"] = keyword_brief
+            self._step("KeywordResearch")
+        except Exception as exc:
+            self._error("KeywordResearch", str(exc))
 
         # 7b. EvidencePack — sélection des faits/sources les plus fiables parmi
         # ceux déjà trouvés par ResearchBrief, pour guider la rédaction
@@ -836,7 +893,7 @@ class SEOGenerationOrchestrator:
 
             try:
                 from app.services.seo.geo_expert_service import compute_geo_score
-                geo_result = compute_geo_score(draft)
+                geo_result = compute_geo_score(draft, evidence_pack=self.context.get("evidence_pack"))
                 self._save(article.id, "geo_optimization", geo_result)
                 self._step("GEOOptimizer")
             except Exception as exc:
@@ -1392,6 +1449,37 @@ class SEOGenerationOrchestrator:
 
         self._raise_if_cancelled(article)
 
+        # ── Pass 1.5 — LogicalCoherence (temp 0.4) ──────────────────────────
+        # Cohérence logique inter-phrases et inter-sections : le writer génère
+        # une matière riche mais peut enchaîner des phrases dont l'articulation
+        # logique est faible (référents ambigus, causalité implicite, saut de
+        # sujet entre phrases, chronologie cassée). Passe ciblée sur le
+        # raisonnement, pas sur le style — elle précède la passe de style pour
+        # que celle-ci ne fige pas une logique défaillante.
+        coherence_prompt = (
+            "Passe de cohérence logique sur cet article. Corrige UNIQUEMENT les "
+            "enchaînements logiques, sans rien changer au fond ni au style :\n"
+            "- Chaque phrase s'enchaîne logiquement sur la précédente (si le lien est "
+            "implicite, ajoute la précision qui rend la progression compréhensible).\n"
+            "- Les référents (il, elle, ce, cela, cet...) pointent sans ambiguïté vers "
+            "l'élément mentionné : remplace un pronom flou par le mot qu'il désigne.\n"
+            "- Les relations de cause → conséquence, condition, concession sont "
+            "explicites quand le sens l'exige (reformule, ne colle pas de connecteur de "
+            "transition creux).\n"
+            "- La chronologie et l'ordre des étapes sont respectés de section en section.\n"
+            "- Une section ne répète pas une idée déjà établie dans la précédente : "
+            "fusionne ou déplace si nécessaire, sans perdre de contenu.\n"
+            "- Ne change ni le plan, ni les faits, ni les données, ni les liens.\n"
+            "- Interdit : connecteurs de transition en début de phrase ('En outre', "
+            "'De plus', 'Par ailleurs', 'Ainsi', 'En effet', 'Pourtant', 'En réalité'...), "
+            "tiret cadratin (—).\n\n"
+            "Retourne UNIQUEMENT le HTML complet corrigé, sans explication, sans backticks.\n\n"
+            f"Contenu :\n{content}"
+        )
+        content = self._write_pass(coherence_prompt, "coherence_editor", article, 0.4, "WritingPass_LogicalCoherence")
+
+        self._raise_if_cancelled(article)
+
         # ── Pass 2 — Style (temp 0.5) ──────────────────────────────────────
         # Passe de cohérence stylistique : voix, rythme, transitions, marqueurs
         # humains. Plus froide : elle affine, elle n'invente pas de nouveau fond.
@@ -1802,7 +1890,7 @@ class SEOGenerationOrchestrator:
 
         try:
             from app.services.seo.geo_expert_service import compute_geo_score
-            geo_result = compute_geo_score(draft)
+            geo_result = compute_geo_score(draft, evidence_pack=self.context.get("evidence_pack"))
             self._save(article.id, "geo_optimization", geo_result)
         except Exception as exc:
             self._error("AutoImprove_recompute_geo", str(exc))
@@ -1860,10 +1948,12 @@ class SEOGenerationOrchestrator:
             'probable_internal_duplicate': "Réécris les passages qui ressemblent trop à d'autres articles déjà publiés sur ce projet — change l'angle, pas seulement les mots.",
             'high_source_overlap': "Reformule davantage les passages proches des sources : angle et structure différents, pas seulement des synonymes.",
             'no_sources_unverified': "Ajoute des sources vérifiables (études, statistiques sourcées) pour étayer les affirmations de l'article.",
+            'competitor_similarity_high': "Réécris les phrases trop proches du contenu des concurrents détectées : change la structure ET l'angle, pas seulement le vocabulaire.",
+            'passage_concurrent': "Réécris entièrement le passage cité : angle, structure et mots différents de la page concurrente, tout en gardant l'idée.",
         }),
         'Présence humaine': ('human_presence_report', {
             'intro_trop_longue': "Raccourcis l'introduction : maximum 10% du volume total de l'article.",
-            'aucun_marqueur_humain': "Ajoute 1-2 marqueurs de voix humaine par section : 'honnêtement,', 'à bien y réfléchir,', 'pourtant,', 'en réalité'.",
+            'aucun_marqueur_humain': "Ajoute 1-2 marqueurs de voix humaine par section : 'curieusement,', 'ce que peu de gens réalisent', 'c'est bien dommage', 'et ce n'est pas anodin', 'malgré tout'.",
             'marqueurs_humains_en_exces': "Réduis le nombre de marqueurs de voix humaine : garde-en 1 à 2 par section maximum, pas plus.",
             'paragraphes_longueur_uniforme': "Varie la longueur des paragraphes : alterne paragraphes courts et plus longs, jamais 4 paragraphes de longueur similaire à la suite.",
             'aucune_phrase_courte_de_rythme': "Ajoute au moins une phrase très courte (moins de 8 mots) pour marquer une idée forte.",
@@ -1908,7 +1998,30 @@ class SEOGenerationOrchestrator:
                 specific.append(message)
         if not specific:
             return generic_fallback
-        return generic_fallback + " Concrètement, dans cet article précis : " + " ".join(specific)
+        instruction = generic_fallback + " Concrètement, dans cet article précis : " + " ".join(specific)
+
+        # Transitions creuses : la grille de style (style_check, sauvegardée par
+        # _generate_content) détecte mécaniquement les connecteurs bannis et leur
+        # empilement — un signal "Présence humaine" fort ne doit pas masquer un
+        # article qui enchaîne encore des transitions interdites. On les ajoute à
+        # l'instruction quand le style en a repéré (l'itération corrige alors les
+        # deux à la fois).
+        style_check = self._get(article.id, "style_check") or {}
+        style_flags = [f for f in style_check.get("issues") or [] if f.startswith("transition_creuse:")]
+        if style_flags:
+            connectors = ", ".join(f.split(":", 1)[1] for f in style_flags[:6])
+            instruction += (
+                " Supprime les connecteurs de transition bannis encore présents en début de "
+                f"phrase : {connectors} — remplace-les par un lien concret ou laisse la phrase "
+                "avancer sans connecteur."
+            )
+        if "empilement_transitions" in (style_check.get("issues") or []):
+            instruction += (
+                " Deux phrases consécutives commencent par un connecteur de transition : "
+                "espace-les, n'en garde qu'une, et laisse les phrases suivantes avancer sans "
+                "connecteur de transition en tête."
+            )
+        return instruction
 
     def _auto_improve_score(self, draft: _DraftArticle, sources_list: list[str], max_iterations: int = 4):
         """Tant que global_score < AUTO_IMPROVE_SCORE_TARGET, améliore le signal le plus faible.

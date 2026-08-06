@@ -310,6 +310,18 @@ AGENTS: list[AgentDef] = [
         output_json_field="content_html",
     ),
     AgentDef(
+        agent_id="coherence_editor",
+        name="Cohérence logique",
+        description="Vérifie la logique entre les phrases et les sections (enchaînement des idées, référents, causalité, chronologie)",
+        category=AgentCategory.creation,
+        phase="writing",
+        requires_llm=True,
+        icon="git-branch",
+        implementation_ref="seo_generation_orchestrator.coherence_pass",
+        status=AgentStatus.active,
+        output_json_field=None,
+    ),
+    AgentDef(
         agent_id="meta_writer",
         name="Rédaction métas",
         description="Prépare les métas (title, description, slug, excerpt)",

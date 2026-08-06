@@ -170,12 +170,21 @@ def build_evidence_pack(
         "Privilégie systématiquement les sources de qualité 'high', et ignore les sources de qualité "
         "'low' ainsi que les sources hors-sujet. Un fait doit toujours citer une source de qualité "
         "élevée ou moyenne.\n\n"
+        "Chaque fait doit être TYPÉ et CHIFFRÉ quand la source le permet :\n"
+        "- type : 'statistique' (chiffre + unité + date, ex: '42% en 2024'), 'exemple' (cas réel), "
+        "'definition', 'expert' (avis d'une personne/autorité citée), ou 'donnee' (fait précis sourcé)\n"
+        "- figure : le nombre/valeur exact(e) si la source en donne un(e), sinon vide\n"
+        "- figure_context : le contexte court du chiffre (année, population, périmètre)\n"
+        "- usage_hint : à quelle question/section de l'article ce fait répond\n"
+        "- sentence_ready : UNE phrase française prête à intégrer qui reformule le fait avec son "
+        "chiffre et sa source, sans plagier la source\n\n"
         f"Titre : {title}\n"
         f"Mot-clé : {keyword}\n\n"
         f"Sources disponibles :\n{sources_text}\n\n"
         "Réponds UNIQUEMENT avec un JSON valide :\n"
-        '{"evidence_items": [{"fact": "...", "source_url": "...", "reliability": "high|medium|low", '
-        '"source_quality": "high|medium|low|unknown"}]}'
+        '{"evidence_items": [{"type": "statistique|exemple|definition|expert|donnee", "fact": "...", '
+        '"figure": "...", "figure_context": "...", "source_url": "...", "reliability": "high|medium|low", '
+        '"source_quality": "high|medium|low|unknown", "usage_hint": "...", "sentence_ready": "..."}]}'
     )
     try:
         result = provider.generate_json(prompt, schema_hint="json evidence pack object")
@@ -184,11 +193,29 @@ def build_evidence_pack(
             for item in items:
                 if "source_quality" not in item:
                     item["source_quality"] = _quality_for_url(item.get("source_url", ""), external_links)
+                # Repli déterministe : si le LLM n'a pas extrait de figure alors
+                # que le fait en contient une (chiffre + %/unité), on la récupère.
+                if not item.get("figure"):
+                    item["figure"] = _extract_figure_from_fact(str(item.get("fact", "")))
             return {"status": "success", **result}
         return {"status": "error", "message": "Invalid response format", "evidence_items": []}
     except Exception as exc:
         logger.warning("Evidence pack builder agent failed: %s", exc)
         return {"status": "error", "message": str(exc), "evidence_items": []}
+
+
+def _extract_figure_from_fact(fact: str) -> str:
+    """Extrait une figure depuis un fait LLM ('42% des PME...' → '42%') — repli
+    déterministe quand l'agent n'a pas rempli le champ figure (point 7 du
+    pipeline : evidence pack typé et chiffré)."""
+    import re
+    if not fact:
+        return ""
+    match = re.search(r"\d+[\.,]?\d*\s*(?:%|millions?|milliards?|milliers?|[a-zÀ-ÿ]+)", fact)
+    if not match:
+        return ""
+    candidate = match.group(0).strip().rstrip(".")
+    return candidate[:40] if len(candidate) > 3 else ""
 
 
 def adapt_editorial_style(

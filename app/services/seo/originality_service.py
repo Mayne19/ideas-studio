@@ -105,6 +105,35 @@ def score_source_verification(text: str, sources: list[str]) -> tuple[float, str
     return 100.0, "adds_value"
 
 
+def score_competitor_similarity(content: str, competitor_texts: list[str]) -> tuple[float, list[str]]:
+    """Détecte les passages proches du contenu concurrent (SERP/scraping) au
+    niveau phrase — une similarité n-gram calculée sur l'article entier se
+    dilue et laisse passer un paragraphe recopié d'un concurrent. On compare
+    chaque phrase de l'article aux textes concurrents : si ≥60% des trigrammes
+    d'une phrase existent déjà chez un concurrent, c'est un signal fort de
+    paraphrase trop proche. 100% heuristique, aucun appel LLM."""
+    if not competitor_texts:
+        return 100.0, []
+    sentences = [s.strip() for s in re.split(r"[.!?]+", strip_html(content)) if len(s.strip()) >= 20]
+    if not sentences:
+        return 100.0, []
+    competitor_ngrams = _ngrams(" ".join(competitor_texts), 3)
+    if not competitor_ngrams:
+        return 100.0, []
+    flagged: list[str] = []
+    for sentence in sentences:
+        ngrams = _ngrams(sentence, 3)
+        if not ngrams:
+            continue
+        overlap = len(ngrams & competitor_ngrams) / len(ngrams)
+        if overlap >= 0.60:
+            flagged.append(sentence[:90])
+    if not flagged:
+        return 100.0, []
+    score = max(0.0, 100.0 - len(flagged) * 15.0)
+    return score, [f"passage_concurrent:{passage}" for passage in flagged[:5]]
+
+
 def _count_concrete_examples(text: str) -> int:
     count = 0
     text_lower = text.lower()
@@ -177,8 +206,12 @@ def compute_originality_score(article: Any, project_articles: list[Any] | None =
     s2 = score_internal_uniqueness(article, project_articles or [])
     s3_score, s3_status = score_source_verification(text, sources)
     s4 = score_own_examples(text, fmt_obj)
+    # Similarité phrase à phrase contre le contenu concurrent (les snippets
+    # SERP du research brief sont de vraies pages concurrentes) : complète
+    # score_source_verification, diluée sur l'article entier.
+    s5, s5_flags = score_competitor_similarity(content, sources)
 
-    rules_score = s1 * 0.35 + s2 * 0.25 + s3_score * 0.25 + s4 * 0.15
+    rules_score = s1 * 0.30 + s2 * 0.20 + s3_score * 0.15 + s4 * 0.10 + s5 * 0.25
     final_score = round(rules_score)
 
     if s3_status == "unverified":
@@ -193,17 +226,21 @@ def compute_originality_score(article: Any, project_articles: list[Any] | None =
         flags.append("generic_ai_patterns_detected")
     if s2 == 0:
         flags.append("probable_internal_duplicate")
+    if s5 < 70:
+        flags.append("competitor_similarity_high")
+    flags.extend(s5_flags)
 
-    available = sum(1 for v in [s1, s2, s3_score, s4] if v is not None)
-    confidence = "high" if available >= 3 else "medium"
+    available = sum(1 for v in [s1, s2, s3_score, s4, s5] if v is not None)
+    confidence = "high" if available >= 4 else "medium"
     if s3_status == "unverified":
         confidence = "medium"
 
     signals = {
-        "ai_generic_absence": {"value": round(s1), "weight": 0.35, "contribution": round(s1 * 0.35, 1)},
-        "internal_uniqueness": {"value": round(s2), "weight": 0.25, "contribution": round(s2 * 0.25, 1)},
-        "source_verification": {"value": round(s3_score), "weight": 0.25, "contribution": round(s3_score * 0.25, 1), "status": s3_status},
-        "concrete_examples":   {"value": round(s4), "weight": 0.15, "contribution": round(s4 * 0.15, 1)},
+        "ai_generic_absence": {"value": round(s1), "weight": 0.30, "contribution": round(s1 * 0.30, 1)},
+        "internal_uniqueness": {"value": round(s2), "weight": 0.20, "contribution": round(s2 * 0.20, 1)},
+        "source_verification": {"value": round(s3_score), "weight": 0.15, "contribution": round(s3_score * 0.15, 1), "status": s3_status},
+        "concrete_examples":   {"value": round(s4), "weight": 0.10, "contribution": round(s4 * 0.10, 1)},
+        "competitor_similarity": {"value": round(s5), "weight": 0.25, "contribution": round(s5 * 0.25, 1)},
     }
 
     explanation_parts = []
@@ -215,6 +252,8 @@ def compute_originality_score(article: Any, project_articles: list[Any] | None =
         explanation_parts.append("originalité non vérifiée — aucune source fournie")
     elif s3_status == "high_overlap":
         explanation_parts.append("fort chevauchement avec les sources")
+    if s5 < 70:
+        explanation_parts.append("passages trop proches du contenu concurrent")
     if not explanation_parts:
         explanation_parts.append("contenu original, aucun signal négatif majeur")
 

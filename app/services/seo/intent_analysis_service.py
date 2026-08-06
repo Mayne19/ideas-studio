@@ -117,3 +117,81 @@ def analyze_intent_dict(
     project_context: dict | None = None,
 ) -> dict:
     return asdict(analyze_intent(title, keyword, context_hint, category_name, idea_discovery, project_context))
+
+
+def refine_intent_with_research(
+    base: dict,
+    title: str,
+    keyword: str,
+    research_brief: dict | None = None,
+    db=None,
+    project_id: str | None = None,
+) -> dict:
+    """Affine l'analyse d'intention heuristique avec un jugement LLM appuyé sur
+    les VRAIS résultats SERP du research brief (titres + snippets concurrents).
+    Point 9 du pipeline : l'heuristique seule inférait l'intention depuis des
+    marqueurs lexicaux du titre ; elle ignore ce que la SERP montre réellement
+    (type de pages classées, questions posées par les concurrents). Repli
+    systématique sur l'analyse de base si aucun provider n'est disponible —
+    jamais bloquant, toujours un enrichissement."""
+    result = dict(base)
+    if db is None:
+        return result
+    try:
+        from app.services.agents.agent_router import get_router
+    except Exception:
+        return result
+    router = get_router(db)
+    if router is None:
+        return result
+    try:
+        provider = router.get_provider("intent_analysis", project_id=project_id)
+        if provider is None or provider.is_mock:
+            return result
+    except Exception:
+        return result
+
+    sources = (research_brief or {}).get("sources_consulted") or []
+    serp_context = ""
+    if sources:
+        lines = []
+        for source in sources[:10]:
+            if isinstance(source, dict):
+                snippet = (source.get("snippet") or "")[:200]
+                lines.append(f"- {source.get('title', '')} — {snippet}")
+        serp_context = "\n".join(lines)
+
+    prompt = (
+        "Analyse l'intention de recherche réelle derrière ce sujet d'article en t'appuyant sur "
+        "les résultats Google réels (SERP) ci-dessous. Détermine : explicit_intent (informational|"
+        "commercial|transactional|navigational), article_type (evergreen_information|guide|"
+        "comparison|transactional|navigational|simple_question), la vraie question du lecteur, "
+        "la réponse attendue, les sous-questions à traiter, l'angle recommandé et ce qu'il faut "
+        "éviter (ce que les concurrents ratent).\n\n"
+        f"Titre : {title}\nMot-clé : {keyword}\n\n"
+        + (f"Résultats SERP réels :\n{serp_context}\n\n" if serp_context else "Aucun résultat SERP disponible.\n\n")
+        + "Réponds UNIQUEMENT avec un JSON valide :\n"
+        '{"explicit_intent": "...", "article_type": "...", "reader_real_question": "...", '
+        '"expected_answer": "...", "sub_questions": ["...", "..."], "first_block_goal": "...", '
+        '"recommended_angle": "...", "what_to_avoid": ["...", "..."]}'
+    )
+    try:
+        refined = provider.generate_json(prompt, schema_hint="json intent analysis object")
+    except Exception:
+        return result
+    if not isinstance(refined, dict):
+        return result
+
+    for field in ("explicit_intent", "article_type", "reader_real_question", "expected_answer",
+                  "first_block_goal", "recommended_angle"):
+        value = refined.get(field)
+        if isinstance(value, str) and value.strip():
+            result[field] = value.strip()
+    for list_field in ("sub_questions", "what_to_avoid"):
+        value = refined.get(list_field)
+        if isinstance(value, list) and value:
+            result[list_field] = [str(x) for x in value if str(x).strip()][:8]
+    result["refined_by_llm"] = True
+    if isinstance(result.get("intent_scores"), dict):
+        result["intent_scores"] = dict(result["intent_scores"])
+    return result
