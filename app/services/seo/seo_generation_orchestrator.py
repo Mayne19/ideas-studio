@@ -1589,10 +1589,8 @@ class SEOGenerationOrchestrator:
 
         from app.services.seo.content_structure_guard import (
             apply_structure_guards, check_style_compliance, check_word_count_compliance,
-            inject_missing_external_links,
         )
         content = apply_structure_guards(content, draft.title)
-        content = inject_missing_external_links(content, self.context.get("external_links"))
 
         image_sources = self.context.get("image_sources") or []
         if image_sources:
