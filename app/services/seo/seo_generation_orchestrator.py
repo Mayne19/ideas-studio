@@ -1073,6 +1073,74 @@ class SEOGenerationOrchestrator:
         self._step(step)
         return content
 
+    def _build_checklist_verification_block(self) -> str:
+        """Checklist de vérification mécanique pour la passe QualityGate (Pass 3,
+        gate_prompt). Les passes précédentes corrigent la prose (logique, style,
+        redondance), pas la conformité aux exigences mécaniques (plage de mots,
+        liens du plan réellement présents, statistique sourcée) — cette checklist
+        les rend explicites au modèle dans le même appel LLM, sans coût
+        supplémentaire. Construite dynamiquement depuis self.context ; ne plante
+        jamais sur un contexte incomplet (chaîne vide si rien de pertinent)."""
+        checklist: list[str] = []
+
+        wc_min = self.context.get("word_count_min")
+        wc_max = self.context.get("word_count_max")
+        if wc_min or wc_max:
+            target = " et ".join(
+                p for p in (
+                    f"minimum {wc_min} mots" if wc_min else "",
+                    f"maximum {wc_max} mots" if wc_max else "",
+                ) if p
+            )
+            checklist.append(
+                f"Respecte la plage de mots : {target}. Compte les mots du HTML "
+                "final que tu renvoies ; coupe les passages les moins utiles si tu "
+                "dépasses le maximum, développe une section pertinente si tu es "
+                "sous le minimum."
+            )
+
+        external_plan = self.context.get("external_links") or {}
+        external_links = (external_plan.get("links") or []) if isinstance(external_plan, dict) else []
+        external_urls = [
+            str(link.get("url", "")).strip()
+            for link in external_links if isinstance(link, dict) and link.get("url")
+        ]
+        if external_urls:
+            checklist.append(
+                "Chaque lien externe du plan doit apparaître réellement dans le HTML "
+                "(balise <a href='...'>). URLs attendues : "
+                + ", ".join(external_urls[:4])
+                + ". Vérifie-les une à une ; si un lien est absent, place-le sur la "
+                "phrase qui s'appuie sur cette source."
+            )
+
+        internal_plan = self.context.get("internal_links") or {}
+        internal_links = (internal_plan.get("links") or []) if isinstance(internal_plan, dict) else []
+        internal_urls = [
+            str(link.get("target_url", "")).strip()
+            for link in internal_links if isinstance(link, dict) and link.get("target_url")
+        ]
+        if internal_urls:
+            checklist.append(
+                "Chaque lien interne du plan doit apparaître réellement dans le HTML. "
+                "URLs attendues : "
+                + ", ".join(internal_urls[:3])
+                + ". Si un lien est absent, insère-le naturellement sur une phrase "
+                "connexe."
+            )
+
+        checklist.append(
+            "L'article contient au moins une statistique chiffrée (un nombre précis) "
+            "avec sa source citée dans la même phrase (ex : « 67 % des ... selon "
+            "l'étude X »)."
+        )
+
+        if not checklist:
+            return ""
+        lines = ["", "Checklist de vérification mécanique (à respecter absolument) :"]
+        lines += [f"- {item}" for item in checklist]
+        return "\n".join(lines)
+
     def _verify_human_insights_usage(self, content: str) -> None:
         """Garde-fou non bloquant : si des insights humains réels étaient
         disponibles avant la rédaction, on vérifie que le contenu généré les
@@ -1505,8 +1573,9 @@ class SEOGenerationOrchestrator:
             "génériques, les superlatifs vides, le mot-clé sur-optimisé (densité max 2%). "
             "Ne change ni le plan, ni les faits, ni les données, ni les liens. "
             "Règle absolue : pas de tiret cadratin (—), remplace-le par une virgule, "
-            "un point-virgule ou une reformulation.\n\n"
-            "Retourne UNIQUEMENT le HTML complet nettoyé, sans explication, sans backticks.\n\n"
+            "un point-virgule ou une reformulation."
+            + self._build_checklist_verification_block()
+            + "\n\nRetourne UNIQUEMENT le HTML complet nettoyé, sans explication, sans backticks.\n\n"
             f"Contenu :\n{content}"
         )
         content = self._write_pass(gate_prompt, "writer", article, 0.3, "WritingPass_QualityGate")
@@ -1515,8 +1584,10 @@ class SEOGenerationOrchestrator:
 
         from app.services.seo.content_structure_guard import (
             apply_structure_guards, check_style_compliance, check_word_count_compliance,
+            inject_missing_external_links,
         )
         content = apply_structure_guards(content, draft.title)
+        content = inject_missing_external_links(content, self.context.get("external_links"))
 
         image_sources = self.context.get("image_sources") or []
         if image_sources:
