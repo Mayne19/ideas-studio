@@ -21,7 +21,7 @@ _HEADERS = {
 }
 
 
-def _fetch_adaptor(url: str, timeout: int = 20) -> Any | None:
+def _fetch_adaptor(url: str, timeout: int = 8) -> Any | None:
     """
     Fetch a URL with httpx and wrap the response in a Scrapling Adaptor.
     Does NOT need curl_cffi or playwright — httpx + Adaptor is enough.
@@ -81,7 +81,7 @@ class ScraplingAdapter:
     # Core fetch
     # ------------------------------------------------------------------
 
-    def _fetch_page(self, url: str, timeout: int = 20) -> Any | None:
+    def _fetch_page(self, url: str, timeout: int = 8) -> Any | None:
         """Return a Scrapling Adaptor or None on failure."""
         if not self.configured:
             return None

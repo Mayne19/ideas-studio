@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 import logging
+from time import perf_counter
 
 from app.services.seo.adapters.scrapling_adapter import scrapling_adapter
 
 logger = logging.getLogger(__name__)
 
 _MIN_WORD_COUNT = 150
+
+# Jusqu'à 12 sources validées séquentiellement (~8s max chacune côté
+# scrapling_adapter) : sans budget global, une série de sources lentes ou
+# bloquées (ex. rate-limiting réseau côté hébergeur) pouvait faire dériver
+# cette seule étape vers plusieurs minutes. On plafonne le temps total et on
+# marque les sources restantes comme "skipped" plutôt que de les bloquer.
+SOURCE_VALIDATION_TIME_BUDGET_SECONDS = 30
 
 
 def validate_sources(sources: list[dict]) -> list[dict]:
@@ -22,7 +30,15 @@ def validate_sources(sources: list[dict]) -> list[dict]:
         ]
 
     validated = []
+    started_at = perf_counter()
     for src in sources:
+        if perf_counter() - started_at > SOURCE_VALIDATION_TIME_BUDGET_SECONDS:
+            logger.warning(
+                "source_quality: budget de %ss dépassé, %s source(s) restante(s) sautée(s)",
+                SOURCE_VALIDATION_TIME_BUDGET_SECONDS, len(sources) - len(validated),
+            )
+            validated.append({**src, "quality_check": {"skipped": True, "reason": "time_budget_exceeded"}})
+            continue
         url = src.get("url", "")
         if not url:
             validated.append({**src, "quality_check": {"skipped": True, "reason": "no_url"}})

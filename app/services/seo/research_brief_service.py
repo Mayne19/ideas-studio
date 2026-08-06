@@ -1,12 +1,21 @@
 from __future__ import annotations
 
 import logging
+from time import perf_counter
 
 from app.schemas.seo_workflow import ResearchBrief, asdict
 from app.services.seo.adapters.serp_adapter import serp_adapter
 from app.services.seo.adapters.scrapling_adapter import scrapling_adapter
 
 logger = logging.getLogger(__name__)
+
+# Jusqu'à 12 URLs SERP scrapées séquentiellement (~8s max chacune côté
+# scrapling_adapter) avant même le début de la rédaction : sans budget
+# global, des sources lentes ou bloquées côté réseau pouvaient faire dériver
+# cette seule étape vers plusieurs minutes. Au-delà du budget, les URLs
+# restantes retombent sur le snippet SERP seul (déjà le comportement de
+# fallback existant en cas d'échec de scrape).
+RESEARCH_BRIEF_TIME_BUDGET_SECONDS = 30
 
 
 def build_research_brief(
@@ -34,10 +43,22 @@ def build_research_brief(
 
     brief.research_status = "available"
     external_links_discovered: list[dict] = []
+    started_at = perf_counter()
+    budget_exceeded = False
 
     for r in results:
         url = r.get("url", "")
         if not url:
+            continue
+
+        if budget_exceeded or perf_counter() - started_at > RESEARCH_BRIEF_TIME_BUDGET_SECONDS:
+            if not budget_exceeded:
+                budget_exceeded = True
+                logger.warning(
+                    "research_brief: budget de %ss dépassé, URLs restantes limitées au snippet SERP",
+                    RESEARCH_BRIEF_TIME_BUDGET_SECONDS,
+                )
+            brief.sources_consulted.append({"url": url, "title": r.get("title", ""), "snippet": r.get("snippet", "")})
             continue
 
         # Scrapling full competitor scrape
@@ -79,6 +100,10 @@ def build_research_brief(
     )
 
     brief.limitations.append("SERP research used limited results (12 URLs max)")
+    if budget_exceeded:
+        brief.limitations.append(
+            f"Budget de temps ({RESEARCH_BRIEF_TIME_BUDGET_SECONDS}s) dépassé — certaines URLs n'ont pas été scrapées en détail"
+        )
     return brief
 
 

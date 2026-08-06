@@ -30,8 +30,20 @@ import logging
 import re
 import urllib.parse
 from dataclasses import dataclass, field
+from time import perf_counter
 
 logger = logging.getLogger(__name__)
+
+# Budget de temps total pour l'ensemble des extracteurs (Reddit, StackOverflow,
+# Nitter x5 instances, forums...). Chaque fetch individuel a son propre timeout
+# (voir _fetch), mais rien ne bornait auparavant la somme de tous les fetchs
+# séquentiels — jusqu'à ~25 requêtes HTTP possibles, chacune pouvant aller
+# jusqu'au bout de son timeout (sources lentes, ou IP datacenter Railway
+# rate-limitée/bloquée par Reddit/Twitter-miroirs) : plusieurs minutes dans le
+# pire cas, sans aucune limite globale. Au-delà de ce budget, les extracteurs
+# restants sont sautés — les insights déjà collectés sont conservés (dégradation
+# progressive, même logique que le repli "insights lite" existant).
+HUMAN_INSIGHTS_TIME_BUDGET_SECONDS = 45
 
 _HEADERS = {
     "User-Agent": (
@@ -75,7 +87,7 @@ class HumanInsightsReport:
 # UTILITAIRE FETCH
 # ─────────────────────────────────────────────────────────
 
-def _fetch(url: str, timeout: int = 20):
+def _fetch(url: str, timeout: int = 8):
     """Fetch with httpx + wrap in Scrapling Adaptor."""
     try:
         import httpx
@@ -652,7 +664,15 @@ def extract_human_insights(
             ("Forums SERP", lambda: _extract_forums_from_serp(keyword, serp_results))
         )
 
+    started_at = perf_counter()
     for name, extractor in extractors:
+        if perf_counter() - started_at > HUMAN_INSIGHTS_TIME_BUDGET_SECONDS:
+            logger.warning(
+                "HumanInsights: budget de %ss dépassé, extracteurs restants sautés (%s insights déjà collectés)",
+                HUMAN_INSIGHTS_TIME_BUDGET_SECONDS, len(all_insights),
+            )
+            report.sources_failed.append(f"{name} (budget de temps dépassé, sauté)")
+            break
         try:
             results = extractor()
             all_insights.extend(results)
