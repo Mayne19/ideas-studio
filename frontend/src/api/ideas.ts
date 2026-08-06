@@ -15,7 +15,7 @@ export function listIdeas(projectId: string, status?: ArticleStatusCode): Promis
 }
 
 export function generateIdea(projectId: string, payload: IdeaGenerateRequest = {}): Promise<IdeaGenerateResponse> {
-  return api.post<IdeaGenerateResponse>(`/projects/${projectId}/ideas/generate`, payload)
+  return api.post<IdeaGenerateResponse>(`/projects/${projectId}/ideas/generate`, payload, { timeoutMs: 180000 })
 }
 
 export function rejectIdea(articleId: string, payload: IdeaRejectRequest = {}): Promise<{ status: string }> {
@@ -52,7 +52,7 @@ export type AutoGenerateIdeasResponse = {
 }
 
 export function autoGenerateIdeas(projectId: string, count: number = 3, context_hint?: string | null): Promise<AutoGenerateIdeasResponse> {
-  return api.post<AutoGenerateIdeasResponse>(`/projects/${projectId}/ideas/auto-generate`, { count, context_hint })
+  return api.post<AutoGenerateIdeasResponse>(`/projects/${projectId}/ideas/auto-generate`, { count, context_hint }, { timeoutMs: 180000 })
 }
 
 export type DiscoverIdeasResponse = {
@@ -70,7 +70,7 @@ export type DiscoverIdeasResponse = {
 }
 
 export function discoverIdeas(projectId: string, topic: string, count: number = 5): Promise<DiscoverIdeasResponse> {
-  return api.post<DiscoverIdeasResponse>(`/projects/${projectId}/ideas/discover`, { topic, count })
+  return api.post<DiscoverIdeasResponse>(`/projects/${projectId}/ideas/discover`, { topic, count }, { timeoutMs: 180000 })
 }
 
 export type SendToProductionResponse = {
@@ -118,7 +118,7 @@ export type MonthlyPlanResponse = {
 }
 
 export function generateMonthlyPlan(projectId: string, force: boolean = false, generation_day?: number): Promise<MonthlyPlanResponse> {
-  return api.post<MonthlyPlanResponse>(`/projects/${projectId}/planning/monthly`, { force, generation_day })
+  return api.post<MonthlyPlanResponse>(`/projects/${projectId}/planning/monthly`, { force, generation_day }, { timeoutMs: 180000 })
 }
 
 export type ImprovementAnalysisResponse = {
@@ -129,7 +129,7 @@ export type ImprovementAnalysisResponse = {
 }
 
 export function analyzeArticleImprovement(articleId: string): Promise<ImprovementAnalysisResponse> {
-  return api.post<ImprovementAnalysisResponse>(`/articles/${articleId}/analyze-improvement`)
+  return api.post<ImprovementAnalysisResponse>(`/articles/${articleId}/analyze-improvement`, undefined, { timeoutMs: 180000 })
 }
 
 export type CreateImprovementDraftResponse = {

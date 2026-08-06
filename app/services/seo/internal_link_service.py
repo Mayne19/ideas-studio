@@ -76,7 +76,7 @@ def build_internal_link_plan(
                 # Add hint entries directly with high relevance
                 scored.append({
                     "target_article_id": aid,
-                    "target_url": f"/articles/{hint.get('article_id', aid)}",
+                    "target_url": f"/articles/{target.slug}" if target else f"/articles/{aid}",
                     "anchor_text": hint.get("title") or "Article connexe",
                     "placement": "auto",
                     "reason": "section overlap detected",
