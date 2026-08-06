@@ -67,6 +67,16 @@ class WritingCancelledError(RuntimeError):
 # d'arrêt du cycle d'auto-amélioration (les deux doivent rester identiques).
 AUTO_IMPROVE_SCORE_TARGET = 90
 
+# Budget de temps maximum (secondes) pour l'ensemble du cycle d'auto-amélioration.
+# Depuis que la boucle voit enfin les vrais signaux SEO/EEAT/lisibilité/
+# originalité (elle tournait auparavant presque toujours à vide), chaque
+# itération envoie l'article complet à un LLM et attend une réécriture
+# complète — un run de génération peut désormais légitimement prendre
+# plusieurs minutes. Ce budget évite qu'il ne s'étende indéfiniment sur un
+# provider lent, au-delà de ce qu'un utilisateur attend raisonnablement
+# devant un écran (voir generateArticle() côté frontend, timeout aligné).
+AUTO_IMPROVE_TIME_BUDGET_SECONDS = 150
+
 
 class _DraftArticle:
     """Support de rédaction en mémoire — content.articles/article_revisions
@@ -1658,7 +1668,7 @@ class SEOGenerationOrchestrator:
                 .limit(1)
             ).scalar()
             if current_score is not None and current_score < AUTO_IMPROVE_SCORE_TARGET:
-                self._auto_improve_score(draft, sources_list, max_iterations=8)
+                self._auto_improve_score(draft, sources_list, max_iterations=4)
 
             # Vérification finale après auto-improvement
             final_score = self.db.execute(
@@ -1862,8 +1872,16 @@ class SEOGenerationOrchestrator:
 
         wc_min = self.context.get("word_count_min")
         wc_max = self.context.get("word_count_max")
+        loop_started_at = perf_counter()
 
         for iteration in range(max_iterations):
+            if perf_counter() - loop_started_at > AUTO_IMPROVE_TIME_BUDGET_SECONDS:
+                self._log(
+                    f"Budget de temps de l'auto-amélioration dépassé "
+                    f"({AUTO_IMPROVE_TIME_BUDGET_SECONDS}s) — arrêt après {iteration} itération(s).",
+                    level="warning", step="AutoImprove_time_budget",
+                )
+                break
             self._raise_if_cancelled(article)
             scoring = compute_global_score(self.db, article.id, article=article)
             current_score = scoring.get("global_score")

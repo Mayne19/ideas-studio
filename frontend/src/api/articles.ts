@@ -155,5 +155,9 @@ export type GenerateArticleResponse = {
 }
 
 export function generateArticle(projectId: string, payload: GenerateArticleRequest = {}): Promise<GenerateArticleResponse> {
-  return api.post<GenerateArticleResponse>(`/projects/${projectId}/articles/generate`, payload)
+  // Génération synchrone côté backend, avec un cycle d'auto-amélioration
+  // qui peut faire plusieurs allers-retours LLM sur l'article complet —
+  // largement au-delà du timeout par défaut de 25s (voir client.ts). Aligné
+  // sur triggerPipelineRun(), qui a le même besoin (voir pipeline.ts).
+  return api.post<GenerateArticleResponse>(`/projects/${projectId}/articles/generate`, payload, { timeoutMs: 180000 })
 }
