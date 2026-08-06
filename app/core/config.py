@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.5-flash"
     GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
-    GEMINI_TIMEOUT_SECONDS: int = 180
+    GEMINI_TIMEOUT_SECONDS: int = 300
     SEARXNG_URL: str = ""
     SERP_API_KEY: str = ""
     UNSPLASH_ACCESS_KEY: str = ""
