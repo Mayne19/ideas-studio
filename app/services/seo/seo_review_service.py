@@ -386,7 +386,26 @@ def build_aggregated_seo_review(
 
 def run_and_store_seo_review(db: Session, article: Any) -> dict:
     from app.services.seo.artifacts import save_artifact
+    from app.models.content import ArticleSeo
+    from app.services.article_service import primary_keyword
 
-    review = review_article_with_knowledge_pack(article)
+    # article (modèle Article schéma v3) n'a ni content, ni title, ni
+    # meta_description, ni keyword, ni faq_json en colonnes directes — ces
+    # champs vivent sur ArticleRevision / ArticleSeo. Sans cette résolution,
+    # review_article_with_knowledge_pack() reçoit des champs vides et note
+    # l'article comme si le contenu était absent.
+    revision = getattr(article, "current_revision", None)
+    seo = db.get(ArticleSeo, article.id)
+    flat_article = {
+        "title": revision.title if revision else "",
+        "slug": getattr(article, "slug", ""),
+        "meta_description": seo.meta_description if seo else "",
+        "content": revision.body if revision else "",
+        "keyword": primary_keyword(db, article.id) or "",
+        "faq_json": revision.faq if revision else [],
+        "author_name": getattr(article, "author_name", ""),
+    }
+
+    review = review_article_with_knowledge_pack(flat_article)
     save_artifact(db, article.id, "seo_review", review)
     return review

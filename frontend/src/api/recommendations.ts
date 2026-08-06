@@ -6,7 +6,7 @@ export function listRecommendations(projectId: string): Promise<OptimizationReco
 }
 
 export function triggerReview(projectId: string): Promise<{ generated: number }> {
-  return api.post<{ generated: number }>(`/projects/${projectId}/recommendations/review`)
+  return api.post<{ generated: number }>(`/projects/${projectId}/recommendations/review`, undefined, { timeoutMs: 180000 })
 }
 
 export function acceptRecommendation(id: string): Promise<OptimizationRecommendation> {

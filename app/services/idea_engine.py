@@ -366,6 +366,9 @@ def generate_idea(
             for label, value in (
                 ("Ton éditorial", profile.tone),
                 ("Vertical", profile.vertical),
+                ("Description du site", rules.get("description")),
+                ("Positionnement", rules.get("positioning")),
+                ("Mots-clés prioritaires", ", ".join(rules.get("main_keywords") or []) or None),
                 ("Objectif éditorial", rules.get("editorial_goal")),
                 ("Sujets interdits", constraints.get("forbidden_topics")),
                 ("Contraintes SEO", rules.get("seo_rules")),

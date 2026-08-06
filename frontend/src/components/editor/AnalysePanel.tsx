@@ -3,7 +3,7 @@ import {
   AlertCircle, AlertTriangle, Info, RefreshCw, CheckCircle,
   HelpCircle, Download,
 } from '@/components/ui/hugeIcons'
-import { analyzeArticle, readyCheck } from '@/api/seo'
+import { analyzeArticle, readyCheck, runSeoExpertReview } from '@/api/seo'
 import { ApiError } from '@/api/client'
 import type { AnalysisBrief, SeoAnalysis, SeoIssue, ReadyCheck, EditorArticle, SeoExpertReview } from '@/types'
 import { finiteScore } from '@/lib/scoreBadge'
@@ -555,7 +555,7 @@ export default function AnalysePanel({
   const [selectedScore, setSelectedScore] = useState<ScoreKey>('Synthèse')
 
   const brief = analysis ?? article.latest_analysis
-  const expertReview: SeoExpertReview | null = null
+  const [expertReview, setExpertReview] = useState<SeoExpertReview | null>(null)
 
   const autoTriggeredRef = useRef(false)
   useEffect(() => {
@@ -581,6 +581,12 @@ export default function AnalysePanel({
         onReadinessUpdate(check)
       } catch {
         // readiness optional
+      }
+      try {
+        const review = await runSeoExpertReview(projectId, article.id)
+        setExpertReview(review)
+      } catch {
+        // audit SEO Expert optionnel — les scores restent basés sur l'analyse standard
       }
     } catch (err) {
       setError(translateError(err))
