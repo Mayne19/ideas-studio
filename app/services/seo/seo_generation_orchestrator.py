@@ -2170,6 +2170,15 @@ class SEOGenerationOrchestrator:
                 f"Contenu :\n{draft.content or ''}"
             )
 
+            # Snapshot avant la tentative : une réécriture peut améliorer le
+            # signal ciblé tout en dégradant un autre. Si le rescoring montre une
+            # régression du score global, on restaure ce snapshot exact (contenu,
+            # compteurs, révision) au lieu de garder une passe qui fait reculer.
+            previous_content = draft.content
+            previous_word_count = draft.word_count
+            previous_reading_time = draft.reading_time_minutes
+            previous_revision_id = article.current_revision_id
+
             try:
                 # Passe par l'agent editor : le provider configuré pour la révision
                 # doit aussi piloter les retouches automatiques.
@@ -2210,6 +2219,12 @@ class SEOGenerationOrchestrator:
                         self._recompute_quality_artifacts(article, draft, sources_list)
                         run_and_store_seo_review(self.db, article)
                         rescored = compute_global_score(self.db, article.id, article=article)
+                        new_score = rescored.get("global_score")
+                        # Réécriture acceptée uniquement si le score global progresse
+                        # réellement : un None (score non confirmé) est traité comme une
+                        # régression par prudence. La ligne ArticleScore ci-dessous est
+                        # écrite quand même : elle garde la trace d'audit de la tentative.
+                        is_regression = new_score is None or (current_score is not None and new_score < current_score)
                         quality_report = self._get(article.id, "editorial_quality_report") or {}
                         seo_final = self._get(article.id, "seo_final_checklist") or {}
                         self.db.add(ArticleScore(
@@ -2224,10 +2239,32 @@ class SEOGenerationOrchestrator:
                             issues=_seo_final_checklist_to_issues(seo_final) + _editorial_quality_report_to_issues(quality_report),
                         ))
                         self.db.flush()
+
+                        if is_regression:
+                            # Revert déterministe : pas de _persist_revision() ici — la
+                            # révision précédente existe déjà, on repointe juste
+                            # current_revision_id dessus. On recalcule les artifacts sur
+                            # le contenu redevenu courant, sinon l'itération suivante
+                            # lirait des artifacts incohérents avec draft.content.
+                            draft.content = previous_content
+                            draft.word_count = previous_word_count
+                            draft.reading_time_minutes = previous_reading_time
+                            article.current_revision_id = previous_revision_id
+                            article.updated_at = datetime.now(timezone.utc)
+                            self.db.flush()
+                            self._recompute_quality_artifacts(article, draft, sources_list)
+                            run_and_store_seo_review(self.db, article)
+                            self._log(
+                                f"Réécriture rejetée (score {new_score} < {current_score}) — "
+                                "retour au contenu précédent.",
+                                level="warning",
+                                step=f"AutoImprove_{weakest_signal}_iter{iteration + 1}_reverted",
+                            )
+                        else:
+                            self._step(f"AutoImprove_{weakest_signal}_iter{iteration + 1}")
                     except Exception as score_exc:
                         self._error(f"AutoImprove_rescore_{iteration}", str(score_exc))
 
-                    self._step(f"AutoImprove_{weakest_signal}_iter{iteration + 1}")
             except Exception as exc:
                 self._error(f"AutoImprove_{weakest_signal}_iter{iteration + 1}", str(exc))
                 break
