@@ -8,7 +8,7 @@ from app.models.reference import ArticleStatus
 from app.schemas.seo_workflow import IdeaDiscoveryResult, asdict
 from app.services.providers.llm_provider import LLMProvider
 from app.services.providers.search_provider import SearchProvider, MockSearchProvider
-from app.services.seo.adapters.serp_adapter import serp_adapter
+from app.services.seo.adapters.serp_adapter import get_serp_adapter
 from app.services.seo.adapters.trends_adapter import trends_adapter
 
 _EXISTING_KEYWORD_STATUSES = (
@@ -32,6 +32,7 @@ def discover_ideas(
     category_strategy: dict | None = None,
 ) -> list[dict]:
     ideas: list[dict] = []
+    serp_configured = get_serp_adapter(project_id).configured
     categories = db.execute(select(Category).where(Category.project_id == project_id)).scalars().all()
     category_id = None
     if category_strategy and category_strategy.get("chosen_category_id"):
@@ -159,7 +160,7 @@ def discover_ideas(
                 confidence_score=round(0.7 - (i * 0.05), 2),
                 limitations=[],
             )
-            if serp_adapter.configured:
+            if serp_configured:
                 ref.real_research_used = True
                 ref.source = "serp_research"
 
