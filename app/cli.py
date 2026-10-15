@@ -69,7 +69,7 @@ def cmd_generate_ideas(args) -> None:
         profile = project.active_editorial_profile
 
         llm = get_llm_provider()
-        search = get_search_provider()
+        search = get_search_provider(project.id)
         idea = generate_idea(
             db=db,
             project_id=project.id,
