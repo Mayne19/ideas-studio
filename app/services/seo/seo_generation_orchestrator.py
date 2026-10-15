@@ -282,6 +282,7 @@ class SEOGenerationOrchestrator:
             "main_keyword": keyword or "",
             "secondary_keywords": [],
             "detected_intent": search_intent or "informational",
+            "angle": angle or "",
             "source": "manual" if preferred_title else "category_strategy",
             "real_research_used": False,
             "opportunity_score": 0.7,
