@@ -241,10 +241,13 @@ def check_validation_thresholds(
     article_review = ctx.get("article_review")
     if article_review and article_review.get("decision") == "REECRITURE":
         blocking = article_review.get("blocking_triggered") or []
-        blocking_reasons.append(
-            f"Agent reviseur : REECRITURE requise (score {article_review.get('total_score')}, "
-            f"bloquant(s) : {', '.join(blocking) if blocking else 'score insuffisant'})"
-        )
+        non_blocking_warnings.append({
+            "type": "reviewer_rewrite_suggested", "severity": "warning",
+            "message": (
+                f"Agent reviseur : REECRITURE suggeree (score {article_review.get('total_score')}, "
+                f"critere(s) : {', '.join(blocking) if blocking else 'score insuffisant'})"
+            ),
+        })
 
     for w in warnings:
         if w["severity"] == "critical":
