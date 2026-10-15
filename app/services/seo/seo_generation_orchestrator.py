@@ -1379,6 +1379,41 @@ class SEOGenerationOrchestrator:
         self._step(f"ProofreadingPass ({report['corrected']} corrigée(s), {report['rejected']} rejetée(s))")
         return proofread
 
+    def _consistency_pass(self, article: Article, content: str) -> str:
+        """Contradictions chiffrées et phrases répétées entre l'introduction
+        et les sections : un appel de détection, corrections phrase par
+        phrase appliquées par le code, tracées dans l'artefact
+        consistency_report."""
+        from app.services.seo.consistency_checker import check_and_fix_consistency
+        brief = self.context.get("production_brief") or {}
+        facts = []
+        for item in brief.get("evidence_items") or []:
+            if isinstance(item, dict) and item.get("fact"):
+                fact = str(item["fact"])
+                if item.get("figure"):
+                    fact += f" [{item['figure']}]"
+                facts.append(fact)
+        try:
+            fixed, report = check_and_fix_consistency(
+                content, self._polish_call_fn(article),
+                verified_facts=facts, fatal_exceptions=(WritingCancelledError,),
+            )
+        except WritingCancelledError:
+            raise
+        except Exception as exc:
+            self._error("ConsistencyPass", f"Contrôle de cohérence ignoré : {exc}")
+            return content
+        fixed = self._keep_if_h2_lost(content, fixed, "ConsistencyPass")
+        self._save(article.id, "consistency_report", report)
+        if report.get("applied"):
+            self._log(
+                f"Cohérence : {len(report['applied'])} phrase(s) corrigée(s) ou supprimée(s) "
+                f"sur {report.get('issues_found', 0)} problème(s) signalé(s).",
+                level="info", step="ConsistencyPass", article_id=article.id,
+            )
+        self._step(f"ConsistencyPass ({len(report.get('applied') or [])} correction(s))")
+        return fixed
+
     def _generate_content(self, draft: _DraftArticle, outline: dict, keyword_brief: dict, include_callouts: bool | None, include_faq: bool | None = None):
         article = draft.article
         self._raise_if_cancelled(article)
@@ -1461,6 +1496,7 @@ class SEOGenerationOrchestrator:
 
         # ── Finition — appels courts et ciblés, jamais de réécriture libre ──
         content = self._proofread_pass(article, draft, content)
+        content = self._consistency_pass(article, content)
         self._save(article.id, "section_writing_report", section_writer.report)
 
         self._raise_if_cancelled(article)
