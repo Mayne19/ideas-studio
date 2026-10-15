@@ -137,7 +137,9 @@ def _build_outline_with_llm(
         "rien de ce qui figure dans « À éviter ».\n"
         "- Pas de section définition générique, « pourquoi c'est important » ou « conclusion ».\n"
         "- Titres H2 concrets et variés, différents des titres concurrents.\n"
-        "- Une section longue peut avoir des sous-sections H3 (level=3).\n"
+        "- Les sous-points d'un même thème sont des H3 (level=3) placés juste après leur H2, "
+        "pas des H2 séparés.\n"
+        "- Pas de numérotation dans les titres (« 1. », « Étape 2 : »), sauf format list ou how_to.\n"
         "Réponds UNIQUEMENT avec un JSON valide :\n"
         '{"h1": "...", "intro_goal": "...", "first_block_goal": "...", '
         '"sections": [{"heading": "...", "level": 2, "purpose": "...", '
