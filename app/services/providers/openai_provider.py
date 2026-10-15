@@ -11,6 +11,14 @@ from app.services.providers.llm_provider import (
 )
 
 
+# Plafond explicite de tokens générés par appel : sans lui, certains
+# providers (OpenRouter free, endpoints compatibles OpenAI) appliquent un
+# défaut bas et coupent un article long en plein milieu. 16k couvre un
+# article complet en HTML plus les tokens de raisonnement des modèles qui
+# les décomptent du même budget.
+DEFAULT_MAX_OUTPUT_TOKENS = 16384
+
+
 class OpenAILLMProvider(LLMProvider):
     is_mock: bool = False
     provider_name: str = "openai"
@@ -22,6 +30,7 @@ class OpenAILLMProvider(LLMProvider):
         base_url: str = "https://api.openai.com/v1",
         timeout_seconds: int = 90,
         max_retries: int = 2,
+        max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
     ):
         self.api_key = api_key
         self.model = model
@@ -29,7 +38,14 @@ class OpenAILLMProvider(LLMProvider):
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
+        self.max_output_tokens = max_output_tokens
         self.last_usage: dict[str, int] | None = None
+
+    def _max_tokens_field(self) -> str:
+        # L'API OpenAI officielle refuse max_tokens sur ses modèles récents
+        # (raisonnement) et attend max_completion_tokens ; les endpoints
+        # compatibles (OpenRouter, Mistral, Gemini...) attendent max_tokens.
+        return "max_completion_tokens" if "api.openai.com" in self.base_url else "max_tokens"
 
     def _headers(self) -> dict[str, str]:
         return {
@@ -46,6 +62,7 @@ class OpenAILLMProvider(LLMProvider):
             "model": self.model,
             "messages": messages,
             "temperature": temperature,
+            self._max_tokens_field(): self.max_output_tokens,
         }
 
         self.last_usage = None
