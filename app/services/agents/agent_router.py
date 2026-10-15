@@ -85,6 +85,8 @@ class AgentRouter:
         # configuré pour ce projet avant d'abandonner. Transparent pour tous
         # les appelants (agent_services.py et consorts font provider.generate_text/
         # generate_json directement sur l'objet retourné ici).
+        provider = _apply_openrouter_role_model(provider, agent_id)
+
         from app.services.providers.llm_provider import FallbackLLMProvider
         provider = FallbackLLMProvider(provider, project_id)
 
@@ -170,6 +172,25 @@ class AgentRouter:
 
     def clear_cache(self):
         self._cache.clear()
+
+
+# Agents qui produisent ou réécrivent le texte long de l'article : ils
+# utilisent OPENROUTER_WRITER_MODEL, tous les autres OPENROUTER_PLANNER_MODEL.
+_WRITER_ROLE_AGENTS = {"editor"}
+
+
+def _apply_openrouter_role_model(provider: LLMProvider, agent_id: str) -> LLMProvider:
+    from app.services.providers.openrouter_provider import OpenRouterLLMProvider
+
+    if not isinstance(provider, OpenRouterLLMProvider):
+        return provider
+    # Un modèle forcé par variable d'environnement pour cet agent prime.
+    if getattr(settings, f"AGENT_{agent_id.upper()}_MODEL", None):
+        return provider
+    canonical_id = resolve_agent_id(agent_id)
+    agent = get_agent(canonical_id)
+    is_writer = canonical_id in _WRITER_ROLE_AGENTS or (agent is not None and agent.phase == "writing")
+    return provider.for_role("writer" if is_writer else "planner")
 
 
 _default_router: AgentRouter | None = None
