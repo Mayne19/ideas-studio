@@ -1641,19 +1641,10 @@ class SEOGenerationOrchestrator:
                 level="warning", step="article_review",
             )
 
-        # Le verdict de l'agent réviseur n'était auparavant qu'informatif : un
-        # REECRITURE ne déclenchait qu'un warning, le pipeline continuait tel
-        # quel vers DRAFT_READY. Les 10 critères de cette grille (ouvertures
-        # génériques, position tranchée, moment de surprise, interdictions
-        # stylistiques...) ne sont pas non plus couverts par les 5 signaux
-        # pondérés de _auto_improve_score (SEO/EEAT/lisibilité/originalité/GEO).
-        # Un critère bloquant déclenche donc désormais une passe corrective
-        # ciblée avant de poursuivre.
-        if review_report.get("blocking_triggered"):
-            content = self._fix_blocking_structural_issues(content, draft, review_report)
-            draft.content = content
-            draft.word_count = calculate_word_count(content)
-            draft.reading_time_minutes = calculate_reading_time_minutes(draft.word_count)
+        # Le verdict de l'agent réviseur reste informatif : aucune passe de
+        # réécriture n'est déclenchée sur ses critères bloquants (ouverture
+        # générique, position tranchée, moment de surprise...). Ces réécritures
+        # ciblaient des signaux de surface et dégradaient le fond de l'article.
 
         from app.services.seo.article_tier_service import compute_volume_tiers
         volume_tiers = compute_volume_tiers(content)
