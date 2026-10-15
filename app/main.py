@@ -10,7 +10,7 @@ from sqlalchemy.engine.url import make_url
 from alembic.config import Config
 from alembic import command
 from app.core.config import settings
-from app.routers import auth, projects, health, categories, articles, public_api, tracking, ideas, seo, performance, recommendations, notifications, members, editor, versions, media, invitations, editorial_setup, callouts, pipeline, generation, comments, search, search_console, profile, ai_providers, activity, webhooks, kanban_columns, ai_agents, monitoring, analytics
+from app.routers import auth, projects, health, categories, articles, public_api, tracking, ideas, seo, performance, recommendations, notifications, members, editor, versions, media, invitations, editorial_setup, callouts, pipeline, generation, comments, search, search_console, profile, ai_providers, activity, webhooks, kanban_columns, ai_agents, monitoring, analytics, external_services
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,6 +42,7 @@ OPENAPI_TAGS = [
     {"name": "media", "description": "Médiathèque, uploads et métadonnées des fichiers."},
     {"name": "notifications", "description": "Notifications projet et actions de lecture/suppression."},
     {"name": "ai_providers", "description": "Providers IA, tests de connexion et statut des clés masquées."},
+    {"name": "external_services", "description": "Services externes (recherche web, images) : clés chiffrées par projet, tests de connexion."},
     {"name": "ai_agents", "description": "Registre des agents IA et assignations aux providers."},
     {"name": "search", "description": "Recherche globale dans le studio."},
     {"name": "search_console", "description": "Intégration Google Search Console, partielle selon configuration."},
@@ -269,6 +270,7 @@ app.include_router(comments.router)
 app.include_router(search.router)
 app.include_router(search_console.router)
 app.include_router(ai_providers.router)
+app.include_router(external_services.router)
 app.include_router(ai_agents.router)
 app.include_router(monitoring.router)
 app.include_router(activity.router)
