@@ -4,7 +4,7 @@ import json
 import uuid
 from datetime import datetime, timezone
 from time import perf_counter
-from typing import Any, TYPE_CHECKING
+from typing import Any, Callable, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.services.agents.agent_router import AgentRouter
@@ -157,8 +157,12 @@ class SEOGenerationOrchestrator:
         llm: LLMProvider,
         search: SearchProviderType,
         agent_router: Any | None = None,
+        progress_cb: Callable[[str, int], None] | None = None,
     ):
         self.db = db
+        # Appelé à chaque étape terminée (nom, nombre d'étapes) : suivi de
+        # progression d'un job de génération en tâche de fond.
+        self.progress_cb = progress_cb
         self.project_id = project_id
         self.llm = llm
         self.search = search
@@ -183,6 +187,12 @@ class SEOGenerationOrchestrator:
     def _step(self, name: str):
         self.steps_completed.append(name)
         self._log(f"Step completed: {name}", level="info", step=name)
+        if self.progress_cb is not None:
+            try:
+                self.progress_cb(name, len(self.steps_completed))
+            except Exception:
+                # La progression est informative : ne jamais casser la génération.
+                pass
 
     def _error(self, step: str, message: str):
         self.errors.append(f"[{step}] {message}")
@@ -1879,8 +1889,11 @@ def generate_full_article(
     include_callouts: bool | None = None,
     agent_router: Any | None = None,
     existing_article_id: str | None = None,
+    progress_cb: Callable[[str, int], None] | None = None,
 ) -> Article:
-    orchestrator = SEOGenerationOrchestrator(db, project_id, llm, search, agent_router=agent_router)
+    orchestrator = SEOGenerationOrchestrator(
+        db, project_id, llm, search, agent_router=agent_router, progress_cb=progress_cb,
+    )
     return orchestrator.generate_full_article(
         preferred_title=preferred_title,
         keyword=keyword,
