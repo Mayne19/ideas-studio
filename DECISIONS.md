@@ -25,6 +25,26 @@
 
 ## Décisions enregistrées
 
+### [DEC-013] — Génération d'article asynchrone (job + polling) et finition ciblée
+
+- **Date** : 2026-10-16
+- **Domaine** : architecture
+- **Problème** : le proxy HTTP de Railway coupe toute requête à 300 s ; la rédaction section par section prend 7 à 12 min, donc `POST /projects/{id}/articles/generate` renvoyait toujours 502 alors que l'article finissait côté serveur.
+- **Options étudiées** :
+  - Option A : streaming / keep-alive de la requête synchrone
+  - Option B : job persisté (`ai.generation_jobs`), exécuté dans un pool de threads borné (2) avec sa propre session, suivi par polling
+  - Option C : worker séparé + file externe (Redis/Celery)
+- **Décision retenue** : Option B — même modèle d'exécution que la file de rédaction (`production_queue.py`), réplique et worker uvicorn uniques.
+- **Justification** : aucune infrastructure supplémentaire ; la progression (étape courante) est lisible en base ; le 202 répond en quelques millisecondes.
+- **Conséquences** :
+  - (+) Plus de 502 côté client, progression et erreurs visibles dans l'interface
+  - (-) Pool en mémoire : un redémarrage interrompt les jobs en cours, marqués « failed » au démarrage (jamais repris automatiquement)
+  - (-) Ne tient pas en multi-réplique sans verrou ni file partagée
+  - Finition associée : relecture par section, contrôle de cohérence et insertion des liens se font par appels courts dont le code applique le résultat (phrase exacte → remplacement / suppression / `<a href>`), jamais par réécriture libre de l'article
+- **Révisable** : Oui — si plusieurs répliques ou workers uvicorn deviennent nécessaires
+
+---
+
 ### [DEC-012] — Abandon de SQLite en développement, PostgreSQL obligatoire (schéma v3)
 
 - **Date** : 2026-08 (refonte schéma v3, commit `8524f50f`)
