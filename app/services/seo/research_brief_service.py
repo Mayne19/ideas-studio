@@ -4,7 +4,7 @@ import logging
 from time import perf_counter
 
 from app.schemas.seo_workflow import ResearchBrief, asdict
-from app.services.seo.adapters.serp_adapter import serp_adapter
+from app.services.seo.adapters.serp_adapter import get_serp_adapter
 from app.services.seo.adapters.scrapling_adapter import scrapling_adapter
 
 logger = logging.getLogger(__name__)
@@ -26,11 +26,12 @@ def build_research_brief(
     project_id: str | None = None,
 ) -> ResearchBrief:
     brief = ResearchBrief()
+    serp_adapter = get_serp_adapter(project_id)
 
     if not serp_adapter.configured:
         brief.research_status = "not_available"
         brief.limitations = [
-            "SERP provider not configured (SERPER_API_KEY or SERP_API_KEY missing)",
+            "SERP provider not configured (Paramètres → Services externes, or SERPER_API_KEY env)",
             "Research based on internal context only, no real competitor analysis",
         ]
         return brief
