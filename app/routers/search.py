@@ -37,6 +37,7 @@ def global_search(
         ("settings", "Paramètres", "Général", "settings"),
         ("strategy", "Stratégie", "Audience, ton éditorial et consignes IA", "settings/strategy"),
         ("providers", "Providers", "Connecter Gemini, OpenAI, OpenRouter, Anthropic, Mistral", "settings/providers"),
+        ("external-services", "Services externes", "Recherche web (Serper, Brave, SerpAPI, Google) et images (Unsplash)", "settings/external-services"),
         ("agents", "Agents", "Assigner providers et modèles aux agents IA", "settings/agents"),
         ("pipeline", "Pipeline", "Automatisations éditoriales et génération planifiée", "settings/pipeline"),
         ("integration", "Intégration", "Site connecté, API et revalidation", "settings/integration"),

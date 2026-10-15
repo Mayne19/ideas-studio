@@ -99,7 +99,7 @@ def generate_article_route(
 
     try:
         llm = get_llm_provider()
-        search = get_search_provider()
+        search = get_search_provider(project_id)
     except ProviderUnavailableError as exc:
         raise _generation_http_error(exc) from exc
 
@@ -186,7 +186,7 @@ def auto_generate_ideas_route(
 
     try:
         llm = get_llm_provider()
-        search = get_search_provider()
+        search = get_search_provider(project_id)
     except ProviderUnavailableError as exc:
         raise _generation_http_error(exc) from exc
 
@@ -248,7 +248,7 @@ def discover_ideas_route(
 
     try:
         llm = get_llm_provider()
-        search = get_search_provider()
+        search = get_search_provider(project_id)
     except ProviderUnavailableError as exc:
         raise _generation_http_error(exc) from exc
 
@@ -291,7 +291,7 @@ def generate_monthly_plan_route(
     project = _get_project_or_404(project_id, db)
     try:
         llm = get_llm_provider()
-        search = get_search_provider()
+        search = get_search_provider(project_id)
     except (ProviderUnavailableError, GenerationFailedError) as exc:
         raise _generation_http_error(exc) from exc
 

@@ -67,7 +67,6 @@ def generation_already_ran(db: Session, project_id: str, schedule: dict, now: da
 def generate_daily_ideas(db: Session) -> dict:
     """Generate ideas for all active projects, up to IDEAS_PER_DAY per project."""
     llm = get_llm_provider()
-    search = get_search_provider()
 
     projects = db.execute(select(Project).where(Project.status_reason_id != ProjectStatus.ARCHIVED)).scalars().all()
 
@@ -77,6 +76,9 @@ def generate_daily_ideas(db: Session) -> dict:
     for project in projects:
         profile = project.active_editorial_profile
         project_generated = 0
+        # Résolu par projet : chaque projet peut avoir sa propre clé de
+        # recherche (Paramètres → Services externes).
+        search = get_search_provider(project.id)
         for _ in range(settings.IDEAS_PER_DAY):
             idea = generate_idea(
                 db=db,
@@ -158,7 +160,7 @@ def _run_ideas(db: Session, project_id: str) -> dict:
     pipeline = db.get(Pipeline, project_id)
 
     llm = get_llm_provider()
-    search = get_search_provider()
+    search = get_search_provider(project_id)
 
     schedule = pipeline.schedule if pipeline else {}
     active_days = schedule.get("active_days", []) if schedule else []

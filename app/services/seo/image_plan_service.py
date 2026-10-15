@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from app.schemas.seo_workflow import ImagePlan, asdict
-from app.services.seo.adapters.image_sourcing_adapter import image_sourcing_adapter, brave_image_search_provider
+from app.services.seo.adapters.image_sourcing_adapter import get_brave_image_search_provider, get_image_sourcing_adapter
 
 
 def build_image_plan(
@@ -48,6 +48,8 @@ def build_image_plan(
 
     competitor_domains = _get_competitor_domains(db, project_id)
     plan.provider_configured = True
+    brave_image_search_provider = get_brave_image_search_provider(project_id)
+    image_sourcing_adapter = get_image_sourcing_adapter(project_id)
 
     seen_urls: set[str] = set()
     for section in section_plan.get("sections", []):

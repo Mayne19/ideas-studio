@@ -36,6 +36,7 @@ const CalendarPage = lazy(() => import('@/pages/projects/calendar/CalendarPage')
 const NotificationsPage = lazy(() => import('@/pages/projects/notifications/NotificationsPage'))
 const ProjectStrategyPage = lazy(() => import('@/pages/projects/settings/ProjectStrategyPage'))
 const ProjectProvidersPage = lazy(() => import('@/pages/projects/settings/ProjectProvidersPage'))
+const ProjectExternalServicesPage = lazy(() => import('@/pages/projects/settings/ProjectExternalServicesPage'))
 const ProjectCalloutsPage = lazy(() => import('@/pages/projects/settings/ProjectCalloutsPage'))
 const ProjectPipelinePage = lazy(() => import('@/pages/projects/settings/ProjectPipelinePage'))
 const ProjectAgentsPage = lazy(() => import('@/pages/projects/settings/ProjectAgentsPage'))
@@ -213,6 +214,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<LoadingState />}>
                 <ProjectProvidersPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'external-services',
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <ProjectExternalServicesPage />
               </Suspense>
             ),
           },

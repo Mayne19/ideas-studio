@@ -382,7 +382,7 @@ def run_pipeline(db: Session, project_id: str) -> dict:
                     "Pipeline provider loaded project=%s provider=%s model=%s is_mock=%s",
                     project_id, llm.provider_name, llm.model_name, llm.is_mock,
                 )
-                search = get_search_provider()
+                search = get_search_provider(project_id)
                 agent_router = get_agent_router(db=db)
 
                 project_audience = profile.audience if profile else None

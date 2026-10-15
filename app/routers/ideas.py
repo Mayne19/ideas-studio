@@ -110,7 +110,7 @@ def generate_idea_route(
     profile = project.active_editorial_profile
     try:
         llm = get_llm_provider()
-        search = get_search_provider()
+        search = get_search_provider(project_id)
         logger.info(
             "generate_idea provider=%s model=%s is_mock=%s project=%s",
             llm.provider_name, llm.model_name, llm.is_mock, project_id,
@@ -154,7 +154,7 @@ def start_writing_route(
         )
     try:
         llm = get_llm_provider()
-        search = get_search_provider()
+        search = get_search_provider(article.project_id)
     except ProviderUnavailableError as exc:
         raise _generation_http_error(exc) from exc
 
@@ -219,7 +219,7 @@ def reject_idea_route(
             profile = project.active_editorial_profile if project else None
             if project:
                 llm = get_llm_provider()
-                search = get_search_provider()
+                search = get_search_provider(article.project_id)
                 replacement = generate_idea(
                     db=db,
                     project_id=article.project_id,
@@ -334,7 +334,7 @@ def rerun_writing_route(
         raise HTTPException(status_code=400, detail=f"Cannot rerun from status '{article.status_reason_id}'")
     try:
         llm = get_llm_provider()
-        search = get_search_provider()
+        search = get_search_provider(article.project_id)
         logger.info(
             "rerun_writing provider=%s model=%s is_mock=%s article=%s",
             llm.provider_name, llm.model_name, llm.is_mock, article_id,
@@ -382,7 +382,7 @@ def launch_project_route(
 
     try:
         llm = get_llm_provider()
-        search = get_search_provider()
+        search = get_search_provider(project_id)
     except (ProviderUnavailableError, GenerationFailedError) as exc:
         raise _generation_http_error(exc) from exc
 

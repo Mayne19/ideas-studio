@@ -48,9 +48,9 @@ from app.services.seo.seo_final_checklist_service import check_seo_final_dict
 from app.services.seo.seo_review_service import build_aggregated_seo_review, build_review_error_report, run_and_store_seo_review
 from app.services.seo.generation_report_service import build_generation_report_dict
 from app.services.seo.error_manager_service import analyze_generation_errors
-from app.services.seo.adapters.serp_adapter import serp_adapter
+from app.services.seo.adapters.serp_adapter import get_serp_adapter
 from app.services.seo.adapters.trends_adapter import trends_adapter
-from app.services.seo.adapters.image_sourcing_adapter import image_sourcing_adapter
+from app.services.seo.adapters.image_sourcing_adapter import get_image_sourcing_adapter
 from app.services.seo.adapters.language_adapter import language_adapter
 from app.services.seo.adapters.content_extraction_adapter import content_extraction_adapter
 from app.services.seo.adapters.scrapling_adapter import scrapling_adapter
@@ -164,6 +164,10 @@ class SEOGenerationOrchestrator:
         self.search = search
         self.agent_router = agent_router
         self.project = db.get(Project, project_id)
+        # Clés résolues pour CE projet (Paramètres → Services externes, puis
+        # config globale, puis env) — plus de singleton figé à l'import.
+        self.serp_adapter = get_serp_adapter(project_id)
+        self.image_sourcing_adapter = get_image_sourcing_adapter(project_id)
         self.steps_completed: list[str] = []
         self.errors: list[str] = []
         self.limitations: list[str] = []
@@ -185,11 +189,11 @@ class SEOGenerationOrchestrator:
         self._log(message, level="error", step=step)
 
     def _check_tools(self):
-        if serp_adapter.configured:
+        if self.serp_adapter.configured:
             self.tools_used.append("serpapi")
         else:
             self.tools_not_configured.append("serpapi")
-            self.limitations.append("SERP provider not configured (SERPER_API_KEY or SERP_API_KEY missing)")
+            self.limitations.append("SERP provider not configured (Paramètres → Services externes, or SERPER_API_KEY env)")
 
     def _ensure_slug(self, article: Article, title: str, keyword: str):
         if article.slug and not article.slug.startswith("idea-"):
@@ -350,7 +354,9 @@ class SEOGenerationOrchestrator:
         article_type = intent_analysis.get("article_type", "evergreen_information")
 
         # 6. ResearchBrief
-        research_brief = build_research_brief_dict(final_keyword, final_title, category_name, project_id=self.project_id)
+        research_brief = build_research_brief_dict(
+            final_keyword, final_title, category_name, project_id=self.project_id, serp_adapter=self.serp_adapter,
+        )
         self.context["research_brief"] = research_brief
         self._step("ResearchBrief")
 
@@ -1799,7 +1805,7 @@ class SEOGenerationOrchestrator:
     ):
         adapters_status = {}
         for adapter in (
-            serp_adapter, trends_adapter, image_sourcing_adapter, language_adapter,
+            self.serp_adapter, trends_adapter, self.image_sourcing_adapter, language_adapter,
             scrapling_adapter, content_extraction_adapter, orig_adapter, readability_adapter, google_watch_adapter,
         ):
             try:

@@ -203,8 +203,67 @@ class GoogleCustomSearchProvider(SearchProvider):
         return bool(self.api_key and self.cx)
 
 
-def get_search_provider() -> SearchProvider:
+class SerpApiSearchProvider(SearchProvider):
+    """SerpAPI — résultats Google via https://serpapi.com/."""
+    is_mock: bool = False
+    provider_name: str = "serpapi"
+
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+
+    def search(self, query: str, limit: int = 10) -> list[SearchResult]:
+        try:
+            import httpx
+            from app.core.config import settings
+            resp = httpx.get(
+                "https://serpapi.com/search",
+                params={"q": query, "api_key": self.api_key, "num": limit},
+                timeout=settings.SEARCH_TIMEOUT_SECONDS or 30,
+            )
+            resp.raise_for_status()
+            return [
+                SearchResult(
+                    title=item.get("title", ""),
+                    url=item.get("link", ""),
+                    snippet=item.get("snippet", ""),
+                )
+                for item in resp.json().get("organic_results", [])[:limit]
+            ]
+        except Exception:
+            return []
+
+    def is_available(self) -> bool:
+        return bool(self.api_key)
+
+
+def build_search_provider(credential) -> SearchProvider | None:
+    """SearchProvider réel à partir d'une ServiceCredential (voir
+    app/services/providers/external_services.py), None si non supporté."""
+    if credential is None or not credential.api_key:
+        return None
+    if credential.provider == "serper":
+        return SerperSearchProvider(credential.api_key)
+    if credential.provider == "brave":
+        return BraveSearchProvider(credential.api_key)
+    if credential.provider == "serpapi":
+        return SerpApiSearchProvider(credential.api_key)
+    if credential.provider == "google_cse":
+        cx = (credential.config or {}).get("cx")
+        return GoogleCustomSearchProvider(credential.api_key, cx) if cx else None
+    return None
+
+
+def get_search_provider(project_id: str | None = None) -> SearchProvider:
+    """Clé configurée dans le CMS (projet, puis globale) en priorité — elle
+    prime sur DEFAULT_SEARCH_PROVIDER — puis repli sur les variables
+    d'environnement. project_id absent : celui de la requête/job en cours
+    (current_project_id) est utilisé, voir resolve_db_credential."""
     from app.core.config import settings
+    from app.services.providers.external_services import resolve_db_credential
+
+    configured = build_search_provider(resolve_db_credential("search", project_id))
+    if configured is not None and configured.is_available():
+        return configured
 
     if settings.DEFAULT_SEARCH_PROVIDER == "searxng" and settings.SEARXNG_URL:
         provider = SearXNGSearchProvider(settings.SEARXNG_URL)

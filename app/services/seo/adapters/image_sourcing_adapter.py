@@ -16,9 +16,16 @@ class BraveImageSearchProvider:
     fallback_mode = "not_configured"
     trust_level = "medium"  # dépend de la fiabilité du domaine ciblé, jamais garanti à 100%
 
-    def __init__(self):
-        from app.core.config import settings
-        if settings.BRAVE_SEARCH_API_KEY:
+    def __init__(self, credential=None):
+        """credential : ServiceCredential "brand_images" (voir
+        app/services/providers/external_services.py) ; absent = repli env
+        (BRAVE_SEARCH_API_KEY). Voir get_brave_image_search_provider()."""
+        if credential is None:
+            from app.services.providers.external_services import env_credential
+            credential = env_credential("brand_images")
+        self.api_key = credential.api_key if credential is not None else None
+        self.source = credential.source if credential is not None else None
+        if self.api_key:
             self.configured = True
             self.enabled = True
             self.fallback_mode = "brave_image_search"
@@ -32,7 +39,7 @@ class BraveImageSearchProvider:
             resp = httpx.get(
                 "https://api.search.brave.com/res/v1/images/search",
                 params={"q": f"{query} site:{domain}", "count": min(limit, 20), "safesearch": "strict"},
-                headers={"X-Subscription-Token": settings.BRAVE_SEARCH_API_KEY, "Accept": "application/json"},
+                headers={"X-Subscription-Token": self.api_key, "Accept": "application/json"},
                 timeout=settings.SEARCH_TIMEOUT_SECONDS or 30,
             )
             resp.raise_for_status()
@@ -70,9 +77,19 @@ class BraveImageSearchProvider:
             "real_data_available": self.real_data_available,
             "fallback_mode": self.fallback_mode,
             "trust_level": self.trust_level,
+            "credential_source": self.source,
         }
 
 
+def get_brave_image_search_provider(project_id: str | None = None) -> BraveImageSearchProvider:
+    """Config CMS (images officielles, sinon clé Brave de la recherche web ;
+    projet puis global), puis env. project_id absent : celui du job courant."""
+    from app.services.providers.external_services import resolve_credential
+
+    return BraveImageSearchProvider(resolve_credential("brand_images", project_id))
+
+
+# Compat : singleton env uniquement, préférer get_brave_image_search_provider().
 brave_image_search_provider = BraveImageSearchProvider()
 
 
@@ -86,9 +103,16 @@ class ImageSourcingAdapter:
     fallback_mode = "not_configured"
     trust_level = "none"
 
-    def __init__(self):
-        from app.core.config import settings
-        if settings.UNSPLASH_ACCESS_KEY:
+    def __init__(self, credential=None):
+        """credential : ServiceCredential "images" (voir
+        app/services/providers/external_services.py) ; absent = repli env
+        (UNSPLASH_ACCESS_KEY). Voir get_image_sourcing_adapter()."""
+        if credential is None:
+            from app.services.providers.external_services import env_credential
+            credential = env_credential("images")
+        self.api_key = credential.api_key if credential is not None and credential.provider == "unsplash" else None
+        self.source = credential.source if self.api_key else None
+        if self.api_key:
             self.configured = True
             self.enabled = True
             self.fallback_mode = "unsplash"
@@ -99,7 +123,7 @@ class ImageSourcingAdapter:
         try:
             import httpx
             from app.core.config import settings
-            key = settings.UNSPLASH_ACCESS_KEY
+            key = self.api_key
             resp = httpx.get(
                 "https://api.unsplash.com/search/photos",
                 params={"query": query, "per_page": limit},
@@ -137,7 +161,17 @@ class ImageSourcingAdapter:
             "real_data_available": self.real_data_available,
             "fallback_mode": self.fallback_mode,
             "trust_level": self.trust_level,
+            "credential_source": self.source,
         }
 
 
+def get_image_sourcing_adapter(project_id: str | None = None) -> ImageSourcingAdapter:
+    """Config CMS (projet puis global), puis env. project_id absent : celui
+    de la requête/job en cours."""
+    from app.services.providers.external_services import resolve_credential
+
+    return ImageSourcingAdapter(resolve_credential("images", project_id))
+
+
+# Compat : singleton env uniquement, préférer get_image_sourcing_adapter().
 image_sourcing_adapter = ImageSourcingAdapter()

@@ -154,7 +154,7 @@ def write_queued_article(article_id: str, project_id: str) -> dict:
         title = article.current_revision.title if article.current_revision else ""
         try:
             llm = get_llm_provider(project_id=project_id)
-            search = get_search_provider()
+            search = get_search_provider(project_id)
             generate_full_article(
                 db=db,
                 project_id=project_id,
