@@ -748,6 +748,49 @@ def extract_main_keyword(title: str, db=None, project_id: str | None = None) -> 
         return {"status": "error", "message": str(exc), "keyword": None}
 
 
+def generate_article_title(
+    keyword: str,
+    reader_question: str | None = None,
+    expected_answer: str | None = None,
+    competitor_titles: list[str] | None = None,
+    db=None,
+    project_id: str | None = None,
+) -> dict[str, Any]:
+    """Rédige un titre éditorial quand l'article n'a reçu qu'un mot-clé
+    (sinon le mot-clé brut, en minuscules, devient le titre publié)."""
+    router = _get_router(db)
+    try:
+        provider = router.get_provider("meta_writer", project_id=project_id)
+    except Exception as exc:
+        logger.warning("Title provider resolution failed: %s", exc)
+        return {"status": "skipped", "message": f"Provider indisponible : {exc}", "title": None}
+    if provider.is_mock:
+        return {"status": "skipped", "message": "Title generation not configured (mock provider)", "title": None}
+
+    competitors = "\n".join(f"- {t}" for t in (competitor_titles or [])[:8] if t)
+    prompt = (
+        f"Mot-clé principal : {keyword}\n"
+        f"Question réelle du lecteur : {reader_question or keyword}\n"
+        f"Réponse attendue : {expected_answer or ''}\n"
+        + (f"Titres des pages concurrentes :\n{competitors}\n" if competitors else "")
+        + "\nÉcris le titre H1 de l'article, dans la langue du mot-clé :\n"
+        "- 45 à 65 caractères, majuscule initiale, contient le mot-clé ou sa forme naturelle ;\n"
+        "- promet exactement la réponse à la question du lecteur, sans exagération ni clickbait ;\n"
+        "- se distingue des titres concurrents ; pas de deux-points en série, pas de tiret cadratin.\n"
+        "Réponds UNIQUEMENT avec un JSON valide :\n"
+        '{"title": "..."}'
+    )
+    try:
+        result = provider.generate_json(prompt, schema_hint="json title object")
+        title = result.get("title") if isinstance(result, dict) else None
+        if isinstance(title, str) and 10 <= len(title.strip()) <= 110:
+            return {"status": "success", "title": title.strip()}
+        return {"status": "error", "message": "Invalid response format", "title": None}
+    except Exception as exc:
+        logger.warning("Title generation agent failed: %s", exc)
+        return {"status": "error", "message": str(exc), "title": None}
+
+
 def plan_section_images(
     section_headings: list[str],
     article_keyword: str,
