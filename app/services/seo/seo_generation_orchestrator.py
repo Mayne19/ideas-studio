@@ -1354,9 +1354,11 @@ class SEOGenerationOrchestrator:
             for word in _re.findall(r"\w[\w'-]*", text)[1:]:
                 if word[:1].isupper() and len(word) >= 3 and word not in nouns:
                     nouns.append(word)
+        known = {n.lower() for n in nouns}
         for token in (draft.keyword or "").split():
-            if len(token) >= 4 and token.capitalize() not in nouns and token.lower() not in {"pour", "avec", "dans", "comment"}:
+            if len(token) >= 4 and token.lower() not in known and token.lower() not in {"pour", "avec", "dans", "comment"}:
                 nouns.append(token.capitalize())
+                known.add(token.lower())
         return nouns[:12]
 
     def _proofread_pass(self, article: Article, draft: _DraftArticle, content: str) -> str:
