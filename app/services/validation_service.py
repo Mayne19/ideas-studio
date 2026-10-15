@@ -213,10 +213,15 @@ def check_validation_thresholds(
     blocking_reasons: list[str] = []
     non_blocking_warnings: list[dict] = []
 
+    # Le score global est un signal heuristique informatif pour l'éditeur :
+    # il ne bloque plus la publication (seul un score incomplet bloque encore).
     if not global_score_valid:
         blocking_reasons.append(scoring.get("incomplete_reason", "Score global incomplet"))
     elif global_score is not None and global_score < 90:
-        blocking_reasons.append(f"Score global ({global_score}) < 90")
+        non_blocking_warnings.append({
+            "type": "low_global_score", "severity": "warning",
+            "message": f"Score global ({global_score}) < 90",
+        })
 
     if seo_contrib is not None and seo_contrib < 85:
         blocking_reasons.append(f"Score SEO ({seo_contrib}) < 85")
