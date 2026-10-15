@@ -1326,6 +1326,59 @@ class SEOGenerationOrchestrator:
             self.limitations.append(f"missing_sections: {', '.join(still_missing)}")
         return content
 
+    def _polish_call_fn(self, article: Article):
+        """Appel court via l'agent writer (même modèle bon marché que la
+        rédaction) pour les passes de finition."""
+        def call(prompt: str, step: str, temperature: float) -> str:
+            self._raise_if_cancelled(article)
+            return self._write_pass(prompt, "writer", article, temperature, step)
+        return call
+
+    def _keep_if_h2_lost(self, before: str, after: str, step: str) -> str:
+        """Garde-fou commun des passes de finition : une passe qui fait
+        disparaître un H2 est annulée."""
+        from app.services.seo.section_writer import lost_h2s
+        dropped = lost_h2s(before, after)
+        if dropped:
+            self._error(step, f"Passe annulée : section(s) H2 perdue(s) ({', '.join(dropped[:3])}).")
+            return before
+        return after
+
+    def _proper_nouns(self, draft: _DraftArticle) -> list[str]:
+        import re as _re
+        sources = [draft.title or "", draft.keyword or ""]
+        sources += [s.get("heading", "") for s in (self.context.get("outline") or {}).get("sections") or [] if isinstance(s, dict)]
+        nouns: list[str] = []
+        for text in sources:
+            # Mots capitalisés hors premier mot : noms propres probables.
+            for word in _re.findall(r"\w[\w'-]*", text)[1:]:
+                if word[:1].isupper() and len(word) >= 3 and word not in nouns:
+                    nouns.append(word)
+        for token in (draft.keyword or "").split():
+            if len(token) >= 4 and token.capitalize() not in nouns and token.lower() not in {"pour", "avec", "dans", "comment"}:
+                nouns.append(token.capitalize())
+        return nouns[:12]
+
+    def _proofread_pass(self, article: Article, draft: _DraftArticle, content: str) -> str:
+        """Relecture orthographique par section (jetons corrompus, accords),
+        sortie rejetée si la structure, les chiffres ou les liens changent."""
+        from app.services.seo.section_proofreader import proofread_article
+        try:
+            proofread, report = proofread_article(
+                content, self._polish_call_fn(article),
+                proper_nouns=self._proper_nouns(draft),
+                fatal_exceptions=(WritingCancelledError,),
+            )
+        except WritingCancelledError:
+            raise
+        except Exception as exc:
+            self._error("ProofreadingPass", f"Relecture ignorée : {exc}")
+            return content
+        proofread = self._keep_if_h2_lost(content, proofread, "ProofreadingPass")
+        self._save(article.id, "proofreading_report", report)
+        self._step(f"ProofreadingPass ({report['corrected']} corrigée(s), {report['rejected']} rejetée(s))")
+        return proofread
+
     def _generate_content(self, draft: _DraftArticle, outline: dict, keyword_brief: dict, include_callouts: bool | None, include_faq: bool | None = None):
         article = draft.article
         self._raise_if_cancelled(article)
@@ -1405,6 +1458,9 @@ class SEOGenerationOrchestrator:
         else:
             content = gated
         content = self._ensure_outline_complete(section_writer, content, "SectionCompleteness_Final")
+
+        # ── Finition — appels courts et ciblés, jamais de réécriture libre ──
+        content = self._proofread_pass(article, draft, content)
         self._save(article.id, "section_writing_report", section_writer.report)
 
         self._raise_if_cancelled(article)
