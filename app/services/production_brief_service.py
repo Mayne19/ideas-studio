@@ -72,11 +72,6 @@ def build_production_brief(
             "Adresser ces douleurs non couvertes : " + "; ".join(uncovered_pains[:3])
         )
 
-    if evidence_pack.get("evidence_items"):
-        top_priorities.append(
-            "Citer les faits et sources validés du dossier de preuves (pas de données inventées)."
-        )
-
     intent = intent_analysis.get("explicit_intent") or "informational"
     article_type = intent_analysis.get("article_type") or "evergreen_information"
     commercial_score = intent_analysis.get("commercial_intent_score") or 0.0
