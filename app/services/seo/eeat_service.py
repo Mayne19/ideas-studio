@@ -187,19 +187,19 @@ def compute_eeat_score(article: Any, project_domain: str = "", budget: LLMBudget
     # contenu — un plafond artificiel qu'aucune édition ne pouvait lever.
     # Poids des 5 signaux restants reponderés proportionnellement (ratio
     # d'origine 25:20:20:10:10 conservé, total 100%).
+    # cited_stats (s2) ne pèse plus dans le score : récompenser un motif
+    # "chiffre + selon/étude" poussait le rédacteur à inventer des
+    # statistiques "sourcées". Le signal reste exposé à titre informatif.
     final_score = round(
-        s1 * (5 / 17)
-        + s2 * (4 / 17)
-        + s3 * (4 / 17)
-        + s5 * (2 / 17)
-        + s6 * (2 / 17)
+        s1 * (5 / 13)
+        + s3 * (4 / 13)
+        + s5 * (2 / 13)
+        + s6 * (2 / 13)
     )
 
     flags: list[str] = []
     if s1 < 50:
         flags.append("insufficient_external_links")
-    if s2 < 50:
-        flags.append("no_cited_statistics")
     if s5 < 50:
         flags.append("no_nuance_markers")
     if s3 < 50:
@@ -208,15 +208,15 @@ def compute_eeat_score(article: Any, project_domain: str = "", budget: LLMBudget
         flags.append("low_heading_diversity")
 
     signals = {
-        "external_links":    {"value": round(s1), "weight": round(5 / 17, 4), "contribution": round(s1 * 5 / 17, 1)},
-        "cited_stats":       {"value": round(s2), "weight": round(4 / 17, 4), "contribution": round(s2 * 4 / 17, 1)},
-        "heading_structure": {"value": round(s3), "weight": round(4 / 17, 4), "contribution": round(s3 * 4 / 17, 1)},
-        "nuance_markers":    {"value": round(s5), "weight": round(2 / 17, 4), "contribution": round(s5 * 2 / 17, 1)},
-        "heading_diversity": {"value": round(s6), "weight": round(2 / 17, 4), "contribution": round(s6 * 2 / 17, 1)},
+        "external_links":    {"value": round(s1), "weight": round(5 / 13, 4), "contribution": round(s1 * 5 / 13, 1)},
+        "cited_stats":       {"value": round(s2), "weight": 0.0, "contribution": 0.0},
+        "heading_structure": {"value": round(s3), "weight": round(4 / 13, 4), "contribution": round(s3 * 4 / 13, 1)},
+        "nuance_markers":    {"value": round(s5), "weight": round(2 / 13, 4), "contribution": round(s5 * 2 / 13, 1)},
+        "heading_diversity": {"value": round(s6), "weight": round(2 / 13, 4), "contribution": round(s6 * 2 / 13, 1)},
     }
 
-    strengths = [k for k, v in signals.items() if v["value"] >= 75]
-    weaknesses = [k for k, v in signals.items() if v["value"] < 50]
+    strengths = [k for k, v in signals.items() if v["weight"] and v["value"] >= 75]
+    weaknesses = [k for k, v in signals.items() if v["weight"] and v["value"] < 50]
     explanation = (
         f"EEAT {fmt} : score {final_score}/100. "
         + (f"Points forts : {', '.join(strengths)}. " if strengths else "")
