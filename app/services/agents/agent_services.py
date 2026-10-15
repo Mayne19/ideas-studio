@@ -164,27 +164,27 @@ def build_evidence_pack(
         _format_source_for_evidence(s) for s in external_links[:12]
     )
     prompt = (
-        "À partir de ces sources trouvées pour préparer un article, sélectionne les faits et "
-        "données les plus fiables et pertinents à citer, avec leur source d'origine. Chaque source "
-        "est annotée avec sa qualité (high/medium/low/unknown : accessibilité et longueur du contenu). "
-        "Privilégie systématiquement les sources de qualité 'high', et ignore les sources de qualité "
-        "'low' ainsi que les sources hors-sujet. Un fait doit toujours citer une source de qualité "
-        "élevée ou moyenne.\n\n"
-        "Chaque fait doit être TYPÉ et CHIFFRÉ quand la source le permet :\n"
-        "- type : 'statistique' (chiffre + unité + date, ex: '42% en 2024'), 'exemple' (cas réel), "
-        "'definition', 'expert' (avis d'une personne/autorité citée), ou 'donnee' (fait précis sourcé)\n"
-        "- figure : le nombre/valeur exact(e) si la source en donne un(e), sinon vide\n"
-        "- figure_context : le contexte court du chiffre (année, population, périmètre)\n"
-        "- usage_hint : à quelle question/section de l'article ce fait répond\n"
-        "- sentence_ready : UNE phrase française prête à intégrer qui reformule le fait avec son "
-        "chiffre et sa source, sans plagier la source\n\n"
+        "À partir de ces sources trouvées pour préparer un article, sélectionne les faits utiles "
+        "pour répondre à la question du lecteur, avec leur source d'origine. Chaque source est "
+        "annotée avec sa qualité (high/medium/low/unknown : accessibilité et longueur du contenu). "
+        "Privilégie les sources de qualité 'high', et ignore les sources de qualité 'low' ainsi "
+        "que les sources hors-sujet.\n\n"
+        "Règle absolue : un fait doit figurer explicitement dans l'extrait fourni pour sa source. "
+        "N'ajoute jamais un chiffre, une date ou une donnée qui n'apparaît pas mot pour mot dans "
+        "l'extrait. Si les extraits ne contiennent aucun fait exploitable, renvoie une liste vide : "
+        "c'est une réponse valide.\n\n"
+        "Pour chaque fait :\n"
+        "- type : 'exemple' (cas réel), 'definition', 'expert' (avis d'une personne/autorité citée), "
+        "'statistique' ou 'donnee' (fait précis présent dans l'extrait)\n"
+        "- fact : le fait, repris fidèlement depuis l'extrait\n"
+        "- usage_hint : à quelle question/section de l'article ce fait répond\n\n"
         f"Titre : {title}\n"
         f"Mot-clé : {keyword}\n\n"
         f"Sources disponibles :\n{sources_text}\n\n"
         "Réponds UNIQUEMENT avec un JSON valide :\n"
-        '{"evidence_items": [{"type": "statistique|exemple|definition|expert|donnee", "fact": "...", '
-        '"figure": "...", "figure_context": "...", "source_url": "...", "reliability": "high|medium|low", '
-        '"source_quality": "high|medium|low|unknown", "usage_hint": "...", "sentence_ready": "..."}]}'
+        '{"evidence_items": [{"type": "exemple|definition|expert|statistique|donnee", "fact": "...", '
+        '"source_url": "...", "reliability": "high|medium|low", '
+        '"source_quality": "high|medium|low|unknown", "usage_hint": "..."}]}'
     )
     try:
         result = provider.generate_json(prompt, schema_hint="json evidence pack object")
