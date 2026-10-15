@@ -2,7 +2,8 @@ from __future__ import annotations
 
 
 class SerpAdapter:
-    """Analyse concurrentielle SERP — SerpAPI (SERP_API_KEY) en priorité si
+    """Analyse concurrentielle SERP — Serper (SERPER_API_KEY, vrais résultats
+    Google) en priorité, puis SerpAPI (SERP_API_KEY) si
     configurée, sinon Brave Search (BRAVE_SEARCH_API_KEY), sinon repli sur
     Google Custom Search (GOOGLE_SEARCH_API_KEY/GOOGLE_SEARCH_CX). Google est
     en dernier recours : les nouveaux moteurs de recherche personnalisés (cx)
@@ -20,7 +21,12 @@ class SerpAdapter:
 
     def __init__(self):
         from app.core.config import settings
-        if settings.SERP_API_KEY:
+        if settings.SERPER_API_KEY:
+            self.configured = True
+            self.enabled = True
+            self.real_data_available = True
+            self.fallback_mode = "serper"
+        elif settings.SERP_API_KEY:
             self.configured = True
             self.enabled = True
             self.real_data_available = True
@@ -41,6 +47,8 @@ class SerpAdapter:
             return []
         from app.core.config import settings
         try:
+            if settings.SERPER_API_KEY:
+                return self._search_serper(query, limit)
             if settings.SERP_API_KEY:
                 return self._search_serpapi(query, limit)
             if settings.BRAVE_SEARCH_API_KEY:
@@ -50,6 +58,25 @@ class SerpAdapter:
             self.last_error = str(exc)
             self.real_data_available = False
             return []
+
+    def _search_serper(self, query: str, limit: int) -> list[dict]:
+        import httpx
+        from app.core.config import settings
+        resp = httpx.post(
+            "https://google.serper.dev/search",
+            json={"q": query, "num": min(limit, 20), "gl": "fr", "hl": "fr"},
+            headers={"X-API-KEY": settings.SERPER_API_KEY, "Content-Type": "application/json"},
+            timeout=settings.SEARCH_TIMEOUT_SECONDS or 30,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        results = [
+            {"title": item.get("title", ""), "url": item.get("link", ""), "snippet": item.get("snippet", "")}
+            for item in data.get("organic", [])[:limit]
+        ]
+        if results:
+            self.real_data_available = True
+        return results
 
     def _search_brave(self, query: str, limit: int) -> list[dict]:
         import httpx
