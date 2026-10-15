@@ -123,6 +123,17 @@ def process_writing_queues():
         db.close()
 
 
+def ensure_partitions():
+    """Daily job: keep monthly partitions created ahead of time."""
+    try:
+        from app.core.database import engine
+        from app.services.partition_service import ensure_monthly_partitions
+
+        ensure_monthly_partitions(engine)
+    except Exception as e:
+        logger.error("Monthly partition job failed: %s", e)
+
+
 def start_scheduler():
     """Start the background scheduler with all recurring jobs."""
     if scheduler.running:
@@ -152,8 +163,17 @@ def start_scheduler():
         coalesce=True,
     )
 
+    scheduler.add_job(
+        ensure_partitions,
+        trigger=CronTrigger(hour="3", minute="15"),
+        id="ensure_monthly_partitions",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+
     scheduler.start()
-    logger.info("Background scheduler started with jobs: check_scheduled_publications, check_scheduled_idea_generation, process_writing_queues")
+    logger.info("Background scheduler started with jobs: check_scheduled_publications, check_scheduled_idea_generation, process_writing_queues, ensure_monthly_partitions")
 
 
 def stop_scheduler():
