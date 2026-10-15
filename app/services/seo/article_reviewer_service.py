@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Agent réviseur — applique la grille de scoring à 10 critères (100 points)
+"""Agent réviseur — applique la grille de scoring à 7 critères (100 points)
 et les 6 tests structurels universels avant soumission à l'éditeur humain
 (voir docs/guide_formation_ia.md et docs/guide_tests_universels.md).
 
@@ -18,12 +18,9 @@ from app.services.seo.content_structure_guard import check_style_compliance
 from app.services.seo.helpers import strip_html
 from app.services.seo.human_presence_service import (
     _extract_paragraphs,
-    _extract_sections,
     score_conclusion,
-    score_human_markers,
     score_intro_quality,
     score_paragraph_variation,
-    score_section_positions,
     score_vocabulary,
 )
 
@@ -72,32 +69,6 @@ def score_vous_dosage(content: str) -> tuple[float, list[str]]:
     return 100.0, flags
 
 
-# ── Critère 7 — Connecteurs variés ──────────────────────────────────────
-# Aligné sur les connecteurs que le prompt du writer encourage réellement :
-# "pourtant", "à bien y réfléchir", "en réalité", "pour être honnête" sont
-# désormais bannis (liste noire du prompt) et ne doivent plus être récompensés.
-
-_VARIED_CONNECTORS = (
-    "ce qui signifie concrètement", "tout compte tenu", "cela dit",
-    "autrement dit", "tout compte fait", "paradoxalement", "curieusement",
-    "malgré tout", "contrairement à", "et c'est là que ça devient intéressant",
-)
-
-
-def score_connector_variety(content: str) -> tuple[float, list[str]]:
-    text = strip_html(content).lower()
-    mais_count = len(re.findall(r"\bmais\b", text)) + len(re.findall(r"\bcependant\b", text))
-    varied_count = sum(1 for c in _VARIED_CONNECTORS if c in text)
-    flags = []
-    if varied_count == 0 and mais_count > 0:
-        flags.append("connecteurs_non_varies")
-        return 0.0, flags
-    if varied_count <= 1 and mais_count > 2:
-        flags.append("mais_dominant")
-        return 60.0, flags
-    return 100.0, flags
-
-
 # ── Critère 10 — Absence d'interdictions (réutilise check_style_compliance) ──
 
 def score_forbidden_absence(content: str) -> tuple[float, list[str]]:
@@ -122,7 +93,7 @@ def score_forbidden_absence(content: str) -> tuple[float, list[str]]:
 def score_surprise_moment(
     content: str, title: str = "", keyword: str = "", db=None, project_id: str | None = None,
 ) -> tuple[float | None, list[str]]:
-    """Contrairement aux 9 autres critères, "une observation absente des 10
+    """Contrairement aux autres critères, "une observation absente des 10
     premiers résultats Google" ne peut pas être vérifié par une regex — ça
     demande un jugement sur le fond. Délègue à agent_services.judge_surprise_
     moment (LLM) ; si le provider est indisponible, retourne None plutôt
@@ -137,26 +108,28 @@ def score_surprise_moment(
     return result["score"], flags
 
 
+# Les critères « position tranchée », « marqueurs humains » et « connecteurs
+# variés » reposaient sur des listes de tournures toutes faites que le writer
+# n'est plus invité à placer : ils récompensaient des tics, pas la réponse au
+# lecteur. Ils sont retirés de la grille.
 _CRITERIA_WEIGHTS = {
-    "introduction": 15,
-    "densite_informationnelle": 15,
+    "introduction": 20,
+    "densite_informationnelle": 20,
     "variation_paragraphes": 10,
-    "position_tranchee": 15,
-    "marqueurs_humains": 10,
-    "dosage_vous": 5,
-    "connecteurs": 5,
+    "dosage_vous": 10,
     "moment_surprise": 10,
-    "conclusion": 10,
-    "absence_interdictions": 5,
+    "conclusion": 15,
+    "absence_interdictions": 15,
 }
-_BLOCKING_CRITERIA = {"introduction", "position_tranchee", "moment_surprise", "absence_interdictions"}
+# Signal uniquement : le verdict du réviseur ne bloque jamais la publication.
+_BLOCKING_CRITERIA = {"introduction", "absence_interdictions"}
 
 
 def review_article(
     content: str | None, word_count: int | None = None,
     *, title: str = "", keyword: str = "", db=None, project_id: str | None = None,
 ) -> dict:
-    """Point d'entrée de l'agent réviseur — grille de scoring à 10 critères
+    """Point d'entrée de l'agent réviseur — grille de scoring à 7 critères
     (100 points) + décision de publication, format aligné sur le rapport
     de révision demandé (docs/GUIDE-FORMATION-IA.md Partie 4).
 
@@ -174,10 +147,7 @@ def review_article(
     intro_score, intro_flags = score_intro_quality(content, wc)
     density_score, density_flags = score_information_density(content)
     paragraph_score, paragraph_flags = score_paragraph_variation(content)
-    position_score, position_flags = score_section_positions(content)
-    marker_score, marker_flags = score_human_markers(content)
     vous_score, vous_flags = score_vous_dosage(content)
-    connector_score, connector_flags = score_connector_variety(content)
     surprise_score, surprise_flags = score_surprise_moment(content, title, keyword, db=db, project_id=project_id)
     conclusion_score, conclusion_flags = score_conclusion(content, wc)
     forbidden_score, forbidden_flags = score_forbidden_absence(content)
@@ -186,10 +156,7 @@ def review_article(
         "introduction": intro_score,
         "densite_informationnelle": density_score,
         "variation_paragraphes": paragraph_score,
-        "position_tranchee": position_score,
-        "marqueurs_humains": marker_score,
         "dosage_vous": vous_score,
-        "connecteurs": connector_score,
         "moment_surprise": surprise_score,
         "conclusion": conclusion_score,
         "absence_interdictions": forbidden_score,
@@ -198,10 +165,7 @@ def review_article(
         "introduction": intro_flags,
         "densite_informationnelle": density_flags,
         "variation_paragraphes": paragraph_flags,
-        "position_tranchee": position_flags,
-        "marqueurs_humains": marker_flags,
         "dosage_vous": vous_flags,
-        "connecteurs": connector_flags,
         "moment_surprise": surprise_flags,
         "conclusion": conclusion_flags,
         "absence_interdictions": forbidden_flags,
