@@ -111,47 +111,27 @@ def discover_ideas(
                             "Matière humaine réelle disponible sur ce sujet (Reddit, People Also Ask, "
                             "Google Autocomplete, StackOverflow, Quora, YouTube) :\n"
                             + "\n".join(f"- {p}" for p in picked)
-                            + "\nBase ton idée sur cette vraie demande plutôt que sur une supposition "
-                            "générique — c'est ce que les internautes cherchent réellement en ce moment.\n"
+                            + "\nBase ton idée sur cette vraie demande.\n"
                         )
 
-                # Format de titre imposé au coup par coup (choisi selon l'index pour
-                # forcer la variété plutôt que de laisser le LLM retomber sur son
-                # patron par défaut "[Sujet] : Le Guide [Superlatif] pour [Cible]",
-                # observé systématiquement sans cette contrainte.
-                title_formats = [
-                    "une question directe que se pose vraiment le lecteur (ex: 'Pourquoi votre site vitrine ne génère aucun client ?')",
-                    "une affirmation tranchée ou contre-intuitive (ex: 'Le CMS que la plupart des entrepreneurs choisissent pour les mauvaises raisons')",
-                    "un chiffre concret et spécifique (ex: '6 erreurs de copywriting qui font fuir vos visiteurs avant la première phrase')",
-                    "un angle qui déconseille une pratique populaire ou révèle une idée reçue fausse",
-                    "une situation précise vécue par le lecteur plutôt qu'une cible générique (ex: 'vous avez du trafic mais zéro contact', 'votre site existe depuis 2 ans mais ne convertit pas')",
-                ]
-                title_format = title_formats[i % len(title_formats)]
-
                 prompt = (
-                    f"Génère une idée d'article SEO originale en langue '{project_language}'.\n"
-                    f"Audience cible : {project_audience or 'grand public'}.\n"
-                    f"Contexte : {context_hint or 'aucun'}.\n"
+                    f"Propose une idée d'article de blog en langue '{project_language}', qui répond "
+                    "à une vraie question que se pose le lecteur.\n"
+                    f"Audience : {project_audience or 'grand public'}.\n"
+                    f"Sujet : {context_hint or 'aucun'}.\n"
                     f"{trend_hint}"
-                    f"Contexte SERP :\n{serp_context}\n\n"
-                    f"{human_insights_hint}"
-                    f"Format de titre imposé : {title_format}\n"
-                    "Interdits dans le titre : 'Ultime', 'Incontournable', 'Essentiel', 'Complet', "
-                    "'Puissant', 'Booster', 'Révolutionnaire', 'Exhaustif', 'Guide complet pour', "
-                    "ainsi que toute structure '[Sujet] : Le Guide [Superlatif] pour [Cible]'.\n"
-                    "La cible doit être précise, jamais générique : pas 'les entrepreneurs' mais "
-                    "'les freelances qui lancent leur premier site', pas 'les PME' mais "
-                    "'les e-commerçants avec moins de 100 commandes par mois'. Ne réutilise jamais "
-                    "la même formule de cible ('pour Entrepreneurs et Freelances', 'pour PME et "
-                    "Indépendants').\n"
-                    "L'idée ne doit pas se contenter de couvrir un sujet : elle doit contredire une "
-                    "idée reçue, révéler quelque chose que les articles concurrents n'osent pas dire, "
-                    "ou partir d'une situation concrète vécue par un lecteur francophone réel.\n\n"
-                    'Réponds en JSON : {"title": "...", "keyword": "...", "angle": "...", "search_intent": "informational|commercial"}'
+                    + (f"Résultats Google actuels :\n{serp_context}\n" if serp_context else "")
+                    + f"{human_insights_hint}\n"
+                    "Le titre formule clairement la question ou le besoin du lecteur, sans "
+                    "superlatif ('ultime', 'complet', 'incontournable') ni promesse creuse.\n"
+                    "Réponds en JSON : {\"title\": \"...\", \"keyword\": \"...\", "
+                    "\"reader_question\": \"la question précise du lecteur\", "
+                    "\"angle\": \"ce que l'article apporte, en une phrase\", "
+                    "\"search_intent\": \"informational|commercial|transactional\"}"
                 )
                 idea_data = llm.generate_json(
                     prompt,
-                    schema_hint='{"title": "...", "keyword": "...", "angle": "...", "search_intent": "informational|commercial"}',
+                    schema_hint='{"title": "...", "keyword": "...", "reader_question": "...", "angle": "...", "search_intent": "..."}',
                 )
                 if isinstance(idea_data, dict):
                     title = idea_data.get("title") or title
