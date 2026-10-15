@@ -173,7 +173,10 @@ def production_brief_to_text(brief: dict) -> str:
                 lines.append(f"  Points: {', '.join(key_points)}")
 
     if brief.get("evidence_items"):
-        lines.append("Faits et sources validés à citer (typés et chiffrés) :")
+        lines.append(
+            "Faits disponibles dans les sources (optionnels : à utiliser seulement s'ils "
+            "aident à répondre au lecteur, sans les déformer) :"
+        )
         for item in brief["evidence_items"]:
             fact = item.get("fact", "")
             url = item.get("source_url", "")
@@ -192,9 +195,6 @@ def production_brief_to_text(brief: dict) -> str:
             if usage:
                 line += f" — usage : {usage}"
             lines.append(line)
-            ready = item.get("sentence_ready")
-            if ready:
-                lines.append(f"  Phrase prête : {ready}")
 
     insights = brief.get("human_insights") or {}
     if insights.get("questions"):
