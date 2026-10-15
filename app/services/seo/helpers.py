@@ -78,11 +78,16 @@ def detect_long_dash(text: str) -> list[str]:
 
 
 def detect_h2_directly_followed_by_h3(content: str) -> list[str]:
+    # Parcours linéaire des titres : l'ancienne regex à répétitions imbriquées
+    # backtrackait de façon exponentielle sur les longs articles et gelait
+    # tout le process (le GIL reste tenu pendant re.finditer).
     issues: list[str] = []
-    pattern = re.compile(r"<h2[^>]*>.*?</h2>\s*(?:\s*<(?!h[2-6])[^>]*>.*?</[^>]+>\s*)*<h3[^>]*>", re.IGNORECASE | re.DOTALL)
-    for match in pattern.finditer(content or ""):
-        seq = content[max(0, match.start() - 20):match.end() + 20]
-        issues.append(seq[:100])
+    content = content or ""
+    headings = list(re.finditer(r"<h([2-6])[^>]*>.*?</h\1>", content, re.IGNORECASE | re.DOTALL))
+    for current, following in zip(headings, headings[1:]):
+        if current.group(1) == "2" and following.group(1) == "3":
+            seq = content[max(0, current.start() - 20):following.end() + 20]
+            issues.append(seq[:100])
     return issues
 
 
