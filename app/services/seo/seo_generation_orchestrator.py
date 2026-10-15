@@ -451,6 +451,24 @@ class SEOGenerationOrchestrator:
         except Exception as exc:
             self._error("IntentAnalysisRefine", str(exc))
 
+        # 6f. TitleGeneration — un article lancé avec un simple mot-clé
+        # recevait ce mot-clé brut (en minuscules) comme titre publié.
+        if not preferred_title and final_title.strip().lower() == final_keyword.strip().lower():
+            from app.services.agents.agent_services import generate_article_title
+            title_result = generate_article_title(
+                final_keyword,
+                reader_question=intent_analysis.get("reader_real_question"),
+                expected_answer=intent_analysis.get("expected_answer"),
+                competitor_titles=[s.get("title", "") for s in research_brief.get("sources_consulted", []) if isinstance(s, dict)],
+                db=self.db,
+                project_id=self.project_id,
+            )
+            if title_result.get("title"):
+                final_title = title_result["title"]
+                self._step("TitleGeneration")
+            else:
+                self.limitations.append(f"TitleGeneration: {title_result.get('message', 'échec')}")
+
         # L'agent d'intention peut avoir corrigé le type d'article : le plan
         # (étape 9) et la FAQ doivent lire la version affinée, pas l'ancienne.
         article_type = intent_analysis.get("article_type", "evergreen_information")
