@@ -210,6 +210,27 @@ def sync_agents_at_startup():
 
 
 @app.on_event("startup")
+def fail_interrupted_generation_jobs():
+    """Les jobs de génération tournent dans un pool en mémoire : un job resté
+    queued/running appartient au process précédent et ne finira jamais."""
+    if settings.APP_ENV in ("test", "maintenance"):
+        return
+    try:
+        from app.core.database import SessionLocal
+        from app.services.generation_job_service import fail_interrupted_jobs
+
+        db = SessionLocal()
+        try:
+            count = fail_interrupted_jobs(db)
+            if count:
+                logger.warning("%s generation job(s) interrupted by restart marked as failed", count)
+        finally:
+            db.close()
+    except Exception as exc:
+        logger.error("Interrupted generation jobs recovery failed at startup: %s", exc)
+
+
+@app.on_event("startup")
 async def start_background_scheduler():
     """Démarre le scheduler APScheduler pour les publications programmées et les pipelines."""
     if settings.APP_ENV == "test":
@@ -229,6 +250,11 @@ async def stop_background_scheduler():
     try:
         from app.services.worker import stop_scheduler
         stop_scheduler()
+    except Exception:
+        pass
+    try:
+        from app.services.generation_job_service import shutdown_executor
+        shutdown_executor()
     except Exception:
         pass
 
