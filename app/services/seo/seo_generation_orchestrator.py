@@ -1234,6 +1234,82 @@ class SEOGenerationOrchestrator:
             rules.extend(f"- {rule}" for rule in style_guide["rules"][:8])
         return "\n".join(rules)
 
+    def _build_section_writer(self, draft: _DraftArticle, production_brief: dict, outline: dict,
+                              include_callouts: bool | None, writer_system: str):
+        """Prépare le rédacteur section par section : brief compact commun à
+        tous les appels, plan regroupé (H3 sous leur H2), budget de mots par
+        section et sources citables."""
+        from app.services.seo.article_outline_planner import resolve_outline_format
+        from app.services.seo.section_writer import (
+            OutlineSection, SectionWriter, build_section_brief, compute_words_per_section,
+            group_outline_sections,
+        )
+        article = draft.article
+        sections = group_outline_sections(outline)
+        if not sections:
+            sections = [OutlineSection(
+                heading=production_brief.get("reader_real_question") or draft.title or draft.keyword or "",
+            )]
+        fmt = resolve_outline_format(self.context.get("intent_analysis"), production_brief.get("article_type"))
+
+        brief_parts = [build_section_brief(production_brief)]
+        used_angles = (self.context.get("project_context") or {}).get("used_angles") or []
+        if used_angles:
+            brief_parts.append("Angles déjà publiés sur ce projet (ne les répète pas) : " + "; ".join(used_angles[:6]))
+        insights = self.context.get("human_insights") or {}
+        if insights.get("total_insights", 0) > 0:
+            for label, key, limit in (
+                ("Questions réelles de lecteurs", "questions", 4),
+                ("Difficultés rencontrées", "pain_points", 4),
+                ("Exemples réels", "real_examples", 3),
+            ):
+                if insights.get(key):
+                    brief_parts.append(f"{label} (si utile) : " + " ; ".join(str(x) for x in insights[key][:limit]))
+        if include_callouts:
+            brief_parts.append(
+                "Un encadré <blockquote> est permis si une mise en garde ou une astuce le mérite vraiment."
+            )
+        brief_parts.append("Pas de FAQ : elle est générée séparément.")
+
+        def write_fn(prompt: str, step: str, temperature: float) -> str:
+            self._raise_if_cancelled(article)
+            return self._write_pass(prompt, "writer", article, temperature, step, system=writer_system)
+
+        def _links(key: str) -> list:
+            plan = self.context.get(key) or {}
+            return plan.get("links") or [] if isinstance(plan, dict) else []
+
+        return SectionWriter(
+            write_fn,
+            "\n".join(brief_parts),
+            sections,
+            fmt=fmt,
+            words_per_section=compute_words_per_section(
+                len(sections), self.context.get("word_count_min"), self.context.get("word_count_max"),
+            ),
+            external_links=_links("external_links"),
+            internal_links=_links("internal_links"),
+            conclusion_title=(outline or {}).get("conclusion_title") or "",
+            style_example=build_reference_examples_block(),
+            fatal_exceptions=(WritingCancelledError,),
+        )
+
+    def _ensure_outline_complete(self, section_writer, content: str, step: str) -> str:
+        """Garde-fou de complétude : chaque H2 du plan doit être présent ;
+        seules les sections absentes sont régénérées."""
+        if not section_writer.missing_sections(content):
+            return content
+        content, regenerated, still_missing = section_writer.ensure_complete(content)
+        if regenerated:
+            self._log(
+                f"{len(regenerated)} section(s) absente(s) régénérée(s) : {', '.join(regenerated)}",
+                level="warning", step=step,
+            )
+        if still_missing:
+            self._error(step, f"Section(s) toujours absente(s) : {', '.join(still_missing)}")
+            self.limitations.append(f"missing_sections: {', '.join(still_missing)}")
+        return content
+
     def _generate_content(self, draft: _DraftArticle, outline: dict, keyword_brief: dict, include_callouts: bool | None, include_faq: bool | None = None):
         article = draft.article
         self._raise_if_cancelled(article)
@@ -1259,113 +1335,21 @@ class SEOGenerationOrchestrator:
                 editorial_angle=self.context.get("editorial_angle"),
                 audience=draft.audience,
             )
-        from app.services.production_brief_service import production_brief_to_text
-        prompt_parts = [production_brief_to_text(production_brief), ""]
-
-        project_context = self.context.get("project_context") or {}
-        used_angles = project_context.get("used_angles") or []
-        if used_angles:
-            prompt_parts.append(
-                "Angles déjà publiés sur ce projet (ne les répète pas) : " + "; ".join(used_angles[:6])
-            )
-            prompt_parts.append("")
-
-        length_hint = (
-            f"repère indicatif : {self.context['word_count_range']}"
-            if self.context.get("word_count_range") else "pas de longueur imposée"
-        )
-        prompt_parts += [
-            "Consignes :",
-            "1. Les 2 à 3 premières phrases (en <p>, avant le premier <h2>) répondent directement à la "
-            "question réelle du lecteur. Pas de contexte, de définition ni d'annonce du plan avant la réponse.",
-            "2. Suis le plan : un <h2> par section, dans l'ordre. Chaque section répond à ce que son titre "
-            "annonce, sans détour.",
-            "3. Traite les points « À inclure » ; n'écris rien de ce qui figure dans « À éviter ».",
-            f"4. Longueur : le sujet décide ({length_hint}). Arrête-toi quand la question est entièrement "
-            "traitée ; n'ajoute jamais de texte pour atteindre un volume.",
-            "5. N'écris aucun chiffre, pourcentage, date, nom d'étude ou fait précis absent des sources "
-            "fournies. Sans source, écris la phrase sans chiffre ou supprime-la.",
-            "6. Reformule les sources avec tes propres mots. Pour citer quelqu'un mot pour mot, utilise "
-            "<blockquote> avec <cite><a href='URL_SOURCE' target='_blank' rel='nofollow'>Nom, plateforme</a></cite>.",
-            "7. HTML compatible TipTap uniquement : <h2>, <h3>, <p>, <ul>, <ol>, <li>, <blockquote>, <table>, "
-            "<strong>, <em>, <a>. Pas de <h1> (le titre existe déjà), pas de Markdown, pas de <h4> à <h6>. "
-            "Un <h3> n'apparaît que sous un <h2>, après au moins un paragraphe.",
-            "8. Liste ou tableau seulement quand ça rend la réponse plus claire.",
-            "9. Pas de section « Conclusion » ni « En résumé » : termine dans la dernière section du plan, "
-            "sur une conséquence pratique ou la prochaine étape pour le lecteur.",
-            "10. Pas de FAQ : elle est générée séparément.",
-        ]
-        if include_callouts:
-            prompt_parts.append(
-                "11. Tu peux ajouter un ou deux encadrés (<blockquote>) si une mise en garde ou une astuce "
-                "le mérite vraiment."
-            )
-        prompt_parts += ["", build_reference_examples_block()]
-
-        insights = self.context.get("human_insights") or {}
-        if insights and insights.get("total_insights", 0) > 0:
-            prompt_parts.append(
-                "\n=== MATIÈRE HUMAINE RÉELLE (à utiliser seulement si elle aide à répondre) ==="
-            )
-            for label, key, limit in (
-                ("Questions posées par de vrais utilisateurs", "questions", 8),
-                ("Difficultés rencontrées", "pain_points", 6),
-                ("Exemples réels", "real_examples", 4),
-                ("Objections", "objections", 4),
-            ):
-                if insights.get(key):
-                    prompt_parts.append(f"{label} :\n" + "\n".join(f"- {x}" for x in insights[key][:limit]))
-            sourced = [i for i in insights.get("all_insights", []) if isinstance(i, dict) and i.get("source_url")]
-            if sourced:
-                prompt_parts.append(
-                    "Sources de ces éléments (pour un lien vers la source, n'invente jamais d'URL) :\n"
-                    + "\n".join(
-                        f"- \"{str(i.get('content', ''))[:90]}\" : {i.get('source_url')} "
-                        f"({i.get('source_name', '')}, {i.get('author') or 'anonyme'})"
-                        for i in sourced[:10]
-                    )
-                )
-
-        # === MAILLAGE OBLIGATOIRE ===
-        internal_links_plan = self.context.get("internal_links") or {}
-        internal_link_items = internal_links_plan.get("links") if isinstance(internal_links_plan, dict) else []
-        if internal_link_items:
-            prompt_parts.append("\n=== MAILLAGE INTERNE OBLIGATOIRE ===")
-            prompt_parts.append("Intègre ces liens internes vers d'autres articles publiés du projet, de façon naturelle, "
-                               "sur une phrase ou une ancre qui a du sens dans le texte :")
-            for link in internal_link_items[:3]:
-                anchor = (link.get("anchor_text") or "Article connexe").strip()
-                url = link.get("target_url") or ""
-                ctx = (link.get("context") or {}).get("target_excerpt", "")
-                prompt_parts.append(f"- Ancre suggérée : « {anchor} » → URL : {url} | Contexte : {ctx[:120]}")
-            prompt_parts.append("Format : <a href='URL'>texte d'ancre naturel dans la phrase</a> (lien interne : jamais de rel='nofollow')")
-            prompt_parts.append("Ne crée JAMAIS de lien interne fictif : utilise uniquement les URLs listées.")
-
-        external_links_plan = self.context.get("external_links") or {}
-        external_link_items = external_links_plan.get("links") if isinstance(external_links_plan, dict) else []
-        if external_link_items:
-            prompt_parts.append("\n=== LIENS EXTERNES (OPTIONNELS) ===")
-            prompt_parts.append("Liens externes disponibles. Tu peux en utiliser 0 à 2, uniquement si un extrait de "
-                               "source fourni soutient réellement la phrase qui porte le lien. N'en place aucun "
-                               "s'il ne sert pas le lecteur ; n'invente jamais d'autre URL :")
-            for link in external_link_items[:4]:
-                url = link.get("url") or ""
-                anchor = (link.get("anchor_text") or "Source").strip()
-                reason = link.get("reason") or ""
-                prompt_parts.append(f"- {url} | Ancre suggérée : « {anchor} » | {reason}")
-            prompt_parts.append("Format : <a href='URL' target='_blank' rel='nofollow'>texte d'ancre naturel</a>")
-            prompt_parts.append("Un lien externe utilisé doit être entouré d'une phrase qui justifie sa présence.")
-
-        prompt_parts.append("\nRetourne uniquement le HTML de l'article, sans explication ni backticks.")
-        content_prompt = "\n".join(prompt_parts)
-
-        # ── Pass 1 — Foundation (temp 0.7) ─────────────────────────────────
-        # Rédige l'article complet depuis le brief. Temperatura haute pour
-        # la générosité et la richesse de la matière première.
+        # ── Pass 1 — Rédaction section par section (temp 0.7) ──────────────
+        # Introduction, puis un appel par H2 du plan, puis une fin si le format
+        # la justifie, assemblés par le code. Un seul appel pour l'article
+        # entier faisait sauter des sections sur les modèles bon marché
+        # (3 sections sur 5, sans fin, sans que rien ne le détecte).
+        from app.services.seo.section_writer import SectionWritingError
         writer_system = self._build_writer_system_prompt()
-        content = self._write_pass(
-            content_prompt, "writer", article, 0.7, "WritingPass_Foundation", system=writer_system,
+        section_writer = self._build_section_writer(
+            draft, production_brief, outline, include_callouts, writer_system,
         )
+        try:
+            content = section_writer.write_article()
+        except SectionWritingError as exc:
+            raise GenerationFailedError(str(exc)) from exc
+        content = self._ensure_outline_complete(section_writer, content, "SectionCompleteness_Draft")
 
         self._raise_if_cancelled(article)
 
@@ -1391,6 +1375,7 @@ class SEOGenerationOrchestrator:
         content = self._guarded_rewrite_pass(
             content, gate_prompt, "writer", article, 0.3, "WritingPass_QualityGate", system=writer_system,
         )
+        self._save(article.id, "section_writing_report", section_writer.report)
 
         self._raise_if_cancelled(article)
 
