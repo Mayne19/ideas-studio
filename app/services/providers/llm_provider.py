@@ -14,6 +14,11 @@ class ProviderTimeoutError(ProviderUnavailableError):
     """Raised when a provider call exceeds its absolute wall-clock deadline."""
 
 
+class TruncatedOutputError(ProviderUnavailableError):
+    """Raised when the model stopped because it hit its output token limit
+    (finish_reason == "length"): a truncated article must never be used."""
+
+
 def run_with_deadline(fn, args=(), kwargs=None, *, seconds: int, message: str):
     """httpx.post(timeout=N) applique N secondes à CHAQUE phase (connexion,
     écriture, lecture, pool) séparément, jamais un plafond total : un serveur

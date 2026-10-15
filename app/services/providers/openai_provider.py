@@ -6,6 +6,7 @@ import httpx
 from app.services.providers.llm_provider import (
     LLMProvider,
     ProviderUnavailableError,
+    TruncatedOutputError,
     parse_openai_usage,
     run_with_deadline,
 )
@@ -84,7 +85,13 @@ class OpenAILLMProvider(LLMProvider):
                     resp.raise_for_status()
                     data = resp.json()
                     self.last_usage = parse_openai_usage(data)
-                    content = data["choices"][0]["message"]["content"]
+                    choice = data["choices"][0]
+                    if choice.get("finish_reason") == "length":
+                        raise TruncatedOutputError(
+                            f"Provider {self.provider_name} model {self.model} : réponse tronquée "
+                            f"(limite de {self.max_output_tokens} tokens atteinte)."
+                        )
+                    content = choice["message"]["content"]
                     if content is None:
                         raise ProviderUnavailableError(
                             f"Provider {self.provider_name} model {self.model} a retourné content=null "
