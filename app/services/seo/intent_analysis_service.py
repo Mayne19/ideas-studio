@@ -1,6 +1,68 @@
 from __future__ import annotations
 
+import logging
+import re
+
 from app.schemas.seo_workflow import IntentAnalysis, asdict
+
+logger = logging.getLogger(__name__)
+
+RECOMMENDED_FORMATS = ("simple_question", "how_to", "comparison", "explainer", "list")
+
+# Correspondance format recommandé -> article_type historique (lu par la FAQ,
+# le rapport et le repli de plan).
+_FORMAT_TO_ARTICLE_TYPE = {
+    "simple_question": "simple_question",
+    "how_to": "guide",
+    "comparison": "comparison",
+    "explainer": "evergreen_information",
+    "list": "evergreen_information",
+}
+_ARTICLE_TYPE_TO_FORMAT = {
+    "simple_question": "simple_question",
+    "guide": "how_to",
+    "comparison": "comparison",
+    "transactional": "comparison",
+    "navigational": "simple_question",
+    "evergreen_information": "explainer",
+}
+
+_INTENT_MARKERS = {
+    "commercial": (
+        "meilleur", "meilleurs", "meilleure", "meilleures", "comparer", "comparatif",
+        "comparaison", "vs", "versus", "différence", "choisir", "avis", "alternative",
+        "alternatives", "best", "compare", "review", "top",
+    ),
+    "transactional": (
+        "acheter", "prix", "tarif", "tarifs", "commander", "abonnement", "télécharger",
+        "essai gratuit", "réserver", "buy", "price", "pricing", "download", "free trial",
+    ),
+    "navigational": (
+        "login", "connexion", "se connecter", "site officiel", "sign in", "sign up",
+    ),
+}
+_HOW_TO_MARKERS = ("comment", "étapes", "tutoriel", "how to", "tutorial", "guide")
+_QUESTION_MARKERS = (
+    "quoi", "qu'est-ce", "pourquoi", "quand", "quel", "quelle", "quels", "quelles",
+    "combien", "faut-il", "est-ce", "what", "why", "when", "which", "is", "can", "does",
+)
+
+
+def _has_word(text: str, marker: str) -> bool:
+    """Correspondance sur mot entier : « free » ne doit pas matcher « freelance »."""
+    return re.search(rf"(?<![\w'-]){re.escape(marker)}(?![\w-])", text) is not None
+
+
+def _count_hits(text: str, markers: tuple[str, ...]) -> int:
+    return sum(1 for m in markers if _has_word(text, m))
+
+
+def format_to_article_type(recommended_format: str) -> str:
+    return _FORMAT_TO_ARTICLE_TYPE.get(recommended_format, "evergreen_information")
+
+
+def article_type_to_format(article_type: str) -> str:
+    return _ARTICLE_TYPE_TO_FORMAT.get(article_type, "explainer")
 
 
 def analyze_intent(
@@ -11,100 +73,59 @@ def analyze_intent(
     idea_discovery: dict | None = None,
     project_context: dict | None = None,
 ) -> IntentAnalysis:
+    """Repli non-LLM, volontairement minimal : il classe le format à partir de
+    marqueurs lexicaux (mots entiers) et ne fabrique AUCUNE sous-question ni
+    réponse attendue génériques. Le vrai brief d'intention vient de l'étape
+    LLM refine_intent_with_research."""
     title_lower = (title or "").lower()
     keyword_lower = (keyword or "").lower()
-    hint_lower = (context_hint or "").lower()
-    category_lower = (category_name or "").lower()
+    head = f"{title_lower} {keyword_lower}"
+    text = " ".join([head, (context_hint or "").lower(), (category_name or "").lower()])
 
-    analysis = IntentAnalysis(
-        explicit_intent="informational",
-        reader_real_question=title,
-        expected_answer="",
-        first_block_goal="",
-    )
+    scores = {dim: round(min(1.0, _count_hits(text, markers) / 4.0), 2)
+              for dim, markers in _INTENT_MARKERS.items()}
+    how_to_hits = _count_hits(head, _HOW_TO_MARKERS)
+    question_hits = _count_hits(head, _QUESTION_MARKERS) or (1 if "?" in title_lower else 0)
+    scores["informational"] = round(min(1.0, (how_to_hits + question_hits) / 4.0), 2)
 
-    # ── Scoring multi-dimension : chaque intention est notée 0-1 à partir de
-    # marqueurs lexicaux (titre, mot-clé, contexte, catégorie). La dimension
-    # dominante pilote le type d'article ; commercial_intent_score indique
-    # séparément le poids d'intention transactionnelle pour le SEO.
-    text_combined = " ".join([title_lower, keyword_lower, hint_lower, category_lower])
+    explicit_intent = "informational"
+    if scores["navigational"] >= 0.25:
+        explicit_intent = "navigational"
+    elif scores["transactional"] >= 0.25:
+        explicit_intent = "transactional"
+    elif scores["commercial"] >= 0.25:
+        explicit_intent = "commercial"
 
-    dims = {
-        "informational": [
-            "quoi", "qu'est-ce", "comment", "pourquoi", "guide", "tutoriel",
-            "conseil", "astuce", "definition", "apprendre", "information",
-            "how", "what", "why", "guide", "tutorial", "tips",
-        ],
-        "commercial": [
-            "meilleur", "comparer", "comparaison", "vs", "vs.", "différence",
-            "choisir", "avis", "recommandation", "alternative", "test",
-            "best", "compare", "review", "vs", "alternatives", "top",
-        ],
-        "transactional": [
-            "acheter", "prix", "tarif", "commander", "abonnement", "offre",
-            "télécharger", "essai", "gratuit", "réserver", "inscription",
-            "buy", "price", "pricing", "download", "trial", "order", "free",
-        ],
-        "navigational": [
-            "login", "connexion", "compte", "site officiel", "dashboard",
-            "console", "sign in", "sign up", "official", "login",
-        ],
+    if re.match(r"^\s*\d+\s", title_lower):
+        recommended_format = "list"
+    elif explicit_intent == "commercial":
+        recommended_format = "comparison"
+    elif how_to_hits:
+        recommended_format = "how_to"
+    elif question_hits or explicit_intent == "navigational":
+        recommended_format = "simple_question"
+    else:
+        recommended_format = "explainer"
+
+    first_block_goals = {
+        "simple_question": "Répondre directement à la question dès les premières phrases.",
+        "how_to": "Donner tout de suite la marche à suivre résumée.",
+        "comparison": "Donner tout de suite la recommandation selon le profil du lecteur.",
+        "explainer": "Expliquer l'essentiel en deux ou trois phrases dès le début.",
+        "list": "Annoncer tout de suite ce que la liste apporte et à qui.",
     }
 
-    intent_scores: dict[str, float] = {}
-    for dim, markers in dims.items():
-        hits = sum(1 for m in markers if m in text_combined)
-        score = min(1.0, hits / 4.0)
-        intent_scores[dim] = round(score, 2)
-
-    analysis.intent_scores = intent_scores
-    analysis.commercial_intent_score = intent_scores["commercial"]
-
-    dominant = max(intent_scores, key=lambda k: intent_scores[k])
-    if intent_scores[dominant] >= 0.25 and dominant != "informational":
-        analysis.explicit_intent = dominant
-
-    comparison_markers = ["vs", "ou", "comparer", "différence", "meilleur", "choisir"]
-    guide_markers = ["comment", "guide", "tutoriel", "étapes", "créer", "configurer"]
-    question_markers = ["quoi", "qu'est-ce", "pourquoi", "quand", "quel", "comment"]
-
-    if intent_scores["commercial"] >= 0.25 or analysis.explicit_intent == "commercial":
-        analysis.article_type = "comparison"
-        analysis.first_block_goal = "Cadrer les critères de comparaison pour aider le lecteur à comprendre les différences essentielles."
-        analysis.recommended_angle = "Comparer objectivement les options disponibles."
-    elif intent_scores["transactional"] >= 0.25:
-        analysis.article_type = "transactional"
-        analysis.first_block_goal = "Présenter directement les options, prix et conditions pour aider à décider."
-        analysis.recommended_angle = "Présentation claire des options et de leurs différences."
-    elif analysis.explicit_intent == "navigational" or intent_scores["navigational"] >= 0.25:
-        analysis.article_type = "navigational"
-        analysis.first_block_goal = "Aider le lecteur à trouver rapidement la ressource ou la page recherchée."
-        analysis.recommended_angle = "Orientation directe vers la ressource recherchée."
-    elif any(m in title_lower or m in keyword_lower for m in guide_markers):
-        analysis.article_type = "guide"
-        analysis.first_block_goal = "Donner une première action utile que le lecteur peut appliquer immédiatement."
-        analysis.recommended_angle = "Guide pratique avec étapes concrètes."
-    elif any(m in title_lower or m in keyword_lower for m in question_markers):
-        analysis.article_type = "simple_question"
-        analysis.first_block_goal = "Répondre directement à la question principale du lecteur."
-        analysis.recommended_angle = "Réponse claire et directe avec explications."
-    else:
-        analysis.first_block_goal = "Présenter le sujet et donner une première information utile au lecteur."
-        analysis.recommended_angle = "Contenu informatif complet et utile."
-
-    analysis.implicit_intent = f"Le lecteur cherche des informations pratiques et fiables sur {keyword or title}"
-    analysis.expected_answer = f"Un guide complet expliquant {keyword or title} avec des conseils pratiques"
-    analysis.sub_questions = [
-        f"Qu'est-ce que {keyword or title} ?",
-        f"Pourquoi {keyword or title} est-il important ?",
-        f"Comment appliquer {keyword or title} concrètement ?",
-    ]
-    analysis.what_to_avoid = [
-        "Réponse trop générique sans conseil pratique",
-        "Contenu trop technique sans explication",
-        "Absence d'exemples concrets",
-    ]
-
+    analysis = IntentAnalysis(
+        explicit_intent=explicit_intent,
+        reader_real_question=title or keyword,
+        expected_answer="",
+        first_block_goal=first_block_goals[recommended_format],
+        article_type=format_to_article_type(recommended_format)
+        if explicit_intent != "transactional" else "transactional",
+        recommended_format=recommended_format,
+    )
+    analysis.intent_scores = scores
+    analysis.commercial_intent_score = scores["commercial"]
     return analysis
 
 
