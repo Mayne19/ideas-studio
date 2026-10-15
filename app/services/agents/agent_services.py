@@ -112,13 +112,21 @@ def _format_source_for_evidence(source: dict) -> str:
     """Format a source for the evidence pack builder prompt, embedding the
     quality computed by source_quality_service.validate_sources."""
     url = source.get("url", "")
-    label = source.get("title") or source.get("snippet") or url
+    label = source.get("title") or url
     quality_check = source.get("quality_check") or {}
     if quality_check.get("skipped"):
         quality = "unknown"
     else:
         quality = quality_check.get("quality") or "unknown"
-    return f"- {url} : {label} (qualité: {quality})"
+    line = f"- {url} : {label} (qualité: {quality})"
+    # L'extrait est la seule matière dont un fait peut être tiré : sans lui,
+    # le modèle n'a qu'un titre et invente les "faits".
+    excerpt = " ".join(
+        part for part in (source.get("snippet"), source.get("meta_description")) if part
+    ).strip()
+    if excerpt:
+        line += f"\n  Extrait : {excerpt[:500]}"
+    return line
 
 
 def _quality_for_url(url: str, sources: list[dict]) -> str:
