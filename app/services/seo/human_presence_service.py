@@ -2,9 +2,8 @@ from __future__ import annotations
 
 """Score « Présence humaine » — détecte spécifiquement les signaux d'un
 texte généré sans contrainte de style : phrases d'ouverture génériques,
-tirets cadratins, régularité mécanique des paragraphes, absence de
-position tranchée, absence de marqueur de voix humaine, conclusion qui
-résume au lieu de clore sur une image. Règles issues du guide de
+tirets cadratins, régularité mécanique des paragraphes, conclusion qui
+résume au lieu de clore. Règles issues du guide de
 rédaction éditorial (checklist qualité 90+, voir guide_redaction_complet.md).
 
 100% heuristique, aucun appel LLM — les signaux mesurables mécaniquement
@@ -39,20 +38,6 @@ WORN_EXPRESSIONS = (
     "le contenu est roi", "dans le paysage numérique actuel",
     "passer à la vitesse supérieure", "sortir du lot",
     "se démarquer de la concurrence",
-)
-
-HUMAN_MARKERS = (
-    # "honnêtement", "pourtant", "en réalité", "à bien y réfléchir",
-    # "pour être honnête" volontairement absents : le prompt du rédacteur les
-    # bannit comme transitions creuses (liste noire "Vocabulaire interdit") —
-    # les récompenser ici comme marqueurs de voix humaine contredirait la
-    # consigne donnée au writer.
-    "curieusement", "sincèrement",
-    "et ce n'est pas anodin", "et ce n'est pas une exagération",
-    "et c'est normal", "ce que peu de gens réalisent",
-    "vous l'avez peut-être", "c'est bien dommage", "croyez-moi",
-    "et c'est presque toujours vrai", "tout compte fait",
-    "malgré tout",
 )
 
 CONCLUSION_STARTERS = (
@@ -160,47 +145,6 @@ def score_paragraph_variation(content: str) -> tuple[float, list[str]]:
     return max(score, 0.0), flags
 
 
-def score_human_markers(content: str) -> tuple[float, list[str]]:
-    text = strip_html(content).lower()
-    count = sum(1 for marker in HUMAN_MARKERS if marker in text)
-    flags = []
-    if count == 0:
-        flags.append("aucun_marqueur_humain")
-        return 20.0, flags
-    if count == 1:
-        return 70.0, flags
-    if count <= 4:
-        return 100.0, flags
-    # Trop de marqueurs redevient mécanique — comme le note le guide, un
-    # marqueur à chaque paragraphe est aussi artificiel que zéro marqueur.
-    flags.append("marqueurs_humains_en_exces")
-    return 60.0, flags
-
-
-def score_section_positions(content: str) -> tuple[float, list[str]]:
-    sections = _extract_sections(content)
-    real_sections = [(h, t) for h, t in sections if h]
-    if not real_sections:
-        return 70.0, []
-
-    # Une position tranchée est approximée par la présence d'un marqueur
-    # d'opinion assumée ("mais", "en réalité", "ce n'est pas") combiné à une
-    # tournure de contraste — heuristique volontairement permissive : un
-    # faux négatif (section réellement tranchée non détectée) est préférable
-    # à un faux positif qui pénaliserait à tort un bon article.
-    opinion_markers = ("mais si ", "en pratique", "ce n'est pas ", "pas parce que", "c'est probablement le signal")
-    sections_without_position = []
-    for heading, text in real_sections:
-        lowered = text.lower()
-        if not any(marker in lowered for marker in opinion_markers):
-            sections_without_position.append(heading[:40])
-
-    ratio_missing = len(sections_without_position) / len(real_sections)
-    score = max(100.0 - ratio_missing * 100.0, 0.0)
-    flags = [f"section_sans_position_tranchee:{h}" for h in sections_without_position[:5]]
-    return score, flags
-
-
 def score_conclusion(content: str, word_count: int) -> tuple[float, list[str]]:
     paragraphs = _extract_paragraphs(content)
     if not paragraphs:
@@ -232,29 +176,25 @@ def compute_human_presence_score(content: str | None, word_count: int | None = N
     intro_score, intro_flags = score_intro_quality(content, wc)
     vocab_score, vocab_flags = score_vocabulary(content)
     paragraph_score, paragraph_flags = score_paragraph_variation(content)
-    marker_score, marker_flags = score_human_markers(content)
-    position_score, position_flags = score_section_positions(content)
     conclusion_score, conclusion_flags = score_conclusion(content, wc)
 
+    # Plus de « marqueurs humains » ni de « position tranchée » : ces signaux
+    # comptaient des tournures toutes faites et poussaient à les plaquer.
     weights = {
-        "intro": 0.20,
-        "vocabulaire": 0.20,
-        "paragraphes": 0.20,
-        "marqueurs_humains": 0.15,
-        "position_tranchee": 0.15,
-        "conclusion": 0.10,
+        "intro": 0.30,
+        "vocabulaire": 0.30,
+        "paragraphes": 0.25,
+        "conclusion": 0.15,
     }
     values = {
         "intro": intro_score,
         "vocabulaire": vocab_score,
         "paragraphes": paragraph_score,
-        "marqueurs_humains": marker_score,
-        "position_tranchee": position_score,
         "conclusion": conclusion_score,
     }
     final_score = sum(values[k] * weights[k] for k in weights)
 
-    all_flags = intro_flags + vocab_flags + paragraph_flags + marker_flags + position_flags + conclusion_flags
+    all_flags = intro_flags + vocab_flags + paragraph_flags + conclusion_flags
 
     signals = {
         key: {

@@ -8,7 +8,6 @@ from app.services.seo.human_presence_service import (
     WORTHLESS_FILLER_PHRASES,
     EMPTY_SUPERLATIVES,
     WORN_EXPRESSIONS,
-    HUMAN_MARKERS,
     CONCLUSION_STARTERS,
 )
 
@@ -107,11 +106,6 @@ def check_humanization(content: str | None) -> HumanizationReport:
     has_short_punch = any(len(s.split()) <= 8 for s in sentences) if sentences else True
     if sentences and not has_short_punch:
         report.repeated_patterns.append("Aucune phrase courte de rythme détectée")
-
-    # Test 7 — absence de marqueur de voix humaine
-    marker_count = sum(1 for marker in HUMAN_MARKERS if marker in text)
-    if marker_count == 0:
-        report.repeated_patterns.append("Aucun marqueur de voix humaine")
 
     # Test 8 — conclusion générique (résumé au lieu de clore)
     last_paragraphs = " ".join(paragraphs[-2:]).lower() if len(paragraphs) >= 2 else text
