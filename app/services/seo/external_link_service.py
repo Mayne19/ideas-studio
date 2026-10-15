@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 
 from app.schemas.seo_workflow import ExternalLinkPlan, asdict
 from app.services.seo.adapters.scrapling_adapter import scrapling_adapter
+from app.services.seo.source_quality_service import classify_source_quality
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +102,11 @@ def _clean_anchor(anchor: str) -> str:
     return anchor
 
 
+def _clean_excerpt(text: str, limit: int = 220) -> str:
+    text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", str(text or ""))).strip()
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+
+
 def _get_competitor_domains(db, project_id: str | None) -> set[str]:
     """Domaines à ne jamais proposer comme lien externe — lus depuis
     editorial_profiles.rules.competitor_domains (même champ JSON libre que
@@ -135,8 +141,6 @@ def _serp_competitor_hosts(sources: list) -> set[str]:
     """Domaines des résultats SERP du mot-clé : ce sont les concurrents
     directs de l'article. Les sources de référence (Wikipédia, sites publics…
     classées 'strong') restent citables même si elles rankent sur le mot-clé."""
-    from app.services.seo.source_quality_service import classify_source_quality
-
     hosts: set[str] = set()
     for src in sources:
         if not isinstance(src, dict):
@@ -198,6 +202,10 @@ def build_external_link_plan(
             "placement": "auto",
             "reason": "Source consultée lors de la recherche",
             "source_reliability": quality_check.get("quality", "medium"),
+            "domain_tier": classify_source_quality(url),
+            # Extrait de la page : permet au writer de ne citer la source que
+            # sur une phrase que cet extrait soutient réellement.
+            "excerpt": _clean_excerpt(src.get("snippet") or src.get("meta_description") or ""),
             "nofollow_recommended": True,
             "word_count": quality_check.get("word_count", 0),
         })
@@ -231,6 +239,8 @@ def build_external_link_plan(
             "placement": "auto",
             "reason": "Lien découvert chez un concurrent",
             "source_reliability": quality,
+            "domain_tier": classify_source_quality(clean_url),
+            "excerpt": "",
             "nofollow_recommended": True,
             "word_count": word_count,
         })
@@ -254,7 +264,18 @@ def build_external_link_plan(
 
     domain_counts: dict[str, int] = {}
     diversified: list[dict] = []
-    for link in sorted(candidate_links, key=lambda x: (x.get("word_count", 0), _path_depth(x.get("url", ""))), reverse=True):
+    tier_rank = {"strong": 2, "neutral": 1, "weak": 0}
+
+    def _rank(link: dict) -> tuple:
+        # Sources de référence et liens accompagnés d'un extrait d'abord.
+        return (
+            tier_rank.get(link.get("domain_tier", "neutral"), 1),
+            bool(link.get("excerpt")),
+            link.get("word_count", 0),
+            _path_depth(link.get("url", "")),
+        )
+
+    for link in sorted(candidate_links, key=_rank, reverse=True):
         domain = _domain_of(link.get("url", ""))
         if domain_counts.get(domain, 0) >= 2:
             continue
