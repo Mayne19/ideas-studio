@@ -2,7 +2,7 @@
 import json
 import logging
 
-from app.services.providers.llm_provider import LLMProvider, ProviderUnavailableError
+from app.services.providers.llm_provider import LLMProvider, ProviderUnavailableError, TruncatedOutputError
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +75,10 @@ class AnthropicLLMProvider(LLMProvider):
                 "output_tokens": int(getattr(usage, "output_tokens", 0) or 0),
             }
 
+        if response.stop_reason == "max_tokens":
+            raise TruncatedOutputError(
+                f"Anthropic : réponse tronquée (limite de {self.max_tokens} tokens atteinte)."
+            )
         if response.stop_reason == "refusal":
             raise ProviderUnavailableError(
                 "Anthropic : la requête a été refusée par les garde-fous du modèle."
