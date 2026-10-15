@@ -83,6 +83,31 @@ class HumanInsightsReport:
     status: str = "pending"
 
 
+_SEARCH_QUERY_PARAMS = {"q", "query", "search_query", "search"}
+
+
+def linkable_source_url(url: str | None) -> str:
+    """Retourne l'URL si elle pointe vers un contenu précis, sinon "".
+
+    Plusieurs extracteurs (Reddit, Stack Overflow, Nitter, Quora, YouTube,
+    PAA, autocomplete) n'ont que l'URL de la page de résultats de recherche :
+    un lien vers "reddit.com/search?q=..." n'est pas une source, le rédacteur
+    ne doit jamais le citer. L'insight reste utilisable, sans lien."""
+    if not url:
+        return ""
+    try:
+        parsed = urllib.parse.urlparse(url)
+    except ValueError:
+        return ""
+    segments = [seg.lower() for seg in parsed.path.split("/") if seg]
+    if any(seg.startswith("search") for seg in segments) or "results" in segments:
+        return ""
+    params = {k.lower() for k in urllib.parse.parse_qs(parsed.query)}
+    if params & _SEARCH_QUERY_PARAMS:
+        return ""
+    return url
+
+
 # ─────────────────────────────────────────────────────────
 # UTILITAIRE FETCH
 # ─────────────────────────────────────────────────────────
@@ -714,7 +739,7 @@ def extract_human_insights(
         report.all_insights.append({
             "source_type": insight.source_type,
             "source_name": insight.source_name,
-            "source_url": insight.source_url,
+            "source_url": linkable_source_url(insight.source_url),
             "content": content,
             "insight_type": t,
             "author": insight.author,

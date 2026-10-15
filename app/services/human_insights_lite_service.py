@@ -33,6 +33,7 @@ def extract_human_insights_lite(
         _extract_forums_from_serp,
         _extract_google_autocomplete,
         _extract_people_also_ask,
+        linkable_source_url,
     )
 
     all_insights = []
@@ -90,7 +91,7 @@ def extract_human_insights_lite(
         all_insights_dicts.append({
             "source_type": insight.source_type,
             "source_name": insight.source_name,
-            "source_url": insight.source_url,
+            "source_url": linkable_source_url(insight.source_url),
             "content": content,
             "insight_type": t,
             "author": insight.author,
