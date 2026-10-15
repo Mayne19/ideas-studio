@@ -1343,7 +1343,8 @@ class SEOGenerationOrchestrator:
             "  début de phrase, 'À bien y réfléchir'.",
             "- Jamais de connecteur de transition en début de paragraphe si un connecteur a déjà été "
             "  utilisé dans les 3 phrases précédentes : espace-les, ne les enchaîne pas.",
-            "- Quantificateurs vagues à remplacer par un chiffre précis ou à supprimer : 'Nombreux', "
+            "- Quantificateurs vagues à supprimer (ou à remplacer par un chiffre seulement s'il figure "
+            "  dans les sources fournies) : 'Nombreux', "
             "  'Divers', 'Plusieurs' (si le nombre est connaissable), 'Multiples', 'Extrêmement', "
             "  'Particulièrement', 'Fortement', 'Considérablement', 'Hautement', 'Grandement', "
             "  'Véritablement', 'Absolument', 'Tout à fait'/'Certainement'/'Bien sûr' en début de phrase.",
