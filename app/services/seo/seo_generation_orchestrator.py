@@ -1187,6 +1187,36 @@ class SEOGenerationOrchestrator:
             self._step("HumanInsightsUsageGuard")
             self.tools_used.append("human_insights_usage")
 
+    def _build_writer_system_prompt(self) -> str:
+        """Règles de voix et de style, envoyées en prompt système pour rester
+        séparées du brief et des consignes de la tâche."""
+        rules = [
+            "Tu es un rédacteur spécialisé qui écrit en français pour des lecteurs pressés. "
+            "Tu réponds précisément à leur question, sans remplissage.",
+            "Style :",
+            "- Chaque phrase apporte une information concrète ; supprime celles qui n'apportent rien.",
+            "- Paragraphes courts (1 à 4 phrases), rythme varié.",
+            "- Ton direct et naturel, comme un expert qui explique à quelqu'un qu'il respecte.",
+            "- Pas d'ouverture générique (« Dans un monde où », « Il est important de », « Dans cet article »).",
+            "- Pas de superlatifs vides (ultime, incontournable, révolutionnaire) ni de jargon "
+            "(synergie, levier, écosystème, booster, holistique).",
+            "- Pas de connecteur de remplissage en début de phrase : En outre, De plus, Par ailleurs, "
+            "Ainsi, En effet, Néanmoins, Toutefois, Honnêtement, En réalité, En somme.",
+            "- Jamais de tiret cadratin (—) : utilise une virgule, deux-points ou une nouvelle phrase.",
+        ]
+        style_bits = [
+            f"{label} : {self.context[key]}"
+            for label, key in (("Ton", "tone"), ("Niveau du lecteur", "reader_level"), ("Style", "writing_style"))
+            if self.context.get(key)
+        ]
+        if style_bits:
+            rules.append("Profil éditorial du projet : " + " ; ".join(style_bits) + ".")
+        style_guide = (self.context.get("style_adaptation") or {}).get("style_guide")
+        if isinstance(style_guide, dict) and style_guide.get("rules"):
+            rules.append("Guide de style du projet :")
+            rules.extend(f"- {rule}" for rule in style_guide["rules"][:8])
+        return "\n".join(rules)
+
     def _generate_content(self, draft: _DraftArticle, outline: dict, keyword_brief: dict, include_callouts: bool | None, include_faq: bool | None = None):
         article = draft.article
         self._raise_if_cancelled(article)
@@ -1202,283 +1232,82 @@ class SEOGenerationOrchestrator:
             self.db.flush()
             return
 
-        outline_sections = outline.get("sections", [])
-
         production_brief = self.context.get("production_brief")
-        if production_brief:
-            from app.services.production_brief_service import production_brief_to_text
-            brief_block = production_brief_to_text(production_brief)
-            if brief_block:
-                prompt_parts = [brief_block, "", "Règles d'écriture :", ""]
-                prompt_parts += [
-                    f"Rédige un article de blog SEO en français, complet et utile.",
-                    f"Titre : {draft.title}",
-                    f"Mot-clé principal : {draft.keyword}",
-                    f"Mot(s)-clé(s) secondaire(s) : {', '.join(keyword_brief.get('secondary_keywords', []))}",
-                    f"Intention de recherche : {article.search_intent or 'informational'}",
-                    f"Angle éditorial : {draft.angle or 'Informatif et pratique'}",
-                    f"Audience : {draft.audience or 'Grand public'}",
-                ]
-            else:
-                prompt_parts = [
-                    f"Rédige un article de blog SEO en français, complet et utile.",
-                    f"Titre : {draft.title}",
-                    f"Mot-clé principal : {draft.keyword}",
-                    f"Mot(s)-clé(s) secondaire(s) : {', '.join(keyword_brief.get('secondary_keywords', []))}",
-                    f"Intention de recherche : {article.search_intent or 'informational'}",
-                    f"Angle éditorial : {draft.angle or 'Informatif et pratique'}",
-                    f"Audience : {draft.audience or 'Grand public'}",
-                ]
-        else:
-            prompt_parts = [
-                f"Rédige un article de blog SEO en français, complet et utile.",
-                f"Titre : {draft.title}",
-                f"Mot-clé principal : {draft.keyword}",
-                f"Mot(s)-clé(s) secondaire(s) : {', '.join(keyword_brief.get('secondary_keywords', []))}",
-                f"Intention de recherche : {article.search_intent or 'informational'}",
-                f"Angle éditorial : {draft.angle or 'Informatif et pratique'}",
-                f"Audience : {draft.audience or 'Grand public'}",
-            ]
-        if self.context.get("tone"):
-            prompt_parts.append(f"Ton éditorial : {self.context['tone']}")
-        if self.context.get("reader_level"):
-            prompt_parts.append(f"Niveau du lecteur : {self.context['reader_level']}")
-        if self.context.get("writing_style"):
-            prompt_parts.append(f"Style d'écriture : {self.context['writing_style']}")
+        if not production_brief:
+            from app.services.production_brief_service import build_production_brief
+            production_brief = build_production_brief(
+                keyword=draft.keyword or "", title=draft.title or "",
+                intent_analysis=self.context.get("intent_analysis"),
+                keyword_brief=keyword_brief, outline=outline,
+                editorial_angle=self.context.get("editorial_angle"),
+                audience=draft.audience,
+            )
+        from app.services.production_brief_service import production_brief_to_text
+        prompt_parts = [production_brief_to_text(production_brief), ""]
+
         project_context = self.context.get("project_context") or {}
         used_angles = project_context.get("used_angles") or []
-        used_examples = project_context.get("used_examples") or []
         if used_angles:
             prompt_parts.append(
-                "Angles éditoriaux déjà utilisés sur ce projet (À ÉVITER — trouve un angle différent) : "
-                + "; ".join(used_angles[:8])
+                "Angles déjà publiés sur ce projet (ne les répète pas) : " + "; ".join(used_angles[:6])
             )
-        if used_examples:
-            prompt_parts.append(
-                "Exemples déjà exploités sur ce projet (À NE PAS RÉPÉTER) : "
-                + "; ".join(used_examples[:6])
-            )
-        style_adaptation = self.context.get("style_adaptation") or {}
-        style_guide = style_adaptation.get("style_guide")
-        if style_guide and isinstance(style_guide, dict):
-            guide_rules = style_guide.get("rules") or []
-            if guide_rules:
-                prompt_parts.append("Guide de style (règles à respecter) :")
-                prompt_parts.extend(f"- {rule}" for rule in guide_rules)
-                prompt_parts.append("")
+            prompt_parts.append("")
+
+        length_hint = (
+            f"repère indicatif : {self.context['word_count_range']}"
+            if self.context.get("word_count_range") else "pas de longueur imposée"
+        )
         prompt_parts += [
-            "",
-            "Règles strictes :",
-            "- Rédige en HTML compatible TipTap : <h2>, <h3>, <p>, <ul>, <ol>, <li>, <blockquote>, <table>, <strong>, <em>",
-            "- N'écris JAMAIS de balise <h1> dans le contenu : le titre existe déjà séparément, "
-            "  le corps de l'article commence directement en <h2>",
-            "- Pas de Markdown brut visible, pas de ## visibles, pas de [Mock]",
-            "- Pas de H5/H6",
-            "- Pas de H2 suivi directement par H3 (mets une phrase entre les deux)",
-            "- Jamais de saut de niveau de titre (ex: H2 suivi directement de H4 sans H3 entre les deux)",
-            "- Introduction courte et efficace (2-3 phrases max)",
-            "- Après l'introduction, insère un callout résumé (blockquote HTML) récapitulant les 2-3 points clés en 1-2 phrases max. "
-            "CE CALLOUT DOIT ÊTRE COURT : 1-2 phrases brèves qui donnent directement les réponses clés, "
-            "jamais un paragraphe développé ni un mini-article.",
-            "- Début qui satisfait rapidement l'intention du lecteur",
-            "- RÈGLE ABSOLUE — faits et chiffres : n'écris jamais un nombre, un pourcentage, une "
-            "  date, un nom d'étude ou un fait précis qui n'apparaît pas tel quel dans les extraits "
-            "  de sources fournis ci-dessous (faits du brief, matière humaine). Si aucune source "
-            "  fournie ne le contient, écris la phrase sans chiffre ou supprime-la. Un article sans "
-            "  statistique est acceptable ; une statistique inventée ne l'est jamais.",
-            "- Ton humain, direct, concret, pas de texte robotique",
-            "- N'utilise JAMAIS le tiret cadratin (—). "
-            "  Remplace-le systématiquement par une virgule, un point-virgule, ou reformule la phrase. "
-            "  Exemple interdit : 'Le résultat — surprenant — dépasse les attentes.' "
-            "  Correct : 'Le résultat, surprenant, dépasse les attentes.'",
-            "- REFORMULATION vs PARAPHRASE, règle absolue : "
-            "  La paraphrase est INTERDITE. La reformulation totale est OBLIGATOIRE. "
-            "  Différence : "
-            "  PARAPHRASE (interdit) = changer 2 ou 3 mots dans la phrase originale. "
-            "    Exemple : 'j'ai faim' → 'je suis affamé' : c'est la même idée avec un synonyme. INTERDIT. "
-            "  REFORMULATION (obligatoire) = exprimer la même idée avec un angle, une structure "
-            "  et des mots entièrement différents. "
-            "    Exemple : 'j'ai faim' → 'il me faut mettre quelque chose sous la dent' : angle différent. CORRECT. "
-            "  Cette règle s'applique à TOUTES les sources : insights humains, données SERP, "
-            "  textes concurrents, études, statistiques. "
-            "  Si tu ne peux pas reformuler totalement, utilise une citation formelle (blockquote).",
-            "- Quand tu utilises un insight venant d'un utilisateur réel (Reddit, forum, Stack Overflow...) : "
-            "  reformule complètement l'idée avec tes propres mots, puis ajoute un lien hypertexte "
-            "  sur la phrase pointant vers la source originale. "
-            "  Format : <a href='URL_SOURCE' target='_blank' rel='nofollow'>texte ancre naturel</a>",
-            "- Si tu veux reproduire exactement ce qu'une personne a dit mot pour mot : "
-            "  utilise obligatoirement une balise blockquote avec attribution et lien. "
-            "  Format HTML exact : "
-            "  <blockquote>"
-            "    'Texte exact de la citation telle que dite par la personne.'"
-            "    <cite><a href='URL_SOURCE' target='_blank' rel='nofollow'>Nom / Pseudo, Plateforme</a></cite>"
-            "  </blockquote>",
-            "- Inclus une liste à puces si pertinent",
-            "- Tableau seulement si utile pour comparer ou résumer",
-            "- Ne crée PAS de section 'Conclusion', 'En résumé' ou 'Pour conclure' séparée",
-            "- Termine l'article dans la dernière section du plan sans H2 supplémentaire",
-            "- Si un résumé est utile, intègre-le dans la dernière section existante",
-            "",
-            "Règles de voix et de rythme (checklist qualité 90+) :",
-            "- L'introduction ne dépasse jamais 10% du volume total et entre dans le vif en 2-3 phrases : "
-            "  pas de contexte, pas de définition du sujet, pas d'annonce du plan.",
-            "- Chaque phrase apporte une information nouvelle ou disparaît. Test : si on peut la "
-            "  supprimer sans rien perdre, elle n'a pas sa place.",
-            "- Zéro phrase d'ouverture générique, ni en intro ni en début de section. Interdits : "
-            "  'Dans l'univers numérique actuel', 'Il est important de', 'Dans cette section', "
-            "  'Il est crucial de', 'Force est de constater', 'Il va sans dire que', 'Dans un monde où', "
-            "  'À l'heure/l'ère du digital', 'Nombreux sont ceux qui', 'Nous allons voir dans cet article'.",
-            "- Interdits dans tout le texte : les superlatifs vides 'Ultime', 'Incontournable', 'Essentiel', "
-            "  'Complet', 'Puissant', 'Révolutionnaire', 'Innovant' utilisés comme adjectif générique, "
-            "  et les expressions usées 'Le contenu est roi', 'Dans le paysage numérique actuel', "
-            "  'Passer à la vitesse supérieure', 'Sortir du lot', 'Se démarquer de la concurrence'.",
-            "- RÈGLE ABSOLUE — paragraphes COURTS : chaque paragraphe fait 1 à 4 phrases maximum "
-            "  (cible : 2-3 phrases). Dès qu'un paragraphe atteint 5 phrases, coupe-le en deux. "
-            "  Une phrase isolée est permise pour marquer une idée forte (effet de choc). "
-            "  Jamais de pavé dense de 5 phrases ou plus.",
-            "- RÈGLE ABSOLUE — plusieurs paragraphes par section : chaque section H2 contient au "
-            "  minimum 2 paragraphes, généralement 3 à 5. Ne condense jamais une section entière "
-            "  en un seul bloc, même court.",
-            "- Ne jamais enchaîner plus de 3 paragraphes de longueur similaire : alterne les rythmes "
-            "  (un court, deux moyens, un long, un percutant d'une phrase...).",
-            "- L'article doit se lire naturellement et agréablement à voix haute : phrases fluides, "
-            "  rythme varié, transitions discrètes. Réponds court et direct sur le sujet : chaque "
-            "  section répond à la question annoncée par son titre sans détour, chaque idée tient "
-            "  en 1-2 phrases, rien n'est développé pour remplir de la place.",
-            "- Au moins une position tranchée et assumée par section (pas juste énumérer des faits neutres) : "
-            "  dire ce qui ne marche pas, pour qui une option n'est pas adaptée, ou pourquoi tel choix "
-            "  est préférable dans un cas précis.",
-            "- Place 1 à 2 marqueurs de voix humaine par section, jamais plus (au-delà, c'est aussi "
-            "  mécanique que zéro), et jamais toujours au même endroit de la phrase : "
-            "  'Curieusement,' en début ; "
-            "  'et ce n'est pas anodin', 'ce que peu de gens réalisent' en milieu ; "
-            "  'c'est bien dommage', 'et c'est presque toujours vrai' en fin.",
-            "- Varie les connecteurs logiques : pas seulement 'mais'/'cependant', alterne avec "
-            "  'ce qui signifie concrètement', 'tout compte tenu', 'cela dit', "
-            "  'et c'est là que ça devient intéressant'.",
-            "- Dose le 'vous' : mélange avec des tournures impersonnelles et des phrases sans sujet direct, "
-            "  ne t'adresse pas au lecteur dans chaque phrase.",
-            "- La conclusion (dans la dernière section, jamais une section à part) ne résume pas ce qui "
-            "  précède, ne commence jamais par 'En conclusion', 'Pour résumer', 'Nous avons vu que', et ne "
-            "  liste pas les points déjà traités. Termine sur une image concrète, une conséquence "
-            "  pratique, ou une question ouverte qui laisse une tension.",
-            "- Le premier mot d'une section H2 n'est jamais 'Il', 'Dans', 'Nous', 'Cette'.",
-            "- Contient au moins un moment de vraie surprise : une observation ou un angle qu'on ne "
-            "  trouverait pas dans les 10 premiers résultats Google sur le même sujet.",
-            "",
-            "Vocabulaire interdit (signature d'un texte généré par IA) :",
-            "- Transitions creuses à supprimer ou remplacer par un lien concret : 'En outre', 'De plus', "
-            "  'Par ailleurs', 'Néanmoins', 'Toutefois', 'Ainsi', 'Dès lors', 'En somme', 'En définitive', "
-            "  'D'autre part', 'À cet égard', 'En effet'/'Effectivement'/'Notamment' en début de "
-            "  paragraphe, 'De surcroît', 'Qui plus est', 'Honnêtement', 'En réalité', 'Pourtant' en "
-            "  début de phrase, 'À bien y réfléchir'.",
-            "- Jamais de connecteur de transition en début de paragraphe si un connecteur a déjà été "
-            "  utilisé dans les 3 phrases précédentes : espace-les, ne les enchaîne pas.",
-            "- Quantificateurs vagues à supprimer (ou à remplacer par un chiffre seulement s'il figure "
-            "  dans les sources fournies) : 'Nombreux', "
-            "  'Divers', 'Plusieurs' (si le nombre est connaissable), 'Multiples', 'Extrêmement', "
-            "  'Particulièrement', 'Fortement', 'Considérablement', 'Hautement', 'Grandement', "
-            "  'Véritablement', 'Absolument', 'Tout à fait'/'Certainement'/'Bien sûr' en début de phrase.",
-            "- Verbes corporatifs à remplacer par un verbe court et concret : 'Utiliser' → se servir de ; "
-            "  'Mettre en œuvre' → appliquer/faire/lancer ; 'Faciliter' → aider/rendre possible ; "
-            "  'Optimiser' → améliorer/accélérer ; 'Booster' → augmenter/renforcer ; "
-            "  'Adresser (un problème)' → résoudre/traiter ; 'Impacter' → affecter/changer ; "
-            "  'Générer (du trafic/des leads)' → attirer/produire.",
-            "- Buzzwords vides à supprimer ou préciser concrètement : 'Holistique', 'Transversal', "
-            "  'Structurant', 'Robuste', 'Paradigme', 'Synergie', 'Innovant' (sans précision), "
-            "  'Catalyseur', 'Levier' (au sens figuré systématique), 'Écosystème numérique', "
-            "  'Paysage numérique', 'Naviguer dans la complexité', 'Plonger dans un sujet'.",
-            "- Anglicismes structurels à éviter : 'Faire du sens' → avoir du sens ; "
-            "  'Adresser un problème' → résoudre/traiter ; 'Plonger dans' → explorer/examiner ; "
-            "  'Naviguer dans' → gérer/traverser ; 'Impacter positivement' → améliorer/renforcer.",
-            "- Structures de phrases à éviter : 'Non seulement X, mais aussi Y' (reformule en deux "
-            "  phrases distinctes) ; 3 phrases consécutives commençant par le même mot ou groupe de "
-            "  mots ('Cela...', 'Cette approche...') ; 'Premièrement... Deuxièmement... Enfin...' sur "
-            "  plusieurs sections (intègre dans la prose sans numérotation apparente) ; "
-            "  '[X] joue un rôle clé dans [Y]' (décris l'effet précis à la place) ; "
-            "  'Les études montrent que...'/'Les experts s'accordent à dire que...' sans source "
-            "  citée (cite la vraie étude ou reformule sans cette fausse précision).",
-            "",
-            build_reference_examples_block(),
+            "Consignes :",
+            "1. Les 2 à 3 premières phrases (en <p>, avant le premier <h2>) répondent directement à la "
+            "question réelle du lecteur. Pas de contexte, de définition ni d'annonce du plan avant la réponse.",
+            "2. Suis le plan : un <h2> par section, dans l'ordre. Chaque section répond à ce que son titre "
+            "annonce, sans détour.",
+            "3. Traite les points « À inclure » ; n'écris rien de ce qui figure dans « À éviter ».",
+            f"4. Longueur : le sujet décide ({length_hint}). Arrête-toi quand la question est entièrement "
+            "traitée ; n'ajoute jamais de texte pour atteindre un volume.",
+            "5. N'écris aucun chiffre, pourcentage, date, nom d'étude ou fait précis absent des sources "
+            "fournies. Sans source, écris la phrase sans chiffre ou supprime-la.",
+            "6. Reformule les sources avec tes propres mots. Pour citer quelqu'un mot pour mot, utilise "
+            "<blockquote> avec <cite><a href='URL_SOURCE' target='_blank' rel='nofollow'>Nom, plateforme</a></cite>.",
+            "7. HTML compatible TipTap uniquement : <h2>, <h3>, <p>, <ul>, <ol>, <li>, <blockquote>, <table>, "
+            "<strong>, <em>, <a>. Pas de <h1> (le titre existe déjà), pas de Markdown, pas de <h4> à <h6>. "
+            "Un <h3> n'apparaît que sous un <h2>, après au moins un paragraphe.",
+            "8. Liste ou tableau seulement quand ça rend la réponse plus claire.",
+            "9. Pas de section « Conclusion » ni « En résumé » : termine dans la dernière section du plan, "
+            "sur une conséquence pratique ou la prochaine étape pour le lecteur.",
+            "10. Pas de FAQ : elle est générée séparément.",
         ]
-
-        if self.context.get("word_count_range"):
-            prompt_parts.append(
-                f"- Volume obligatoire : {self.context['word_count_range']}. "
-                "Ne dépasse jamais le maximum. Ne descends jamais sous le minimum."
-            )
-
-        prompt_parts.extend(["", "Plan à suivre :"])
-
-        for section in outline_sections:
-            heading = section.get("heading", "")
-            purpose = section.get("purpose", "")
-            key_points = section.get("key_points", [])
-            prompt_parts.append(f"- H{section.get('level', 2)}: {heading} ({purpose})")
-            if key_points:
-                prompt_parts.append(f"  Points: {', '.join(key_points)}")
-
-        prompt_parts.append("")
         if include_callouts:
-            prompt_parts.append("Prévois 1-2 callouts pertinents sous forme de paragraphes introduits naturellement.")
-        prompt_parts.append("La FAQ sera générée séparément : ne l'inclus pas dans le contenu principal.")
-        prompt_parts.append("Sois précis, original et utile.")
+            prompt_parts.append(
+                "11. Tu peux ajouter un ou deux encadrés (<blockquote>) si une mise en garde ou une astuce "
+                "le mérite vraiment."
+            )
+        prompt_parts += ["", build_reference_examples_block()]
 
-        # Injecter la matière humaine si disponible
         insights = self.context.get("human_insights") or {}
         if insights and insights.get("total_insights", 0) > 0:
-            prompt_parts.append("\n=== MATIÈRE HUMAINE RÉELLE (à intégrer naturellement) ===")
-            if insights.get("questions"):
-                prompt_parts.append(
-                    "VRAIES QUESTIONS posées par des utilisateurs :\n"
-                    + "\n".join(f"- {q}" for q in insights["questions"][:10])
-                )
-            if insights.get("pain_points"):
-                prompt_parts.append(
-                    "VRAIES DOULEURS et frustrations :\n"
-                    + "\n".join(f"- {p}" for p in insights["pain_points"][:8])
-                )
-            if insights.get("real_examples"):
-                prompt_parts.append(
-                    "EXEMPLES RÉELS partagés par des utilisateurs :\n"
-                    + "\n".join(f"- {e}" for e in insights["real_examples"][:6])
-                )
-            if insights.get("objections"):
-                prompt_parts.append(
-                    "OBJECTIONS et scepticismes :\n"
-                    + "\n".join(f"- {o}" for o in insights["objections"][:6])
-                )
-            if insights.get("positive_experiences"):
-                prompt_parts.append(
-                    "EXPÉRIENCES POSITIVES réelles :\n"
-                    + "\n".join(f"- {p}" for p in insights["positive_experiences"][:6])
-                )
-            if insights.get("debates"):
-                prompt_parts.append(
-                    "DÉBATS et controverses :\n"
-                    + "\n".join(f"- {d}" for d in insights["debates"][:5])
-                )
-            if insights.get("vocabulary"):
-                prompt_parts.append(
-                    "VOCABULAIRE utilisé par les vrais utilisateurs :\n"
-                    + "\n".join(f"- {v}" for v in insights["vocabulary"][:8])
-                )
+            prompt_parts.append(
+                "\n=== MATIÈRE HUMAINE RÉELLE (à utiliser seulement si elle aide à répondre) ==="
+            )
+            for label, key, limit in (
+                ("Questions posées par de vrais utilisateurs", "questions", 8),
+                ("Difficultés rencontrées", "pain_points", 6),
+                ("Exemples réels", "real_examples", 4),
+                ("Objections", "objections", 4),
+            ):
+                if insights.get(key):
+                    prompt_parts.append(f"{label} :\n" + "\n".join(f"- {x}" for x in insights[key][:limit]))
             sourced = [i for i in insights.get("all_insights", []) if isinstance(i, dict) and i.get("source_url")]
             if sourced:
                 prompt_parts.append(
-                    "SOURCES ORIGINALES des insights (à utiliser pour les liens hypertexte et les citations, "
-                    "n'invente jamais d'URL) :\n"
+                    "Sources de ces éléments (pour un lien vers la source, n'invente jamais d'URL) :\n"
                     + "\n".join(
-                        f"- \"{str(i.get('content', ''))[:90]}\" → {i.get('source_url')} "
+                        f"- \"{str(i.get('content', ''))[:90]}\" : {i.get('source_url')} "
                         f"({i.get('source_name', '')}, {i.get('author') or 'anonyme'})"
-                        for i in sourced[:15]
+                        for i in sourced[:10]
                     )
                 )
-            prompt_parts.append(
-                "INSTRUCTIONS : réponds aux vraies questions ci-dessus. Adresse les vraies douleurs. "
-                "Utilise le vocabulaire naturel de ces utilisateurs. L'article doit sembler écrit par "
-                "quelqu'un qui connaît vraiment le sujet et les vraies préoccupations des lecteurs."
-            )
 
         # === MAILLAGE OBLIGATOIRE ===
         internal_links_plan = self.context.get("internal_links") or {}
@@ -1510,12 +1339,16 @@ class SEOGenerationOrchestrator:
             prompt_parts.append("Format : <a href='URL' target='_blank' rel='nofollow'>texte d'ancre naturel</a>")
             prompt_parts.append("Un lien externe utilisé doit être entouré d'une phrase qui justifie sa présence.")
 
+        prompt_parts.append("\nRetourne uniquement le HTML de l'article, sans explication ni backticks.")
         content_prompt = "\n".join(prompt_parts)
 
         # ── Pass 1 — Foundation (temp 0.7) ─────────────────────────────────
         # Rédige l'article complet depuis le brief. Temperatura haute pour
         # la générosité et la richesse de la matière première.
-        content = self._write_pass(content_prompt, "writer", article, 0.7, "WritingPass_Foundation")
+        writer_system = self._build_writer_system_prompt()
+        content = self._write_pass(
+            content_prompt, "writer", article, 0.7, "WritingPass_Foundation", system=writer_system,
+        )
 
         self._raise_if_cancelled(article)
 
@@ -1535,7 +1368,9 @@ class SEOGenerationOrchestrator:
             + "\n\nRetourne UNIQUEMENT le HTML complet nettoyé, sans explication, sans backticks.\n\n"
             f"Contenu :\n{content}"
         )
-        content = self._guarded_rewrite_pass(content, gate_prompt, "writer", article, 0.3, "WritingPass_QualityGate")
+        content = self._guarded_rewrite_pass(
+            content, gate_prompt, "writer", article, 0.3, "WritingPass_QualityGate", system=writer_system,
+        )
 
         self._raise_if_cancelled(article)
 
