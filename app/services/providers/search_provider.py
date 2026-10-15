@@ -211,6 +211,11 @@ def get_search_provider() -> SearchProvider:
         if provider.is_available():
             return provider
 
+    if settings.DEFAULT_SEARCH_PROVIDER == "serper" and settings.SERPER_API_KEY:
+        provider = SerperSearchProvider(settings.SERPER_API_KEY)
+        if provider.is_available():
+            return provider
+
     if settings.DEFAULT_SEARCH_PROVIDER == "brave" and settings.BRAVE_SEARCH_API_KEY:
         provider = BraveSearchProvider(settings.BRAVE_SEARCH_API_KEY)
         if provider.is_available():
@@ -228,7 +233,12 @@ def get_search_provider() -> SearchProvider:
     # est essayé avant Google : les nouveaux moteurs de recherche personnalisés
     # Google (cx) ne peuvent plus interroger le web entier (fonctionnalité
     # dépréciée côté Google, cause d'un 403 permanent quoi que la config
-    # fasse), Brave n'a pas cette limitation.
+    # fasse), Brave n'a pas cette limitation. Serper (vrais résultats Google)
+    # passe en premier quand il est configuré.
+    if settings.SERPER_API_KEY:
+        provider = SerperSearchProvider(settings.SERPER_API_KEY)
+        if provider.is_available():
+            return provider
     if settings.BRAVE_SEARCH_API_KEY:
         provider = BraveSearchProvider(settings.BRAVE_SEARCH_API_KEY)
         if provider.is_available():
