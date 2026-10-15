@@ -223,16 +223,20 @@ def check_validation_thresholds(
             "message": f"Score global ({global_score}) < 90",
         })
 
-    if seo_contrib is not None and seo_contrib < 85:
-        blocking_reasons.append(f"Score SEO ({seo_contrib}) < 85")
-    if quality is not None and quality < 85:
-        blocking_reasons.append(f"Score Qualite ({quality}) < 85")
-    if geo is not None and geo < 80:
-        blocking_reasons.append(f"Score GEO ({geo}) < 80")
-    if originality is not None and originality < 85:
-        blocking_reasons.append(f"Score Originalite ({originality}) < 85")
-    if human_presence is not None and human_presence < 70:
-        blocking_reasons.append(f"Score Presence humaine ({human_presence}) < 70")
+    # Sous-scores heuristiques : signalés à l'éditeur, jamais bloquants.
+    sub_score_thresholds = (
+        ("low_seo_score", "Score SEO", seo_contrib, 85),
+        ("low_quality_score", "Score Qualite", quality, 85),
+        ("low_geo_score", "Score GEO", geo, 80),
+        ("low_originality_score", "Score Originalite", originality, 85),
+        ("low_human_presence_score", "Score Presence humaine", human_presence, 70),
+    )
+    for warning_type, label, value, threshold in sub_score_thresholds:
+        if value is not None and value < threshold:
+            non_blocking_warnings.append({
+                "type": warning_type, "severity": "warning",
+                "message": f"{label} ({value}) < {threshold}",
+            })
 
     article_review = ctx.get("article_review")
     if article_review and article_review.get("decision") == "REECRITURE":
