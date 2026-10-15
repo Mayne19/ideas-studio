@@ -121,9 +121,10 @@ def build_external_link_plan(
     # mot-clé (ni vers une autre page de son site découverte en le scrapant).
     serp_hosts = _serp_competitor_hosts(sources)
 
-    # Also pick up URLs discovered by Scrapling during competitor scraping
+    # URLs découvertes par Scrapling chez les concurrents (anciens briefs :
+    # elles étaient stockées dans facts_to_include).
     discovered_urls: list[str] = [
-        url for url in research.get("facts_to_include", [])
+        url for url in (research.get("discovered_links") or []) + (research.get("facts_to_include") or [])
         if isinstance(url, str) and url.startswith("http")
     ]
 

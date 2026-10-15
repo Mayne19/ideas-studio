@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
+import re
 from time import perf_counter
+from urllib.parse import urlparse
 
 from app.schemas.seo_workflow import ResearchBrief, asdict
 from app.services.seo.adapters.serp_adapter import serp_adapter
@@ -16,6 +18,42 @@ logger = logging.getLogger(__name__)
 # restantes retombent sur le snippet SERP seul (déjà le comportement de
 # fallback existant en cas d'échec de scrape).
 RESEARCH_BRIEF_TIME_BUDGET_SECONDS = 30
+
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
+_URL_RE = re.compile(r"https?://|www\.", re.IGNORECASE)
+# Un fait exploitable contient un chiffre (prix, part de marché, date, durée).
+_FIGURE_RE = re.compile(r"\d")
+_MAX_FACTS = 8
+
+
+def extract_facts_from_snippets(sources: list[dict], limit: int = _MAX_FACTS) -> list[str]:
+    """Faits courts tirés des snippets SERP / meta descriptions : une phrase
+    complète contenant un chiffre, suivie de son domaine source. Jamais d'URL
+    nue ; liste vide si aucun snippet ne contient de fait précis."""
+    facts: list[str] = []
+    seen: set[str] = set()
+    for src in sources or []:
+        if not isinstance(src, dict):
+            continue
+        host = (urlparse(src.get("url") or "").hostname or "").removeprefix("www.")
+        text = " ".join(
+            str(src.get(k) or "") for k in ("snippet", "meta_description")
+        )
+        for sentence in _SENTENCE_SPLIT_RE.split(re.sub(r"\s+", " ", text).strip()):
+            sentence = sentence.strip(" .…-")
+            words = sentence.split()
+            if not (6 <= len(words) <= 40) or not _FIGURE_RE.search(sentence):
+                continue
+            if _URL_RE.search(sentence) or "..." in sentence:
+                continue
+            key = sentence.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            facts.append(f"{sentence} (source : {host})" if host else sentence)
+            if len(facts) >= limit:
+                return facts
+    return facts
 
 
 def build_research_brief(
@@ -94,10 +132,12 @@ def build_research_brief(
         brief.field_signals.append(
             f"{len(external_links_discovered)} liens externes découverts chez les concurrents"
         )
-    # Store raw list for ExternalLinkPlan
-    brief.facts_to_include.extend(
+    # URLs brutes pour ExternalLinkPlan : jamais dans facts_to_include, qui ne
+    # contient que des faits lisibles par le writer.
+    brief.discovered_links.extend(
         [lk.get("url", "") for lk in external_links_discovered[:10] if lk.get("url")]
     )
+    brief.facts_to_include.extend(extract_facts_from_snippets(brief.sources_consulted))
 
     brief.limitations.append("SERP research used limited results (12 URLs max)")
     if budget_exceeded:

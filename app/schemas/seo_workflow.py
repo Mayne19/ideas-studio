@@ -101,6 +101,9 @@ class ResearchBrief:
     field_signals: list[str] = field(default_factory=list)
     practical_examples: list[str] = field(default_factory=list)
     facts_to_include: list[str] = field(default_factory=list)
+    # URLs externes trouvées dans les pages concurrentes (candidates au plan
+    # de liens externes) — distinctes des faits, qui restent du texte.
+    discovered_links: list[str] = field(default_factory=list)
     risks_or_uncertainties: list[str] = field(default_factory=list)
     source_reliability_notes: list[str] = field(default_factory=list)
     limitations: list[str] = field(default_factory=list)
