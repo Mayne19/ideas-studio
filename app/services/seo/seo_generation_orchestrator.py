@@ -428,17 +428,25 @@ class SEOGenerationOrchestrator:
             self._error("ContentGap", str(exc))
             self.context["content_gaps"] = {}
 
-        # 6e. IntentAnalysisRefine — l'analyse heuristique de l'étape 5 n'utilisait
-        # que des marqueurs lexicaux du titre ; une fois la SERP réelle collectée
-        # (research_brief), on l'affine avec un jugement LLM sur les vraies pages
-        # concurrentes (point 9 du pipeline : intent_analysis réel).
+        # 6e. IntentAnalysisRefine — brief d'intention LLM (question réelle,
+        # réponse attendue, must_include / must_avoid, format) appuyé sur la
+        # SERP réelle. Il pilote l'angle, le plan et le writer ; un repli sur
+        # l'heuristique est journalisé en warning, jamais silencieux.
         try:
             intent_analysis = refine_intent_with_research(
                 intent_analysis, final_title, final_keyword, research_brief,
-                db=self.db, project_id=self.project_id,
+                db=self.db, project_id=self.project_id, idea_discovery=idea_discovery,
             )
             self.context["intent_analysis"] = intent_analysis
-            self._step("IntentAnalysisRefine")
+            refine_status = intent_analysis.get("intent_refine_status", "unknown")
+            if refine_status != "ok":
+                self.limitations.append(f"IntentAnalysisRefine: brief LLM indisponible ({refine_status}), repli heuristique")
+                self._log(
+                    f"Intent brief LLM unavailable ({refine_status}) — heuristic fallback, "
+                    "no expected answer for the writer",
+                    level="warning", step="IntentAnalysisRefine",
+                )
+            self._step(f"IntentAnalysisRefine ({refine_status}, format={intent_analysis.get('recommended_format')})")
         except Exception as exc:
             self._error("IntentAnalysisRefine", str(exc))
 
