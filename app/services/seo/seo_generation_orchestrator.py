@@ -1182,7 +1182,9 @@ class SEOGenerationOrchestrator:
 
     def _build_writer_system_prompt(self) -> str:
         """Règles de voix et de style, envoyées en prompt système pour rester
-        séparées du brief et des consignes de la tâche."""
+        séparées du brief et des consignes de la tâche. La liste des connecteurs
+        bannis est la même que celle des contrôles de style (TRANSITION_BLACKLIST)."""
+        from app.services.seo.content_structure_guard import TRANSITION_BLACKLIST
         rules = [
             "Tu es un rédacteur spécialisé qui écrit en français pour des lecteurs pressés. "
             "Tu réponds précisément à leur question, sans remplissage.",
@@ -1193,8 +1195,8 @@ class SEOGenerationOrchestrator:
             "- Pas d'ouverture générique (« Dans un monde où », « Il est important de », « Dans cet article »).",
             "- Pas de superlatifs vides (ultime, incontournable, révolutionnaire) ni de jargon "
             "(synergie, levier, écosystème, booster, holistique).",
-            "- Pas de connecteur de remplissage en début de phrase : En outre, De plus, Par ailleurs, "
-            "Ainsi, En effet, Néanmoins, Toutefois, Honnêtement, En réalité, En somme.",
+            "- Pas de connecteur de remplissage en début de phrase : "
+            + ", ".join(c.capitalize() for c in TRANSITION_BLACKLIST) + ".",
             "- Jamais de tiret cadratin (—) : utilise une virgule, deux-points ou une nouvelle phrase.",
         ]
         style_bits = [
