@@ -1518,55 +1518,10 @@ class SEOGenerationOrchestrator:
 
         self._raise_if_cancelled(article)
 
-        # ── Pass 1.5 — LogicalCoherence (temp 0.4) ──────────────────────────
-        # Cohérence logique inter-phrases et inter-sections : le writer génère
-        # une matière riche mais peut enchaîner des phrases dont l'articulation
-        # logique est faible (référents ambigus, causalité implicite, saut de
-        # sujet entre phrases, chronologie cassée). Passe ciblée sur le
-        # raisonnement, pas sur le style — elle précède la passe de style pour
-        # que celle-ci ne fige pas une logique défaillante.
-        coherence_prompt = (
-            "Passe de cohérence logique sur cet article. Corrige UNIQUEMENT les "
-            "enchaînements logiques, sans rien changer au fond ni au style :\n"
-            "- Chaque phrase s'enchaîne logiquement sur la précédente (si le lien est "
-            "implicite, ajoute la précision qui rend la progression compréhensible).\n"
-            "- Les référents (il, elle, ce, cela, cet...) pointent sans ambiguïté vers "
-            "l'élément mentionné : remplace un pronom flou par le mot qu'il désigne.\n"
-            "- Les relations de cause → conséquence, condition, concession sont "
-            "explicites quand le sens l'exige (reformule, ne colle pas de connecteur de "
-            "transition creux).\n"
-            "- La chronologie et l'ordre des étapes sont respectés de section en section.\n"
-            "- Une section ne répète pas une idée déjà établie dans la précédente : "
-            "fusionne ou déplace si nécessaire, sans perdre de contenu.\n"
-            "- Ne change ni le plan, ni les faits, ni les données, ni les liens.\n"
-            "- Interdit : connecteurs de transition en début de phrase ('En outre', "
-            "'De plus', 'Par ailleurs', 'Ainsi', 'En effet', 'Pourtant', 'En réalité'...), "
-            "tiret cadratin (—).\n\n"
-            "Retourne UNIQUEMENT le HTML complet corrigé, sans explication, sans backticks.\n\n"
-            f"Contenu :\n{content}"
-        )
-        content = self._write_pass(coherence_prompt, "coherence_editor", article, 0.4, "WritingPass_LogicalCoherence")
-
-        self._raise_if_cancelled(article)
-
-        # ── Pass 2 — Style (temp 0.5) ──────────────────────────────────────
-        # Passe de cohérence stylistique : voix, rythme, transitions, marqueurs
-        # humains. Plus froide : elle affine, elle n'invente pas de nouveau fond.
-        style_prompt = (
-            "Affine le style de cet article de blog : corrige les formulations "
-            "robotiques, varie les longueurs de phrases, renforce la voix humaine, "
-            "rends les transitions naturelles. Ne change ni le plan, ni les faits, "
-            "ni les données, ni les liens. Règle absolue : pas de tiret cadratin (—), "
-            "remplace-le par une virgule, un point-virgule ou une reformulation.\n\n"
-            "Retourne UNIQUEMENT le HTML complet amélioré, sans explication, sans backticks.\n\n"
-            f"Contenu :\n{content}"
-        )
-        content = self._write_pass(style_prompt, "writer", article, 0.5, "WritingPass_Style")
-
-        self._raise_if_cancelled(article)
-
-        # ── Pass 3 — QualityGate (temp 0.3) ────────────────────────────────
-        # Passe finale froide : suppression des redondances, des phrases creuses,
+        # ── Pass 2 — QualityGate (temp 0.3) ────────────────────────────────
+        # Unique passe d'édition après le premier jet (les anciennes passes de
+        # cohérence et de style réécrivaient tout l'article et diluaient le fond).
+        # Passe froide : suppression des redondances, des phrases creuses,
         # vérification de la densité du mot-clé et de la conformité aux règles.
         gate_prompt = (
             "Passe de contrôle qualité finale sur cet article. Corrige : les phrases "
