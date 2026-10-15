@@ -1275,13 +1275,6 @@ class SEOGenerationOrchestrator:
             "    'Texte exact de la citation telle que dite par la personne.'"
             "    <cite><a href='URL_SOURCE' target='_blank' rel='nofollow'>Nom / Pseudo, Plateforme</a></cite>"
             "  </blockquote>",
-            "- Pour les publications de personnalités d'autorité reconnues dans le domaine "
-            "  (PDG, experts de référence, chercheurs, etc.) publiées sur Twitter/X, LinkedIn, "
-            "  ou d'autres réseaux sociaux : intègre le post directement via son code d'intégration natif. "
-            "  Pour Twitter/X : utilise le format <blockquote class='twitter-tweet'>...</blockquote> "
-            "  avec le script https://platform.twitter.com/widgets.js "
-            "  Pour LinkedIn : utilise le lien embed natif de LinkedIn. "
-            "  Ne résume jamais un tweet d'autorité : intègre-le.",
             "- Inclus une liste à puces si pertinent",
             "- Tableau seulement si utile pour comparer ou résumer",
             "- Ne crée PAS de section 'Conclusion', 'En résumé' ou 'Pour conclure' séparée",
