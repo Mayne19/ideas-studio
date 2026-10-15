@@ -1355,6 +1355,7 @@ class SEOGenerationOrchestrator:
             "redondantes ou creuses, les répétitions de mots rapprochées, les ouvertures "
             "génériques, les superlatifs vides, le mot-clé sur-optimisé (densité max 2%). "
             "Ne change ni le plan, ni les faits, ni les données, ni les liens. "
+            "Garde la réponse directe des premières phrases intacte. "
             "Règle absolue : pas de tiret cadratin (—), remplace-le par une virgule, "
             "un point-virgule ou une reformulation."
             + self._build_checklist_verification_block()
