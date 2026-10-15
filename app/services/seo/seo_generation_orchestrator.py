@@ -1217,6 +1217,9 @@ class SEOGenerationOrchestrator:
             "- Pas de connecteur de remplissage en début de phrase : "
             + ", ".join(c.capitalize() for c in TRANSITION_BLACKLIST) + ".",
             "- Jamais de tiret cadratin (—) : utilise une virgule, deux-points ou une nouvelle phrase.",
+            "- Appelle un produit, une marque, un outil ou une personne par son nom (« Webflow », pas "
+            "« cet outil » ni « la plateforme »). Répéter un nom propre est normal ; une périphrase "
+            "n'est utile que si le nom vient d'être cité dans la même phrase.",
         ]
         style_bits = [
             f"{label} : {self.context[key]}"
@@ -1373,8 +1376,10 @@ class SEOGenerationOrchestrator:
         # vérification de la densité du mot-clé et de la conformité aux règles.
         gate_prompt = (
             "Passe de contrôle qualité finale sur cet article. Corrige : les phrases "
-            "redondantes ou creuses, les répétitions de mots rapprochées, les ouvertures "
-            "génériques, les superlatifs vides, le mot-clé sur-optimisé (densité max 2%). "
+            "redondantes ou creuses, les mots courants répétés de près, les ouvertures "
+            "génériques, les superlatifs vides, l'expression-clé complète répétée mécaniquement. "
+            "Ne remplace jamais un nom propre (produit, marque, outil) par « cet outil », "
+            "« la plateforme » ou un pronom : le nom reste. "
             "Ne change ni le plan, ni les faits, ni les données, ni les liens. "
             "Garde la réponse directe des premières phrases intacte. "
             "Règle absolue : pas de tiret cadratin (—), remplace-le par une virgule, "
