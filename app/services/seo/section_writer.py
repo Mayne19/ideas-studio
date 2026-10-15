@@ -190,7 +190,7 @@ def build_section_brief(brief: dict) -> str:
         lines.append("À éviter : " + " ; ".join(str(x) for x in brief["must_avoid"][:6]))
     facts = [i for i in (brief.get("evidence_items") or []) if isinstance(i, dict) and i.get("fact")]
     if facts:
-        lines.append("Faits vérifiés (les seuls chiffres autorisés) :")
+        lines.append("Faits vérifiés (à utiliser seulement s'ils aident à répondre) :")
         for item in facts[:6]:
             fact = str(item.get("fact"))
             if item.get("figure"):
