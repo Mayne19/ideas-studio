@@ -137,18 +137,32 @@ def _host_of(url: str) -> str:
         return ""
 
 
-def _serp_competitor_hosts(sources: list) -> set[str]:
+def _is_subject_official_host(host: str, keyword: str) -> bool:
+    """Site officiel d'une entité nommée dans le mot-clé (webflow.com pour
+    « webflow ou wordpress ») : sa page tarifs ou sa doc est une source
+    primaire, pas un article concurrent."""
+    parts = host.split(".")
+    if len(parts) < 2:
+        return False
+    brand = parts[-2]
+    tokens = {t for t in re.split(r"[^\w]+", (keyword or "").lower()) if len(t) >= 4}
+    return brand in tokens
+
+
+def _serp_competitor_hosts(sources: list, keyword: str = "") -> set[str]:
     """Domaines des résultats SERP du mot-clé : ce sont les concurrents
     directs de l'article. Les sources de référence (Wikipédia, sites publics…
-    classées 'strong') restent citables même si elles rankent sur le mot-clé."""
+    classées 'strong') et les sites officiels des entités du mot-clé restent
+    citables même s'ils rankent sur le mot-clé."""
     hosts: set[str] = set()
     for src in sources:
         if not isinstance(src, dict):
             continue
         url = src.get("url") or ""
         host = _host_of(url)
-        if host and classify_source_quality(url) != "strong":
-            hosts.add(host)
+        if not host or classify_source_quality(url) == "strong" or _is_subject_official_host(host, keyword):
+            continue
+        hosts.add(host)
     return hosts
 
 
@@ -170,7 +184,7 @@ def build_external_link_plan(
     sources = research.get("sources_consulted", [])
     # Ne jamais renvoyer le lecteur vers un concurrent qui ranke sur le même
     # mot-clé (ni vers une autre page de son site découverte en le scrapant).
-    serp_hosts = _serp_competitor_hosts(sources)
+    serp_hosts = _serp_competitor_hosts(sources, keyword)
 
     # URLs découvertes par Scrapling chez les concurrents (anciens briefs :
     # elles étaient stockées dans facts_to_include).
