@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Plus, FileText, Edit3, Trash2, Sparkles, Zap, Loader2, CheckCircle, Archive, EyeOff } from '@/components/ui/hugeIcons'
-import { listArticles, createArticle, unpublishArticle, archiveArticle, analyzeSeoArticle, deleteArticle, generateArticle } from '@/api/articles'
-import type { CreateArticlePayload, GenerateArticleRequest } from '@/api/articles'
+import { listArticles, createArticle, unpublishArticle, archiveArticle, analyzeSeoArticle, deleteArticle, generateArticle, waitForGenerationJob } from '@/api/articles'
+import type { CreateArticlePayload, GenerateArticleRequest, GenerationJob } from '@/api/articles'
 import { listCategories } from '@/api/categories'
 import type { Article, Category } from '@/types'
 
@@ -186,6 +186,10 @@ export default function ArticlesPage() {
   const [generating, setGenerating] = useState(false)
   const [generateError, setGenerateError] = useState('')
   const [generateResult, setGenerateResult] = useState<{ id: string; title: string } | null>(null)
+  const [generateJob, setGenerateJob] = useState<GenerationJob | null>(null)
+  const generatePollRef = useRef<AbortController | null>(null)
+
+  useEffect(() => () => generatePollRef.current?.abort(), [])
 
   useEffect(() => {
     if (!projectId) return
@@ -343,14 +347,33 @@ export default function ArticlesPage() {
     setGenerateError('')
     setGenerateResult(null)
     setGenerating(true)
+    setGenerateJob(null)
+    generatePollRef.current?.abort()
+    const controller = new AbortController()
+    generatePollRef.current = controller
     try {
-      const res = await generateArticle(projectId, generateForm)
-      setGenerateResult({ id: res.id, title: res.title })
-      setTick((t) => t + 1)
+      // Le backend répond 202 avec un job : la génération (7 à 12 min) tourne
+      // en arrière-plan, on suit son avancement par polling.
+      const created = await generateArticle(projectId, generateForm)
+      setGenerateJob(created)
+      const job = await waitForGenerationJob(projectId, created.id, {
+        signal: controller.signal,
+        onUpdate: setGenerateJob,
+      })
+      if (job.status === 'succeeded' && job.article_id) {
+        setGenerateResult({ id: job.article_id, title: job.title || generateForm.preferred_title || generateForm.keyword || 'Article généré' })
+        setTick((t) => t + 1)
+      } else {
+        setGenerateError(job.error || 'La génération a échoué.')
+      }
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       setGenerateError(err instanceof Error ? err.message : 'Erreur lors de la génération')
     } finally {
-      setGenerating(false)
+      if (generatePollRef.current === controller) {
+        generatePollRef.current = null
+        setGenerating(false)
+      }
     }
   }
 
@@ -703,6 +726,23 @@ export default function ArticlesPage() {
             {generateError && (
               <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">
                 {generateError}
+              </div>
+            )}
+            {generating && (
+              <div className="flex items-start gap-3 rounded-[10px] border border-border bg-surface-soft px-3.5 py-2.5">
+                <Loader2 size={14} className="mt-0.5 shrink-0 animate-spin text-accent" />
+                <div className="min-w-0">
+                  <p className="text-[14px] font-medium text-primary">
+                    {generateJob?.status === 'running' ? 'Génération en cours' : 'Génération en file d’attente'}
+                    {generateJob?.steps_completed ? ` · ${generateJob.steps_completed} étape(s)` : ''}
+                  </p>
+                  <p className="mt-0.5 truncate text-[12px] text-secondary">
+                    {generateJob?.current_step ? `Étape : ${generateJob.current_step}` : 'Démarrage…'}
+                  </p>
+                  <p className="mt-0.5 text-[12px] text-tertiary">
+                    Comptez 7 à 12 minutes. La génération continue côté serveur si vous fermez cette fenêtre (suivi dans Génération IA).
+                  </p>
+                </div>
               </div>
             )}
             <Input
