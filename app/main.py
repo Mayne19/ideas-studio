@@ -166,7 +166,7 @@ def run_migrations():
             _database_dialect(),
             _read_alembic_revision(),
             "head",
-            "Check the failing revision in Render logs, then run `python -m alembic upgrade head` against a PostgreSQL test database.",
+            "Check the failing revision in Railway deploy logs, then run `python -m alembic upgrade head` against a PostgreSQL test database.",
         )
         sys.stderr.flush()
         raise
@@ -199,8 +199,8 @@ async def start_background_scheduler():
     """Démarre le scheduler APScheduler pour les publications programmées et les pipelines."""
     if settings.APP_ENV == "test":
         return
-    # Render définit RENDER_INSTANCE_ID — le scheduler tourne sur le process unique
-    worker_id = os.getenv("RENDER_INSTANCE_ID", "local")
+    # Railway définit RAILWAY_REPLICA_ID — le scheduler tourne sur le process unique
+    worker_id = os.getenv("RAILWAY_REPLICA_ID", "local")
     try:
         from app.services.worker import start_scheduler
         start_scheduler()
