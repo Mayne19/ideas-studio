@@ -1059,10 +1059,9 @@ class SEOGenerationOrchestrator:
         return content
 
     def _build_checklist_verification_block(self) -> str:
-        """Checklist de vérification mécanique pour la passe QualityGate (Pass 3,
-        gate_prompt). Les passes précédentes corrigent la prose (logique, style,
-        redondance), pas la conformité aux exigences mécaniques (plage de mots,
-        liens du plan réellement présents, statistique sourcée) — cette checklist
+        """Checklist de vérification mécanique pour la passe QualityGate (Pass 2,
+        gate_prompt) : conformité aux exigences mécaniques (plage de mots,
+        liens internes du plan réellement présents) — cette checklist
         les rend explicites au modèle dans le même appel LLM, sans coût
         supplémentaire. Construite dynamiquement depuis self.context ; ne plante
         jamais sur un contexte incomplet (chaîne vide si rien de pertinent)."""
@@ -1113,12 +1112,6 @@ class SEOGenerationOrchestrator:
                 + ". Si un lien est absent, insère-le naturellement sur une phrase "
                 "connexe."
             )
-
-        checklist.append(
-            "L'article contient au moins une statistique chiffrée (un nombre précis) "
-            "avec sa source citée dans la même phrase (ex : « 67 % des ... selon "
-            "l'étude X »)."
-        )
 
         if not checklist:
             return ""
