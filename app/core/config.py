@@ -29,8 +29,9 @@ class Settings(BaseSettings):
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_MODEL: str = "deepseek/deepseek-v4-flash:free"
-    OPENROUTER_WRITER_MODEL: str = "deepseek/deepseek-v4-flash:free"
-    OPENROUTER_PLANNER_MODEL: str = "openai/gpt-oss-120b:free"
+    # Modèles par rôle (optionnels) : vides = OPENROUTER_MODEL pour tous les agents.
+    OPENROUTER_WRITER_MODEL: str = ""
+    OPENROUTER_PLANNER_MODEL: str = ""
     OPENROUTER_FALLBACK_MODEL: str = "openrouter/free"
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
     GEMINI_API_KEY: str = ""
