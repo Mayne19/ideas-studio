@@ -279,8 +279,10 @@ OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 
 OpenRouter permet de configurer des modèles différents pour chaque étape :
 - **`OPENROUTER_MODEL`** — Génération principale
-- **`OPENROUTER_WRITER_MODEL`** — Rédaction d'article
-- **`OPENROUTER_PLANNER_MODEL`** — Planification et stratégie
+- **`OPENROUTER_WRITER_MODEL`** — Rédaction d'article (agents de la phase "writing" + `editor`), optionnel, défaut : `OPENROUTER_MODEL`
+- **`OPENROUTER_PLANNER_MODEL`** — Planification, recherche et contrôle (tous les autres agents), optionnel, défaut : `OPENROUTER_MODEL`
+
+Ces modèles par rôle ne s'appliquent que si le provider OpenRouter n'a pas de modèle explicite dans sa configuration en base (sinon ce modèle sert à tous les agents).
 - **`OPENROUTER_FALLBACK_MODEL`** — Fallback si le modèle principal échoue
 
 ---
