@@ -1,3 +1,5 @@
+import copy
+
 from app.services.providers.openai_provider import OpenAILLMProvider
 
 
@@ -25,3 +27,16 @@ class OpenRouterLLMProvider(OpenAILLMProvider):
         self.writer_model = writer_model or model
         self.planner_model = planner_model or model
         self.fallback_model = fallback_model or model
+
+    def for_role(self, role: str) -> "OpenRouterLLMProvider":
+        """Copie de ce provider pointant sur le modèle du rôle demandé
+        ('writer' pour la rédaction, 'planner' pour le reste). Retourne
+        self quand le modèle du rôle est déjà le modèle courant."""
+        target = self.writer_model if role == "writer" else self.planner_model
+        if not target or target == self.model:
+            return self
+        clone = copy.copy(self)
+        clone.model = target
+        clone.model_name = target
+        clone.last_usage = None
+        return clone
