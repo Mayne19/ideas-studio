@@ -106,3 +106,29 @@ def scan_monitoring_route(
             for a in reviewed
         ],
     }
+
+
+@router.get("/monitoring/threads")
+def dump_threads(current_user: User = Depends(get_current_user)):
+    """Pile d'appels de chaque thread du process (diagnostic des générations
+    bloquées en production). Réservé aux comptes staff."""
+    if not current_user.is_staff:
+        raise HTTPException(status_code=403, detail="Staff only")
+    import sys
+    import threading
+    import traceback
+
+    names = {t.ident: t.name for t in threading.enumerate()}
+    return {
+        "threads": [
+            {
+                "name": names.get(ident, str(ident)),
+                "stack": [
+                    f"{frame.filename}:{frame.lineno} {frame.name}"
+                    for frame in traceback.extract_stack(stack)
+                    if "/app/" in frame.filename
+                ][-15:],
+            }
+            for ident, stack in sys._current_frames().items()
+        ]
+    }
