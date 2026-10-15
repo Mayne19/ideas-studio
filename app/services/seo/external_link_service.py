@@ -80,7 +80,6 @@ def _clean_url(url: str) -> str | None:
     netloc = parsed.netloc.lower()
     query_parts = [p for p in parsed.query.split("&") if p and not p.startswith(_TRACKING_PREFIXES)]
     query = "&".join(query_parts)
-    path = parsed.path
     clean = urlparse(url)._replace(scheme=scheme, netloc=netloc, query=query, fragment="").geturl()
     return clean
 
