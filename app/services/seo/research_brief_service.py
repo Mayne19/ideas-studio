@@ -30,7 +30,7 @@ def build_research_brief(
     if not serp_adapter.configured:
         brief.research_status = "not_available"
         brief.limitations = [
-            "SERP provider not configured (SERP_API_KEY missing)",
+            "SERP provider not configured (SERPER_API_KEY or SERP_API_KEY missing)",
             "Research based on internal context only, no real competitor analysis",
         ]
         return brief

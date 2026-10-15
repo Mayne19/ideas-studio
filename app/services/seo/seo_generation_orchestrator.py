@@ -189,7 +189,7 @@ class SEOGenerationOrchestrator:
             self.tools_used.append("serpapi")
         else:
             self.tools_not_configured.append("serpapi")
-            self.limitations.append("SERP provider not configured (SERP_API_KEY missing)")
+            self.limitations.append("SERP provider not configured (SERPER_API_KEY or SERP_API_KEY missing)")
 
     def _ensure_slug(self, article: Article, title: str, keyword: str):
         if article.slug and not article.slug.startswith("idea-"):
