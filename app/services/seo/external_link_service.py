@@ -77,6 +77,35 @@ def _is_competitor_domain(url: str, competitor_domains: set[str]) -> bool:
     return any(comp in lowered for comp in competitor_domains)
 
 
+def _host_of(url: str) -> str:
+    try:
+        return (urlparse(url).hostname or "").lower().removeprefix("www.")
+    except ValueError:
+        return ""
+
+
+def _serp_competitor_hosts(sources: list) -> set[str]:
+    """Domaines des résultats SERP du mot-clé : ce sont les concurrents
+    directs de l'article. Les sources de référence (Wikipédia, sites publics…
+    classées 'strong') restent citables même si elles rankent sur le mot-clé."""
+    from app.services.seo.source_quality_service import classify_source_quality
+
+    hosts: set[str] = set()
+    for src in sources:
+        if not isinstance(src, dict):
+            continue
+        url = src.get("url") or ""
+        host = _host_of(url)
+        if host and classify_source_quality(url) != "strong":
+            hosts.add(host)
+    return hosts
+
+
+def _is_serp_competitor(url: str, competitor_hosts: set[str]) -> bool:
+    host = _host_of(url)
+    return bool(host) and any(host == h or host.endswith("." + h) for h in competitor_hosts)
+
+
 def build_external_link_plan(
     keyword: str,
     research_brief: dict | None = None,
@@ -88,6 +117,9 @@ def build_external_link_plan(
 
     research = research_brief or {}
     sources = research.get("sources_consulted", [])
+    # Ne jamais renvoyer le lecteur vers un concurrent qui ranke sur le même
+    # mot-clé (ni vers une autre page de son site découverte en le scrapant).
+    serp_hosts = _serp_competitor_hosts(sources)
 
     # Also pick up URLs discovered by Scrapling during competitor scraping
     discovered_urls: list[str] = [
@@ -103,6 +135,8 @@ def build_external_link_plan(
             continue
         url = _clean_url(src.get("url", ""))
         if not url or url in seen_urls or _is_competitor_domain(url, competitor_domains):
+            continue
+        if _is_serp_competitor(url, serp_hosts):
             continue
         seen_urls.add(url)
         quality_check = src.get("quality_check", {})
@@ -124,6 +158,8 @@ def build_external_link_plan(
     for url in discovered_urls:
         clean_url = _clean_url(url)
         if not clean_url or clean_url in seen_urls or _is_competitor_domain(clean_url, competitor_domains):
+            continue
+        if _is_serp_competitor(clean_url, serp_hosts):
             continue
         seen_urls.add(clean_url)
         # Validate via Scrapling only if configured
