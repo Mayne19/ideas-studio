@@ -63,6 +63,48 @@ class ProviderCredential(Base):
     created_at: Mapped[datetime] = mapped_column(default=_now)
 
 
+class ExternalServiceCredential(Base):
+    """Clé d'un service externe non-IA (recherche web, banque d'images) —
+    éditable depuis le CMS (Paramètres → Services externes) plutôt que via
+    variables d'environnement. Une ligne par (projet, service) ; project_id
+    NULL = défaut global de la plateforme. Résolution : ligne projet, puis
+    ligne globale, puis variables d'environnement (SERPER_API_KEY, ...) —
+    voir app/services/providers/external_services.py.
+
+    secret_ref est chiffré via encrypt_secret (jamais renvoyé par l'API, seuls
+    les 4 derniers caractères le sont). config porte les paramètres non
+    secrets propres au provider (ex: cx pour Google Custom Search)."""
+
+    __tablename__ = "external_service_credentials"
+    __table_args__ = (
+        Index(
+            "external_service_credentials_unique_project", "project_id", "service",
+            unique=True, postgresql_where=text("project_id IS NOT NULL"),
+        ),
+        Index(
+            "external_service_credentials_unique_global", "service",
+            unique=True, postgresql_where=text("project_id IS NULL"),
+        ),
+        {"schema": "ai"},
+    )
+
+    id: Mapped[str] = _uuid_pk()
+    project_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("core.projects.id", ondelete="CASCADE"), nullable=True
+    )
+    # "search" | "images" — validé côté application (EXTERNAL_SERVICES).
+    service: Mapped[str] = mapped_column(Text, nullable=False)
+    # search: serper | brave | serpapi | google_cse ; images: unsplash | brave
+    provider: Mapped[str] = mapped_column(Text, nullable=False)
+    secret_ref: Mapped[str] = mapped_column(Text, nullable=False)
+    config: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    last_test_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    last_test_ok: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    last_test_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+
 class Agent(Base):
     __tablename__ = "agents"
     __table_args__ = {"schema": "ai"}
