@@ -1461,7 +1461,7 @@ class SEOGenerationOrchestrator:
                 url = link.get("target_url") or ""
                 ctx = (link.get("context") or {}).get("target_excerpt", "")
                 prompt_parts.append(f"- Ancre suggérée : « {anchor} » → URL : {url} | Contexte : {ctx[:120]}")
-            prompt_parts.append("Format : <a href='URL' rel='nofollow'>texte d'ancre naturel dans la phrase</a>")
+            prompt_parts.append("Format : <a href='URL'>texte d'ancre naturel dans la phrase</a> (lien interne : jamais de rel='nofollow')")
             prompt_parts.append("Ne crée JAMAIS de lien interne fictif : utilise uniquement les URLs listées.")
 
         external_links_plan = self.context.get("external_links") or {}
