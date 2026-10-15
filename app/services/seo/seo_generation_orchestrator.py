@@ -1039,7 +1039,8 @@ class SEOGenerationOrchestrator:
         provider = self._get_agent_provider(agent_id)
         return provider.generate_text(prompt, **kwargs)
 
-    def _write_pass(self, prompt: str, agent_id: str, article, temperature: float, step: str) -> str:
+    def _write_pass(self, prompt: str, agent_id: str, article, temperature: float, step: str,
+                    system: str | None = None) -> str:
         """Une passe d'écriture/révision via le provider d'un agent donné.
         Retourne le texte brut ; lève GenerationFailedError si le provider
         est mock ou ne produit rien (chaque passe est bloquante)."""
@@ -1052,6 +1053,7 @@ class SEOGenerationOrchestrator:
                 db=self.db,
                 project_id=self.project_id,
                 article_id=article.id,
+                system=system,
                 temperature=temperature,
             )
             if result.status != "success":
@@ -1060,20 +1062,21 @@ class SEOGenerationOrchestrator:
             provider = self._get_agent_provider(agent_id, self.llm)
             if provider.is_mock:
                 raise GenerationFailedError(f"Provider non configuré pour l'agent {agent_id}.")
-            content = provider.generate_text(prompt, temperature=temperature)
+            content = provider.generate_text(prompt, system=system, temperature=temperature)
         if not content or not content.strip():
             raise GenerationFailedError(f"L'agent {agent_id} n'a pas retourné de contenu exploitable.")
         self._step(step)
         return content
 
-    def _guarded_rewrite_pass(self, content: str, prompt: str, agent_id: str, article, temperature: float, step: str) -> str:
+    def _guarded_rewrite_pass(self, content: str, prompt: str, agent_id: str, article, temperature: float, step: str,
+                              system: str | None = None) -> str:
         """Passe de réécriture d'un article complet qui ne peut jamais remplacer
         l'article par une sortie tronquée : en cas d'échec de l'appel (dont
         finish_reason == "length") ou si la réponse perd plus de 25 % des mots
         (au-delà de la réduction attendue vers le maximum de mots), l'article
         d'entrée est conservé tel quel."""
         try:
-            rewritten = self._write_pass(prompt, agent_id, article, temperature, step)
+            rewritten = self._write_pass(prompt, agent_id, article, temperature, step, system=system)
         except GenerationFailedError as exc:
             self._error(step, f"Passe ignorée, contenu précédent conservé : {exc}")
             return content
