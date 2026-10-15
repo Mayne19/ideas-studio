@@ -12,7 +12,6 @@ qui résume ce qu'il faut absolument traiter.
 """
 from __future__ import annotations
 
-import json
 
 
 def build_production_brief(
@@ -46,31 +45,11 @@ def build_production_brief(
     human_insights = human_insights or {}
     content_gaps = content_gaps or {}
 
-    top_priorities: list[str] = []
-
     reader_question = intent_analysis.get("reader_real_question") or title or keyword
-    top_priorities.append(
-        f"Répondre à la question principale du lecteur : {reader_question}"
-    )
-
-    if editorial_angle.get("editorial_promise"):
-        top_priorities.append(f"Tenir la promesse éditoriale : {editorial_angle['editorial_promise']}")
-
     angle = editorial_angle.get("main_angle")
-    if angle:
-        top_priorities.append(f"Traiter l'angle : {angle}")
-
-    uncovered_questions = content_gaps.get("uncovered_questions") or []
-    if uncovered_questions:
-        top_priorities.append(
-            "Couvrir les questions non traitées par le projet : "
-            + "; ".join(uncovered_questions[:3])
-        )
-    uncovered_pains = content_gaps.get("uncovered_pain_points") or []
-    if uncovered_pains:
-        top_priorities.append(
-            "Adresser ces douleurs non couvertes : " + "; ".join(uncovered_pains[:3])
-        )
+    top_priorities: list[str] = [f"Répondre à la question réelle du lecteur : {reader_question}"]
+    if intent_analysis.get("expected_answer"):
+        top_priorities.append(f"Réponse attendue : {intent_analysis['expected_answer']}")
 
     intent = intent_analysis.get("explicit_intent") or "informational"
     article_type = intent_analysis.get("article_type") or "evergreen_information"
@@ -89,6 +68,10 @@ def build_production_brief(
         "commercial_intent_score": commercial_score,
         "sub_questions": intent_analysis.get("sub_questions") or [],
         "reader_real_question": reader_question,
+        "expected_answer": intent_analysis.get("expected_answer") or "",
+        "recommended_format": intent_analysis.get("recommended_format") or "",
+        "must_include": intent_analysis.get("must_include") or [],
+        "must_avoid": intent_analysis.get("must_avoid") or intent_analysis.get("what_to_avoid") or [],
         "editorial_promise": editorial_angle.get("editorial_promise") or "",
         "main_angle": angle or "",
         "differentiation": editorial_angle.get("differentiation") or "",
@@ -132,81 +115,62 @@ def build_production_brief_dict(**kwargs) -> dict:
 
 
 def production_brief_to_text(brief: dict) -> str:
-    """Serialize le brief en texte lisible à injecter dans un prompt LLM."""
-    lines: list[str] = ["=== BRIEF DE PRODUCTION ==="]
-    if brief.get("title"):
-        lines.append(f"Titre : {brief['title']}")
-    if brief.get("keyword"):
-        lines.append(f"Mot-clé principal : {brief['keyword']}")
-    if brief.get("category_name"):
-        lines.append(f"Catégorie : {brief['category_name']}")
-    if brief.get("audience"):
-        lines.append(f"Audience : {brief['audience']}")
-    if brief.get("tone"):
-        lines.append(f"Ton : {brief['tone']}")
-    if brief.get("reader_level"):
-        lines.append(f"Niveau du lecteur : {brief['reader_level']}")
-    if brief.get("writing_style"):
-        lines.append(f"Style d'écriture : {brief['writing_style']}")
-    if brief.get("word_count_range"):
-        lines.append(f"Volume cible : {brief['word_count_range']}")
-    lines.append(f"Intention : {brief.get('intent', 'informational')} ({brief.get('article_type', 'evergreen_information')})")
+    """Sérialise le brief en un bloc unique pour le prompt du writer : la
+    question du lecteur et la réponse attendue d'abord, puis le plan. Le plan
+    n'est affiché qu'ici (le prompt du writer ne le répète pas). Les consignes
+    de longueur et de style vivent dans le prompt du writer, pas ici."""
+    lines: list[str] = ["=== BRIEF ==="]
+    for label, key in (
+        ("Titre", "title"), ("Mot-clé principal", "keyword"), ("Audience", "audience"),
+        ("Ton", "tone"), ("Niveau du lecteur", "reader_level"), ("Style", "writing_style"),
+        ("Format", "recommended_format"), ("Angle", "main_angle"),
+    ):
+        if brief.get(key):
+            lines.append(f"{label} : {brief[key]}")
 
-    if brief.get("top_priorities"):
-        lines.append("Priorités absolues :")
-        for p in brief["top_priorities"]:
-            lines.append(f"- {p}")
-
+    lines.append(f"Question réelle du lecteur : {brief.get('reader_real_question') or brief.get('title', '')}")
+    if brief.get("expected_answer"):
+        lines.append(f"Réponse attendue : {brief['expected_answer']}")
+    if brief.get("must_include"):
+        lines.append("À inclure :")
+        lines.extend(f"- {x}" for x in brief["must_include"])
+    if brief.get("must_avoid"):
+        lines.append("À éviter :")
+        lines.extend(f"- {x}" for x in brief["must_avoid"])
+    questions = list(brief.get("sub_questions") or [])
+    for q in brief.get("related_questions") or []:
+        if q not in questions:
+            questions.append(q)
+    if questions:
+        lines.append(f"Questions de suivi possibles : {'; '.join(questions[:6])}")
     if brief.get("secondary_keywords"):
-        lines.append(f"Mots-clés secondaires : {', '.join(brief['secondary_keywords'])}")
-    if brief.get("related_questions"):
-        lines.append(f"Questions associées : {'; '.join(brief['related_questions'][:6])}")
+        lines.append(f"Mots-clés secondaires : {', '.join(brief['secondary_keywords'][:8])}")
 
     if brief.get("sections"):
         lines.append("Plan :")
         for section in brief["sections"]:
-            heading = section.get("heading", "")
             purpose = section.get("purpose", "")
-            key_points = section.get("key_points") or []
-            lines.append(f"- H{section.get('level', 2)}: {heading} ({purpose})")
-            if key_points:
-                lines.append(f"  Points: {', '.join(key_points)}")
+            line = f"- H{section.get('level', 2)} : {section.get('heading', '')}"
+            lines.append(f"{line} ({purpose})" if purpose else line)
+            if section.get("key_points"):
+                lines.append(f"  Points : {', '.join(str(k) for k in section['key_points'])}")
 
     if brief.get("evidence_items"):
         lines.append(
-            "Faits disponibles dans les sources (optionnels : à utiliser seulement s'ils "
-            "aident à répondre au lecteur, sans les déformer) :"
+            "Faits disponibles dans les sources (optionnels : seulement s'ils aident à répondre, "
+            "sans les déformer) :"
         )
         for item in brief["evidence_items"]:
-            fact = item.get("fact", "")
-            url = item.get("source_url", "")
-            qual = item.get("source_quality") or item.get("reliability") or "unknown"
-            etype = item.get("type")
-            figure = item.get("figure")
-            context = item.get("figure_context")
-            usage = item.get("usage_hint")
-            line = f"- {fact} ({qual}) — {url}"
-            if etype:
-                line += f" [type: {etype}]"
-            if figure:
-                line += f" [chiffre: {figure}]"
-            if context:
-                line += f" ({context})"
-            if usage:
-                line += f" — usage : {usage}"
+            line = f"- {item.get('fact', '')} : {item.get('source_url', '')}"
+            if item.get("figure"):
+                line += f" [chiffre : {item['figure']}]"
+            if item.get("figure_context"):
+                line += f" ({item['figure_context']})"
             lines.append(line)
-
-    insights = brief.get("human_insights") or {}
-    if insights.get("questions"):
-        lines.append("Vraies questions d'utilisateurs :")
-        lines.extend(f"- {q}" for q in insights["questions"])
-    if insights.get("pain_points"):
-        lines.append("Vraies douleurs d'utilisateurs :")
-        lines.extend(f"- {p}" for p in insights["pain_points"])
 
     gaps = brief.get("content_gaps") or {}
     if gaps.get("suggestions"):
-        lines.append("Manques de contenu à couvrir :")
-        lines.extend(f"- {s}" for s in gaps["suggestions"])
+        lines.append("Pistes complémentaires (seulement si elles servent la question) :")
+        lines.extend(f"- {s}" for s in gaps["suggestions"][:4])
 
     return "\n".join(lines)
