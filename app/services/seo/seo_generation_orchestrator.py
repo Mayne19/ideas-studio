@@ -1364,7 +1364,8 @@ class SEOGenerationOrchestrator:
             "génériques, les superlatifs vides, l'expression-clé complète répétée mécaniquement. "
             "Ne remplace jamais un nom propre (produit, marque, outil) par « cet outil », "
             "« la plateforme » ou un pronom : le nom reste. "
-            "Ne change ni le plan, ni les faits, ni les données, ni les liens. "
+            "Ne change ni le plan (garde chaque titre <h2> et <h3> mot pour mot), ni les faits, "
+            "ni les données, ni les liens. "
             "Garde la réponse directe des premières phrases intacte. "
             "Règle absolue : pas de tiret cadratin (—), remplace-le par une virgule, "
             "un point-virgule ou une reformulation."
@@ -1372,9 +1373,22 @@ class SEOGenerationOrchestrator:
             + "\n\nRetourne UNIQUEMENT le HTML complet nettoyé, sans explication, sans backticks.\n\n"
             f"Contenu :\n{content}"
         )
-        content = self._guarded_rewrite_pass(
+        gated = self._guarded_rewrite_pass(
             content, gate_prompt, "writer", article, 0.3, "WritingPass_QualityGate", system=writer_system,
         )
+        # La passe d'édition réécrit l'article entier en un appel : si elle
+        # perd un H2, on garde le premier jet plutôt qu'un article amputé.
+        from app.services.seo.section_writer import lost_h2s
+        dropped_h2 = lost_h2s(content, gated)
+        if dropped_h2:
+            self._error(
+                "WritingPass_QualityGate",
+                f"Réponse rejetée : {len(dropped_h2)} section(s) H2 perdue(s) "
+                f"({', '.join(dropped_h2[:3])}) — contenu précédent conservé.",
+            )
+        else:
+            content = gated
+        content = self._ensure_outline_complete(section_writer, content, "SectionCompleteness_Final")
         self._save(article.id, "section_writing_report", section_writer.report)
 
         self._raise_if_cancelled(article)
