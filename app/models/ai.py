@@ -79,11 +79,11 @@ class ExternalServiceCredential(Base):
     __table_args__ = (
         Index(
             "external_service_credentials_unique_project", "project_id", "service",
-            unique=True, postgresql_where=text("project_id IS NOT NULL"),
+            unique=True, postgresql_where=text("project_id IS NOT NULL"), sqlite_where=text("project_id IS NOT NULL"),
         ),
         Index(
             "external_service_credentials_unique_global", "service",
-            unique=True, postgresql_where=text("project_id IS NULL"),
+            unique=True, postgresql_where=text("project_id IS NULL"), sqlite_where=text("project_id IS NULL"),
         ),
         {"schema": "ai"},
     )
