@@ -1529,6 +1529,9 @@ class SEOGenerationOrchestrator:
         content = self._proofread_pass(article, draft, content)
         content = self._consistency_pass(article, content)
         content = self._citation_pass(article, draft, content)
+        # Chaque passe de finition annule déjà sa sortie si un H2 disparaît ;
+        # le garde-fou de complétude du plan reste le dernier filet.
+        content = self._ensure_outline_complete(section_writer, content, "SectionCompleteness_Polish")
         self._save(article.id, "section_writing_report", section_writer.report)
 
         self._raise_if_cancelled(article)
