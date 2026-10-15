@@ -127,6 +127,45 @@ class BraveSearchProvider(SearchProvider):
         return bool(self.api_key)
 
 
+class SerperSearchProvider(SearchProvider):
+    """Serper.dev — résultats Google réels (organiques) via API. 2 500
+    requêtes offertes à l'inscription, puis facturation à l'usage.
+    Voir https://serper.dev/."""
+    is_mock: bool = False
+    provider_name: str = "serper"
+
+    def __init__(self, api_key: str, gl: str = "fr", hl: str = "fr"):
+        self.api_key = api_key
+        self.gl = gl
+        self.hl = hl
+
+    def search(self, query: str, limit: int = 10) -> list[SearchResult]:
+        try:
+            import httpx
+            from app.core.config import settings
+            resp = httpx.post(
+                "https://google.serper.dev/search",
+                json={"q": query, "num": min(limit, 20), "gl": self.gl, "hl": self.hl},
+                headers={"X-API-KEY": self.api_key, "Content-Type": "application/json"},
+                timeout=settings.SEARCH_TIMEOUT_SECONDS or 30,
+            )
+            resp.raise_for_status()
+            results = resp.json().get("organic", [])
+            return [
+                SearchResult(
+                    title=item.get("title", ""),
+                    url=item.get("link", ""),
+                    snippet=item.get("snippet", ""),
+                )
+                for item in results[:limit]
+            ]
+        except Exception:
+            return []
+
+    def is_available(self) -> bool:
+        return bool(self.api_key)
+
+
 class GoogleCustomSearchProvider(SearchProvider):
     """Google Custom Search JSON API — nécessite une clé API + un moteur de
     recherche personnalisé (cx) configuré sur https://programmablesearchengine.google.com/.
