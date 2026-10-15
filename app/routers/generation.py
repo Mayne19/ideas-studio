@@ -1,5 +1,7 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -10,6 +12,13 @@ from app.models.content import Article
 from app.models.reference import ArticleStatus
 from app.services.article_service import primary_keyword, to_public
 from app.services.idea_engine import generate_idea
+from app.services.generation_job_service import (
+    create_generation_job,
+    get_generation_job,
+    job_to_dict,
+    list_generation_jobs,
+    submit_generation_job,
+)
 from app.services.seo.seo_generation_orchestrator import generate_full_article
 from app.services.seo.artifacts import get_latest_artifact, get_all_latest_artifacts
 from app.services.providers.llm_provider import (
@@ -86,14 +95,78 @@ def _get_project_or_404(project_id: str, db: Session) -> Project:
     return project
 
 
-@router.post("/projects/{project_id}/articles/generate", response_model=GenerateArticleResponse)
+class GenerationJobResponse(BaseModel):
+    id: str
+    project_id: str
+    status: str
+    article_id: str | None = None
+    current_step: str | None = None
+    steps_completed: int = 0
+    error: str | None = None
+    title: str | None = None
+    created_at: datetime | None = None
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+
+
+@router.post(
+    "/projects/{project_id}/articles/generate",
+    status_code=202,
+    response_model=GenerationJobResponse | GenerateArticleResponse,
+)
 def generate_article_route(
     project_id: str,
     body: GenerateArticleRequest,
+    response: Response,
+    sync: bool = Query(False, description="Ancien mode synchrone (scripts uniquement : coupé à 300 s par le proxy)."),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
     _member=Depends(require_project_role("owner", "admin", "editor")),
 ):
+    """Crée un job de génération exécuté en tâche de fond et répond 202 avec
+    son id ; suivre l'avancement via GET /projects/{id}/generation-jobs/{job_id}."""
+    _get_project_or_404(project_id, db)
+    if sync:
+        response.status_code = 200
+        return _generate_article_sync(project_id, body, db)
+
+    job = create_generation_job(
+        db, project_id, getattr(current_user, "id", None),
+        body.model_dump(exclude={"use_orchestrator"}),
+    )
+    db.commit()
+    submit_generation_job(job.id, project_id)
+    logger.info("generation_job_queued job=%s project=%s", job.id, project_id)
+    return GenerationJobResponse(**job_to_dict(job))
+
+
+@router.get("/projects/{project_id}/generation-jobs", response_model=list[GenerationJobResponse])
+def list_generation_jobs_route(
+    project_id: str,
+    limit: int = Query(10, ge=1, le=50),
+    active: bool = Query(False),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+    _member=Depends(require_project_role("owner", "admin", "editor", "designer", "viewer")),
+):
+    return [GenerationJobResponse(**job_to_dict(job)) for job in list_generation_jobs(db, project_id, limit, active)]
+
+
+@router.get("/projects/{project_id}/generation-jobs/{job_id}", response_model=GenerationJobResponse)
+def get_generation_job_route(
+    project_id: str,
+    job_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+    _member=Depends(require_project_role("owner", "admin", "editor", "designer", "viewer")),
+):
+    job = get_generation_job(db, project_id, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Generation job not found")
+    return GenerationJobResponse(**job_to_dict(job))
+
+
+def _generate_article_sync(project_id: str, body: GenerateArticleRequest, db: Session) -> GenerateArticleResponse:
     project = _get_project_or_404(project_id, db)
     profile = project.active_editorial_profile
 
