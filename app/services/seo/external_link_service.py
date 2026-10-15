@@ -1,12 +1,57 @@
 from __future__ import annotations
 
 import logging
+import re
 from urllib.parse import urlparse
 
 from app.schemas.seo_workflow import ExternalLinkPlan, asdict
 from app.services.seo.adapters.scrapling_adapter import scrapling_adapter
 
 logger = logging.getLogger(__name__)
+
+
+# Hôtes qui ne sont jamais une source citable : raccourcisseurs, redirecteurs,
+# régies publicitaires, pages de consentement ou de compte.
+_JUNK_HOSTS = {
+    "t.co", "bit.ly", "goo.gl", "lnkd.in", "ow.ly", "buff.ly", "tinyurl.com", "rebrand.ly",
+    "doubleclick.net", "googleadservices.com", "googlesyndication.com", "l.facebook.com",
+    "lm.facebook.com", "out.reddit.com", "wa.me", "api.whatsapp.com", "webcache.googleusercontent.com",
+    "accounts.google.com", "consent.google.com", "policies.google.com", "myaccount.google.com",
+    "translate.google.com", "maps.google.com", "news.google.com", "bing.com", "search.yahoo.com",
+    "duckduckgo.com", "qwant.com", "ecosia.org", "yandex.ru", "yandex.com", "baidu.com",
+}
+# Moteurs de recherche : la racine (google.fr, www.google.com…) ne mène qu'à
+# des pages de résultats ou de préférences.
+_SEARCH_ENGINE_ROOT_RE = re.compile(r"^(?:www\.)?google\.[a-z.]{2,6}$")
+# Chemins de recherche, de redirection, de partage ou de préférences.
+_JUNK_PATH_RE = re.compile(
+    r"^/(?:(?:url|redirect|out|click|share|sharer|intent|sharearticle|pin/create)(?:[/.]|$)"
+    r"|(?:search|preferences|setprefs|advanced_search|login|signin|signup|cart|checkout)(?:/?$|\.))",
+    re.IGNORECASE,
+)
+# Paramètres qui trahissent une page de résultats ou une redirection.
+_JUNK_QUERY_KEYS = {"q", "query", "search", "s", "url", "u", "redirect", "redirect_uri", "dest", "target"}
+_TRACKING_PREFIXES = ("utm_", "fbclid", "gclid", "mc_cid", "mc_eid", "_ga", "msclkid")
+
+
+def is_junk_url(url: str) -> bool:
+    """Vrai pour une URL qui ne peut pas servir de source à un lecteur :
+    page de recherche ou de préférences, redirection, raccourcisseur,
+    tracking publicitaire, bouton de partage."""
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return True
+    host = (parsed.hostname or "").lower()
+    bare = host.removeprefix("www.")
+    if bare in _JUNK_HOSTS or bare.endswith(".doubleclick.net"):
+        return True
+    if _SEARCH_ENGINE_ROOT_RE.match(host):
+        return True
+    if _JUNK_PATH_RE.match(parsed.path or "/"):
+        return True
+    keys = {p.split("=", 1)[0].lower() for p in (parsed.query or "").split("&") if p}
+    return bool(keys & _JUNK_QUERY_KEYS)
 
 
 def _clean_url(url: str) -> str | None:
@@ -27,10 +72,12 @@ def _clean_url(url: str) -> str | None:
     host = parsed.hostname or ""
     if host in ("example.com", "yourdomain.com", "domaine.com", "example.org"):
         return None
+    if is_junk_url(url):
+        return None
     # Normalise : minuscules pour schéma/domaine, suppression fragment + tracking
     scheme = parsed.scheme.lower()
     netloc = parsed.netloc.lower()
-    query_parts = [p for p in parsed.query.split("&") if p and not p.startswith(("utm_", "fbclid", "gclid"))]
+    query_parts = [p for p in parsed.query.split("&") if p and not p.startswith(_TRACKING_PREFIXES)]
     query = "&".join(query_parts)
     path = parsed.path
     clean = urlparse(url)._replace(scheme=scheme, netloc=netloc, query=query, fragment="").geturl()
