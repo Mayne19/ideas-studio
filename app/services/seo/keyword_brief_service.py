@@ -71,10 +71,10 @@ def refine_keyword_brief_with_research(
     if db is None:
         return result
     try:
-        from app.services.agents.agent_router import get_router
+        from app.services.agents.agent_router import get_agent_router
     except Exception:
         return result
-    router = get_router(db)
+    router = get_agent_router(db=db)
     if router is None:
         return result
     try:
