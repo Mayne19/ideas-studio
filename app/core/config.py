@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     GOOGLE_SEARCH_API_KEY: str = ""
     GOOGLE_SEARCH_CX: str = ""
     BRAVE_SEARCH_API_KEY: str = ""
+    SERPER_API_KEY: str = ""
 
     PIPELINE_MODE: str = "ideas_only"
     OUTLINE_PLANNER_MODE: str = "llm"
