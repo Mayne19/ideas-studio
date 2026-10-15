@@ -1243,6 +1243,11 @@ class SEOGenerationOrchestrator:
             "CE CALLOUT DOIT ÊTRE COURT : 1-2 phrases brèves qui donnent directement les réponses clés, "
             "jamais un paragraphe développé ni un mini-article.",
             "- Début qui satisfait rapidement l'intention du lecteur",
+            "- RÈGLE ABSOLUE — faits et chiffres : n'écris jamais un nombre, un pourcentage, une "
+            "  date, un nom d'étude ou un fait précis qui n'apparaît pas tel quel dans les extraits "
+            "  de sources fournis ci-dessous (faits du brief, matière humaine). Si aucune source "
+            "  fournie ne le contient, écris la phrase sans chiffre ou supprime-la. Un article sans "
+            "  statistique est acceptable ; une statistique inventée ne l'est jamais.",
             "- Ton humain, direct, concret, pas de texte robotique",
             "- N'utilise JAMAIS le tiret cadratin (—). "
             "  Remplace-le systématiquement par une virgule, un point-virgule, ou reformule la phrase. "
