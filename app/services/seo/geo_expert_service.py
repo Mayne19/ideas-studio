@@ -10,9 +10,11 @@ from app.services.seo.helpers import strip_html
 QUESTION_WORDS = ["comment", "pourquoi", "qu'est-ce", "quand", "où", "qui", "quels", "quelle", "combien"]
 ACTION_VERBS = ["permet", "aide", "améliore", "réduit", "augmente", "garantit", "évite", "explique"]
 
+# « en résumé », « pour résumer », « synthèse » retirés : le writer les a
+# interdits (ouvertures de conclusion). Le signal principal est désormais la
+# réponse directe en tête d'article (voir score_summaries).
 SUMMARY_MARKERS = [
-    "en résumé", "tl;dr", "à retenir", "points clés", "l'essentiel",
-    "pour résumer", "en bref", "synthèse", "conclusion rapide",
+    "tl;dr", "à retenir", "points clés", "l'essentiel", "en bref",
 ]
 
 SCHEMA_POINTS: dict[str, int] = {
@@ -126,12 +128,20 @@ def score_named_entities(text: str, word_count: int) -> float:
     return 100.0
 
 
-def score_summaries(text: str) -> float:
-    found = sum(1 for m in SUMMARY_MARKERS if m in text.lower())
-    if found == 0:   return 10.0
-    if found == 1:   return 60.0
-    if found == 2:   return 85.0
-    return 100.0
+def score_summaries(content: str) -> float:
+    """Un moteur génératif cite d'abord la réponse donnée en tête d'article :
+    on récompense un court bloc de réponse avant le premier H2 (ce que le
+    writer doit produire), et seulement à défaut un marqueur de synthèse."""
+    first_h2 = re.search(r"<h2[\s>]", content, re.IGNORECASE)
+    opening = strip_html(content[:first_h2.start()] if first_h2 else "").strip()
+    opening_words = len(opening.split())
+    if 15 <= opening_words <= 90:
+        return 100.0
+    if 90 < opening_words <= 150:
+        return 70.0
+    if any(m in strip_html(content).lower() for m in SUMMARY_MARKERS):
+        return 60.0
+    return 40.0 if opening_words else 10.0
 
 
 def score_semantic_density(text: str, target_keyword: str | None, related_terms: list[str] | None = None) -> float:
@@ -222,7 +232,7 @@ def compute_geo_score(article: Any, evidence_pack: dict | None = None) -> dict:
     s2 = score_heading_format(headings_h2)
     s3 = score_structured_data(article)
     s4 = score_named_entities(text, word_count)
-    s5 = score_summaries(text)
+    s5 = score_summaries(content)
     s6 = score_semantic_density(text, keyword)
 
     evidence_items = (evidence_pack or {}).get("evidence_items") or []
