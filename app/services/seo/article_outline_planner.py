@@ -157,51 +157,52 @@ def _build_outline_heuristic(
     intent_analysis: dict | None = None,
     article_type: str = "evergreen_information",
 ) -> ArticleOutline:
-    outline = ArticleOutline(
+    """Repli minimal construit sur le brief d'intention : une première section
+    qui répond à la question, puis les questions de suivi et points
+    indispensables. Aucun intitulé gabarit du type « Qu'est-ce que X ? »."""
+    intent = intent_analysis or {}
+    fmt = _resolve_format(intent, article_type)
+    _, max_sections = SECTION_RANGE_BY_FORMAT[fmt]
+    question = (intent.get("reader_real_question") or title or keyword).strip()
+    expected = (intent.get("expected_answer") or "").strip()
+
+    sections = [{
+        "heading": question,
+        "level": 2,
+        "purpose": "Répondre directement à la question du lecteur",
+        "key_points": [expected] if expected else [],
+        "reader_value": "Obtenir la réponse tout de suite",
+    }]
+    seen = {question.lower()}
+    for item in list(intent.get("sub_questions") or []) + list(intent.get("must_include") or []):
+        heading = str(item).strip()
+        if not heading or heading.lower() in seen or len(sections) >= max_sections:
+            continue
+        seen.add(heading.lower())
+        sections.append({
+            "heading": heading, "level": 2, "purpose": "Point dont le lecteur a besoin",
+            "key_points": [], "reader_value": "",
+        })
+    if len(sections) < 2:
+        follow_up = {
+            "how_to": "Les étapes, dans l'ordre",
+            "comparison": "Comment choisir selon votre situation",
+            "list": "La liste en détail",
+        }.get(fmt, "Les cas particuliers à connaître")
+        sections.append({
+            "heading": follow_up, "level": 2, "purpose": "Compléter la réponse",
+            "key_points": [], "reader_value": "",
+        })
+
+    return ArticleOutline(
         h1=title,
-        intro_goal="Présenter le sujet et accrocher le lecteur",
-        first_block_goal="",
-        conclusion_title="Ce qu'il faut retenir",
+        intro_goal="Répondre à la question du lecteur dès les premières phrases",
+        first_block_goal=intent.get("first_block_goal") or "Répondre directement à la question",
+        sections=sections,
+        conclusion_title="",
         faq_planned=False,
         callouts_planned=False,
     )
-
-    intent = intent_analysis or {}
-    first_block = intent.get("first_block_goal", "")
-
-    if article_type == "comparison":
-        outline.first_block_goal = first_block or "Cadrer les critères de comparaison essentiels"
-        outline.sections = [
-            {"heading": "Pourquoi comparer ?", "level": 2, "purpose": "Expliquer l'importance de la comparaison", "key_points": ["Contexte", "Enjeux"], "reader_value": "Comprendre l'enjeu"},
-            {"heading": "Critères de comparaison", "level": 2, "purpose": "Définir les critères", "key_points": ["Critère 1", "Critère 2", "Critère 3"], "reader_value": "Savoir quoi regarder"},
-            {"heading": "Tableau comparatif", "level": 2, "purpose": "Comparer visuellement", "key_points": ["Points communs", "Différences"], "reader_value": "Voir les différences clairement"},
-            {"heading": "Comment choisir ?", "level": 2, "purpose": "Aider à la décision", "key_points": ["Cas d'usage"], "reader_value": "Faire le bon choix"},
-        ]
-    elif article_type == "guide":
-        outline.first_block_goal = first_block or "Donner une première action immédiate"
-        outline.sections = [
-            {"heading": "Qu'est-ce que c'est ?", "level": 2, "purpose": "Définir le concept", "key_points": [], "reader_value": "Comprendre les bases"},
-            {"heading": "Étape 1 : Préparation", "level": 2, "purpose": "Première étape pratique", "key_points": [], "reader_value": "Savoir par où commencer"},
-            {"heading": "Étape 2 : Exécution", "level": 2, "purpose": "Étape principale", "key_points": [], "reader_value": "Réaliser l'action principale"},
-            {"heading": "Conseils et astuces", "level": 2, "purpose": "Bonnes pratiques", "key_points": ["Astuce 1", "Astuce 2"], "reader_value": "Optimiser son travail"},
-        ]
-    elif article_type == "simple_question":
-        outline.first_block_goal = first_block or "Répondre directement à la question"
-        outline.sections = [
-            {"heading": "Réponse rapide", "level": 2, "purpose": "Donner la réponse directement", "key_points": ["Réponse principale"], "reader_value": "Obtenir la réponse rapidement"},
-            {"heading": "Pourquoi ?", "level": 2, "purpose": "Expliquer le contexte", "key_points": ["Raisons"], "reader_value": "Comprendre le pourquoi"},
-            {"heading": "Exemples concrets", "level": 2, "purpose": "Illustrer", "key_points": ["Exemple 1", "Exemple 2"], "reader_value": "Voir des cas réels"},
-        ]
-    else:
-        outline.first_block_goal = first_block or "Donner une information utile au lecteur dès le début"
-        outline.sections = [
-            {"heading": f"Qu'est-ce que {keyword} ?", "level": 2, "purpose": "Définir le sujet", "key_points": [], "reader_value": "Comprendre les bases"},
-            {"heading": f"Pourquoi {keyword} est important ?", "level": 2, "purpose": "Montrer l'importance", "key_points": [], "reader_value": "Saisir les enjeux"},
-            {"heading": "Comment faire ?", "level": 2, "purpose": "Guide pratique", "key_points": [], "reader_value": "Savoir appliquer"},
-            {"heading": "Bonnes pratiques", "level": 2, "purpose": "Conseils supplémentaires", "key_points": [], "reader_value": "Optimiser ses résultats"},
-        ]
-
-    return outline
 
 
 def build_outline_dict(
