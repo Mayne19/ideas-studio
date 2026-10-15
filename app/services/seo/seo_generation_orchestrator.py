@@ -1060,10 +1060,10 @@ class SEOGenerationOrchestrator:
 
     def _build_checklist_verification_block(self) -> str:
         """Checklist de vérification mécanique pour la passe QualityGate (Pass 2,
-        gate_prompt) : conformité aux exigences mécaniques (plage de mots,
-        liens internes du plan réellement présents) — cette checklist
-        les rend explicites au modèle dans le même appel LLM, sans coût
-        supplémentaire. Construite dynamiquement depuis self.context ; ne plante
+        gate_prompt) : conformité aux exigences mécaniques (plage de mots).
+        Les liens et statistiques ne sont volontairement plus imposés ici : les
+        forcer poussait le modèle à inventer des chiffres et à placer des liens
+        sans rapport avec le texte. Construite dynamiquement depuis self.context ; ne plante
         jamais sur un contexte incomplet (chaîne vide si rien de pertinent)."""
         checklist: list[str] = []
 
@@ -1081,36 +1081,6 @@ class SEOGenerationOrchestrator:
                 "final que tu renvoies ; coupe les passages les moins utiles si tu "
                 "dépasses le maximum, développe une section pertinente si tu es "
                 "sous le minimum."
-            )
-
-        external_plan = self.context.get("external_links") or {}
-        external_links = (external_plan.get("links") or []) if isinstance(external_plan, dict) else []
-        external_urls = [
-            str(link.get("url", "")).strip()
-            for link in external_links if isinstance(link, dict) and link.get("url")
-        ]
-        if external_urls:
-            checklist.append(
-                "Chaque lien externe du plan doit apparaître réellement dans le HTML "
-                "(balise <a href='...'>). URLs attendues : "
-                + ", ".join(external_urls[:4])
-                + ". Vérifie-les une à une ; si un lien est absent, place-le sur la "
-                "phrase qui s'appuie sur cette source."
-            )
-
-        internal_plan = self.context.get("internal_links") or {}
-        internal_links = (internal_plan.get("links") or []) if isinstance(internal_plan, dict) else []
-        internal_urls = [
-            str(link.get("target_url", "")).strip()
-            for link in internal_links if isinstance(link, dict) and link.get("target_url")
-        ]
-        if internal_urls:
-            checklist.append(
-                "Chaque lien interne du plan doit apparaître réellement dans le HTML. "
-                "URLs attendues : "
-                + ", ".join(internal_urls[:3])
-                + ". Si un lien est absent, insère-le naturellement sur une phrase "
-                "connexe."
             )
 
         if not checklist:
