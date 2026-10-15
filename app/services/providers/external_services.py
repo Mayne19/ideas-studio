@@ -105,6 +105,31 @@ def row_to_credential(row) -> ServiceCredential | None:
     )
 
 
+def _scoped_credential(db, service: str, project_id: str | None) -> ServiceCredential | None:
+    row = find_row(db, service, project_id)
+    if row is None:
+        return None
+    cred = row_to_credential(row)
+    if cred is None or not is_valid_provider(service, cred.provider):
+        return None
+    return cred
+
+
+def lookup_db_credential(db, service: str, project_id: str | None) -> ServiceCredential | None:
+    """Clé configurée dans le CMS avec la session fournie : projet, puis
+    globale. Pour brand_images, une clé Brave saisie pour la recherche web
+    sert aussi (même abonnement Brave Search API)."""
+    for scope in ([project_id, None] if project_id else [None]):
+        cred = _scoped_credential(db, service, scope)
+        if cred is not None:
+            return cred
+    if service == "brand_images":
+        search = lookup_db_credential(db, "search", project_id)
+        if search is not None and search.provider == "brave":
+            return ServiceCredential("brand_images", "brave", search.api_key, source=search.source)
+    return None
+
+
 def resolve_db_credential(service: str, project_id: str | None = None) -> ServiceCredential | None:
     """Clé configurée dans le CMS (projet puis globale), None sinon.
 
@@ -129,18 +154,7 @@ def resolve_db_credential(service: str, project_id: str | None = None) -> Servic
 
     db = SessionLocal()
     try:
-        if project_id:
-            row = find_row(db, service, project_id)
-            if row is not None:
-                cred = row_to_credential(row)
-                if cred is not None and is_valid_provider(service, cred.provider):
-                    return cred
-        row = find_row(db, service, None)
-        if row is not None:
-            cred = row_to_credential(row)
-            if cred is not None and is_valid_provider(service, cred.provider):
-                return cred
-        return None
+        return lookup_db_credential(db, service, project_id)
     except Exception as exc:
         logger.warning("external_services: lecture config %s impossible (%s), repli env", service, exc)
         return None
@@ -177,16 +191,14 @@ def env_credential(service: str) -> ServiceCredential | None:
 
 
 def resolve_credential(service: str, project_id: str | None = None) -> ServiceCredential | None:
-    cred = resolve_db_credential(service, project_id)
-    if cred is not None:
-        return cred
-    if service == "brand_images":
-        # Une clé Brave saisie pour la recherche web sert aussi aux images
-        # officielles (même abonnement Brave Search API).
-        search = resolve_db_credential("search", project_id)
-        if search is not None and search.provider == "brave":
-            return ServiceCredential("brand_images", "brave", search.api_key, source=search.source)
-    return env_credential(service)
+    """Clé effectivement utilisée à l'exécution : CMS (projet, global) puis env."""
+    return resolve_db_credential(service, project_id) or env_credential(service)
+
+
+def effective_credential(db, service: str, project_id: str | None) -> ServiceCredential | None:
+    """Même résolution que resolve_credential mais avec la session fournie
+    (affichage dans les paramètres, y compris en environnement de test)."""
+    return lookup_db_credential(db, service, project_id) or env_credential(service)
 
 
 # ── Test de connexion ──────────────────────────────────────────────────────
@@ -259,3 +271,57 @@ def check_credential(cred: ServiceCredential) -> tuple[bool, str | None]:
         return True, None
     except Exception as exc:
         return False, _http_error_message(exc)
+
+
+# ── Gestion depuis les paramètres ──────────────────────────────────────────
+
+
+class ExternalServiceConfigError(ValueError):
+    """Requête de configuration invalide (provider inconnu, clé manquante...)."""
+
+
+def _clean_config(service: str, provider: str, config: dict | None) -> dict:
+    allowed = EXTERNAL_SERVICES[service]["providers"][provider].get("fields", [])
+    return {k: str(v).strip() for k, v in (config or {}).items() if k in allowed and v is not None and str(v).strip()}
+
+
+def upsert_credential(db, service: str, project_id: str | None, provider: str, api_key: str | None, config: dict | None):
+    """Crée ou met à jour la ligne (projet, service). Une clé n'est jamais
+    réutilisée pour un autre provider : changer de provider exige une clé."""
+    from app.core.security import encrypt_secret
+    from app.models.ai import ExternalServiceCredential
+
+    if service not in EXTERNAL_SERVICES:
+        raise ExternalServiceConfigError(f"Service '{service}' inconnu")
+    if not is_valid_provider(service, provider):
+        raise ExternalServiceConfigError(f"Provider '{provider}' non supporté pour '{service}'")
+    api_key = (api_key or "").strip() or None
+
+    row = find_row(db, service, project_id)
+    same_provider = row is not None and row.provider == provider
+    if not api_key and not same_provider:
+        raise ExternalServiceConfigError(
+            "Clé API requise" if row is None else "Nouvelle clé API requise pour changer de provider"
+        )
+    # config absent = conserver les paramètres existants (même provider).
+    source_config = config if (config is not None or not same_provider) else row.config
+    final_config = _clean_config(service, provider, source_config)
+    for required in EXTERNAL_SERVICES[service]["providers"][provider].get("fields", []):
+        if required not in final_config:
+            raise ExternalServiceConfigError(f"Champ '{required}' requis pour {provider}")
+
+    if row is None:
+        row = ExternalServiceCredential(project_id=project_id, service=service)
+        db.add(row)
+    if api_key or not same_provider or final_config != (row.config or {}):
+        # Le dernier test ne porte plus sur la config actuelle.
+        row.last_test_ok = None
+        row.last_test_at = None
+        row.last_test_error = None
+    row.provider = provider
+    if api_key:
+        row.secret_ref = encrypt_secret(api_key) or ""
+    row.config = final_config
+    db.commit()
+    db.refresh(row)
+    return row
