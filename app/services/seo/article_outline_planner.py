@@ -6,6 +6,22 @@ from app.schemas.seo_workflow import ArticleOutline, asdict
 
 logger = logging.getLogger(__name__)
 
+# Nombre de sections H2 selon le format recommandé par le brief d'intention :
+# une question simple n'a pas besoin de 8 sections, une liste peut en avoir 9.
+SECTION_RANGE_BY_FORMAT = {
+    "simple_question": (2, 4),
+    "how_to": (4, 7),
+    "explainer": (4, 6),
+    "comparison": (4, 6),
+    "list": (5, 9),
+}
+
+
+def _resolve_format(intent: dict, article_type: str) -> str:
+    from app.services.seo.intent_analysis_service import article_type_to_format
+    fmt = (intent.get("recommended_format") or "").strip()
+    return fmt if fmt in SECTION_RANGE_BY_FORMAT else article_type_to_format(article_type)
+
 
 def build_outline(
     title: str,
@@ -60,43 +76,42 @@ def _build_outline_with_llm(
     brief = research_brief or {}
     kb = keyword_brief or {}
     angle = editorial_angle or {}
+    fmt = _resolve_format(intent, article_type)
+    min_sections, max_sections = SECTION_RANGE_BY_FORMAT[fmt]
+    question = intent.get("reader_real_question") or title
 
+    def _join(values, limit=400):
+        return "; ".join(str(v) for v in (values or []) if str(v).strip())[:limit]
+
+    context_lines = [
+        f"Titre : {title}",
+        f"Mot-clé : {keyword}",
+        f"Question réelle du lecteur : {question}",
+        f"Réponse attendue : {intent.get('expected_answer', '')}",
+        f"Format : {fmt}",
+        f"Angle : {angle.get('main_angle', '')}",
+        f"À inclure : {_join(intent.get('must_include'))}",
+        f"À éviter : {_join(intent.get('must_avoid') or intent.get('what_to_avoid'))}",
+        f"Questions de suivi : {_join(intent.get('sub_questions'))}",
+        f"Angles des concurrents : {_join(brief.get('competitor_angles'))}",
+        f"Mots-clés secondaires : {_join(kb.get('secondary_keywords'), 200)}",
+    ]
     prompt = (
-        "Tu es un stratège de contenu SEO. Construis le plan (outline) d'un article "
-        "de blog en français. Chaque section doit exister pour une vraie raison : "
-        "couvrir un sous-sujet que le lecteur cherche, répondre à une vraie question, "
-        "lever une objection. Interdis-toi les sections de remplissage.\n\n"
-        f"Titre : {title}\n"
-        f"Mot-clé : {keyword}\n"
-        f"Type d'article : {article_type}\n"
-        f"Intention de recherche : {intent.get('explicit_intent', '')}\n"
-        f"Questions secondaires à couvrir : {', '.join(intent.get('sub_questions') or [])}\n"
-        f"Questions réelles du lecteur : {', '.join((intent.get('reader_real_question') or '').split('|'))}\n"
-        f"Angle éditorial : {angle.get('main_angle', '')}\n"
-        f"Promesse éditoriale : {angle.get('editorial_promise', '')}\n"
-        f"Douleurs à adresser : {', '.join(brief.get('field_signals') or [])[:400]}\n"
-        f"Angles concurrents identifiés : {', '.join(brief.get('competitor_angles') or [])[:400]}\n"
-        f"Mots-clés secondaires : {', '.join(kb.get('secondary_keywords') or [])}\n\n"
-        "Contraintes :\n"
-        "- 5 à 8 sections H2 maximum\n"
-        "- Chaque section a un purpose (pourquoi elle existe) et une reader_value "
-        "(ce que le lecteur y gagne)\n"
-        "- Pas de section 'Conclusion' : l'article se termine dans la dernière section\n"
-        "- Si une FAQ est utile, signale faq_planned=true\n"
-        "- Varie la structure syntaxique des titres H2 : question, affirmation directe, "
-        "verbe d'action, comparaison. Ne répète jamais le même patron sur deux sections "
-        "consécutives.\n"
-        "- Différencie chaque titre H2 des angles concurrents identifiés ci-dessus, pas "
-        "seulement dans le sujet traité mais dans la formulation même du titre : évite "
-        "toute reprise proche d'un intitulé concurrent.\n"
-        "- Si un sujet de section nécessite plus de 400 mots pour être traité "
-        "correctement, découpe-la en 2 à 3 sous-sections H3 (level=3) plutôt qu'une "
-        "seule section H2 dense.\n"
+        "Construis le plan d'un article de blog qui répond précisément à la question du lecteur.\n\n"
+        + "\n".join(line for line in context_lines if not line.endswith(": "))
+        + "\n\nRègles :\n"
+        f"- {min_sections} à {max_sections} sections H2 : le sujet décide, pas de remplissage.\n"
+        "- La première section répond directement à la question réelle du lecteur.\n"
+        "- Chaque section suivante traite un point dont le lecteur a vraiment besoin ; "
+        "rien de ce qui figure dans « À éviter ».\n"
+        "- Pas de section définition générique, « pourquoi c'est important » ou « conclusion ».\n"
+        "- Titres H2 concrets et variés, différents des titres concurrents.\n"
+        "- Une section longue peut avoir des sous-sections H3 (level=3).\n"
         "Réponds UNIQUEMENT avec un JSON valide :\n"
-        '{"h1": titre, "intro_goal": "...", "first_block_goal": "...", '
+        '{"h1": "...", "intro_goal": "...", "first_block_goal": "...", '
         '"sections": [{"heading": "...", "level": 2, "purpose": "...", '
         '"key_points": ["..."], "reader_value": "..."}], '
-        '"conclusion_title": "...", "faq_planned": true|false, "callouts_planned": true|false}'
+        '"faq_planned": true|false, "callouts_planned": true|false}'
     )
 
     try:
@@ -127,10 +142,10 @@ def _build_outline_with_llm(
 
     return ArticleOutline(
         h1=result.get("h1") or title,
-        intro_goal=result.get("intro_goal") or "Présenter le sujet et accrocher le lecteur",
-        first_block_goal=result.get("first_block_goal") or "",
+        intro_goal=result.get("intro_goal") or "Répondre à la question du lecteur dès les premières phrases",
+        first_block_goal=result.get("first_block_goal") or intent.get("first_block_goal") or "",
         sections=normalized,
-        conclusion_title=result.get("conclusion_title") or "Ce qu'il faut retenir",
+        conclusion_title=result.get("conclusion_title") or "",
         faq_planned=bool(result.get("faq_planned")),
         callouts_planned=bool(result.get("callouts_planned")),
     )
