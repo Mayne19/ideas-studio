@@ -10,39 +10,21 @@ def define_editorial_angle(
     research_brief: dict | None = None,
     category_name: str | None = None,
 ) -> EditorialAngle:
+    """Angle dérivé du brief d'intention affiné (question réelle, réponse
+    attendue, pièges) plutôt que d'un gabarit générique par type d'article."""
     intent = intent_analysis or {}
-    article_type = intent.get("article_type", "evergreen_information")
+    question = (intent.get("reader_real_question") or title or keyword or "").strip()
+    expected = (intent.get("expected_answer") or "").strip()
+    avoid = [str(x) for x in (intent.get("must_avoid") or intent.get("what_to_avoid") or []) if str(x).strip()]
 
-    angle = EditorialAngle(
-        editorial_promise=f"Un article complet et utile sur {keyword}",
-        main_angle=f"Expliquer {keyword} de manière pratique et accessible",
-        reader_benefit=f"Le lecteur comprendra {keyword} et pourra l'appliquer concrètement",
-        differentiation="Approche pratique avec conseils concrets et exemples réels",
-        tone="Direct, clair et utile",
+    return EditorialAngle(
+        editorial_promise=f"Répondre précisément à : {question}",
+        main_angle=(intent.get("recommended_angle") or "").strip() or f"Réponse directe à : {question}",
+        reader_benefit=expected,
+        differentiation=("Éviter : " + " ; ".join(avoid[:3])) if avoid else "",
+        tone="",
+        eeat_opportunities=[str(x) for x in (intent.get("must_include") or [])][:5],
     )
-
-    if article_type == "comparison":
-        angle.main_angle = f"Comparer objectivement les options liées à {keyword}"
-        angle.reader_benefit = "Le lecteur pourra choisir en connaissance de cause"
-        angle.differentiation = "Analyse équilibrée avec critères de choix clairs et concrets"
-
-    if article_type == "guide":
-        angle.main_angle = f"Guide étape par étape sur {keyword}"
-        angle.reader_benefit = "Le lecteur pourra appliquer immédiatement les étapes"
-        angle.differentiation = "Étapes actionnables avec conseils de terrain"
-
-    if article_type == "simple_question":
-        angle.main_angle = f"Réponse directe et complète à la question sur {keyword}"
-        angle.reader_benefit = "Le lecteur obtient une réponse claire et utile"
-
-    angle.eeat_opportunities = [
-        "Ajouter des sources fiables",
-        "Inclure des exemples concrets",
-        "Citer des données vérifiables si disponibles",
-        "Montrer des cas pratiques d'application",
-    ]
-
-    return angle
 
 
 def define_editorial_angle_dict(
