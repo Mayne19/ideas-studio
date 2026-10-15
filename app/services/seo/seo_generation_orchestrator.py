@@ -1414,6 +1414,37 @@ class SEOGenerationOrchestrator:
         self._step(f"ConsistencyPass ({len(report.get('applied') or [])} correction(s))")
         return fixed
 
+    def _citation_pass(self, article: Article, draft: _DraftArticle, content: str) -> str:
+        """1 à 3 citations externes (sources fiables avec extrait) et jusqu'à
+        2 liens internes, posés par le code sur des phrases choisies par le
+        modèle ; une source sans phrase qui lui corresponde est ignorée."""
+        from app.services.seo.citation_inserter import insert_citations
+
+        def _links(key: str) -> list:
+            plan = self.context.get(key) or {}
+            return (plan.get("links") or []) if isinstance(plan, dict) else []
+
+        try:
+            linked, report = insert_citations(
+                content, self._polish_call_fn(article),
+                _links("external_links"), _links("internal_links"),
+                keyword=draft.keyword or "",
+                fatal_exceptions=(WritingCancelledError,),
+            )
+        except WritingCancelledError:
+            raise
+        except Exception as exc:
+            self._error("CitationPass", f"Insertion des liens ignorée : {exc}")
+            return content
+        linked = self._keep_if_h2_lost(content, linked, "CitationPass")
+        self._save(article.id, "citation_report", report)
+        inserted = report.get("inserted") or []
+        external = sum(1 for i in inserted if i.get("type") == "external")
+        if report.get("candidates_external") and not external and not report.get("existing_external"):
+            self.limitations.append("no_external_citation: aucune phrase ne correspond aux sources fiables")
+        self._step(f"CitationPass ({external} externe(s), {len(inserted) - external} interne(s))")
+        return linked
+
     def _generate_content(self, draft: _DraftArticle, outline: dict, keyword_brief: dict, include_callouts: bool | None, include_faq: bool | None = None):
         article = draft.article
         self._raise_if_cancelled(article)
@@ -1497,6 +1528,7 @@ class SEOGenerationOrchestrator:
         # ── Finition — appels courts et ciblés, jamais de réécriture libre ──
         content = self._proofread_pass(article, draft, content)
         content = self._consistency_pass(article, content)
+        content = self._citation_pass(article, draft, content)
         self._save(article.id, "section_writing_report", section_writer.report)
 
         self._raise_if_cancelled(article)
