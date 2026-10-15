@@ -1,15 +1,31 @@
 from __future__ import annotations
 
 
+_FALLBACK_MODES = {
+    "serper": "serper",
+    "serpapi": "serpapi",
+    "brave": "brave_search",
+    "google_cse": "google_custom_search",
+}
+
+
 class SerpAdapter:
-    """Analyse concurrentielle SERP — Serper (SERPER_API_KEY, vrais résultats
-    Google) en priorité, puis SerpAPI (SERP_API_KEY) si
-    configurée, sinon Brave Search (BRAVE_SEARCH_API_KEY), sinon repli sur
-    Google Custom Search (GOOGLE_SEARCH_API_KEY/GOOGLE_SEARCH_CX). Google est
-    en dernier recours : les nouveaux moteurs de recherche personnalisés (cx)
-    ne peuvent plus interroger le web entier (fonctionnalité dépréciée côté
-    Google), donc un cx créé après cette dépréciation renvoie un 403
-    permanent quelle que soit la config du projet Google Cloud."""
+    """Analyse concurrentielle SERP.
+
+    La clé vient d'une ServiceCredential "search" (voir
+    app/services/providers/external_services.py) : config projet du CMS,
+    puis config globale, puis variables d'environnement. Utiliser
+    get_serp_adapter(project_id) pour une résolution par projet ; un
+    SerpAdapter() sans argument ne lit que l'environnement.
+
+    Repli env : Serper (SERPER_API_KEY, vrais résultats Google) en priorité,
+    puis SerpAPI (SERP_API_KEY), sinon Brave Search (BRAVE_SEARCH_API_KEY),
+    sinon Google Custom Search (GOOGLE_SEARCH_API_KEY/GOOGLE_SEARCH_CX).
+    Google est en dernier recours : les nouveaux moteurs de recherche
+    personnalisés (cx) ne peuvent plus interroger le web entier
+    (fonctionnalité dépréciée côté Google), donc un cx créé après cette
+    dépréciation renvoie un 403 permanent quelle que soit la config du
+    projet Google Cloud."""
     provider_name = "serp"
     enabled = False
     configured = False
@@ -19,39 +35,30 @@ class SerpAdapter:
     fallback_mode = "not_configured"
     trust_level = "none"
 
-    def __init__(self):
-        from app.core.config import settings
-        if settings.SERPER_API_KEY:
+    def __init__(self, credential=None):
+        if credential is None:
+            from app.services.providers.external_services import env_credential
+            credential = env_credential("search")
+        if credential is not None and credential.provider == "google_cse" and not (credential.config or {}).get("cx"):
+            credential = None
+        self.credential = credential
+        self.source = credential.source if credential is not None else None
+        if credential is not None and credential.provider in _FALLBACK_MODES:
             self.configured = True
             self.enabled = True
             self.real_data_available = True
-            self.fallback_mode = "serper"
-        elif settings.SERP_API_KEY:
-            self.configured = True
-            self.enabled = True
-            self.real_data_available = True
-            self.fallback_mode = "serpapi"
-        elif settings.BRAVE_SEARCH_API_KEY:
-            self.configured = True
-            self.enabled = True
-            self.real_data_available = True
-            self.fallback_mode = "brave_search"
-        elif settings.GOOGLE_SEARCH_API_KEY and settings.GOOGLE_SEARCH_CX:
-            self.configured = True
-            self.enabled = True
-            self.real_data_available = True
-            self.fallback_mode = "google_custom_search"
+            self.fallback_mode = _FALLBACK_MODES[credential.provider]
 
     def search(self, query: str, limit: int = 10) -> list[dict]:
         if not self.configured:
             return []
-        from app.core.config import settings
         try:
-            if settings.SERPER_API_KEY:
+            provider = self.credential.provider
+            if provider == "serper":
                 return self._search_serper(query, limit)
-            if settings.SERP_API_KEY:
+            if provider == "serpapi":
                 return self._search_serpapi(query, limit)
-            if settings.BRAVE_SEARCH_API_KEY:
+            if provider == "brave":
                 return self._search_brave(query, limit)
             return self._search_google(query, limit)
         except Exception as exc:
@@ -65,7 +72,7 @@ class SerpAdapter:
         resp = httpx.post(
             "https://google.serper.dev/search",
             json={"q": query, "num": min(limit, 20), "gl": "fr", "hl": "fr"},
-            headers={"X-API-KEY": settings.SERPER_API_KEY, "Content-Type": "application/json"},
+            headers={"X-API-KEY": self.credential.api_key, "Content-Type": "application/json"},
             timeout=settings.SEARCH_TIMEOUT_SECONDS or 30,
         )
         resp.raise_for_status()
@@ -84,7 +91,7 @@ class SerpAdapter:
         resp = httpx.get(
             "https://api.search.brave.com/res/v1/web/search",
             params={"q": query, "count": min(limit, 20)},
-            headers={"X-Subscription-Token": settings.BRAVE_SEARCH_API_KEY, "Accept": "application/json"},
+            headers={"X-Subscription-Token": self.credential.api_key, "Accept": "application/json"},
             timeout=settings.SEARCH_TIMEOUT_SECONDS or 30,
         )
         resp.raise_for_status()
@@ -102,7 +109,7 @@ class SerpAdapter:
         from app.core.config import settings
         resp = httpx.get(
             "https://serpapi.com/search",
-            params={"q": query, "api_key": settings.SERP_API_KEY, "num": limit},
+            params={"q": query, "api_key": self.credential.api_key, "num": limit},
             timeout=settings.SEARCH_TIMEOUT_SECONDS or 30,
         )
         resp.raise_for_status()
@@ -121,8 +128,8 @@ class SerpAdapter:
         resp = httpx.get(
             "https://www.googleapis.com/customsearch/v1",
             params={
-                "key": settings.GOOGLE_SEARCH_API_KEY,
-                "cx": settings.GOOGLE_SEARCH_CX,
+                "key": self.credential.api_key,
+                "cx": self.credential.config.get("cx"),
                 "q": query,
                 "num": min(limit, 10),
             },
@@ -148,7 +155,23 @@ class SerpAdapter:
             "real_data_available": self.real_data_available,
             "fallback_mode": self.fallback_mode,
             "trust_level": self.trust_level,
+            "credential_source": self.source,
         }
 
 
+def get_serp_adapter(project_id: str | None = None) -> SerpAdapter:
+    """Adaptateur résolu pour un projet (config CMS projet, puis globale,
+    puis env). project_id absent : celui de la requête/job en cours."""
+    from app.services.providers.external_services import resolve_db_credential
+
+    credential = resolve_db_credential("search", project_id)
+    if credential is not None:
+        adapter = SerpAdapter(credential)
+        if adapter.configured:
+            return adapter
+    return SerpAdapter()
+
+
+# Compat : singleton construit à l'import, repli env uniquement. Les appelants
+# qui connaissent le projet doivent préférer get_serp_adapter(project_id).
 serp_adapter = SerpAdapter()
