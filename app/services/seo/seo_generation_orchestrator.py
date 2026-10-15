@@ -1058,6 +1058,33 @@ class SEOGenerationOrchestrator:
         self._step(step)
         return content
 
+    def _guarded_rewrite_pass(self, content: str, prompt: str, agent_id: str, article, temperature: float, step: str) -> str:
+        """Passe de réécriture d'un article complet qui ne peut jamais remplacer
+        l'article par une sortie tronquée : en cas d'échec de l'appel (dont
+        finish_reason == "length") ou si la réponse perd plus de 25 % des mots
+        (au-delà de la réduction attendue vers le maximum de mots), l'article
+        d'entrée est conservé tel quel."""
+        try:
+            rewritten = self._write_pass(prompt, agent_id, article, temperature, step)
+        except GenerationFailedError as exc:
+            self._error(step, f"Passe ignorée, contenu précédent conservé : {exc}")
+            return content
+        original_words = calculate_word_count(content)
+        try:
+            wc_max = int(self.context.get("word_count_max") or 0)
+        except (TypeError, ValueError):
+            wc_max = 0
+        reference = min(original_words, wc_max) if wc_max > 0 else original_words
+        rewritten_words = calculate_word_count(rewritten)
+        if rewritten_words < reference * 0.75:
+            self._error(
+                step,
+                f"Réponse rejetée : {rewritten_words} mots contre {original_words} avant la passe "
+                "(troncature probable) — contenu précédent conservé.",
+            )
+            return content
+        return rewritten
+
     def _build_checklist_verification_block(self) -> str:
         """Checklist de vérification mécanique pour la passe QualityGate (Pass 2,
         gate_prompt) : conformité aux exigences mécaniques (plage de mots).
@@ -1497,7 +1524,7 @@ class SEOGenerationOrchestrator:
             + "\n\nRetourne UNIQUEMENT le HTML complet nettoyé, sans explication, sans backticks.\n\n"
             f"Contenu :\n{content}"
         )
-        content = self._write_pass(gate_prompt, "writer", article, 0.3, "WritingPass_QualityGate")
+        content = self._guarded_rewrite_pass(content, gate_prompt, "writer", article, 0.3, "WritingPass_QualityGate")
 
         self._raise_if_cancelled(article)
 
