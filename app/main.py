@@ -174,6 +174,20 @@ def run_migrations():
 
 
 @app.on_event("startup")
+def ensure_partitions_at_startup():
+    """Crée les partitions mensuelles manquantes (mois courant + 3 mois)."""
+    if settings.APP_ENV in ("test", "maintenance"):
+        return
+    try:
+        from app.core.database import engine
+        from app.services.partition_service import ensure_monthly_partitions
+
+        ensure_monthly_partitions(engine)
+    except Exception as exc:
+        logger.error("Monthly partition creation failed at startup: %s", exc)
+
+
+@app.on_event("startup")
 def sync_agents_at_startup():
     """Synchronise ai.agents depuis le registre Python — voir
     app/scripts/sync_agent_catalog.py. Même coupe-circuit que run_migrations :
