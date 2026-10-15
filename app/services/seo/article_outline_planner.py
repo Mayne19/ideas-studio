@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 
 from app.schemas.seo_workflow import ArticleOutline, asdict
 
@@ -21,6 +22,36 @@ def _resolve_format(intent: dict, article_type: str) -> str:
     from app.services.seo.intent_analysis_service import article_type_to_format
     fmt = (intent.get("recommended_format") or "").strip()
     return fmt if fmt in SECTION_RANGE_BY_FORMAT else article_type_to_format(article_type)
+
+
+def resolve_outline_format(intent: dict | None, article_type: str | None) -> str:
+    """Format effectif du plan (le même que celui utilisé par le planner)."""
+    return _resolve_format(intent or {}, article_type or "evergreen_information")
+
+
+# Formats où une numérotation des titres a du sens (étapes, éléments d'une liste).
+NUMBERED_HEADING_FORMATS = ("list", "how_to")
+
+# « 1. », « 2) », « 3 - », « Étape 1 : », « Partie 2. », « IV. »… en tête de titre.
+_HEADING_ENUM_RE = re.compile(
+    r"^\s*(?:(?:[ée]tape|partie|section|point)\s+\d+\s*[:.)\-–]?\s*"
+    r"|\d{1,2}\s*[.)\-–:]\s+"
+    r"|[IVX]{1,4}\s*[.)\-–]\s+)",
+    re.IGNORECASE,
+)
+
+
+def strip_heading_enumeration(heading: str, fmt: str | None = None) -> str:
+    """Retire une numérotation en tête de titre (« 1. Webflow ou WordPress »)
+    que le planner ajoute même hors format liste. Conservée pour les formats
+    liste et tutoriel par étapes."""
+    heading = (heading or "").strip()
+    if fmt in NUMBERED_HEADING_FORMATS:
+        return heading
+    stripped = _HEADING_ENUM_RE.sub("", heading, count=1).strip()
+    if not stripped:
+        return heading
+    return stripped[0].upper() + stripped[1:]
 
 
 def build_outline(
@@ -130,7 +161,7 @@ def _build_outline_with_llm(
         if not isinstance(s, dict) or not s.get("heading"):
             continue
         normalized.append({
-            "heading": s.get("heading", ""),
+            "heading": strip_heading_enumeration(str(s.get("heading", "")), fmt),
             "level": int(s.get("level", 2)),
             "purpose": s.get("purpose", ""),
             "key_points": s.get("key_points") or [],
@@ -175,7 +206,7 @@ def _build_outline_heuristic(
     }]
     seen = {question.lower()}
     for item in list(intent.get("sub_questions") or []) + list(intent.get("must_include") or []):
-        heading = str(item).strip()
+        heading = strip_heading_enumeration(str(item), fmt)
         if not heading or heading.lower() in seen or len(sections) >= max_sections:
             continue
         seen.add(heading.lower())
