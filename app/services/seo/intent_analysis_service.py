@@ -48,6 +48,15 @@ _QUESTION_MARKERS = (
 )
 
 
+FIRST_BLOCK_GOALS = {
+    "simple_question": "Répondre directement à la question dès les premières phrases.",
+    "how_to": "Donner tout de suite la marche à suivre résumée.",
+    "comparison": "Donner tout de suite la recommandation selon le profil du lecteur.",
+    "explainer": "Expliquer l'essentiel en deux ou trois phrases dès le début.",
+    "list": "Annoncer tout de suite ce que la liste apporte et à qui.",
+}
+
+
 def _has_word(text: str, marker: str) -> bool:
     """Correspondance sur mot entier : « free » ne doit pas matcher « freelance »."""
     return re.search(rf"(?<![\w'-]){re.escape(marker)}(?![\w-])", text) is not None
@@ -107,19 +116,11 @@ def analyze_intent(
     else:
         recommended_format = "explainer"
 
-    first_block_goals = {
-        "simple_question": "Répondre directement à la question dès les premières phrases.",
-        "how_to": "Donner tout de suite la marche à suivre résumée.",
-        "comparison": "Donner tout de suite la recommandation selon le profil du lecteur.",
-        "explainer": "Expliquer l'essentiel en deux ou trois phrases dès le début.",
-        "list": "Annoncer tout de suite ce que la liste apporte et à qui.",
-    }
-
     analysis = IntentAnalysis(
         explicit_intent=explicit_intent,
         reader_real_question=title or keyword,
         expected_answer="",
-        first_block_goal=first_block_goals[recommended_format],
+        first_block_goal=FIRST_BLOCK_GOALS[recommended_format],
         article_type=format_to_article_type(recommended_format)
         if explicit_intent != "transactional" else "transactional",
         recommended_format=recommended_format,
@@ -140,6 +141,12 @@ def analyze_intent_dict(
     return asdict(analyze_intent(title, keyword, context_hint, category_name, idea_discovery, project_context))
 
 
+def _clean_list(value, limit: int) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(x).strip() for x in value if str(x).strip()][:limit]
+
+
 def refine_intent_with_research(
     base: dict,
     title: str,
@@ -147,72 +154,82 @@ def refine_intent_with_research(
     research_brief: dict | None = None,
     db=None,
     project_id: str | None = None,
+    idea_discovery: dict | None = None,
 ) -> dict:
-    """Affine l'analyse d'intention heuristique avec un jugement LLM appuyé sur
-    les VRAIS résultats SERP du research brief (titres + snippets concurrents).
-    Point 9 du pipeline : l'heuristique seule inférait l'intention depuis des
-    marqueurs lexicaux du titre ; elle ignore ce que la SERP montre réellement
-    (type de pages classées, questions posées par les concurrents). Repli
-    systématique sur l'analyse de base si aucun provider n'est disponible —
-    jamais bloquant, toujours un enrichissement."""
+    """Produit le vrai brief d'intention par LLM, appuyé sur la SERP réelle :
+    question réelle du lecteur, réponse attendue, points indispensables, pièges
+    à éviter et format recommandé. Ce brief pilote l'angle, le plan et le writer.
+
+    Le résultat porte toujours ``intent_refine_status`` (ok | empty |
+    no_provider | error) pour que l'orchestrateur rende visible un repli sur
+    l'heuristique au lieu de le subir en silence."""
     result = dict(base)
+    result["refined_by_llm"] = False
+    result["intent_refine_status"] = "no_provider"
     if db is None:
         return result
     try:
-        from app.services.agents.agent_router import get_router
-    except Exception:
-        return result
-    router = get_router(db)
-    if router is None:
-        return result
-    try:
-        provider = router.get_provider("intent_analysis", project_id=project_id)
-        if provider is None or provider.is_mock:
-            return result
-    except Exception:
+        from app.services.agents.agent_router import get_agent_router
+        provider = get_agent_router(db=db).get_provider("intent_analysis", project_id=project_id)
+    except Exception as exc:
+        logger.warning("Intent refine: provider resolution failed: %s", exc)
+        provider = None
+    if provider is None or provider.is_mock:
         return result
 
-    sources = (research_brief or {}).get("sources_consulted") or []
-    serp_context = ""
-    if sources:
-        lines = []
-        for source in sources[:10]:
-            if isinstance(source, dict):
-                snippet = (source.get("snippet") or "")[:200]
-                lines.append(f"- {source.get('title', '')} — {snippet}")
-        serp_context = "\n".join(lines)
+    lines = []
+    for source in ((research_brief or {}).get("sources_consulted") or [])[:8]:
+        if isinstance(source, dict):
+            snippet = (source.get("snippet") or "")[:180]
+            lines.append(f"- {source.get('title', '')} : {snippet}")
+    serp_context = "\n".join(lines)
+    idea_angle = (idea_discovery or {}).get("angle") or ""
 
     prompt = (
-        "Analyse l'intention de recherche réelle derrière ce sujet d'article en t'appuyant sur "
-        "les résultats Google réels (SERP) ci-dessous. Détermine : explicit_intent (informational|"
-        "commercial|transactional|navigational), article_type (evergreen_information|guide|"
-        "comparison|transactional|navigational|simple_question), la vraie question du lecteur, "
-        "la réponse attendue, les sous-questions à traiter, l'angle recommandé et ce qu'il faut "
-        "éviter (ce que les concurrents ratent).\n\n"
-        f"Titre : {title}\nMot-clé : {keyword}\n\n"
-        + (f"Résultats SERP réels :\n{serp_context}\n\n" if serp_context else "Aucun résultat SERP disponible.\n\n")
-        + "Réponds UNIQUEMENT avec un JSON valide :\n"
-        '{"explicit_intent": "...", "article_type": "...", "reader_real_question": "...", '
-        '"expected_answer": "...", "sub_questions": ["...", "..."], "first_block_goal": "...", '
-        '"recommended_angle": "...", "what_to_avoid": ["...", "..."]}'
+        "Tu prépares le brief d'un article. Trouve la vraie question que se pose la personne "
+        "qui cherche ce sujet, et ce qu'elle doit lire pour repartir satisfaite.\n\n"
+        f"Titre : {title}\nMot-clé : {keyword}\n"
+        + (f"Angle prévu : {idea_angle}\n" if idea_angle else "")
+        + (f"\nPages déjà classées sur Google :\n{serp_context}\n" if serp_context else "")
+        + "\nRéponds UNIQUEMENT avec ce JSON :\n"
+        '{"reader_real_question": "la question précise du lecteur, en une phrase", '
+        '"expected_answer": "la réponse attendue, en 2 à 3 phrases concrètes", '
+        '"recommended_format": "simple_question | how_to | comparison | explainer | list", '
+        '"explicit_intent": "informational | commercial | transactional | navigational", '
+        '"must_include": ["point indispensable pour bien répondre"], '
+        '"must_avoid": ["hors-sujet ou remplissage à éviter"], '
+        '"sub_questions": ["question de suivi que le lecteur se pose vraiment"], '
+        '"recommended_angle": "l\'angle de l\'article, en une phrase"}\n'
+        "Règles : must_include 3 à 5 éléments, must_avoid 2 à 4, sub_questions 0 à 4. "
+        "Pas de chiffres inventés. Rédige les valeurs dans la langue du titre."
     )
     try:
-        refined = provider.generate_json(prompt, schema_hint="json intent analysis object")
-    except Exception:
+        refined = provider.generate_json(prompt, schema_hint="json intent brief object")
+    except Exception as exc:
+        logger.warning("Intent refine: LLM call failed: %s", exc)
+        result["intent_refine_status"] = "error"
         return result
-    if not isinstance(refined, dict):
+    if not isinstance(refined, dict) or not (refined.get("reader_real_question") or refined.get("expected_answer")):
+        logger.warning("Intent refine: LLM returned an empty or unusable brief for %r", title)
+        result["intent_refine_status"] = "empty"
         return result
 
-    for field in ("explicit_intent", "article_type", "reader_real_question", "expected_answer",
-                  "first_block_goal", "recommended_angle"):
+    for field in ("reader_real_question", "expected_answer", "recommended_angle"):
         value = refined.get(field)
         if isinstance(value, str) and value.strip():
             result[field] = value.strip()
-    for list_field in ("sub_questions", "what_to_avoid"):
-        value = refined.get(list_field)
-        if isinstance(value, list) and value:
-            result[list_field] = [str(x) for x in value if str(x).strip()][:8]
+    intent = str(refined.get("explicit_intent") or "").strip().lower()
+    if intent in ("informational", "commercial", "transactional", "navigational"):
+        result["explicit_intent"] = intent
+    fmt = str(refined.get("recommended_format") or "").strip().lower()
+    if fmt in RECOMMENDED_FORMATS:
+        result["recommended_format"] = fmt
+        result["article_type"] = format_to_article_type(fmt)
+        result["first_block_goal"] = FIRST_BLOCK_GOALS[fmt]
+    result["must_include"] = _clean_list(refined.get("must_include"), 6)
+    result["must_avoid"] = _clean_list(refined.get("must_avoid"), 5)
+    result["what_to_avoid"] = list(result["must_avoid"])
+    result["sub_questions"] = _clean_list(refined.get("sub_questions"), 5)
     result["refined_by_llm"] = True
-    if isinstance(result.get("intent_scores"), dict):
-        result["intent_scores"] = dict(result["intent_scores"])
+    result["intent_refine_status"] = "ok"
     return result
