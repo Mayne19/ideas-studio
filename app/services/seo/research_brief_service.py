@@ -4,7 +4,7 @@ import logging
 from time import perf_counter
 
 from app.schemas.seo_workflow import ResearchBrief, asdict
-from app.services.seo.adapters.serp_adapter import get_serp_adapter
+from app.services.seo.adapters.serp_adapter import SerpAdapter, get_serp_adapter
 from app.services.seo.adapters.scrapling_adapter import scrapling_adapter
 
 logger = logging.getLogger(__name__)
@@ -24,9 +24,13 @@ def build_research_brief(
     category_name: str | None = None,
     serp_enabled: bool = False,
     project_id: str | None = None,
+    serp_adapter: SerpAdapter | None = None,
 ) -> ResearchBrief:
+    """serp_adapter : adaptateur déjà résolu par l'appelant (l'orchestrateur
+    le partage pour que son statut reflète les erreurs de cette étape),
+    sinon résolu ici pour project_id."""
     brief = ResearchBrief()
-    serp_adapter = get_serp_adapter(project_id)
+    serp_adapter = serp_adapter or get_serp_adapter(project_id)
 
     if not serp_adapter.configured:
         brief.research_status = "not_available"
@@ -114,5 +118,6 @@ def build_research_brief_dict(
     category_name: str | None = None,
     serp_enabled: bool = False,
     project_id: str | None = None,
+    serp_adapter: SerpAdapter | None = None,
 ) -> dict:
-    return asdict(build_research_brief(keyword, title, category_name, serp_enabled, project_id))
+    return asdict(build_research_brief(keyword, title, category_name, serp_enabled, project_id, serp_adapter))
