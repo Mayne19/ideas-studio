@@ -256,6 +256,44 @@ class WorkflowStep(Base):
     finished_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
 
+class GenerationJob(Base):
+    """Génération d'article lancée depuis l'interface, exécutée en tâche de
+    fond : la requête HTTP répond 202 tout de suite (le proxy Railway coupe à
+    300 s alors qu'un article prend 7 à 12 min) et le client suit le job par
+    polling. Statut porté par ref.run_status_reasons comme ai.workflow_runs ;
+    article_id n'est connu qu'une fois l'article créé et validé en base."""
+    __tablename__ = "generation_jobs"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["status_reason_id", "state_id"],
+            ["ref.run_status_reasons.id", "ref.run_status_reasons.state_id"],
+        ),
+        Index("generation_jobs_project_idx", "project_id", text("created_at DESC")),
+        {"schema": "ai"},
+    )
+
+    id: Mapped[str] = _uuid_pk()
+    project_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("core.projects.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("core.users.id", ondelete="SET NULL"), nullable=True
+    )
+    article_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("content.articles.id", ondelete="SET NULL"), nullable=True
+    )
+    state_id: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
+    status_reason_id: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=10)
+    request: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    current_step: Mapped[str | None] = mapped_column(Text, nullable=True)
+    steps_completed: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    started_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+
 class Artifact(Base):
     """Remplace les ~40 colonnes articles.<x>_json de l'ancien modèle. Une ligne
     par (article, agent_key) — voir app/services/seo/helpers.py:save_artifact."""
