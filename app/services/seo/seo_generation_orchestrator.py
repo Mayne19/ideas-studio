@@ -1105,20 +1105,13 @@ class SEOGenerationOrchestrator:
         jamais sur un contexte incomplet (chaîne vide si rien de pertinent)."""
         checklist: list[str] = []
 
-        wc_min = self.context.get("word_count_min")
         wc_max = self.context.get("word_count_max")
-        if wc_min or wc_max:
-            target = " et ".join(
-                p for p in (
-                    f"minimum {wc_min} mots" if wc_min else "",
-                    f"maximum {wc_max} mots" if wc_max else "",
-                ) if p
-            )
+        if wc_max:
+            # Seul le maximum est vérifié : demander de « développer » sous le
+            # minimum poussait le modèle à délayer la réponse.
             checklist.append(
-                f"Respecte la plage de mots : {target}. Compte les mots du HTML "
-                "final que tu renvoies ; coupe les passages les moins utiles si tu "
-                "dépasses le maximum, développe une section pertinente si tu es "
-                "sous le minimum."
+                f"Ne dépasse pas {wc_max} mots ; si c'est le cas, coupe les passages les moins utiles. "
+                "N'ajoute jamais de texte pour allonger l'article."
             )
 
         if not checklist:
