@@ -154,12 +154,65 @@ export type GenerateArticleResponse = {
   model_name?: string | null
 }
 
-export function generateArticle(projectId: string, payload: GenerateArticleRequest = {}): Promise<GenerateArticleResponse> {
-  // Génération synchrone côté backend : 4 passes de rédaction séquentielles
-  // puis un cycle d'auto-amélioration budgété à 900s (AUTO_IMPROVE_TIME_BUDGET_SECONDS,
-  // voir seo_generation_orchestrator.py — dimensionné contre le pire cas réel
-  // d'un appel Gemini, jusqu'à 630s). 180s ne suffit plus : le pipeline entier
-  // peut légitimement dépasser cette durée sans que la génération ait échoué.
-  // Aligné sur triggerPipelineRun(), qui a le même besoin (voir pipeline.ts).
-  return api.post<GenerateArticleResponse>(`/projects/${projectId}/articles/generate`, payload, { timeoutMs: 1200000 })
+export type GenerationJobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
+
+export type GenerationJob = {
+  id: string
+  project_id: string
+  status: GenerationJobStatus
+  article_id: string | null
+  current_step: string | null
+  steps_completed: number
+  error: string | null
+  title: string | null
+  created_at: string | null
+  started_at: string | null
+  finished_at: string | null
+}
+
+export function isGenerationJobDone(job: GenerationJob): boolean {
+  return job.status === 'succeeded' || job.status === 'failed' || job.status === 'cancelled'
+}
+
+/** Lance la génération en tâche de fond : le backend répond 202 avec un job
+ * (le proxy Railway coupe les requêtes à 300 s, un article prend 7 à 12 min).
+ * Suivre l'avancement avec getGenerationJob() / waitForGenerationJob(). */
+export function generateArticle(projectId: string, payload: GenerateArticleRequest = {}): Promise<GenerationJob> {
+  return api.post<GenerationJob>(`/projects/${projectId}/articles/generate`, payload)
+}
+
+export function getGenerationJob(projectId: string, jobId: string): Promise<GenerationJob> {
+  return api.get<GenerationJob>(`/projects/${projectId}/generation-jobs/${jobId}`)
+}
+
+export function listGenerationJobs(projectId: string, options: { limit?: number; active?: boolean } = {}): Promise<GenerationJob[]> {
+  const params = new URLSearchParams()
+  if (options.limit !== undefined) params.set('limit', String(options.limit))
+  if (options.active) params.set('active', 'true')
+  const qs = params.toString()
+  return api.get<GenerationJob[]>(`/projects/${projectId}/generation-jobs${qs ? `?${qs}` : ''}`)
+}
+
+/** Interroge le job jusqu'à son issue. Une erreur réseau ponctuelle
+ * (redéploiement, coupure) ne fait pas échouer le suivi : on réessaie. */
+export async function waitForGenerationJob(
+  projectId: string,
+  jobId: string,
+  options: { intervalMs?: number; onUpdate?: (job: GenerationJob) => void; signal?: AbortSignal } = {},
+): Promise<GenerationJob> {
+  const intervalMs = options.intervalMs ?? 4000
+  let consecutiveErrors = 0
+  for (;;) {
+    if (options.signal?.aborted) throw new DOMException('Suivi interrompu', 'AbortError')
+    try {
+      const job = await getGenerationJob(projectId, jobId)
+      consecutiveErrors = 0
+      options.onUpdate?.(job)
+      if (isGenerationJobDone(job)) return job
+    } catch (err) {
+      consecutiveErrors += 1
+      if (consecutiveErrors >= 10) throw err
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, intervalMs))
+  }
 }
