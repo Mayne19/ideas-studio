@@ -318,7 +318,8 @@ AGENTS: list[AgentDef] = [
         requires_llm=True,
         icon="git-branch",
         implementation_ref="seo_generation_orchestrator.coherence_pass",
-        status=AgentStatus.active,
+        # Passe retirée du pipeline (réécriture complète qui diluait le fond).
+        status=AgentStatus.disabled,
         output_json_field=None,
     ),
     AgentDef(
