@@ -289,6 +289,8 @@ class OllamaLLMProvider(LLMProvider):
                     "input_tokens": int(data.get("prompt_eval_count") or 0),
                     "output_tokens": int(data.get("eval_count") or 0),
                 }
+            if data.get("done_reason") == "length":
+                raise TruncatedOutputError(f"Ollama modèle {self.model} : réponse tronquée (limite de tokens atteinte).")
             content = data.get("message", {}).get("content", "")
             if not content:
                 raise ProviderUnavailableError("Ollama a retourné une réponse vide")
