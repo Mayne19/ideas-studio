@@ -80,6 +80,10 @@ class IntentAnalysis:
     recommended_angle: str = ""
     first_block_goal: str = ""
     article_type: str = "evergreen_information"
+    # simple_question | how_to | comparison | explainer | list
+    recommended_format: str = "explainer"
+    must_include: list[str] = field(default_factory=list)
+    must_avoid: list[str] = field(default_factory=list)
     intent_scores: dict = field(default_factory=dict)
     commercial_intent_score: float = 0.0
 
