@@ -4,22 +4,21 @@ import re
 from statistics import mean
 from typing import Any
 
+from app.services.seo.content_structure_guard import TRANSITION_BLACKLIST
 from app.services.seo.helpers import strip_html
 
 
+# Connecteurs neutres récompensés par le score de lisibilité. Tout connecteur
+# banni par le writer (TRANSITION_BLACKLIST, partagée avec le prompt) est
+# exclu, ainsi que les tournures toutes faites (« curieusement », « pour être
+# honnête », « tout compte fait ») qui ne servaient qu'à cocher une case.
 TRANSITION_WORDS = [
-    # "de plus"/"en outre"/"par ailleurs"/"toutefois"/"néanmoins" et
-    # "en conclusion"/"pour conclure"/"en résumé" volontairement absents :
-    # le prompt du rédacteur (seo_generation_orchestrator._generate_content,
-    # règles de voix + vocabulaire interdit) les bannit explicitement comme
-    # "transitions creuses" ou ouvertures de conclusion interdites — les
-    # récompenser ici contredisait directement la consigne donnée au writer.
-    "donc", "ainsi", "par conséquent", "c'est pourquoi", "de ce fait",
-    "également", "cependant", "en revanche", "pourtant",
-    "à bien y réfléchir", "ce qui signifie concrètement", "tout compte fait",
-    "en réalité", "pour être honnête", "paradoxalement", "curieusement",
-    "malgré tout", "autrement dit",
-    "par exemple", "notamment", "ainsi que", "finalement",
+    t for t in (
+        "donc", "par conséquent", "c'est pourquoi", "de ce fait", "également",
+        "cependant", "en revanche", "autrement dit", "malgré tout",
+        "par exemple", "ainsi que", "finalement",
+    )
+    if t not in TRANSITION_BLACKLIST
 ]
 
 PASSIVE_PATTERNS = [
