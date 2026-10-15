@@ -61,6 +61,8 @@ class IdeaDiscoveryResult:
     secondary_keywords: list[str] = field(default_factory=list)
     detected_intent: str = ""
     expected_answer: str = ""
+    angle: str = ""
+    reader_question: str = ""
     opportunity_score: float = 0.0
     source: str = ""
     real_research_used: bool = False

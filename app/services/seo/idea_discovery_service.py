@@ -154,8 +154,13 @@ def discover_ideas(
                     schema_hint='{"title": "...", "keyword": "...", "angle": "...", "search_intent": "informational|commercial"}',
                 )
                 if isinstance(idea_data, dict):
-                    title = idea_data.get("title", title)
-                    keyword = idea_data.get("keyword", keyword)
+                    title = idea_data.get("title") or title
+                    keyword = idea_data.get("keyword") or keyword
+                    idea_angle = str(idea_data.get("angle") or "").strip()
+                    reader_question = str(idea_data.get("reader_question") or "").strip()
+                    intent_value = str(idea_data.get("search_intent") or "").strip().lower()
+                    if intent_value in ("informational", "commercial", "transactional", "navigational"):
+                        detected_intent = intent_value
 
             if keyword in existing_keywords:
                 continue
@@ -165,7 +170,9 @@ def discover_ideas(
                 category_id=category_id or (categories[0].id if categories else None),
                 main_keyword=keyword,
                 secondary_keywords=[keyword],
-                detected_intent="informational",
+                detected_intent=detected_intent,
+                angle=idea_angle,
+                reader_question=reader_question,
                 opportunity_score=round(0.5 + (i / (count * 2)), 2),
                 source="ai_generation" if not llm.is_mock else "mock_template",
                 real_research_used=not llm.is_mock and not isinstance(search, MockSearchProvider),
