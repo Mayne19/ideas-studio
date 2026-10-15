@@ -1467,16 +1467,17 @@ class SEOGenerationOrchestrator:
         external_links_plan = self.context.get("external_links") or {}
         external_link_items = external_links_plan.get("links") if isinstance(external_links_plan, dict) else []
         if external_link_items:
-            prompt_parts.append("\n=== MAILLAGE EXTERNE OBLIGATOIRE ===")
-            prompt_parts.append("Intègre ces liens externes vers des sources d'autorité, en les plaçant sur la phrase "
-                               "qui s'appuie sur l'information (1 à 3 liens externes dans l'article, pas plus) :")
+            prompt_parts.append("\n=== LIENS EXTERNES (OPTIONNELS) ===")
+            prompt_parts.append("Liens externes disponibles. Tu peux en utiliser 0 à 2, uniquement si un extrait de "
+                               "source fourni soutient réellement la phrase qui porte le lien. N'en place aucun "
+                               "s'il ne sert pas le lecteur ; n'invente jamais d'autre URL :")
             for link in external_link_items[:4]:
                 url = link.get("url") or ""
                 anchor = (link.get("anchor_text") or "Source").strip()
                 reason = link.get("reason") or ""
                 prompt_parts.append(f"- {url} | Ancre suggérée : « {anchor} » | {reason}")
             prompt_parts.append("Format : <a href='URL' target='_blank' rel='nofollow'>texte d'ancre naturel</a>")
-            prompt_parts.append("Chaque lien externe doit être entouré d'une phrase qui justifie sa présence.")
+            prompt_parts.append("Un lien externe utilisé doit être entouré d'une phrase qui justifie sa présence.")
 
         content_prompt = "\n".join(prompt_parts)
 
