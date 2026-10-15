@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { AlertTriangle, Bot, CheckCircle, ChevronDown, ChevronUp, History, Loader2, Play, RotateCw, Settings, TestTube2 } from '@/components/ui/hugeIcons'
 import { listAIProviders } from '@/api/aiProviders'
 import { getPipelineLogs, getPipelineSettings, pipelineRunMessage, pipelineStatusLabel, triggerPipelineRun } from '@/api/pipeline'
-import { listArticles } from '@/api/articles'
+import { listArticles, listGenerationJobs } from '@/api/articles'
+import type { GenerationJob } from '@/api/articles'
 import { api, ApiError } from '@/api/client'
 import type { AIProviderPublic } from '@/api/aiProviders'
 import type { PipelineLog, PipelineSettings } from '@/api/pipeline'
@@ -26,6 +27,20 @@ function StatusPill({ ok, label }: { ok: boolean; label: string }) {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <p className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-secondary">{children}</p>
+}
+
+const JOB_STATUS_LABELS: Record<GenerationJob['status'], string> = {
+  queued: 'En file',
+  running: 'En cours',
+  succeeded: 'Terminé',
+  failed: 'Échec',
+  cancelled: 'Annulé',
+}
+
+function jobStatusClass(status: GenerationJob['status']): string {
+  if (status === 'succeeded') return 'text-success'
+  if (status === 'failed' || status === 'cancelled') return 'text-danger'
+  return 'text-secondary'
 }
 
 function workflowStatus(article: Article): string {
@@ -58,6 +73,7 @@ export default function GeneratePage() {
   const [pipeline, setPipeline] = useState<PipelineSettings | null>(null)
   const [logs, setLogs] = useState<PipelineLog[]>([])
   const [articles, setArticles] = useState<Article[]>([])
+  const [jobs, setJobs] = useState<GenerationJob[]>([])
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [runState, setRunState] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
   const [runSummary, setRunSummary] = useState('')
@@ -77,8 +93,9 @@ export default function GeneratePage() {
       getPipelineSettings(projectId).catch(() => null),
       getPipelineLogs(projectId, 12).catch(() => []),
       listArticles(projectId, { limit: 80 }).catch(() => []),
+      listGenerationJobs(projectId, { limit: 8 }).catch(() => []),
     ])
-      .then(([providerData, agentData, assignmentData, pipelineData, logData, articleData]) => {
+      .then(([providerData, agentData, assignmentData, pipelineData, logData, articleData, jobData]) => {
         if (cancelled) return
         setProviders(providerData)
         setAgents(agentData)
@@ -86,6 +103,7 @@ export default function GeneratePage() {
         setPipeline(pipelineData)
         setLogs(logData)
         setArticles(articleData)
+        setJobs(jobData)
         setLoadState('success')
       })
       .catch(() => {
@@ -110,6 +128,7 @@ export default function GeneratePage() {
     () => [...logs].sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime()),
     [logs],
   )
+  const activeJobCount = jobs.filter((job) => job.status === 'queued' || job.status === 'running').length
   const failedPipelineLogs = sortedLogs.filter(isLogFailure)
   const failureCount = failedPipelineLogs.length
   const successPipelineLogs = sortedLogs.filter((log) => isLogSuccess(log.status))
@@ -145,6 +164,15 @@ export default function GeneratePage() {
     const interval = window.setInterval(() => setTick((value) => value + 1), 10000)
     return () => window.clearInterval(interval)
   }, [runState, runningPipelineCount])
+
+  // Générations d'article en tâche de fond : suivi de l'étape courante.
+  useEffect(() => {
+    if (!projectId || activeJobCount === 0) return
+    const interval = window.setInterval(() => {
+      listGenerationJobs(projectId, { limit: 8 }).then(setJobs).catch(() => {})
+    }, 5000)
+    return () => window.clearInterval(interval)
+  }, [projectId, activeJobCount])
 
   async function handleRunPipeline() {
     if (!projectId || runState === 'running' || runningPipelineCount > 0) return
@@ -408,6 +436,40 @@ export default function GeneratePage() {
           )}
         </div>
       </div>
+
+      {jobs.length > 0 && (
+        <div className="mb-6 rounded-[14px] border border-border bg-surface p-4">
+          <SectionTitle>Générations d’articles</SectionTitle>
+          <div className="flex flex-col divide-y divide-border">
+            {jobs.map((job) => (
+              <div key={job.id} className="flex flex-wrap items-start justify-between gap-3 py-2.5 text-[12px]">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-primary">{job.title || 'Article sans titre imposé'}</p>
+                  <p className="mt-0.5 truncate text-secondary">
+                    {job.status === 'failed' || job.status === 'cancelled'
+                      ? job.error || 'Échec sans détail.'
+                      : job.current_step
+                        ? `Étape : ${job.current_step}${job.steps_completed ? ` (${job.steps_completed})` : ''}`
+                        : 'En attente de démarrage'}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <span className={`inline-flex items-center gap-1 font-medium ${jobStatusClass(job.status)}`}>
+                    {(job.status === 'queued' || job.status === 'running') && <Loader2 size={11} className="animate-spin" />}
+                    {JOB_STATUS_LABELS[job.status]}
+                  </span>
+                  <span className="text-tertiary">{job.created_at ? new Date(job.created_at).toLocaleString('fr-FR') : ''}</span>
+                  {job.article_id && (
+                    <button className="font-medium text-accent hover:underline" onClick={() => navigate(`/projects/${projectId}/articles/${job.article_id}/edit`)}>
+                      Ouvrir
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="rounded-[14px] border border-border bg-surface p-4">
         <SectionTitle>Dernières générations</SectionTitle>
