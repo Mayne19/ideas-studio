@@ -37,9 +37,13 @@ EXTERNAL_SERVICES: dict[str, dict] = {
             },
         },
     },
+    # Clé Unsplash, utilisée quand le mode des images d'illustration est
+    # « Photos Unsplash » (ou en repli du mode IA). Le choix du mode et le
+    # style des illustrations générées vivent dans ai.illustration_settings
+    # (app/services/illustration_settings_service.py, /settings/illustrations).
     "images": {
-        "label": "Images d'illustration",
-        "description": "Photos libres de droits insérées automatiquement dans les articles.",
+        "label": "Photos Unsplash",
+        "description": "Photos libres de droits (mode « Photos Unsplash » des images d'illustration, et repli du mode IA).",
         "providers": {
             "unsplash": {"label": "Unsplash", "fields": [], "docs_url": "https://unsplash.com/developers"},
         },
