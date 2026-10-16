@@ -1722,6 +1722,9 @@ class SEOGenerationOrchestrator:
         )
         content = apply_structure_guards(content, draft.title)
         content, structure_fix = self._structure_pass(article, draft, content, section_writer)
+        if self._is_french():
+            from app.services.seo.french_typography import fix_french_typography
+            content = fix_french_typography(content)
 
         illustration_cfg = self.context.get("illustration_config")
         if illustration_cfg is not None and illustration_cfg.mode == "ai":
@@ -1854,7 +1857,7 @@ class SEOGenerationOrchestrator:
             else:
                 title_llm = self._get_agent_provider("meta_writer", writer_llm)
                 raw_title = title_llm.generate_text(meta_prompt, temperature=0.3) or ""
-            draft.meta_title = clean_meta_text(raw_title, 255) or draft.title[:255]
+            draft.meta_title = self._typo(clean_meta_text(raw_title, 255) or draft.title[:255])
 
         if not draft.meta_description:
             desc_prompt = (
@@ -1877,7 +1880,7 @@ class SEOGenerationOrchestrator:
             else:
                 desc_llm = self._get_agent_provider("meta_writer", writer_llm)
                 raw_desc = desc_llm.generate_text(desc_prompt, temperature=0.3) or ""
-            draft.meta_description = clean_meta_text(raw_desc, 500)
+            draft.meta_description = self._typo(clean_meta_text(raw_desc, 500))
 
         draft.excerpt = self._extract_excerpt(content)
 
@@ -2085,11 +2088,21 @@ class SEOGenerationOrchestrator:
                     q = str(item.get("question", "")).strip()
                     a = str(item.get("answer", "")).strip()
                     if q and a:
-                        normalized.append({"question": q, "answer": a})
+                        normalized.append({"question": self._typo(q), "answer": self._typo(a)})
                 if 2 <= len(normalized) <= 6:
                     draft.faq = normalized
         except Exception:
             pass
+
+    def _is_french(self) -> bool:
+        return ((self.project.locale if self.project else None) or "fr").startswith("fr")
+
+    def _typo(self, text: str) -> str:
+        """Typographie française sur un texte court (méta, FAQ)."""
+        if not text or not self._is_french():
+            return text
+        from app.services.seo.french_typography import fix_french_text
+        return fix_french_text(text)
 
     def _extract_excerpt(self, content: str, max_length: int = 300) -> str:
         text = content
