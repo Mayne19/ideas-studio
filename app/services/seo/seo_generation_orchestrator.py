@@ -1347,6 +1347,14 @@ class SEOGenerationOrchestrator:
             "- Connecteurs interdits : " + ", ".join(c.capitalize() for c in TRANSITION_BLACKLIST) + ".",
             "- Tics à éviter, une fois au plus dans tout l'article : " + ", ".join(VERBAL_TICS) + ".",
             "- Ne parle jamais de l'article, de ses sections, des consignes ni « du lecteur » : parle au lecteur.",
+            "- Expressions interdites, qui trahissent un texte généré : « Imaginez », « Franchement », "
+            "« Curieusement », « C'est ce qui fait la différence », « Le saviez-vous », « Et si… ».",
+            "- Pas d'évidence sans valeur (« sans rien installer » pour un outil en ligne, « pas besoin de savoir "
+            "coder » quand personne n'a parlé de code) : chaque phrase apprend quelque chose au lecteur.",
+            "- Après chaque fait, dis ce qu'il change pour le lecteur (« C'est pratique si vous voulez… »).",
+            "- Une ou deux touches d'humour ou d'émotion par article au plus, tirées d'une situation que le "
+            "lecteur a vécue et reliées au conseil qui suit (« un questionnaire promet 2 minutes, et à la "
+            "question 27 on se demande encore s'il finira un jour »). Jamais un mot-tic à la place.",
             "- Jamais de tiret cadratin (—) : utilise une virgule, deux-points ou une nouvelle phrase.",
             "- Appelle un produit, une marque, un outil ou une personne par son nom (« Webflow », pas "
             "« cet outil » ni « la plateforme »). Répéter un nom propre est normal ; une périphrase "
