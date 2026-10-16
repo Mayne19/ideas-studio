@@ -42,3 +42,14 @@ def test_h1_in_body_or_missing_title_fails():
     assert not rule["passed"] and rule["severity"] == "hard"
     assert rule["violations"][0]["detail"].startswith("H1 dans le corps")
     assert not _rule(validate_structure(GOOD, ""), "single_h1")["passed"]
+
+
+def test_heading_hierarchy_detects_orphan_h3_skips_and_h5():
+    orphan = INTRO + "<h3>Avant tout</h3>" + _para(2) + "\n".join(SECTIONS)
+    details = [v["detail"] for v in _rule(validate_structure(orphan, TITLE), "heading_hierarchy")["violations"]]
+    assert "H3 sans H2 parent" in details
+    skipped = GOOD + "<h2>Annexe</h2><h4>Détail</h4>" + _para(2) + "<h5>Note</h5>" + _para(1)
+    details = [v["detail"] for v in _rule(validate_structure(skipped, TITLE), "heading_hierarchy")["violations"]]
+    assert "Niveau sauté : H2 puis H4" in details
+    assert any(d.startswith("H5 interdit") for d in details)
+    assert _rule(validate_structure(GOOD, TITLE), "heading_hierarchy")["passed"]
