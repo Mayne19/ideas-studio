@@ -94,7 +94,8 @@ def article_digest(content: str) -> str:
 
 
 def build_judge_prompt(content: str, *, title: str, keyword: str, brief: dict, facts: list[str],
-                       reference_figures: list[str], required_component: str = "") -> str:
+                       reference_figures: list[str], required_component: str = "",
+                       planned_gain: dict | None = None) -> str:
     criteria = "\n".join(f"- {key} ({pts} pts) : {desc}" for key, (pts, desc) in JUDGE_CRITERIA.items())
     parts = [
         "Tu es rédacteur en chef d'un média web exigeant (niveau des meilleurs blogs experts français). "
@@ -114,6 +115,11 @@ def build_judge_prompt(content: str, *, title: str, keyword: str, brief: dict, f
         parts.append(f"Composant obligatoire du format : {required_component}")
     if reference_figures:
         parts += ["", "Chiffres de référence (font foi) :", *[f"- {f}" for f in reference_figures]]
+    if planned_gain:
+        planned = [k for k in ("decision_tool", "worked_example", "surprising_fact", "common_mistakes") if planned_gain.get(k)]
+        if planned:
+            parts += ["", "Gain d'information prévu avant rédaction (critère information_gain : vérifie que chaque "
+                          "élément est présent et juste) : " + ", ".join(planned)]
     if facts:
         parts += ["", "Faits vérifiés disponibles (avec leur source) :", *[f"- {f}" for f in facts[:40]]]
     parts += [
@@ -219,11 +225,12 @@ def parse_judgement(raw: str, *, structure_report: dict | None = None) -> dict |
 
 def judge_article(content: str, call_fn: CallFn, *, title: str, keyword: str, brief: dict,
                   facts: list[str], reference_figures: list[str], structure_report: dict | None = None,
-                  required_component: str = "",
+                  required_component: str = "", planned_gain: dict | None = None,
                   fatal_exceptions: tuple[type[BaseException], ...] = ()) -> dict:
     """Jugement complet, ou {"error": ...} si l'appel ou le JSON échoue."""
     prompt = build_judge_prompt(content, title=title, keyword=keyword, brief=brief, facts=facts,
-                                reference_figures=reference_figures, required_component=required_component)
+                                reference_figures=reference_figures, required_component=required_component,
+                                planned_gain=planned_gain)
     try:
         raw = call_fn(prompt, "EditorialJudge", 0.1)
     except fatal_exceptions:
