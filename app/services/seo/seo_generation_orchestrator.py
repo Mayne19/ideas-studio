@@ -1550,7 +1550,32 @@ class SEOGenerationOrchestrator:
         proofread = self._keep_if_h2_lost(content, proofread, "ProofreadingPass")
         self._save(article.id, "proofreading_report", report)
         self._step(f"ProofreadingPass ({report['corrected']} corrigée(s), {report['rejected']} rejetée(s))")
-        return proofread
+        return self._clarity_pass(article, draft, proofread)
+
+    def _clarity_pass(self, article: Article, draft: _DraftArticle, content: str) -> str:
+        """Relecture de clarté phrase par phrase pour un lecteur débutant
+        (chantier 4), via l'agent « language_quality » : son modèle se règle
+        dans Paramètres → Agents (rôle relecture)."""
+        from app.services.seo.section_proofreader import proofread_article
+
+        def call(prompt: str, step: str, temperature: float) -> str:
+            self._raise_if_cancelled(article)
+            return self._write_pass(prompt, "language_quality", article, temperature, step)
+
+        try:
+            clarified, report = proofread_article(
+                content, call, proper_nouns=self._proper_nouns(draft),
+                fatal_exceptions=(WritingCancelledError,), mode="clarity",
+            )
+        except WritingCancelledError:
+            raise
+        except Exception as exc:
+            self._error("ClarityPass", f"Relecture de clarté ignorée : {exc}")
+            return content
+        clarified = self._keep_if_h2_lost(content, clarified, "ClarityPass")
+        self._save(article.id, "clarity_report", report)
+        self._step(f"ClarityPass ({report['corrected']} réécrite(s), {report['rejected']} rejetée(s))")
+        return clarified
 
     def _consistency_pass(self, article: Article, content: str) -> str:
         """Contradictions chiffrées et phrases répétées entre l'introduction
