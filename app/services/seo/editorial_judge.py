@@ -45,7 +45,7 @@ CODE_STRUCTURE_POINTS = 5
 CODE_SEO_POINTS = 5
 BLOCKER_TYPES = ("invented_fact", "unsourced_figure", "contradiction", "intent_missed", "missing_component",
                  "off_topic_fact", "meta_commentary", "reader_drop", "unexplained_jargon", "commercial_copy",
-                 "heading_mismatch", "obvious_filler")
+                 "heading_mismatch", "obvious_filler", "plagiarism")
 
 # Introduction acceptée par le fondateur (lecteur : 90/100) : réponse directe
 # adaptée au but du lecteur, problème concret, annonce de ce qu'il obtient.
