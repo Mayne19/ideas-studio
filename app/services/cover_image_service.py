@@ -32,6 +32,14 @@ def set_cover_image_if_missing(db: Session, article: Article, source: dict | Non
     from app.services.seo.image_plan_service import image_alt_text, is_unsplash_source
 
     url = source["image_url"]
+    # Illustration générée : le média existe déjà (stocké et enregistré par
+    # illustration_service), on le lie simplement comme couverture.
+    media_id = source.get("media_id")
+    if media_id and db.get(MediaAsset, media_id) is not None:
+        db.add(ArticleMedia(article_id=article.id, media_id=media_id, role=MediaRole.COVER, position=0))
+        db.flush()
+        return url
+
     author = (source.get("author") or "").strip()
     caption = f"Photo : {author} sur Unsplash" if is_unsplash_source(source) and author else None
     asset = MediaAsset(
