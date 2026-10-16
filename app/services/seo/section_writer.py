@@ -525,6 +525,8 @@ class SectionWriter:
         return [
             "- N'écris aucun chiffre, prix, pourcentage, date ou nom d'étude absent des faits vérifiés "
             "ou des extraits de sources fournis.",
+            "- N'invente aucun témoignage, cas client, anecdote vécue ni propos attribué à quelqu'un "
+            "(« un freelance le confirme », « un client nous a dit ») : présente le raisonnement directement.",
             "- HTML simple uniquement : <h2>, <h3>, <p>, <ul>, <ol>, <li>, <table>, <blockquote>, <strong>, "
             "<em>, <a>. Pas de Markdown, pas de <h1>.",
         ]
