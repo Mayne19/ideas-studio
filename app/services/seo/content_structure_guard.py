@@ -20,8 +20,10 @@ TRANSITION_BLACKLIST = (
     "en outre", "de plus", "par ailleurs", "néanmoins", "toutefois",
     "ainsi", "dès lors", "en somme", "en définitive", "d'autre part",
     "à cet égard", "en effet", "effectivement", "notamment", "de surcroît",
-    "qui plus est", "honnêtement", "en réalité", "pourtant", "à bien y réfléchir",
+    "qui plus est", "honnêtement", "à bien y réfléchir",
 )
+# "pourtant" et "en réalité" restent autorisés : le guide éditorial du
+# fondateur les recommande comme transitions naturelles de contraste.
 
 
 def strip_duplicate_h1(content: str, title: str | None) -> str:
