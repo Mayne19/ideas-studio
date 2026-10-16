@@ -28,6 +28,9 @@ CallFn = Callable[[str, str, float], str]
 
 MAX_WORD_DROP = 0.10
 MAX_WORD_GROWTH = 0.15
+# Mode clarté : des évidences peuvent disparaître, rien ne doit s'ajouter.
+CLARITY_MAX_WORD_DROP = 0.20
+CLARITY_MAX_WORD_GROWTH = 0.10
 MIN_UNIT_WORDS = 15
 
 _HEADING_RE = re.compile(r"<(h[23])\b[^>]*>(.*?)</\1>", re.IGNORECASE | re.DOTALL)
@@ -44,7 +47,8 @@ def _numbers(html: str) -> list[str]:
     return [n.replace(",", ".") for n in _NUMBER_RE.findall(text)]
 
 
-def rejection_reason(original: str, candidate: str) -> str | None:
+def rejection_reason(original: str, candidate: str, *, max_drop: float = MAX_WORD_DROP,
+                     max_growth: float = MAX_WORD_GROWTH) -> str | None:
     """Raison du rejet d'une unité relue, ou None si elle est acceptable."""
     if not candidate.strip():
         return "sortie vide"
@@ -52,9 +56,9 @@ def rejection_reason(original: str, candidate: str) -> str | None:
         return "titres H2/H3 modifiés"
     before = calculate_word_count(original)
     after = calculate_word_count(candidate)
-    if before and after < before * (1 - MAX_WORD_DROP):
+    if before and after < before * (1 - max_drop):
         return f"perte de mots ({before} → {after})"
-    if before and after > before * (1 + MAX_WORD_GROWTH):
+    if before and after > before * (1 + max_growth):
         return f"ajout de texte ({before} → {after})"
     if sorted(_HREF_RE.findall(original)) != sorted(_HREF_RE.findall(candidate)):
         return "liens modifiés"
@@ -84,17 +88,51 @@ def build_proofread_prompt(unit_html: str, proper_nouns: list[str]) -> str:
     return "\n".join(parts)
 
 
+def build_clarity_prompt(unit_html: str, proper_nouns: list[str]) -> str:
+    parts = [
+        "Tu relis un extrait d'article pour un lecteur peu à l'aise en français. Réécris UNIQUEMENT les phrases "
+        "difficiles :",
+        "- tournure inversée ou nominale (« Ajouter de l'eau à ce moment-là achève la plante »), sujet abstrait "
+        "au lieu de « vous », phrase de plus de 30 mots, incise qui coupe la phrase ;",
+        "- préfère la forme « Si vous faites X, il se passe Y » et responsabilise le lecteur quand la phrase "
+        "parle de son action (« Vous croyez bien faire en ajoutant de l'eau, mais vous noyez votre plante ») ;",
+        "- supprime les évidences (« sans rien installer » pour un outil en ligne, « pas besoin de savoir coder »).",
+        "Interdits : toucher aux chiffres, aux liens, aux titres (<h2>, <h3> mot pour mot), aux tableaux et aux "
+        "listes ; ajouter une information ; « Franchement », « Curieusement », « Imaginez » ; le tiret cadratin.",
+        "Les phrases déjà claires restent identiques.",
+    ]
+    if proper_nouns:
+        parts.append("Noms propres attendus dans l'article : " + ", ".join(proper_nouns[:12]) + ".")
+    parts += ["Retourne UNIQUEMENT le HTML relu, sans explication ni backticks.", "", "Extrait :", unit_html.strip()]
+    return "\n".join(parts)
+
+
+def _structure_regressed(units: list[str], index: int, original: str, candidate: str) -> bool:
+    before = "".join(units)
+    after = "".join(units[:index] + [candidate] + units[index + 1:])
+    return _hard_failures(after) > _hard_failures(before)
+
+
+def _hard_failures(content: str) -> int:
+    from app.services.seo.structure_validator import validate_structure
+    return validate_structure(content).get("hard_failures", 0)
+
+
 def proofread_article(
     content: str,
     call_fn: CallFn,
     *,
     proper_nouns: list[str] | None = None,
     fatal_exceptions: tuple[type[BaseException], ...] = (),
+    mode: str = "spelling",
 ) -> tuple[str, dict]:
     """Relit chaque unité de l'article ; retourne (contenu, rapport). Une
-    unité dont la relecture est rejetée ou échoue reste inchangée."""
+    unité dont la relecture est rejetée ou échoue reste inchangée.
+    `mode` : "spelling" (orthographe, sans reformuler) ou "clarity"
+    (réécriture des phrases difficiles pour un lecteur débutant)."""
     units = split_units(content)
-    report: dict = {"units": [], "corrected": 0, "rejected": 0, "errors": 0}
+    clarity = mode == "clarity"
+    report: dict = {"units": [], "corrected": 0, "rejected": 0, "errors": 0, "mode": mode}
     output: list[str] = []
     for index, unit in enumerate(units):
         heading = unit_heading(unit) or ("introduction" if index == 0 else f"section {index}")
@@ -106,7 +144,10 @@ def proofread_article(
         stripped = unit.rstrip()
         trailing = unit[len(stripped):]
         try:
-            raw = call_fn(build_proofread_prompt(stripped, proper_nouns or []), f"Proofreading_{index}", 0.1)
+            if clarity:
+                raw = call_fn(build_clarity_prompt(stripped, proper_nouns or []), f"ClarityPass_{index}", 0.3)
+            else:
+                raw = call_fn(build_proofread_prompt(stripped, proper_nouns or []), f"Proofreading_{index}", 0.1)
         except fatal_exceptions:
             raise
         except Exception as exc:
@@ -117,7 +158,13 @@ def proofread_article(
             output.append(unit)
             continue
         candidate = clean_unit_html(raw)
-        reason = rejection_reason(stripped, candidate)
+        if clarity:
+            reason = rejection_reason(stripped, candidate, max_drop=CLARITY_MAX_WORD_DROP,
+                                      max_growth=CLARITY_MAX_WORD_GROWTH)
+            if reason is None and _structure_regressed(units, index, stripped, candidate + trailing):
+                reason = "règles de structure en échec en plus"
+        else:
+            reason = rejection_reason(stripped, candidate)
         if reason:
             entry.update(status="rejected", reason=reason)
             report["rejected"] += 1
