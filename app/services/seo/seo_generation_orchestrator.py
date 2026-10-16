@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from datetime import datetime, timezone
 from time import perf_counter
@@ -1729,8 +1730,17 @@ class SEOGenerationOrchestrator:
         content = apply_structure_guards(content, draft.title)
         content, structure_fix = self._structure_pass(article, draft, content, section_writer)
         if self._is_french():
-            from app.services.seo.french_typography import fix_french_typography
+            from app.services.seo.french_typography import fix_french_typography, fix_title_case
+            from app.services.seo.html_text_ops import html_to_text
+            body_text = html_to_text(content)
             content = fix_french_typography(content)
+            # Casse anglaise (« Le Coût Réel… ») dans le titre et les intertitres.
+            draft.title = fix_title_case(draft.title or "", body_text)
+            content = re.sub(
+                r"(<h[23]\b[^>]*>)(.*?)(</h[23]>)",
+                lambda m: m.group(1) + fix_title_case(m.group(2), body_text) + m.group(3),
+                content, flags=re.IGNORECASE | re.DOTALL,
+            )
         content = self._editorial_review_loop(article, draft, content, section_writer)
 
         illustration_cfg = self.context.get("illustration_config")
@@ -1864,7 +1874,11 @@ class SEOGenerationOrchestrator:
             else:
                 title_llm = self._get_agent_provider("meta_writer", writer_llm)
                 raw_title = title_llm.generate_text(meta_prompt, temperature=0.3) or ""
-            draft.meta_title = self._typo(clean_meta_text(raw_title, 255) or draft.title[:255])
+            meta_title = clean_meta_text(raw_title, 255) or draft.title[:255]
+            if self._is_french():
+                from app.services.seo.french_typography import fix_title_case
+                meta_title = fix_title_case(meta_title, draft.title or "")
+            draft.meta_title = self._typo(meta_title)
 
         if not draft.meta_description:
             desc_prompt = (
