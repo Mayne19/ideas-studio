@@ -91,6 +91,19 @@ def remove_duplicates(content: str) -> str:
     return re.sub(r"<p\b[^>]*>.*?</p>", _dedupe_p, "".join(kept), flags=re.IGNORECASE | re.DOTALL)
 
 
+def remove_body_faq(content: str) -> str:
+    """La FAQ est générée à part (bloc FAQ + balisage FAQPage) : une section
+    « Questions fréquentes » dans le corps la dupliquait."""
+    from app.services.seo.html_text_ops import split_units, unit_heading
+
+    units = split_units(content or "")
+    kept = [units[0]] + [
+        u for u in units[1:]
+        if not re.match(r"\s*(questions?\s+fr[ée]quentes|faq\b|foire aux questions)", unit_heading(u), re.IGNORECASE)
+    ]
+    return "".join(kept) if len(kept) > 1 or len(units) == 1 else content
+
+
 def apply_deterministic_fixes(content: str, title: str | None) -> str:
     from app.services.seo.content_structure_guard import apply_structure_guards
     return remove_duplicates(strip_heading_tics(
