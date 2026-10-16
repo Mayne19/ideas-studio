@@ -173,3 +173,13 @@ def test_section_fix_is_targeted_and_guarded():
     with_number = bad.replace("<h2>Les coûts cachés</h2>", "<h2>Les coûts cachés</h2><p>Le domaine coûte 12 € par an.</p>")
     loses_number = fix_failing_sections(with_number, validate_structure(with_number, TITLE), fixer, title=TITLE)[1]
     assert loses_number["rejected"][0]["reason"].startswith("chiffre(s) perdu(s)")
+
+
+def test_h2_directly_followed_by_h3_fails():
+    from app.services.seo.structure_validator import validate_structure
+
+    bad = "<p>Intro courte.</p><h2>Choisir</h2><h3>Freelance</h3><p>Texte.</p><h3>Agence</h3><p>Texte.</p>"
+    good = "<p>Intro courte.</p><h2>Choisir</h2><p>Cela dépend du budget.</p><h3>Freelance</h3><p>Texte.</p><h3>Agence</h3><p>Texte.</p>"
+    rule = lambda r: next(x for x in r["rules"] if x["rule"] == "h2_lead_paragraph")
+    assert not rule(validate_structure(bad, "Titre"))["passed"]
+    assert rule(validate_structure(good, "Titre"))["passed"]
