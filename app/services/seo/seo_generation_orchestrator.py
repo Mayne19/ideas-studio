@@ -276,7 +276,10 @@ class SEOGenerationOrchestrator:
         include_faq: bool | None = None,
         include_callouts: bool | None = None,
         existing_article_id: str | None = None,
+        expert_notes: str | None = None,
     ) -> Article:
+        # Notes de l'expert : lues par le brief du rédacteur, le juge et la révision.
+        self.context["expert_notes"] = (expert_notes or "").strip()[:4000]
         # Un seul téléchargement par URL pour toute la génération : research
         # brief, qualité des sources, lecture des pages et liens externes
         # partagent ce cache.
@@ -1379,6 +1382,13 @@ class SEOGenerationOrchestrator:
                 "Un encadré <blockquote> est permis si une mise en garde ou une astuce le mérite vraiment."
             )
         brief_parts.append("Pas de FAQ : elle est générée séparément.")
+        expert_notes = self.context.get("expert_notes")
+        if expert_notes:
+            brief_parts.append(
+                "Notes de l'expert (savoir de terrain vérifié : prix réels, cas vécus, erreurs constatées). "
+                "Intègre-les en priorité là où elles répondent au lecteur, comme l'expérience de l'auteur, "
+                "sans les déformer ; leurs chiffres sont autorisés :\n" + expert_notes
+            )
 
         # Chiffres de référence : une seule fourchette par grandeur pour tout
         # l'article, sinon chaque section reprend la source de ses faits.
@@ -2136,6 +2146,10 @@ class SEOGenerationOrchestrator:
             for f in ledger
         ]
         facts_text = " ".join(f"{f.get('claim', '')} {f.get('figure', '')}" for f in ledger)
+        expert_notes = self.context.get("expert_notes") or ""
+        if expert_notes:
+            facts.insert(0, f"NOTES DE L'EXPERT (font foi, source : l'auteur) : {expert_notes[:1500]}")
+            facts_text += " " + expert_notes
         fmt = self._recommended_format()
         required = FORMAT_COMPONENT_INSTRUCTIONS.get(fmt, "")
         reference_block = ("Chiffres de référence (identiques dans tout l'article) :\n" + "\n".join(f"- {f}" for f in figures)) if figures else ""
@@ -2406,6 +2420,7 @@ def generate_full_article(
     agent_router: Any | None = None,
     existing_article_id: str | None = None,
     progress_cb: Callable[[str, int], None] | None = None,
+    expert_notes: str | None = None,
 ) -> Article:
     orchestrator = SEOGenerationOrchestrator(
         db, project_id, llm, search, agent_router=agent_router, progress_cb=progress_cb,
@@ -2421,4 +2436,5 @@ def generate_full_article(
         include_faq=include_faq,
         include_callouts=include_callouts,
         existing_article_id=existing_article_id,
+        expert_notes=expert_notes,
     )
