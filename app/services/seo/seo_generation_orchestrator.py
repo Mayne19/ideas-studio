@@ -35,7 +35,6 @@ from app.services.seo.keyword_brief_service import build_keyword_brief_dict, ref
 from app.services.seo.editorial_angle_service import define_editorial_angle_dict
 from app.services.seo.article_outline_planner import build_outline_dict
 from app.services.seo.image_plan_service import build_image_plan_dict
-from app.services.seo.writing_reference_examples import build_reference_examples_block
 from app.services.seo.callout_plan_service import build_callout_plan_dict
 from app.services.seo.faq_plan_service import build_faq_plan_dict, generate_faq_list
 from app.services.seo.internal_link_service import build_internal_link_plan_dict
@@ -399,6 +398,24 @@ class SEOGenerationOrchestrator:
 
         if cannibalization.get("risk_level") == "high":
             self._log(f"Cannibalization risk: {cannibalization.get('recommendation')}", level="warning", step="CannibalizationCheck")
+
+        # Mode « agent » : un agent rédacteur unique remplace la recherche, le
+        # plan, la rédaction et la révision (app/services/seo/agent_generation.py).
+        if self._generation_mode() == "agent":
+            from app.services.seo.agent_writer import resolve_agent_credentials
+            api_key, agent_model = resolve_agent_credentials(self.db, self.project_id)
+            if api_key:
+                from app.services.seo.agent_generation import generate_with_agent
+                self.context["context_hint"] = context_hint
+                return generate_with_agent(
+                    self, final_title=final_title, final_keyword=final_keyword, chosen_category=chosen_category,
+                    category_name=category_name, project_context=project_context,
+                    category_strategy=category_strategy, idea_discovery=idea_discovery,
+                    cannibalization=cannibalization, audience=audience, existing_article_id=existing_article_id,
+                    api_key=api_key, model=agent_model,
+                )
+            self.limitations.append("agent_writer: clé Anthropic absente, repli sur l'ancienne chaîne")
+            self._error("AgentWriter", "Clé Anthropic absente (Paramètres → Fournisseurs IA) : repli sur l'ancienne chaîne.")
 
         # 5. IntentAnalysis
         intent_analysis = analyze_intent_dict(
@@ -1473,7 +1490,10 @@ class SEOGenerationOrchestrator:
             external_links=_links("external_links"),
             internal_links=_links("internal_links"),
             conclusion_title=(outline or {}).get("conclusion_title") or "",
-            style_example=build_reference_examples_block(fmt=fmt),
+            # Les articles validés ne servent plus d'exemple de style : le
+            # rédacteur les recopiait (docs/REFERENCE-ARTICLE-VALIDE.md reste
+            # pour la calibration humaine).
+            style_example="",
             fatal_exceptions=(WritingCancelledError,),
             section_facts=section_facts,
             gain_elements=assign_gain_elements(
@@ -2365,6 +2385,17 @@ class SEOGenerationOrchestrator:
             return
         final.setdefault("blockers", []).append(plagiarism_blocker(matches))
         self._save(article.id, "editorial_judgement", judgement)
+
+    def _generation_mode(self) -> str:
+        """Réglage du projet (Paramètres → Pipeline), sinon GENERATION_MODE."""
+        from app.core.config import settings as app_settings
+        from app.models.ai import Pipeline
+        try:
+            pipe = self.db.get(Pipeline, self.project_id)
+        except Exception:
+            pipe = None
+        mode = getattr(pipe, "generation_mode", None) or app_settings.GENERATION_MODE
+        return mode if mode in ("agent", "pipeline") else "agent"
 
     def _min_publish_score(self) -> float:
         from app.models.ai import Pipeline
