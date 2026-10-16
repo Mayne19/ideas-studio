@@ -119,3 +119,24 @@ def test_invalid_json_leaves_article_unchanged():
     content, report = check_and_fix_consistency(ARTICLE, lambda p, s, t: "pas de JSON ici")
     assert content == ARTICLE
     assert report["error"] == "réponse JSON invalide"
+
+
+def test_prompt_covers_unsupported_claims_and_uses_many_facts():
+    from app.services.seo.consistency_checker import build_consistency_prompt
+
+    facts = [f"fait {i}" for i in range(40)]
+    prompt = build_consistency_prompt("<p>Un texte assez long pour être lu.</p>", facts)
+    assert "non étayées" in prompt and '"unsupported"' in prompt and "fragment" in prompt
+    assert "fait 29" in prompt and "fait 30" not in prompt
+
+
+def test_unsupported_claim_removal_is_applied():
+    from app.services.seo.consistency_checker import apply_consistency_fixes
+
+    html = ("<h2>Réserver</h2><p>Réservez pour deux ans. Cela signale aux moteurs de recherche que votre site "
+            "est stable et durable. Activez le renouvellement automatique chez votre registraire.</p>"
+            + "<p>" + "Vérifiez les coordonnées de contact et verrouillez le transfert du domaine. " * 25 + "</p>")
+    issue = {"type": "unsupported", "action": "remove",
+             "sentence": "Cela signale aux moteurs de recherche que votre site est stable et durable."}
+    out, applied, skipped = apply_consistency_fixes(html, [issue])
+    assert applied and "moteurs" not in out and "renouvellement" in out
