@@ -33,10 +33,26 @@ def fix_french_text(text: str) -> str:
     return text
 
 
+_ENTITY_RE = re.compile(r"(&(?:[a-zA-Z]+|#\d+|#x[0-9a-fA-F]+);)")
+
+
+def _fix_text_node(text: str) -> str:
+    """Les entités HTML (&nbsp; &amp; &#8217;) restent intactes : leur « ; »
+    n'est pas un point-virgule (bug observé : « moule&nbsp; ; : »)."""
+    import html as html_lib
+
+    if "&" not in text:
+        return fix_french_text(text)
+    plain = html_lib.unescape(text)
+    fixed = fix_french_text(plain)
+    # Réencode seulement ce qui doit l'être dans un nœud texte HTML.
+    return fixed.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
 def fix_french_typography(html: str) -> str:
     """Applique fix_french_text aux nœuds texte du HTML."""
     parts = _TAG_SPLIT_RE.split(html or "")
-    return "".join(p if p.startswith("<") else fix_french_text(p) for p in parts)
+    return "".join(p if p.startswith("<") else _fix_text_node(p) for p in parts)
 
 
 def fix_title_case(title: str, body_text: str = "") -> str:
