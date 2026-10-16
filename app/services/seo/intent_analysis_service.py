@@ -111,6 +111,8 @@ def analyze_intent(
 
     if re.match(r"^\s*\d+\s", title_lower):
         recommended_format = "list"
+    elif _is_definition_query(keyword_lower or title_lower):
+        recommended_format = "explainer"
     elif _count_hits(head, _PRICE_MARKERS) and not _count_hits(head, ("vs", "versus", "ou")):
         recommended_format = "price_guide"
     elif explicit_intent == "commercial":
@@ -145,6 +147,15 @@ def analyze_intent_dict(
     project_context: dict | None = None,
 ) -> dict:
     return asdict(analyze_intent(title, keyword, context_hint, category_name, idea_discovery, project_context))
+
+
+_DEFINITION_RE = re.compile(
+    r"^\s*(?:qu['’]?est[- ]ce (?:qu['’]?|que )|c['’]?est quoi|d[ée]finition|what is|what are)", re.IGNORECASE)
+
+
+def _is_definition_query(text: str) -> bool:
+    """« qu'est-ce qu'un CMS headless », « c'est quoi le SEO », « définition… »."""
+    return bool(_DEFINITION_RE.search(text or ""))
 
 
 def _clean_list(value, limit: int) -> list[str]:
@@ -203,7 +214,10 @@ def refine_intent_with_research(
 
     prompt = (
         "Tu prépares le brief d'un article. Trouve la vraie question que se pose la personne "
-        "qui cherche ce sujet, et ce qu'elle doit lire pour repartir satisfaite.\n\n"
+        "qui cherche ce sujet, et ce qu'elle doit lire pour repartir satisfaite.\n"
+        "La question du mot-clé reste la question principale : tu peux la préciser, jamais la remplacer "
+        "par une autre (« qu'est-ce qu'un CMS headless » appelle d'abord une définition claire, pas "
+        "« dois-je changer de CMS »). Les autres préoccupations deviennent des sous-questions.\n\n"
         f"Titre : {title}\nMot-clé : {keyword}\n"
         + (f"Angle prévu : {idea_angle}\n" if idea_angle else "")
         + (f"Réponse principale prévue : {idea_answer[:400]}\n" if idea_answer else "")
@@ -214,7 +228,8 @@ def refine_intent_with_research(
         '{"reader_real_question": "la question précise du lecteur, en une phrase", '
         '"expected_answer": "la réponse attendue, en 2 à 3 phrases concrètes", '
         '"recommended_format": "simple_question | how_to | comparison | price_guide | explainer | list '
-        '(price_guide si la question porte sur un prix, un coût ou un budget)", '
+        '(price_guide si la question porte sur un prix, un coût ou un budget ; explainer pour « qu\'est-ce que », '
+        '« c\'est quoi », « définition »)", '
         '"explicit_intent": "informational | commercial | transactional | navigational", '
         '"must_include": ["point indispensable pour bien répondre"], '
         '"must_avoid": ["hors-sujet ou remplissage à éviter"], '
@@ -243,6 +258,8 @@ def refine_intent_with_research(
     if intent in ("informational", "commercial", "transactional", "navigational"):
         result["explicit_intent"] = intent
     fmt = str(refined.get("recommended_format") or "").strip().lower()
+    if _is_definition_query(keyword or title):
+        fmt = "explainer"
     if fmt in RECOMMENDED_FORMATS:
         result["recommended_format"] = fmt
         result["article_type"] = format_to_article_type(fmt)
