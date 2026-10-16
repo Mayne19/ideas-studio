@@ -58,6 +58,21 @@ def trigger_project_revalidation(
             db.commit()
         return {"revalidated": False, "status": "not_configured", "message": "Aucun endpoint de revalidation configuré."}
 
+    if target and target.revalidate_url and url == target.revalidate_url:
+        # Revérifiée à l'envoi (résolution DNS du moment, valeurs enregistrées
+        # avant le contrôle à la saisie) ; l'URL d'environnement est de confiance.
+        from fastapi import HTTPException
+        from app.core.ssrf_guard import assert_safe_external_url
+        try:
+            assert_safe_external_url(url)
+        except HTTPException as exc:
+            message = f"URL de revalidation refusée : {exc.detail}"
+            target.last_sync_status = "error"
+            target.last_sync_error = message
+            target.last_synced_at = datetime.now(timezone.utc)
+            db.commit()
+            return {"revalidated": False, "status": "error", "message": message}
+
     payload = {
         "secret": secret,
         "projectId": project.id,
