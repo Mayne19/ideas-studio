@@ -57,17 +57,19 @@ def trigger_project_revalidation(
             "path": f"/{article.slug}",
         })
 
+    # Secret en en-tête (x-ideas-studio-secret) et dans le corps JSON (compat
+    # des sites déjà déployés) — jamais dans l'URL : une query string finit
+    # dans les logs d'accès, les proxys et les messages d'erreur httpx.
     headers = {
         "Authorization": f"Bearer {secret}",
         "Cache-Control": "no-store",
         "X-Ideas-Studio-Secret": secret,
         "X-Revalidate-Secret": secret,
     }
-    params = {"secret": secret}
 
     try:
         with httpx.Client(timeout=15) as client:
-            resp = client.post(url, params=params, json=payload, headers=headers)
+            resp = client.post(url, json=payload, headers=headers)
             resp.raise_for_status()
         if target:
             target.last_sync_status = "success"
