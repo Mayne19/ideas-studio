@@ -1,8 +1,9 @@
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.config import settings
+from app.core.rate_limit import enforce_auth_rate_limit
 from app.core.security import create_access_token
 from app.schemas.auth import (
     ForgotPasswordRequest,
@@ -22,7 +23,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=UserPublic, status_code=201)
-def register(data: RegisterRequest, db: Session = Depends(get_db)):
+def register(data: RegisterRequest, request: Request, db: Session = Depends(get_db)):
+    enforce_auth_rate_limit(request, "register", str(data.email))
     if get_user_by_email(db, data.email):
         raise HTTPException(status_code=400, detail="Email already registered")
     if data.username:
@@ -34,7 +36,8 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(data: LoginRequest, db: Session = Depends(get_db)):
+def login(data: LoginRequest, request: Request, db: Session = Depends(get_db)):
+    enforce_auth_rate_limit(request, "login", str(data.email))
     user = authenticate_user(db, data.email, data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -46,7 +49,8 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/forgot-password", response_model=ForgotPasswordResponse)
-def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
+def forgot_password(data: ForgotPasswordRequest, request: Request, db: Session = Depends(get_db)):
+    enforce_auth_rate_limit(request, "forgot-password", str(data.email))
     email_sent, dev_reset_url = create_password_reset(db, str(data.email))
     message = (
         "Si un compte existe pour cet email, un lien de réinitialisation a été préparé."
