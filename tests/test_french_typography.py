@@ -34,3 +34,16 @@ def test_title_case_is_lowered_except_proper_nouns():
     assert fix_title_case("Webflow Ou WordPress Pour Un Freelance Exigeant", body) == \
         "Webflow ou WordPress pour un freelance exigeant"
     assert fix_title_case("Site vitrine : le vrai budget en 2026", body) == "Site vitrine : le vrai budget en 2026"
+
+
+def test_html_entities_are_not_broken():
+    out = fix_french_typography("<p>dans le même moule&nbsp;: changer &amp; voir l&#8217;effet</p>")
+    assert "&nbsp; ;" not in out and "; :" not in out
+    assert out.startswith("<p>dans le même moule") and "&amp; voir" in out and "l’effet" in out
+
+
+def test_strip_tics_keeps_extension_spacing():
+    from app.services.seo.content_structure_guard import strip_tics
+
+    assert strip_tics("Choisissez concrètement l'extension adaptée : .com, .fr, .io") == \
+        "Choisissez l'extension adaptée : .com, .fr, .io"
