@@ -13,6 +13,32 @@ from app.services.seo.helpers import (
 
 _ANCHOR_RE = re.compile(r"<a\b[^>]*\bhref\s*=\s*[\"']([^\"']+)[\"'][^>]*>", re.IGNORECASE | re.DOTALL)
 
+# Mots outils et interrogatifs ignorés : « combien coûte un site vitrine »
+# est couvert par « Site vitrine : combien ça coûte ».
+_KW_STOPWORDS = {
+    "un", "une", "le", "la", "les", "de", "des", "du", "d", "l", "et", "ou", "en", "a", "au", "aux",
+    "pour", "par", "sur", "avec", "son", "sa", "ses", "mon", "ma", "mes", "ce", "cet", "cette",
+    "combien", "comment", "quel", "quelle", "quels", "quelles", "pourquoi", "quand", "est", "que", "qui",
+    "the", "an", "of", "for", "to", "and", "or", "how", "what", "which", "why", "is",
+}
+
+
+def _kw_stems(text: str) -> list[str]:
+    import unicodedata
+    norm = unicodedata.normalize("NFKD", (text or "").lower())
+    norm = "".join(c for c in norm if not unicodedata.combining(c))
+    return [w[:4] for w in re.findall(r"[a-z0-9]+", norm) if w not in _KW_STOPWORDS]
+
+
+def keyword_covered(keyword: str, text: str) -> bool:
+    """Tous les termes significatifs du mot-clé (radical de 4 lettres,
+    accents ignorés) apparaissent dans le texte, dans n'importe quel ordre."""
+    stems = _kw_stems(keyword)
+    if not stems:
+        return False
+    present = set(_kw_stems(text))
+    return all(stem in present for stem in stems)
+
 
 def count_links_in_content(content: str | None) -> tuple[int, int]:
     """Compte les liens réellement insérés dans le contenu HTML.
@@ -76,9 +102,9 @@ def check_seo_final(
         {"name": "slug_present", "label": "Slug présent", "pass": bool(slug)},
         {"name": "meta_title_present", "label": "Meta title présent", "pass": bool(meta_title)},
         {"name": "meta_description_present", "label": "Meta description présente", "pass": bool(meta_description)},
-        {"name": "keyword_in_title", "label": "Mot-clé dans le titre", "pass": kw and title and kw in title.lower()},
+        {"name": "keyword_in_title", "label": "Mot-clé dans le titre", "pass": bool(kw) and (keyword_covered(kw, title or "") or keyword_covered(kw, meta_title or ""))},
         {"name": "content_depth", "label": "Profondeur suffisante", "pass": word_count >= depth_target},
-        {"name": "keyword_in_intro", "label": "Mot-clé dans l'introduction", "pass": kw and content and (kw in content[:500].lower() if content else False)},
+        {"name": "keyword_in_intro", "label": "Mot-clé dans l'introduction", "pass": bool(kw) and keyword_covered(kw, text[:600])},
         {"name": "no_isolated_h3", "label": "Pas de H3 isolé", "pass": not detect_isolated_h3(content or "")},
         {"name": "structure_valid", "label": "Structure H2/H3 correcte", "pass": len(detect_h2_directly_followed_by_h3(content or "")) == 0},
         {"name": "faq_valid", "label": "FAQ valide (2-6 questions)", "pass": faq_count == 0 or (2 <= faq_count <= 6)},
