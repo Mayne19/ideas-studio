@@ -133,3 +133,15 @@ def test_section_balance_flags_thin_and_oversized_sections():
     huge = GOOD + _section("Énorme", sizes=(4, 1, 3, 2, 4, 1, 3, 2, 4, 1, 3, 2, 4, 1, 3, 2, 4, 1, 3, 2, 4, 1, 3, 2, 4, 1, 3, 2, 4, 1, 3, 2))
     details = [v["detail"] for v in _rule(validate_structure(huge, TITLE), "section_balance")["violations"]]
     assert any("fois la médiane" in d for d in details)
+
+
+def test_required_elements_follow_recommended_format():
+    comparison = _rule(validate_structure(GOOD, TITLE, "comparison"), "required_elements")
+    assert not comparison["passed"] and comparison["section_fixable"]
+    with_table = GOOD + "<table><tr><th>A</th></tr><tr><td>B</td></tr></table>"
+    assert _rule(validate_structure(with_table, TITLE, "comparison"), "required_elements")["passed"]
+    how_to = _rule(validate_structure(GOOD, TITLE, "how_to"), "required_elements")
+    assert not how_to["passed"]
+    steps = GOOD.replace("</p>\n<h2>Les coûts", "</p><ol><li>Créer un compte</li><li>Choisir un plan</li></ol>\n<h2>Les coûts", 1)
+    assert _rule(validate_structure(steps, TITLE, "how_to"), "required_elements")["passed"]
+    assert _rule(validate_structure(GOOD, TITLE, "explainer"), "required_elements")["passed"]
