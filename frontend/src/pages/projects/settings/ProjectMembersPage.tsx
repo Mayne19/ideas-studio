@@ -194,6 +194,9 @@ export default function ProjectMembersPage() {
   const [members, setMembers] = useState<ProjectMember[]>([])
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [invitations, setInvitations] = useState<Invitation[]>([])
+  // Le jeton brut n'est renvoyé qu'à la création (seul son hash est stocké) :
+  // on le garde pour la session afin de pouvoir copier le lien d'inscription.
+  const [invitationTokens, setInvitationTokens] = useState<Record<string, string>>({})
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([])
   const [activityStatus, setActivityStatus] = useState<'loading' | 'success' | 'error'>('loading')
 
@@ -257,7 +260,11 @@ export default function ProjectMembersPage() {
       if (addType === 'username' && addUsername.trim()) {
         await addMemberByUsername(projectId, addUsername.trim(), addRole)
       } else if (addType === 'email' && addEmail.trim()) {
-        await inviteByEmail(projectId, addEmail.trim(), addRole)
+        const created = await inviteByEmail(projectId, addEmail.trim(), addRole)
+        if (created.token) {
+          const token = created.token
+          setInvitationTokens((prev) => ({ ...prev, [created.id]: token }))
+        }
       } else {
         setAddError('Veuillez remplir le champ.')
         setAdding(false)
@@ -425,17 +432,20 @@ export default function ProjectMembersPage() {
                   </span>
                   {!accepted && (
                     <>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(
-                            `${window.location.origin}/invitations/${invitation.token}`,
-                          )
-                        }}
-                        className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-surface-muted hover:text-primary transition-colors"
-                        title="Copier le lien d'invitation"
-                      >
-                        <Link size={13} />
-                      </button>
+                      {(invitation.token || invitationTokens[invitation.id]) && (
+                        <button
+                          onClick={() => {
+                            const token = invitation.token || invitationTokens[invitation.id]
+                            navigator.clipboard.writeText(
+                              `${window.location.origin}/register?invitation=${encodeURIComponent(token ?? '')}`,
+                            )
+                          }}
+                          className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-surface-muted hover:text-primary transition-colors"
+                          title="Copier le lien d'inscription (inscriptions sur invitation)"
+                        >
+                          <Link size={13} />
+                        </button>
+                      )}
                       <button
                         onClick={() => setRevokeInvitationTarget(invitation)}
                         className="flex h-7 w-7 items-center justify-center rounded-[8px] text-tertiary hover:bg-danger/10 hover:text-danger transition-colors"
