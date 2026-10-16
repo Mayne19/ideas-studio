@@ -1271,8 +1271,8 @@ class SEOGenerationOrchestrator:
         section et sources citables."""
         from app.services.seo.article_outline_planner import resolve_outline_format
         from app.services.seo.section_writer import (
-            OutlineSection, SectionWriter, build_section_brief, compute_words_per_section,
-            group_outline_sections,
+            OutlineSection, SectionWriter, assign_facts_to_sections, build_section_brief,
+            collect_writer_facts, compute_words_per_section, group_outline_sections,
         )
         article = draft.article
         sections = group_outline_sections(outline)
@@ -1309,6 +1309,20 @@ class SEOGenerationOrchestrator:
             plan = self.context.get(key) or {}
             return plan.get("links") or [] if isinstance(plan, dict) else []
 
+        facts = collect_writer_facts(production_brief)
+        section_facts = assign_facts_to_sections(
+            facts, sections, reader_question=production_brief.get("reader_real_question") or "",
+        )
+        self._save(article.id, "section_fact_assignment", {
+            "intro": [f["fact_id"] for f in section_facts.get("intro", [])],
+            "sections": [
+                {"heading": s.heading, "fact_ids": [f["fact_id"] for f in section_facts.get(i, [])]}
+                for i, s in enumerate(sections)
+            ],
+            "unassigned": [f["fact_id"] for f in section_facts.get("unassigned", [])],
+            "total_facts": len(facts),
+        })
+
         return SectionWriter(
             write_fn,
             "\n".join(brief_parts),
@@ -1322,6 +1336,7 @@ class SEOGenerationOrchestrator:
             conclusion_title=(outline or {}).get("conclusion_title") or "",
             style_example=build_reference_examples_block(),
             fatal_exceptions=(WritingCancelledError,),
+            section_facts=section_facts,
         )
 
     def _ensure_outline_complete(self, section_writer, content: str, step: str) -> str:
