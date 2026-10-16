@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext'
 import { api } from '@/api/client'
 import { checkUsername } from '@/api/auth'
 import PageSection from '@/components/ui/PageSection'
+import RegistrationSettingsSection from './RegistrationSettingsSection'
 import Button from '@/components/ui/Button'
 import type { User as AuthUser } from '@/types'
 
@@ -391,6 +392,8 @@ export default function AccountPage() {
           </form>
         )}
       </PageSection>
+
+      {user?.is_staff && <RegistrationSettingsSection />}
     </div>
   )
 }
