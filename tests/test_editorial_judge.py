@@ -89,3 +89,9 @@ def test_guard_rejects_meta_commentary_leak():
     after = ("<h2>Architecture</h2><p>Payload CMS expose une API REST consommée par Next.js. Cette architecture "
              "dépasse les simples mentions théoriques de React.</p>")
     assert guard_revision(before, after, "").startswith("commentaire interne")
+
+
+def test_guard_rejects_revision_that_duplicates_a_section():
+    before = "<h2>Définition</h2><p>Un CMS headless sépare le contenu de son affichage.</p>"
+    after = before + "<h2>Comment fonctionne un CMS headless ?</h2><p>Le contenu passe par une API.</p>"
+    assert guard_revision(before, after, "") == "sections H2 ajoutées ou supprimées"

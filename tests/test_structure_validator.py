@@ -213,3 +213,14 @@ def test_verbal_tics_limited_and_stripped_from_headings():
     assert not rule["passed"] and len(rule["violations"]) == 1
     assert strip_heading_tics("<h2>Comment fonctionne concrètement un CMS headless ?</h2>") == \
         "<h2>Comment fonctionne un CMS headless ?</h2>"
+
+
+def test_duplicate_sections_and_paragraphs_are_removed():
+    from app.services.seo.structure_fixer import remove_duplicates
+
+    p = "<p>La confusion la plus courante est de croire qu'il faut être développeur pour l'utiliser.</p>"
+    html = ("<p>Intro.</p><h2>Comment fonctionne un CMS headless ?</h2>" + p +
+            "<h2>Comment fonctionne un CMS headless ?</h2><p>Autre version.</p><h2>Avantages</h2>" + p + "<p>Fin.</p>")
+    out = remove_duplicates(html)
+    assert out.count("<h2>Comment fonctionne") == 1 and "Autre version" not in out
+    assert out.count("La confusion la plus courante") == 1 and "<h2>Avantages</h2>" in out
