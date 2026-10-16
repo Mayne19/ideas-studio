@@ -44,9 +44,21 @@ def replace_em_dashes(content: str) -> str:
     return "".join(parts)
 
 
+def demote_isolated_h3(content: str) -> str:
+    """Section H2 avec un seul H3 (règle : 0 ou au moins 2) : ce H3 devient
+    une phrase d'accroche en gras, sans perte de texte."""
+    parts = re.split(r"(?=<h2\b)", content or "", flags=re.IGNORECASE)
+    for i, part in enumerate(parts):
+        h3s = re.findall(r"<h3\b[^>]*>.*?</h3>", part, re.IGNORECASE | re.DOTALL)
+        if part.lower().startswith("<h2") and len(h3s) == 1:
+            inner = re.sub(r"^<h3\b[^>]*>|</h3>$", "", h3s[0], flags=re.IGNORECASE)
+            parts[i] = part.replace(h3s[0], f"<p><strong>{inner.strip()}</strong></p>", 1)
+    return "".join(parts)
+
+
 def apply_deterministic_fixes(content: str, title: str | None) -> str:
     from app.services.seo.content_structure_guard import apply_structure_guards
-    return replace_em_dashes(apply_structure_guards(content, title))
+    return demote_isolated_h3(replace_em_dashes(apply_structure_guards(content, title)))
 
 
 def _headings(html: str) -> list[tuple[str, str]]:
