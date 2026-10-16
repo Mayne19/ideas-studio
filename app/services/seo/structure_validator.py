@@ -160,6 +160,21 @@ def check_isolated_h3(units: list[Unit]) -> dict:
     return _rule("isolated_h3", "Pas de H3 isolé", WARNING, violations)
 
 
+def check_h2_lead_paragraph(units: list[Unit]) -> dict:
+    """Un H2 n'est jamais suivi directement d'un H3 : au moins un paragraphe
+    annonce d'abord la réponse de la section (aussi contrôlé par la
+    checklist SEO finale, structure_valid)."""
+    violations = []
+    for unit in units[1:]:
+        after_h2 = re.sub(r"^\s*<h2\b[^>]*>.*?</h2>", "", unit.html, count=1, flags=re.IGNORECASE | re.DOTALL)
+        if re.match(r"\s*<h3\b", after_h2, re.IGNORECASE):
+            violations.append(_loc(
+                unit, "H2 suivi directement d'un H3 : ajouter sous le H2 un court paragraphe qui répond "
+                "à la question de la section avec les informations déjà présentes",
+            ))
+    return _rule("h2_lead_paragraph", "Un paragraphe entre chaque H2 et son premier H3", HARD, violations)
+
+
 def _paragraphs(unit: Unit) -> list[str]:
     return [t for t in (html_to_text(m.group(1)) for m in _P_RE.finditer(unit.html)) if t]
 
@@ -390,6 +405,7 @@ def validate_structure(content: str, title: str | None = None, recommended_forma
         check_h1(content, title),
         check_heading_hierarchy(content),
         check_isolated_h3(units),
+        check_h2_lead_paragraph(units),
         check_paragraph_length(units),
         sentence_hard,
         sentence_soft,
