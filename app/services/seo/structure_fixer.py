@@ -92,6 +92,8 @@ def build_fix_prompt(unit_html: str, violations: list[str], *, is_intro: bool) -
         "- Garde mot pour mot chaque titre <h2> et <h3>, dans le même ordre.",
         "- Garde chaque lien <a href> avec la même URL, chaque chiffre, prix, date et nom propre.",
         "- N'ajoute aucune information ni aucun chiffre ; ne supprime aucune information.",
+        "- Si un tableau ou une liste numérotée est demandé, construis-le uniquement à partir des "
+        "informations déjà présentes dans ce HTML.",
         "- HTML simple : <h2>, <h3>, <p>, <ul>, <ol>, <li>, <table>, <blockquote>, <strong>, <em>, <a>.",
         "",
         "HTML à corriger :",
