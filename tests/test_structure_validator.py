@@ -93,3 +93,14 @@ def test_intro_over_ten_percent_or_generic_fails():
     assert not rule["passed"] and rule["violations"][0]["unit"] == "intro"
     missing = _rule(validate_structure("\n".join(SECTIONS), TITLE), "intro_length")
     assert missing["violations"][0]["detail"] == "Introduction absente"
+
+
+def test_em_dash_banned_words_and_vous_saturation_fail():
+    dashed = GOOD.replace("Le bon plan dépend", "Le bon plan — souvent — dépend")
+    assert not _rule(validate_structure(dashed, TITLE), "no_em_dash")["passed"]
+    banned = GOOD + "<h2>Un outil</h2><p>Webflow est un outil incontournable pour sortir du lot.</p>" + _para(3)
+    detail = _rule(validate_structure(banned, TITLE), "banned_vocabulary")["violations"][0]["detail"]
+    assert "incontournable" in detail and "sortir du lot" in detail
+    vous = GOOD + ("<h2>Votre choix</h2><p>Vous comparez les plans. Vous lisez les limites. "
+                   "Vous choisissez trop vite.</p>" + _para(2))
+    assert not _rule(validate_structure(vous, TITLE), "vous_saturation")["passed"]
