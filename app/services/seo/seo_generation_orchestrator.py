@@ -2224,7 +2224,25 @@ class SEOGenerationOrchestrator:
         final = best[2] if best else None
         self.context["editorial_judgement"] = {"final": final, "rounds": rounds}
         self._save(article.id, "editorial_judgement", {"final": final, "rounds": rounds})
-        return best[1] if best else content
+        chosen = best[1] if best else current
+        # Les révisions peuvent recasser des règles de structure (paragraphes,
+        # phrases, intro trop longs) : une passe de correction ciblée finale.
+        final_report = validate_structure(chosen, draft.title, fmt)
+        if final_report.get("hard_failures"):
+            from app.services.seo.structure_fixer import fix_failing_sections
+            try:
+                fixed, fix_report = fix_failing_sections(
+                    chosen, final_report, self._polish_call_fn(article), title=draft.title,
+                    recommended_format=fmt, fatal_exceptions=(WritingCancelledError,),
+                )
+                chosen = polish(fixed)
+                self._step(f"StructureFix_Final ({len(fix_report['applied'])} section(s))")
+            except WritingCancelledError:
+                raise
+            except Exception as exc:
+                self._error("StructureFix_Final", str(exc))
+        self._save(article.id, "structure_report", validate_structure(chosen, draft.title, fmt))
+        return chosen
 
     def _min_publish_score(self) -> float:
         from app.models.ai import Pipeline
