@@ -578,8 +578,14 @@ class SectionWriter:
             parts.append(f"Fin du texte précédent (enchaîne sans le répéter) : « {last} »")
         if self.words_per_section:
             parts.append(f"Longueur visée : environ {self.words_per_section} mots, moins si le point est simple.")
-        if index == component_section_index(self.sections, self.fmt):
+        component_index = component_section_index(self.sections, self.fmt)
+        if index == component_index:
             parts.append(FORMAT_COMPONENT_INSTRUCTIONS[self.fmt])
+        elif component_index is not None and self.fmt == "comparison":
+            parts.append(
+                f"Pas de tableau dans cette section : le tableau comparatif de l'article est dans la section "
+                f"« {self.sections[component_index].heading} »."
+            )
         parts += [
             "",
             "Consignes :",
