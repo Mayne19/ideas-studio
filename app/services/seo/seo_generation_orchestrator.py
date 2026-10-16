@@ -426,7 +426,11 @@ class SEOGenerationOrchestrator:
             # sources primaires, lu depuis le cache (pas de retéléchargement).
             try:
                 from app.services.seo.source_pages_service import build_source_pages
-                source_pages = build_source_pages(research_brief, final_keyword, self.page_cache)
+                # Requêtes dédiées aux sources primaires (2 appels SERP).
+                source_pages = build_source_pages(
+                    research_brief, final_keyword, self.page_cache,
+                    search_fn=self.serp_adapter.search if self.serp_adapter.configured else None,
+                )
                 self.context["source_pages"] = source_pages
                 self._step(
                     f"SourcePages ({len(source_pages['pages'])} page(s) lue(s), "
