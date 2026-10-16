@@ -189,3 +189,9 @@ def test_price_guide_and_list_components():
     assert component_section_index(sections, "list") is None
     writer = SectionWriter(FakeProvider(), "=== BRIEF ===", sections, fmt="list")
     assert all("pour qui il convient" in writer._section_prompt(i, "", "") for i in range(len(sections)))
+
+
+def test_definition_queries_are_explainers():
+    from app.services.seo.intent_analysis_service import analyze_intent
+
+    assert analyze_intent("qu'est-ce qu'un cms headless", "qu'est-ce qu'un cms headless").recommended_format == "explainer"
