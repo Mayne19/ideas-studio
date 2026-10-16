@@ -44,7 +44,20 @@ JUDGE_CRITERIA: dict[str, tuple[int, str]] = {
 CODE_STRUCTURE_POINTS = 5
 CODE_SEO_POINTS = 5
 BLOCKER_TYPES = ("invented_fact", "unsourced_figure", "contradiction", "intent_missed", "missing_component",
-                 "off_topic_fact")
+                 "off_topic_fact", "meta_commentary", "reader_drop")
+
+# Calibration humaine : introduction refusée par le fondateur (2026-10-16),
+# « aucun lien entre les phrases, on sent le contenu généré, j'ai fermé ».
+FOUNDER_REJECTED_EXAMPLE = (
+    "« Un CMS headless sépare la gestion de vos contenus (back-office) de leur affichage (front-end). "
+    "Concrètement, vous rédigez vos articles et gérez vos médias dans une interface classique, mais le contenu "
+    "est livré via une API à n'importe quel support : site web, application mobile, borne interactive. Avec un "
+    "CMS traditionnel comme WordPress, le back-office et le front-end sont liés : changer de thème modifie "
+    "l'apparence, mais aussi parfois la structure. Avec un headless, vous gardez le même back-office tout en "
+    "changeant complètement le design ou la technologie du site sans toucher aux contenus. »\n"
+    "Pourquoi c'est refusé : des définitions empilées sans fil ni enjeu pour le lecteur, chaque phrase pourrait "
+    "être déplacée sans perte, tic « Concrètement », ton de fiche encyclopédique ; un vrai lecteur ferme la page."
+)
 
 
 def article_digest(content: str) -> str:
@@ -89,10 +102,19 @@ def build_judge_prompt(content: str, *, title: str, keyword: str, brief: dict, f
         "Grille (note chaque critère de 0 à son maximum) :",
         criteria,
         "",
+        "Lis d'abord comme un lecteur humain exigeant, pas comme une IA : il décroche dès que les phrases sont "
+        "empilées sans lien logique, qu'un tic revient (« concrètement », « en réalité »), que l'introduction est "
+        "redite, que le texte parle de lui-même ou sonne généré. Exemple d'introduction refusée par notre "
+        "rédacteur en chef :",
+        FOUNDER_REJECTED_EXAMPLE,
+        "Un passage de ce niveau dans l'introduction ou dans une section = clarity ≤ 4 et blocage reader_drop.",
+        "",
         "Blocages (un seul suffit à refuser la publication) : invented_fact (fait ou source inventés), "
         "unsourced_figure (chiffre précis absent des faits vérifiés et invérifiable), contradiction (deux valeurs "
         "différentes pour la même chose), intent_missed (la question n'a pas de réponse claire), off_topic_fact "
-        "(chiffre qui concerne un autre public ou un autre cas). Ne signale un blocage que s'il est certain.",
+        "(chiffre qui concerne un autre public ou un autre cas), meta_commentary (le texte commente l'article, une "
+        "consigne ou « le lecteur »), reader_drop (passage qui fait décrocher : phrases sans fil, tics, "
+        "répétition, ton généré). Ne signale un blocage que s'il est certain.",
         "",
         "Pour chaque section à améliorer, donne une consigne de correction concrète et applicable par un "
         "rédacteur (« remplacer la fourchette X par la référence Y », « supprimer l'affirmation Z non sourcée », "
