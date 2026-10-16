@@ -154,6 +154,11 @@ def is_unsplash_source(source: dict) -> bool:
     return (source.get("source_name") or "").lower() == "unsplash"
 
 
+def is_generated_source(source: dict) -> bool:
+    """Illustration générée par IA : ni crédit photographe ni attribution."""
+    return source.get("usage_rights_status") == "generated"
+
+
 def _unsplash_caption(source: dict) -> str:
     """Attribution exigée par les Unsplash API Guidelines : photographe et
     Unsplash, tous deux liés avec les paramètres UTM de l'application."""
@@ -186,9 +191,14 @@ def _normalize_heading(heading: str) -> str:
 
 
 def _usable_sources(image_sources: list[dict]) -> list[dict]:
+    """Images insérables dans le corps : Unsplash, images officielles de
+    marque et illustrations générées — jamais une couverture générée
+    (role == "cover"), affichée seulement en tête d'article."""
     return [
         s for s in image_sources
-        if s.get("image_url") and s.get("usage_rights_status") in ("free_with_attribution", "official_source")
+        if s.get("image_url")
+        and s.get("role") != "cover"
+        and s.get("usage_rights_status") in ("free_with_attribution", "official_source", "generated")
     ]
 
 
@@ -285,11 +295,19 @@ def track_unsplash_downloads(image_sources: list[dict], adapter) -> int:
 
 
 def pick_cover_source(image_sources: list[dict]) -> dict | None:
-    """Meilleure image de couverture parmi celles insérées : une photo
-    Unsplash (paysage, créditée, libre de droits) plutôt qu'une capture de
-    marque au droit d'usage non garanti ; à défaut, la première insérée."""
+    """Meilleure image de couverture : la couverture générée dédiée si elle
+    existe ; sinon, parmi les images insérées, une photo Unsplash (paysage,
+    créditée, libre de droits) ou une illustration générée plutôt qu'une
+    capture de marque au droit d'usage non garanti ; à défaut, la première
+    insérée."""
+    dedicated = next((s for s in image_sources if s.get("role") == "cover" and s.get("image_url")), None)
+    if dedicated is not None:
+        return dedicated
     inserted = [s for s in image_sources if s.get("inserted") and s.get("image_url")]
-    return next((s for s in inserted if is_unsplash_source(s)), None) or (inserted[0] if inserted else None)
+    return (
+        next((s for s in inserted if is_unsplash_source(s) or is_generated_source(s)), None)
+        or (inserted[0] if inserted else None)
+    )
 
 
 def localize_image_alts(
