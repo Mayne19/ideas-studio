@@ -31,7 +31,7 @@ WriteFn = Callable[[str, str, float], str]
 MAX_ATTEMPTS_PER_UNIT = 2
 MAX_EXTERNAL_LINKS = 3
 # Formats qui méritent une fin explicite (verdict, prochaine étape).
-CLOSING_FORMATS = ("comparison", "how_to", "list")
+CLOSING_FORMATS = ("comparison", "price_guide", "how_to", "list")
 
 # Composant obligatoire du format (vérifié par structure_validator, règle
 # required_elements) : demandé dès la rédaction, à une seule section, plutôt
@@ -42,18 +42,35 @@ FORMAT_COMPONENT_INSTRUCTIONS = {
         "3 à 6 lignes, construit uniquement avec les chiffres et faits fournis (aucun chiffre inventé), "
         "précédé d'une phrase qui dit ce qu'il compare."
     ),
+    "price_guide": (
+        "Obligatoire dans cette section : un tableau <table> des fourchettes de prix par scénario ou profil "
+        "(ligne d'en-tête <th>, 3 à 6 lignes, uniquement les chiffres de référence et les faits fournis), puis "
+        "un exemple chiffré complet : un cas concret dont on additionne chaque poste jusqu'au total, calcul juste."
+    ),
     "how_to": "Obligatoire dans cette section : les étapes en liste numérotée <ol>, une action concrète par étape.",
+    "list": (
+        "Obligatoire dans cette section : pour chaque élément présenté, pour qui il convient, sa limite "
+        "principale et son prix s'il figure dans les faits."
+    ),
+    "explainer": (
+        "Obligatoire dans cette section : un exemple concret qui montre le concept en situation réelle, "
+        "puis la confusion la plus courante à éviter."
+    ),
 }
 _COMPONENT_HINTS = {
     "comparison": ("compar", "tableau", "récap", "critère", "versus", " vs", " ou ", "formule", "quelle"),
+    "price_guide": ("prix", "coût", "cout", "tarif", "budget", "combien", "fourchette"),
     "how_to": ("étape", "etape", "comment", "méthode", "procédure"),
+    "list": ("liste", "sélection", "outils", "meilleur", "top"),
+    "explainer": ("exemple", "concrètement", "fonctionne", "comment ça"),
 }
 
 
 def component_section_index(sections: list, fmt: str) -> int | None:
     """Section qui doit porter le composant du format : la première dont le
     titre l'annonce, sinon la première section."""
-    if fmt not in FORMAT_COMPONENT_INSTRUCTIONS or not sections:
+    # Liste : la consigne vaut pour chaque élément, donc chaque section.
+    if fmt not in FORMAT_COMPONENT_INSTRUCTIONS or fmt == "list" or not sections:
         return None
     hints = _COMPONENT_HINTS[fmt]
     for i, section in enumerate(sections):
@@ -579,11 +596,11 @@ class SectionWriter:
         if self.words_per_section:
             parts.append(f"Longueur visée : environ {self.words_per_section} mots, moins si le point est simple.")
         component_index = component_section_index(self.sections, self.fmt)
-        if index == component_index:
+        if index == component_index or self.fmt == "list":
             parts.append(FORMAT_COMPONENT_INSTRUCTIONS[self.fmt])
-        elif component_index is not None and self.fmt == "comparison":
+        elif component_index is not None and self.fmt in ("comparison", "price_guide"):
             parts.append(
-                f"Pas de tableau dans cette section : le tableau comparatif de l'article est dans la section "
+                f"Pas de tableau dans cette section : le tableau de l'article est dans la section "
                 f"« {self.sections[component_index].heading} »."
             )
         parts += [
@@ -635,6 +652,7 @@ class SectionWriter:
         goal = {
             "comparison": "le verdict selon le profil du lecteur (quel choix pour quel cas)",
             "how_to": "la prochaine étape concrète une fois la méthode appliquée",
+            "price_guide": "comment obtenir un devis juste et quel budget retenir selon le profil du lecteur",
             "list": "par quoi commencer selon la situation du lecteur",
         }.get(self.fmt, "la conséquence pratique ou la prochaine étape pour le lecteur")
         heading_rule = (
