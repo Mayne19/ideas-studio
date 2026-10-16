@@ -9,6 +9,17 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
     username: Optional[str] = None
+    # Jeton d'invitation (lien /register?invitation=...) : requis quand
+    # l'inscription libre est fermée (réglage d'instance, fermé par défaut).
+    invitation_token: Optional[str] = None
+
+
+class RegistrationStatus(BaseModel):
+    open: bool
+
+
+class RegistrationSettingsUpdate(BaseModel):
+    open: bool
 
 
 class LoginRequest(BaseModel):

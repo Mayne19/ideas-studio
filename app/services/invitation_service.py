@@ -80,3 +80,21 @@ def accept_invitation(db: Session, invitation: Invitation, user: User) -> Projec
 
     db.flush()
     return member
+
+
+def registration_invitation_error(invitation: Invitation | None, email: str) -> str | None:
+    """Raison de refuser une inscription par invitation, None si le jeton
+    autorise la création de ce compte (même contrôles qu'accept_invitation,
+    vérifiés AVANT de créer l'utilisateur)."""
+    if invitation is None:
+        return "Invitation introuvable ou lien invalide."
+    if invitation.accepted_at:
+        return "Cette invitation a déjà été acceptée."
+    expires_at = invitation.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > expires_at:
+        return "Cette invitation a expiré."
+    if (invitation.email or "").strip().lower() != (email or "").strip().lower():
+        return "Cette invitation est destinée à une autre adresse email."
+    return None
