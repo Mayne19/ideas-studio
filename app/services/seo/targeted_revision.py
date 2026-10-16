@@ -72,9 +72,52 @@ _FIGURE_RE = re.compile(
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
 # Calcul montré ou exemple annoncé (autorisés par le rédacteur, vérifiés par
 # le juge) : « soit 0,39 $ par réponse », « Prenons un loyer de 600 € ».
-_CALC_OR_EXAMPLE_RE = re.compile(
-    r"\b(soit|prenons|par exemple|exemple|imaginons un|si vous [a-zé]+ \d|calcul|au total|multipli|divis)\b|[=×÷]|\d\s*[x*/]\s*\d",
+# Exemple annoncé : la phrase commence par l'une de ces formules.
+_EXAMPLE_START_RE = re.compile(r"^\s*(prenons|imaginons|par exemple,\s*si)\b", re.IGNORECASE)
+# Chiffre de population ou d'étude : jamais exempté, il doit venir des faits.
+_NEVER_EXEMPT_RE = re.compile(
+    r"%\s*(des|de français|de la population|de personnes|d'entre)\b|\bla majorité\b|"
+    r"\b(selon|étude|études|enquête|enquêtes|sondage|sondages)\b",
     re.IGNORECASE)
+
+
+def _close(a: float, b: float) -> bool:
+    return abs(a - b) <= max(abs(b) * 0.01, 1e-9)
+
+
+def _derivable(value: float, pool: list[float]) -> bool:
+    """Résultat (à 1 % près) d'une addition, soustraction, multiplication,
+    division ou d'un pourcentage entre deux nombres du pool."""
+    for i, a in enumerate(pool):
+        for j, b in enumerate(pool):
+            if i == j:
+                continue
+            candidates = [a + b, a - b, a * b, a / 100 * b]
+            if b:
+                candidates.append(a / b)
+            if any(_close(c, value) for c in candidates):
+                return True
+    return False
+
+
+def _is_exempt(sentence: str, allowed: set[str]) -> bool:
+    """Calcul montré ou exemple annoncé (règles du fondateur, 2026-10-16)."""
+    if _NEVER_EXEMPT_RE.search(sentence):
+        return False
+    nums = sorted(_numbers(sentence))
+    if not nums:
+        return False
+    values = [float(n) for n in nums]
+    if _EXAMPLE_START_RE.search(sentence):
+        return all(v.is_integer() and v % 5 == 0 for v in values if not _is_trivial_number(str(v)))
+    others = [float(n) for n in allowed]
+
+    def derivable(n: str) -> bool:
+        # Le nombre testé ne sert jamais à se calculer lui-même.
+        pool = [v for v in values if v != float(n)] + [v for v in others if v != float(n)]
+        return _derivable(float(n), pool)
+
+    return all(n in allowed or _is_trivial_number(n) or derivable(n) for n in nums)
 
 
 def unverified_figures(content: str, allowed_text: str) -> dict[int, list[str]]:
@@ -86,7 +129,7 @@ def unverified_figures(content: str, allowed_text: str) -> dict[int, list[str]]:
     for index, unit in enumerate(split_units(content)):
         text = html_to_text(re.sub(r"<h[1-6]\b[^>]*>.*?</h[1-6]>", " ", unit, flags=re.IGNORECASE | re.DOTALL))
         for sentence in _SENTENCE_SPLIT_RE.split(text):
-            if _CALC_OR_EXAMPLE_RE.search(sentence):
+            if _is_exempt(sentence, allowed):
                 continue
             figures = _FIGURE_RE.findall(sentence)
             nums = {n for f in figures for n in _numbers(f)}
