@@ -374,6 +374,7 @@ def format_facts_block(facts: list[dict]) -> str:
 
 _FACT_MARKER_RE = re.compile(r"\s*\[\s*(F\d{1,3}(?:\s*[,;]\s*F\d{1,3})*)\s*\]")
 _SENTENCE_BOUNDARY_RE = re.compile(r"(?<=[.!?…])\s+")
+_EMPTY_INLINE_RE = re.compile(r"\s*<(strong|em|b|i|sup|span)\b[^>]*>\s*</\1>", re.IGNORECASE)
 
 
 def strip_fact_markers(html: str, known_ids: set[str] | None = None) -> tuple[str, list[dict]]:
@@ -393,6 +394,9 @@ def strip_fact_markers(html: str, known_ids: set[str] | None = None) -> tuple[st
                 "known": known_ids is None or fact_id in known_ids,
             })
     cleaned = _FACT_MARKER_RE.sub("", html or "")
+    # Marqueur mis en forme par le modèle (<strong>[F3]</strong>) : la balise
+    # vide restante laisserait une espace avant la ponctuation.
+    cleaned = _EMPTY_INLINE_RE.sub("", cleaned)
     return cleaned, markers
 
 
