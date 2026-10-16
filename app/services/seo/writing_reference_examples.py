@@ -48,16 +48,38 @@ REFERENCE_EXAMPLES = [
             "peu de choix de mise en page. Pour une enquête interne, cela ne pose aucun problème. Pour un "
             "questionnaire envoyé à des clients, le rendu peut en revanche paraître un peu amateur.</p>"
         ),
+        "formats": ("comparison", "list"),
+    },
+    {
+        # Deuxième article validé (90/100) : guide pratique / explication.
+        "subject": "Sauver un basilic acheté en pot (guide pratique)",
+        "formats": ("how_to", "explainer"),
+        "excerpt": "<p>Si votre basilic acheté en pot meurt en quelques jours, ce n'est presque jamais de votre faute. Le pot vendu en supermarché contient des dizaines de jeunes plants serrés les uns contre les autres, qui se disputent le peu de terre et d'eau disponibles. Il suffit ensuite d'une nuit trop fraîche ou d'un arrosage de trop pour que tout s'effondre.</p>\n<p>La bonne nouvelle, c'est qu'un basilic qui commence à faner peut presque toujours être sauvé, à condition d'agir vite. Le problème, c'est que les conseils trouvés en ligne se contredisent : certains disent d'arroser tous les jours, d'autres une fois par semaine, certains parlent de plein soleil, d'autres de mi-ombre.</p>\n<p>Ce guide vous aide à repérer ce qui tue votre basilic grâce à l'aspect de ses feuilles, à le sauver en quatre étapes, puis à le garder vert et touffu tout l'été.</p>\n<h2>Pourquoi le basilic du supermarché meurt si vite</h2>\n<p>Le basilic vendu en pot n'a pas été cultivé pour durer chez vous. Les producteurs sèment des dizaines de graines dans un petit pot, puis font pousser les plants sous serre, avec une lumière, un arrosage et un engrais parfaitement contrôlés, d'après le site de jardinage GrowVeg. Le résultat paraît beau en rayon, mais il est pensé pour être vendu, pas pour vivre des mois.</p>\n<p>Une fois chez vous, ces plants perdent d'un coup leurs conditions idéales. Comme ils sont trop nombreux dans trop peu de terre, ils épuisent vite l'eau et les nutriments, et leurs racines forment une motte serrée où elles ne peuvent plus se développer. La Royal Horticultural Society, la grande société britannique d'horticulture, note d'ailleurs que ces pots trop denses tombent souvent malades ou fleurissent très vite.</p>\n<p>Votre basilic ne meurt donc pas parce que vous avez la main moins verte que les autres. Il meurt parce qu'il était déjà à l'étroit au moment de l'achat.</p>",
+    },
+    {
+        # Troisième article validé : chiffres expliqués, exemple calculé.
+        "subject": "La règle 50/30/20 pour gérer son budget (explication chiffrée)",
+        "formats": ("price_guide", "simple_question"),
+        "excerpt": "<p>La règle 50/30/20 consiste à partager l'argent qui arrive sur votre compte chaque mois en trois parts : 50 % pour les dépenses obligatoires, 30 % pour vos envies et 20 % pour l'épargne. Avec 2 000 € par mois, cela donne 1 000 € pour le loyer, les courses et les factures, 600 € pour les sorties et les achats plaisir, et 400 € mis de côté.</p>\n<p>Sur le papier, c'est simple. Dans la vraie vie, beaucoup de gens abandonnent dès le premier mois, parce que leur loyer avale déjà presque la moitié de leur salaire. La plupart des articles s'arrêtent pourtant là, sans dire quoi faire quand les chiffres ne tombent pas juste.</p>\n<p>Ce guide vous montre comment calculer vos trois parts à partir de votre vrai revenu, où classer les dépenses qui posent question et comment adapter la règle quand votre budget ne rentre pas dans les cases, exemple au SMIC à l'appui.</p>\n<h2>D'où vient la règle 50/30/20 et ce qu'elle dit vraiment</h2>\n<p>La règle a été popularisée en 2005 par Elizabeth Warren, aujourd'hui sénatrice américaine, et sa fille Amelia Warren Tyagi dans leur livre <em>All Your Worth</em>. Leur objectif était simple : donner aux familles un repère facile à retenir, sans tableau compliqué ni suivi au centime près.</p>\n<p>Deux détails de la version d'origine changent beaucoup de choses, et la plupart des articles les oublient. D'abord, les pourcentages se calculent sur le revenu après impôts, et non sur le salaire brut. Ensuite, seul le remboursement minimum d'un crédit compte dans les 50 % de besoins : tout ce que vous remboursez en plus entre dans les 20 %, comme le rappelle le site Acorns.</p>\n<p>En France, le premier point est plutôt une bonne nouvelle. Depuis le prélèvement à la source, l'impôt est déjà retiré de votre salaire : le montant qui arrive sur votre compte est donc la bonne base de calcul.</p>",
     },
 ]
 
 
-def build_reference_examples_block(count: int = 1) -> str:
+def pick_reference_example(fmt: str = "") -> dict:
+    """Exemple validé du même format (comparatif, guide pratique, chiffres),
+    sinon le premier."""
+    for example in REFERENCE_EXAMPLES:
+        if fmt and fmt in example.get("formats", ()):
+            return example
+    return REFERENCE_EXAMPLES[0]
+
+
+def build_reference_examples_block(count: int = 1, fmt: str = "") -> str:
     """Sélectionne `count` exemple(s) (le premier par défaut) à insérer dans
     le prompt — un seul exemple complet est plus efficace qu'un résumé des
     trois : le LLM a besoin de voir un pattern complet respecté de bout en
     bout, pas une liste de fragments désunis."""
-    examples = REFERENCE_EXAMPLES[:count]
+    examples = [pick_reference_example(fmt)] if fmt else REFERENCE_EXAMPLES[:count]
     parts = [
         "Exemple validé par le rédacteur en chef : introduction en trois temps (réponse directe adaptée au but "
         "du lecteur, problème concret, annonce en une phrase de ce qu'il va obtenir), phrases reliées les unes aux "
