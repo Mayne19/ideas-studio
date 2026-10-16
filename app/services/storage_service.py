@@ -99,3 +99,61 @@ def delete_file(url: str) -> bool:
     except Exception as exc:
         logger.warning("Failed to delete file from Supabase Storage: %s", exc)
         return False
+
+
+# ── Images générées ────────────────────────────────────────────────────────
+
+GENERATED_IMAGE_MAX_WIDTH = 1200
+
+
+def optimize_image(data: bytes, mime_type: str, max_width: int = GENERATED_IMAGE_MAX_WIDTH) -> tuple[bytes, str, int | None, int | None]:
+    """Redimensionne à `max_width` px de large et convertit en WebP si Pillow
+    est installé ; sinon renvoie l'image telle quelle (dimensions inconnues).
+    Retourne (octets, mime, largeur, hauteur)."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return data, mime_type, None, None
+    try:
+        from io import BytesIO
+
+        with Image.open(BytesIO(data)) as source:
+            img = source.convert("RGB")
+        if img.width > max_width:
+            img = img.resize((max_width, round(img.height * max_width / img.width)), Image.LANCZOS)
+        out = BytesIO()
+        img.save(out, format="WEBP", quality=82, method=6)
+        return out.getvalue(), "image/webp", img.width, img.height
+    except Exception as exc:
+        logger.warning("Conversion WebP impossible (%s) — image d'origine conservée", exc)
+        return data, mime_type, None, None
+
+
+def save_image(data: bytes, project_id: str, mime_type: str = "image/png", basename: str = "illustration") -> dict:
+    """Stocke une image (générée) de façon permanente : Supabase Storage si
+    configuré, sinon le dossier local UPLOAD_DIR servi sous /uploads (dev).
+    Retourne url, filename, mime_type, byte_size, width, height."""
+    import os
+
+    from app.core.config import settings
+
+    data, mime_type, width, height = optimize_image(data, mime_type)
+    ext = ".webp" if mime_type == "image/webp" else (mimetypes.guess_extension(mime_type) or ".png")
+    if is_configured():
+        url = upload_file(data, f"{basename}{ext}", project_id, content_type=mime_type)
+        filename = url.rsplit("/", 1)[-1]
+    else:
+        filename = f"{uuid.uuid4().hex}{ext}"
+        upload_dir = os.path.join(settings.UPLOAD_DIR, project_id)
+        os.makedirs(upload_dir, exist_ok=True)
+        with open(os.path.join(upload_dir, filename), "wb") as fh:
+            fh.write(data)
+        url = f"{settings.APP_URL.rstrip('/')}/uploads/{project_id}/{filename}"
+    return {
+        "url": url,
+        "filename": filename,
+        "mime_type": mime_type,
+        "byte_size": len(data),
+        "width": width,
+        "height": height,
+    }
