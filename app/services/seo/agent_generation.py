@@ -1,0 +1,302 @@
+"""Mode de génération « agent » de l'orchestrateur.
+
+L'agent rédacteur unique (agent_writer) remplace la recherche, le plan, la
+rédaction, la relecture et la révision. L'orchestrateur garde : contexte
+projet, cannibalisation (déjà faits avant l'appel), création de l'article,
+contrôles par le code avec deux tours de correction au maximum dans la même
+conversation, données structurées, checklist SEO, juge éditorial (score) et
+rapport de génération.
+"""
+from __future__ import annotations
+
+import json
+import re
+import uuid
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING
+
+from app.core.utils import calculate_reading_time_minutes, calculate_word_count
+from app.models.content import Article
+from app.models.reference import ArticleStatus, RunStatus, WorkflowPhase, set_article_status, set_run_status
+
+if TYPE_CHECKING:  # pragma: no cover
+    from app.services.seo.seo_generation_orchestrator import SEOGenerationOrchestrator
+
+MAX_FAQ, MIN_FAQ = 6, 3
+
+
+def published_articles(db, project) -> list[dict]:
+    """Articles publiés du projet (titre et URL) pour les liens internes."""
+    from sqlalchemy import select
+
+    from app.models.content import ArticleRevision
+
+    if project is None or not project.domain:
+        return []
+    base = project.domain if project.domain.startswith("http") else f"https://{project.domain}"
+    rows = db.execute(
+        select(Article.slug, ArticleRevision.title)
+        .join(ArticleRevision, ArticleRevision.id == Article.current_revision_id)
+        .where(Article.project_id == project.id, Article.published_at.is_not(None))
+        .order_by(Article.published_at.desc())
+        .limit(60)
+    ).all()
+    return [{"title": title, "url": f"{base.rstrip('/')}/blog/{slug}"} for slug, title in rows if slug and title]
+
+
+def assembly_errors(data: dict) -> list[str]:
+    """Contrôle d'assemblage : FAQ présente et hors du corps, conclusion en
+    dernier H2 (avant la FAQ), aucun bloc répété."""
+    from app.services.seo.structure_fixer import remove_body_faq, remove_duplicates
+
+    errors: list[str] = []
+    content = data.get("content_html") or ""
+    faq = data.get("faq") or []
+    if not (MIN_FAQ <= len(faq) <= MAX_FAQ):
+        errors.append(f"La FAQ doit contenir 3 à 5 questions (actuellement {len(faq)}).")
+    if remove_body_faq(content) != content:
+        errors.append("Le corps contient une section FAQ : la FAQ va uniquement dans le champ « faq », après la conclusion.")
+    if remove_duplicates(content) != content:
+        errors.append("Un titre ou un paragraphe est répété dans l'article : supprime la répétition.")
+    if not re.search(r"<h2\b", content, re.IGNORECASE):
+        errors.append("L'article n'a aucun H2 ; la conclusion doit être un H2 placé en dernier.")
+    return errors
+
+
+def structure_errors(content: str, title: str) -> list[str]:
+    from app.services.seo.structure_validator import validate_structure
+
+    report = validate_structure(content, title)
+    errors = []
+    for rule in report.get("rules") or []:
+        if rule.get("passed") or rule.get("severity") != "hard":
+            continue
+        for v in (rule.get("violations") or [])[:3]:
+            where = f" (section « {v['section']} »)" if v.get("section") else ""
+            errors.append(f"{rule['label']}{where} : {v.get('detail', '')}")
+    return errors
+
+
+def consistency_errors(content: str, call_fn) -> list[str]:
+    """Une même chose avec deux valeurs différentes (détection seule)."""
+    from app.services.seo.consistency_checker import build_consistency_prompt
+    from app.services.seo.html_text_ops import extract_json_object
+
+    try:
+        data = extract_json_object(call_fn(build_consistency_prompt(content), "AgentConsistencyCheck", 0.1)) or {}
+    except Exception:
+        return []
+    return [
+        f"Contradiction : « {i.get('sentence', '')} » contre « {i.get('related_sentence', '')} » ({i.get('reason', '')})"
+        for i in data.get("issues") or []
+        if isinstance(i, dict) and i.get("type") == "contradiction"
+    ][:5]
+
+
+def plagiarism_errors(orch: "SEOGenerationOrchestrator", content: str) -> tuple[list[str], dict]:
+    from app.services.seo.plagiarism_check import SerpPlagiarismBackend, check_plagiarism
+
+    backend = None
+    if orch.serp_adapter.configured:
+        own = (orch.project.domain if orch.project else "") or ""
+        backend = SerpPlagiarismBackend(orch.serp_adapter.search, own_domain=own)
+    report = check_plagiarism(content, backend)
+    errors = [f"Phrase reprise mot pour mot d'une page en ligne ({m.get('url', '')}) : reformule « {m.get('sentence', '')} »"
+              for m in report.get("matches") or []]
+    return errors, report
+
+
+def _unique_slug(db, project_id: str, wanted: str, article_id: str) -> str:
+    from sqlalchemy import select
+
+    from app.core.utils import slugify
+
+    base = slugify(wanted or "")[:80] or f"article-{uuid.uuid4().hex[:6]}"
+    slug, n = base, 2
+    while db.execute(select(Article.id).where(Article.project_id == project_id, Article.slug == slug,
+                                              Article.id != article_id)).first():
+        slug, n = f"{base}-{n}", n + 1
+    return slug
+
+
+def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, final_keyword: str,
+                        chosen_category: str | None, category_name: str, project_context: dict,
+                        category_strategy: dict, idea_discovery: dict, cannibalization: dict,
+                        audience: str | None, existing_article_id: str | None, api_key: str, model: str) -> Article:
+    from app.models.content import ArticleSeo
+    from app.models.ai import WorkflowRun
+    from app.services.seo.agent_writer import (
+        AgentWriter, AgentWriterError, anthropic_client, build_user_message, load_system_prompt, locale_names,
+    )
+    from app.services.seo.seo_generation_orchestrator import _DraftArticle
+
+    db = orch.db
+    if existing_article_id:
+        article = db.get(Article, existing_article_id)
+        if article is None:
+            raise RuntimeError(f"Article {existing_article_id} non trouvé")
+        set_article_status(article, ArticleStatus.WRITING_IN_PROGRESS)
+    else:
+        article = Article(
+            id=str(uuid.uuid4()), project_id=orch.project_id, category_id=chosen_category,
+            slug=f"idea-{uuid.uuid4().hex[:8]}", search_intent=idea_discovery.get("detected_intent"),
+            status_reason_id=ArticleStatus.WRITING_IN_PROGRESS, state_id=0, priority=0,
+            opportunity_score=idea_discovery.get("opportunity_score", 0.5),
+            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
+        )
+        db.add(article)
+    db.flush()
+    draft = _DraftArticle(article)
+    draft.title, draft.keyword = final_title, final_keyword
+    draft.audience = audience or project_context.get("target_audience")
+    orch.workflow_run = WorkflowRun(article_id=article.id, phase_id=WorkflowPhase.PRODUCTION,
+                                    status_reason_id=RunStatus.RUNNING, state_id=0)
+    db.add(orch.workflow_run)
+    db.flush()
+    for key, value in (("project_context", project_context), ("category_strategy", category_strategy),
+                       ("idea_discovery", idea_discovery), ("cannibalization_check", cannibalization)):
+        orch._save(article.id, key, value)
+
+    langue, pays = locale_names(orch.project.locale if orch.project else None)
+    system = load_system_prompt(site_name=orch.project.name if orch.project else "", langue=langue, pays=pays,
+                                site_domain=(orch.project.domain if orch.project else "") or "")
+    editor_notes = " ".join(x for x in (orch.context.get("expert_notes") or "", orch.context.get("context_hint") or "") if x)
+    user_message = build_user_message(keyword=final_keyword, category=category_name, editor_notes=editor_notes or None,
+                                      published_articles=published_articles(db, orch.project))
+    writer = AgentWriter(anthropic_client(api_key), model=model, system=system)
+    run_report: dict = {"rounds": []}
+    try:
+        orch._step("AgentWriter (recherche et rédaction)")
+        data = writer.write(user_message)
+    except AgentWriterError as exc:
+        return _fail(orch, article, draft, category_name, f"Agent rédacteur : {exc}", writer, run_report)
+    except Exception as exc:  # erreur API (clé, quota, réseau)
+        return _fail(orch, article, draft, category_name, f"Agent rédacteur indisponible : {exc}", writer, run_report)
+
+    def check(candidate: dict) -> tuple[list[str], dict]:
+        content = candidate.get("content_html") or ""
+        errors = structure_errors(content, candidate.get("title") or final_title)
+        errors += assembly_errors(candidate)
+        errors += consistency_errors(content, orch._polish_call_fn(article))
+        plag_errors, plag_report = plagiarism_errors(orch, content)
+        return errors + plag_errors, plag_report
+
+    best, (best_errors, plag_report) = data, check(data)
+    run_report["rounds"].append({"round": 0, "errors": best_errors})
+    for round_no in (1, 2):
+        if not best_errors:
+            break
+        try:
+            corrected = writer.correct(best_errors)
+        except Exception as exc:
+            run_report["rounds"].append({"round": round_no, "error": str(exc)[:300]})
+            break
+        if corrected is None:
+            run_report["rounds"].append({"round": round_no, "error": "JSON corrigé inexploitable"})
+            continue
+        errors, report = check(corrected)
+        run_report["rounds"].append({"round": round_no, "errors": errors})
+        if len(errors) <= len(best_errors):
+            best, best_errors, plag_report = corrected, errors, report
+        orch._step(f"AgentWriter correction #{round_no} ({len(errors)} erreur(s) restante(s))")
+    run_report["remaining_errors"] = best_errors
+
+    content = best.get("content_html") or ""
+    if orch._is_french():
+        from app.services.seo.french_typography import fix_french_text, fix_french_typography
+        content = fix_french_typography(content)
+        best["title"] = fix_french_text(best.get("title") or final_title)
+    draft.title = best.get("title") or final_title
+    draft.content = content
+    draft.meta_title = (best.get("meta_title") or draft.title)[:255]
+    draft.meta_description = (best.get("meta_description") or "")[:500]
+    draft.faq = [{"question": str(f.get("question", "")).strip(), "answer": str(f.get("answer", "")).strip()}
+                 for f in best.get("faq") or [] if isinstance(f, dict) and f.get("question") and f.get("answer")]
+    draft.excerpt = orch._extract_excerpt(content)
+    draft.word_count = calculate_word_count(content)
+    draft.reading_time_minutes = calculate_reading_time_minutes(draft.word_count)
+    article.slug = _unique_slug(db, orch.project_id, best.get("slug") or draft.title, article.id)
+    orch._persist_revision(draft)
+    orch._save(article.id, "agent_writer_output", {k: best.get(k) for k in ("sources", "facts", "competitors", "self_review")})
+    orch._save(article.id, "plagiarism_report", plag_report)
+
+    _finish_seo(orch, article, draft, category_name, best)
+    run_report.update(writer.report())
+    orch._save(article.id, "agent_writer_report", run_report)
+    orch._score_article(article, draft)
+    set_article_status(article, ArticleStatus.DRAFT_READY)
+    article.updated_at = datetime.now(timezone.utc)
+    orch._finalize_report(article, draft, category_name, {}, {}, {}, {}, {}, {}, {})
+    set_run_status(orch.workflow_run, RunStatus.SUCCEEDED)
+    orch.workflow_run.finished_at = datetime.now(timezone.utc)
+    db.flush()
+    return article
+
+
+def _finish_seo(orch, article: Article, draft, category_name: str, best: dict) -> None:
+    """Données structurées, checklist SEO et juge éditorial (score)."""
+    from app.models.content import ArticleSeo
+    from app.services.seo.seo_final_checklist_service import check_seo_final_dict
+    from app.services.structured_data_builder import build_structured_data
+
+    try:
+        structured = build_structured_data(
+            title=draft.title, slug=article.slug, meta_title=draft.meta_title, meta_description=draft.meta_description,
+            excerpt=draft.excerpt, author=draft.author_name, published_at=article.published_at,
+            updated_at=article.updated_at, category=category_name, content=draft.content,
+            faq_json=json.dumps(draft.faq) if draft.faq else None, cover_image_url=None,
+            site_name=orch.project.name if orch.project else None,
+            organization_name=orch.project.name if orch.project else None,
+        )
+        draft.structured_data_json = structured
+        seo_row = orch.db.get(ArticleSeo, article.id)
+        if seo_row is not None and isinstance(structured, dict) and structured.get("schemas"):
+            seo_row.structured_data = structured
+        orch._save(article.id, "structured_data", structured)
+        orch._step("StructuredDataBuilder")
+    except Exception as exc:
+        orch._error("StructuredDataBuilder", str(exc))
+    try:
+        seo_final = check_seo_final_dict(
+            content=draft.content, title=draft.title, slug=article.slug, meta_title=draft.meta_title,
+            meta_description=draft.meta_description, keyword=draft.keyword, faq_count=len(draft.faq or []),
+            internal_links=[], external_links=[], images=[], has_structured_data=bool(draft.structured_data_json),
+            min_word_count=None,
+        )
+        orch._save(article.id, "seo_final_checklist", seo_final)
+        orch._step("SEOFinalChecklist")
+    except Exception as exc:
+        orch._error("SEOFinalChecklist", str(exc))
+    try:
+        from app.services.seo.editorial_judge import judge_article
+        from app.services.seo.structure_validator import validate_structure
+
+        def judge_call(prompt: str, step: str, temperature: float) -> str:
+            return orch._write_pass(prompt, "quality_gate", article, temperature, step)
+
+        facts = [f"{f.get('value', '')} (source : {f.get('source_url', '')})" for f in best.get("facts") or []
+                 if isinstance(f, dict)]
+        judgement = judge_article(draft.content, judge_call, title=draft.title, keyword=draft.keyword or "",
+                                  brief={}, facts=facts, reference_figures=[],
+                                  structure_report=validate_structure(draft.content, draft.title))
+        if not judgement.get("error"):
+            orch.context["editorial_judgement"] = {"final": judgement, "rounds": [judgement]}
+            orch._save(article.id, "editorial_judgement", {"final": judgement, "rounds": [judgement]})
+            orch._step(f"EditorialJudge ({judgement['content_score']}/95)")
+    except Exception as exc:
+        orch._error("EditorialJudge", str(exc))
+
+
+def _fail(orch, article: Article, draft, category_name: str, message: str, writer, run_report: dict) -> Article:
+    orch._error("AgentWriter", message)
+    set_article_status(article, ArticleStatus.FAILED)
+    article.updated_at = datetime.now(timezone.utc)
+    set_run_status(orch.workflow_run, RunStatus.FAILED)
+    orch.workflow_run.error = message
+    orch.workflow_run.finished_at = datetime.now(timezone.utc)
+    run_report.update(writer.report())
+    run_report["error"] = message
+    orch._save(article.id, "agent_writer_report", run_report)
+    orch.db.flush()
+    orch._finalize_report(article, draft, category_name, {}, {}, {}, {}, {}, {}, {})
+    return article
