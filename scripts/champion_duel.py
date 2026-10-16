@@ -41,8 +41,10 @@ def our_article(article_id: str) -> dict:
 
     conn = psycopg2.connect(os.environ["DATABASE_URL"])
     cur = conn.cursor()
-    cur.execute("select r.title, r.body, a.keyword from content.article_revisions r "
-                "join content.articles a on a.id = r.article_id where r.article_id=%s "
+    cur.execute("select r.title, r.body, (select k.term from content.article_keywords ak "
+                "join content.keywords k on k.id = ak.keyword_id where ak.article_id = r.article_id "
+                "order by (ak.role::text = 'primary') desc limit 1) "
+                "from content.article_revisions r where r.article_id=%s "
                 "order by r.revision_no desc limit 1", (article_id,))
     row = cur.fetchone()
     conn.close()
