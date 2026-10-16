@@ -53,6 +53,9 @@ class Settings(BaseSettings):
 
     PIPELINE_MODE: str = "ideas_only"
     OUTLINE_PLANNER_MODE: str = "llm"
+    # Repli si le projet n'a pas de pipeline : « agent » (agent rédacteur
+    # unique) ou « pipeline » (ancienne chaîne). Le réglage du CMS prime.
+    GENERATION_MODE: str = "agent"
 
     UPLOAD_DIR: str = "uploads"
 
