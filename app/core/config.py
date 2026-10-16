@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     # Modèles par rôle (optionnels) : vides = OPENROUTER_MODEL pour tous les agents.
     OPENROUTER_WRITER_MODEL: str = ""
     OPENROUTER_PLANNER_MODEL: str = ""
+    # Modèle de l'agent de relecture (orthographe, grammaire) : vide = modèle
+    # du rôle planner (comportement historique).
+    OPENROUTER_PROOFREADER_MODEL: str = ""
     OPENROUTER_FALLBACK_MODEL: str = "openrouter/free"
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
     GEMINI_API_KEY: str = ""

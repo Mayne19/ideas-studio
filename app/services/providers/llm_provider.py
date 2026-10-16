@@ -405,6 +405,7 @@ def build_provider_from_config(config) -> LLMProvider | None:
             base_url=config.base_url or settings.OPENROUTER_BASE_URL,
             writer_model=config.model or settings.OPENROUTER_WRITER_MODEL,
             planner_model=config.model or settings.OPENROUTER_PLANNER_MODEL,
+            proofreader_model=config.model or settings.OPENROUTER_PROOFREADER_MODEL,
             fallback_model=settings.OPENROUTER_FALLBACK_MODEL,
             reasoning_mode=getattr(config, "reasoning_mode", None) or "off",
         )
@@ -512,6 +513,7 @@ def get_llm_provider(project_id: str | None = None, exclude_provider_name: str |
             base_url=settings.OPENROUTER_BASE_URL,
             writer_model=settings.OPENROUTER_WRITER_MODEL,
             planner_model=settings.OPENROUTER_PLANNER_MODEL,
+            proofreader_model=settings.OPENROUTER_PROOFREADER_MODEL,
             fallback_model=settings.OPENROUTER_FALLBACK_MODEL,
         )
         if provider.is_available():
