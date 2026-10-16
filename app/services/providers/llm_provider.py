@@ -406,6 +406,7 @@ def build_provider_from_config(config) -> LLMProvider | None:
             writer_model=config.model or settings.OPENROUTER_WRITER_MODEL,
             planner_model=config.model or settings.OPENROUTER_PLANNER_MODEL,
             fallback_model=settings.OPENROUTER_FALLBACK_MODEL,
+            reasoning_mode=getattr(config, "reasoning_mode", None) or "off",
         )
     if provider_name == "anthropic":
         return AnthropicLLMProvider(
