@@ -208,3 +208,227 @@ Visez entre 8 et 15 questions fermées, ce qui représente 3 à 5 minutes de rem
 Un questionnaire échoue rarement à cause de son design. Le plus souvent, il échoue parce que le formulaire s'est fermé après quelques réponses, parce que les données ont été stockées au mauvais endroit ou parce qu'une question mal formulée a faussé les résultats.
 
 Choisir l'outil ne prend que quelques minutes. Relire et tester ses questions demande plus de temps, mais c'est cette étape qui fait la qualité des réponses que vous recevrez.
+
+
+---
+
+<!-- Deuxième article validé (90/100), guide pratique. -->
+
+Si votre basilic acheté en pot meurt en quelques jours, ce n'est presque jamais de votre faute. Le pot vendu en supermarché contient des dizaines de jeunes plants serrés les uns contre les autres, qui se disputent le peu de terre et d'eau disponibles. Il suffit ensuite d'une nuit trop fraîche ou d'un arrosage de trop pour que tout s'effondre.
+
+La bonne nouvelle, c'est qu'un basilic qui commence à faner peut presque toujours être sauvé, à condition d'agir vite. Le problème, c'est que les conseils trouvés en ligne se contredisent : certains disent d'arroser tous les jours, d'autres une fois par semaine, certains parlent de plein soleil, d'autres de mi-ombre.
+
+Ce guide vous aide à repérer ce qui tue votre basilic grâce à l'aspect de ses feuilles, à le sauver en quatre étapes, puis à le garder vert et touffu tout l'été.
+
+## Pourquoi le basilic du supermarché meurt si vite
+
+Le basilic vendu en pot n'a pas été cultivé pour durer chez vous. Les producteurs sèment des dizaines de graines dans un petit pot, puis font pousser les plants sous serre, avec une lumière, un arrosage et un engrais parfaitement contrôlés, d'après le site de jardinage [GrowVeg](https://www.growveg.com/guides/the-real-reason-supermarket-basil-always-dies/). Le résultat paraît beau en rayon, mais il est pensé pour être vendu, pas pour vivre des mois.
+
+Une fois chez vous, ces plants perdent d'un coup leurs conditions idéales. Comme ils sont trop nombreux dans trop peu de terre, ils épuisent vite l'eau et les nutriments, et leurs racines forment une motte serrée où elles ne peuvent plus se développer. La Royal Horticultural Society, la grande société britannique d'horticulture, note d'ailleurs que ces pots trop denses [tombent souvent malades ou fleurissent très vite](https://www.rhs.org.uk/herbs/basil).
+
+Votre basilic ne meurt donc pas parce que vous avez la main moins verte que les autres. Il meurt parce qu'il était déjà à l'étroit au moment de l'achat.
+
+## Reconnaître ce qui tue votre basilic à l'aspect de ses feuilles
+
+Avant de vous lancer dans le sauvetage, il faut savoir ce qui ne va pas, car chaque problème laisse une trace différente sur les feuilles. Le tableau ci-dessous associe chaque signe à sa cause la plus probable et au geste à faire.
+
+| Ce que vous voyez | Cause la plus probable | Ce qu'il faut faire |
+|---|---|---|
+| Feuilles noires ou brunes, comme brûlées | Le froid | Placer le pot dans une pièce chauffée, loin des vitres la nuit |
+| Feuilles molles et terre toujours mouillée | Trop d'eau | Laisser sécher la terre et vider la soucoupe |
+| Feuilles qui pendent et terre sèche | Manque d'eau | Arroser copieusement, puis surveiller la terre |
+| Tiges longues et fines, feuilles pâles | Manque de lumière | Rapprocher le pot d'une fenêtre ensoleillée |
+| Épis de fleurs au sommet des tiges | Le basilic monte en graines | Couper les fleurs dès qu'elles apparaissent |
+| Duvet gris sur les tiges ou le pied | Pourriture causée par l'humidité | Retirer les parties atteintes et espacer les plants |
+
+Les trois premiers cas sont de loin les plus fréquents. Ils méritent une explication, car c'est souvent là que les conseils se contredisent.
+
+### Le froid, ennemi numéro un du basilic
+
+Le basilic vient de régions chaudes et supporte très mal le froid, bien plus mal que la plupart des plantes d'intérieur. Selon une [étude publiée dans Frontiers in Plant Science](https://www.frontiersin.org/journals/plant-science/articles/10.3389/fpls.2023.1237577/full), ses feuilles commencent à s'abîmer en dessous de 12 °C, et les dégâts deviennent graves en dessous de 10 °C. À 5 °C, la température d'un réfrigérateur, les feuilles peuvent noircir en trois jours seulement.
+
+C'est pour cette raison qu'un basilic placé au frigo, ou laissé la nuit contre une vitre froide au printemps, se couvre de taches noires. Pour lui, une pièce de vie chauffée est le meilleur endroit, et la fenêtre de la cuisine ne convient que si elle ne refroidit pas trop pendant la nuit.
+
+### Trop d'eau ou pas assez : deux signes qui se ressemblent
+
+Un basilic qui manque d'eau et un basilic qui en reçoit trop ont le même air triste : ses feuilles pendent. La seule façon de faire la différence est de toucher la terre.
+
+Si la terre est sèche, la plante a soif et un bon arrosage la redresse en quelques heures. Si elle est encore mouillée, c'est l'inverse : les racines baignent dans l'eau, elles manquent d'air et commencent à pourrir. Ajouter de l'eau à ce moment-là, en croyant bien faire, achève souvent la plante.
+
+### Le manque de lumière, plus discret
+
+Un basilic qui manque de lumière ne meurt pas d'un coup. Il s'étire vers la fenêtre, ses tiges deviennent fines et ses feuilles pâlissent, jusqu'à ce que la plante s'épuise. Il a besoin de plusieurs heures de soleil direct chaque jour, ce qu'offre rarement le fond d'une cuisine ou un plan de travail éloigné de la fenêtre.
+
+## Sauver un basilic qui fane : la méthode en 4 étapes
+
+Si votre basilic souffre surtout parce qu'il est à l'étroit, le geste le plus efficace consiste à séparer les plants. Cette opération recommandée à la fois par la RHS et par GrowVeg prend moins d'un quart d'heure.
+
+1. Sortez la motte du pot et séparez délicatement les plants avec les doigts, en gardant le plus de racines possible.
+2. Gardez les plants les plus vigoureux et installez-les chacun dans son propre pot, ou par deux ou trois dans un pot plus large, à la même profondeur qu'avant.
+3. Utilisez un terreau léger dans un pot percé au fond, pour que l'eau en trop puisse s'écouler, puis arrosez copieusement une fois pour tasser la terre autour des racines.
+4. Placez les pots au chaud et à la lumière, et laissez la plante récupérer sans la déplacer pendant quelques jours.
+
+Ne vous inquiétez pas si quelques feuilles jaunissent ou tombent dans les jours qui suivent. D'après GrowVeg, les plants repartent en général au bout de quelques semaines, une fois que leurs racines ont pris possession de leur nouvelle terre.
+
+## Comment arroser le basilic sans le noyer
+
+Il n'existe pas de bon calendrier d'arrosage pour le basilic, et c'est justement pour cela que les conseils en ligne se contredisent. Un petit pot posé au soleil en juillet peut avoir besoin d'eau chaque jour, alors qu'un grand pot à l'intérieur en octobre peut tenir une semaine.
+
+Plutôt que de suivre une fréquence, fiez-vous à la terre. Enfoncez un doigt d'environ une phalange dans le terreau : s'il ressort sec, arrosez, et s'il ressort humide, attendez. Cette méthode, conseillée par GrowVeg, s'adapte d'elle-même à la saison et à la taille du pot.
+
+Le moment de l'arrosage compte aussi. La RHS conseille d'arroser le matin, car le basilic supporte mal d'avoir les racines mouillées pendant la nuit, et d'éviter de mouiller les feuilles. Pensez enfin à vider la soucoupe une fois que l'eau en trop s'est écoulée, pour que le pot ne trempe pas en permanence.
+
+## Pincer le basilic pour qu'il reste touffu
+
+Une erreur fréquente consiste à cueillir les grandes feuilles du bas. La plante perd alors ses meilleures feuilles et continue de pousser en hauteur, avec une tige de plus en plus nue.
+
+Il vaut mieux couper l'extrémité des tiges, juste au-dessus d'une paire de feuilles. À cet endroit, deux nouvelles pousses vont apparaître, et le basilic devient plus large et plus fourni au fil des récoltes. Chaque cueillette sert donc à la fois votre cuisine et votre plante.
+
+Surveillez aussi l'apparition des fleurs, en général au milieu ou à la fin de l'été. Une fois en fleurs, le basilic produit des feuilles de moins bonne qualité, c'est pourquoi la RHS conseille de couper les tiges florales dès qu'on les voit. Une seule exception : laisser fleurir un pied fait le bonheur des abeilles, qui adorent son nectar.
+
+## Les trois gestes qui tuent le plus souvent un basilic
+
+Certaines habitudes paraissent logiques, mais condamnent le basilic en quelques jours. Ce sont souvent les mêmes qui reviennent.
+
+Le premier est de ranger le basilic au réfrigérateur pour le garder frais. Comme on l'a vu, le froid noircit ses feuilles en quelques jours, que la plante soit entière ou coupée.
+
+Le deuxième est d'arroser par réflexe, tous les jours, sans regarder la terre. Les racines finissent par pourrir, et la plante fane alors qu'elle a de l'eau en abondance, ce qui pousse souvent à arroser encore plus.
+
+Le troisième est de le garder dans son emballage d'origine, ce cône de plastique transparent qui entoure le pot. Il retient l'humidité autour des feuilles et favorise la pourriture grise. Avouons-le, on l'a presque tous laissé une semaine « pour le protéger », et le basilic nous l'a rarement pardonné.
+
+## Questions fréquentes sur le basilic qui meurt
+
+Voici les réponses aux questions qui reviennent le plus souvent quand un basilic commence à dépérir.
+
+### Peut-on sauver un basilic complètement fané ?
+
+Oui, tant que les tiges restent vertes et fermes. Coupez les parties noires ou molles, séparez les plants, puis rempotez-les dans un terreau léger. Si toutes les tiges sont molles et brunes à la base, la plante est en général perdue.
+
+### Pourquoi mon basilic a des feuilles noires ?
+
+Des feuilles noires sont presque toujours le signe d'un coup de froid. Le basilic s'abîme dès que la température descend sous 12 °C, par exemple au réfrigérateur ou contre une fenêtre froide la nuit.
+
+### Faut-il arroser le basilic tous les jours ?
+
+Pas forcément. Arrosez seulement quand le premier centimètre de terre est sec au toucher. En plein été, cela peut arriver chaque jour, mais à l'intérieur en automne, une à deux fois par semaine suffit souvent.
+
+### Le basilic repousse-t-il après avoir été coupé ?
+
+Oui, à condition de couper juste au-dessus d'une paire de feuilles. Deux nouvelles tiges repartent alors à cet endroit. Si vous coupez la tige au ras de la terre, elle ne repousse pas.
+
+### Le basilic peut-il passer l'hiver dans la maison ?
+
+Il peut tenir quelques mois à l'intérieur, dans une pièce chauffée et bien éclairée. En hiver, le manque de lumière l'affaiblit cependant beaucoup, et beaucoup de jardiniers préfèrent ressemer ou racheter un pot au printemps.
+
+## Un basilic bien installé vous le rend tout l'été
+
+Le basilic du supermarché a la réputation d'une plante qui meurt en une semaine. En réalité, il meurt surtout de ses conditions de départ : trop de plants dans trop peu de terre, puis un passage brutal au froid ou à l'humidité.
+
+Un quart d'heure pour séparer les plants, un doigt dans la terre avant chaque arrosage et une coupe au bon endroit suffisent à changer son destin. Le même pot qui finissait à la poubelle peut alors vous fournir des feuilles fraîches jusqu'à la fin de l'été.
+
+
+---
+
+<!-- Troisième article validé, explication / finances personnelles. -->
+
+La règle 50/30/20 consiste à partager l'argent qui arrive sur votre compte chaque mois en trois parts : 50 % pour les dépenses obligatoires, 30 % pour vos envies et 20 % pour l'épargne. Avec 2 000 € par mois, cela donne 1 000 € pour le loyer, les courses et les factures, 600 € pour les sorties et les achats plaisir, et 400 € mis de côté.
+
+Sur le papier, c'est simple. Dans la vraie vie, beaucoup de gens abandonnent dès le premier mois, parce que leur loyer avale déjà presque la moitié de leur salaire. La plupart des articles s'arrêtent pourtant là, sans dire quoi faire quand les chiffres ne tombent pas juste.
+
+Ce guide vous montre comment calculer vos trois parts à partir de votre vrai revenu, où classer les dépenses qui posent question et comment adapter la règle quand votre budget ne rentre pas dans les cases, exemple au SMIC à l'appui.
+
+## D'où vient la règle 50/30/20 et ce qu'elle dit vraiment
+
+La règle a été popularisée en 2005 par Elizabeth Warren, aujourd'hui sénatrice américaine, et sa fille Amelia Warren Tyagi dans leur livre *All Your Worth*. Leur objectif était simple : donner aux familles un repère facile à retenir, sans tableau compliqué ni suivi au centime près.
+
+Deux détails de la version d'origine changent beaucoup de choses, et la plupart des articles les oublient. D'abord, les pourcentages se calculent sur le revenu après impôts, et non sur le salaire brut. Ensuite, seul le remboursement minimum d'un crédit compte dans les 50 % de besoins : tout ce que vous remboursez en plus entre dans les 20 %, comme le rappelle le site [Acorns](https://www.acorns.com/money-basics/saving-and-budgeting/what-is-the-50-30-20-budget-rule-/).
+
+En France, le premier point est plutôt une bonne nouvelle. Depuis le prélèvement à la source, l'impôt est déjà retiré de votre salaire : le montant qui arrive sur votre compte est donc la bonne base de calcul.
+
+Gardez enfin en tête qu'il ne s'agit pas d'une règle officielle. [La finance pour tous](https://www.lafinancepourtous.com/outils/questions-reponses/budget-qu-est-ce-que-la-regle-des-50-30-20/), le site d'éducation financière de l'Institut pour l'éducation financière du public, la présente comme un repère pratique, à adapter à votre situation.
+
+## Calculer vos trois parts en 3 étapes
+
+Le calcul prend dix minutes, à condition d'avoir vos trois derniers relevés bancaires sous la main. Ce sont eux qui vous montrent la réalité, bien mieux que vos souvenirs.
+
+1. Additionnez tout ce que vous recevez chaque mois de façon régulière : salaire net versé, aides, pension. C'est votre revenu de base.
+2. Multipliez ce revenu par 0,5, 0,3 et 0,2 pour obtenir le montant de chaque part.
+3. Reprenez vos relevés et rangez chaque dépense dans l'une des trois parts, pour voir où vous en êtes aujourd'hui.
+
+Voici ce que donne le calcul pour trois revenus mensuels. Le premier correspond au SMIC net, qui est d'environ 1 478 € par mois depuis sa [revalorisation du 1er juin 2026](https://www.info.gouv.fr/index.php/actualite/le-smic-revalorise-le-1er-juin-2026).
+
+| Revenu net mensuel | Besoins (50 %) | Envies (30 %) | Épargne (20 %) |
+|---|---|---|---|
+| 1 478 € (SMIC) | 739 € | 443 € | 296 € |
+| 2 000 € | 1 000 € | 600 € | 400 € |
+| 3 000 € | 1 500 € | 900 € | 600 € |
+
+La troisième étape est souvent la plus surprenante. Beaucoup de personnes découvrent que leurs envies dépassent largement 30 %, simplement parce que les petites dépenses du quotidien finissent par peser lourd.
+
+## Besoin ou envie : où classer les dépenses qui posent question
+
+Le loyer est clairement un besoin, et un week-end à Barcelone clairement une envie. Entre les deux, beaucoup de dépenses sont plus floues, et c'est souvent là que la règle se dérègle.
+
+Pour trancher, posez-vous une seule question : si vous arrêtiez cette dépense demain, auriez-vous un vrai problème pour vous loger, vous soigner, vous nourrir ou aller travailler ? Si la réponse est oui, c'est un besoin. Si vous seriez simplement déçu, c'est une envie.
+
+| Dépense | Partie « besoin » | Partie « envie » |
+|---|---|---|
+| Courses | Les produits de base | Les produits plaisir et les plats préparés |
+| Forfait mobile | Un forfait simple qui couvre votre usage | L'option ou le forfait haut de gamme |
+| Voiture | Le trajet pour aller travailler | Les sorties du week-end en voiture |
+| Abonnements | Mutuelle, assurance habitation | Streaming, musique, salle de sport |
+| Vêtements | Le remplacement de ce qui est usé | Les achats coup de cœur |
+
+Le tableau montre qu'une même dépense peut se couper en deux. Votre forfait à 30 € n'est un besoin qu'à hauteur du forfait simple qui suffirait : le reste, c'est un choix, et il appartient aux 30 %.
+
+## Votre budget ne rentre pas dans les cases ? Adaptez la règle
+
+Prenons une personne au SMIC, avec 1 478 € par mois. Elle paie 600 € de loyer, environ 250 € de courses de base et 150 € de factures, de transport et d'assurances. Ses besoins atteignent déjà 1 000 €, soit 68 % de son revenu au lieu des 50 % prévus.
+
+Dans ce cas, s'acharner sur la règle d'origine ne sert à rien. Vous allez forcer, vous allez échouer, et vous allez conclure que le budget, ce n'est pas pour vous. Il vaut mieux adapter les pourcentages à votre réalité, comme le proposent aussi plusieurs médias avec des variantes comme 60/20/20 ou 70/20/10.
+
+Pour cette personne, une répartition 68/22/10 fonctionne : 1 000 € de besoins, 330 € d'envies et 148 € d'épargne chaque mois. Ce n'est pas la règle parfaite, mais c'est une règle tenue, et 148 € mis de côté tous les mois font 1 776 € au bout d'un an.
+
+Quand vous adaptez, respectez toujours le même ordre. Les besoins passent en premier, puis l'épargne, même petite, et les envies prennent ce qui reste. C'est l'épargne qui doit survivre aux mois difficiles, pas les sorties.
+
+## Que faire des 20 % mis de côté ?
+
+Mettre de l'argent de côté, c'est bien. Savoir à quoi il sert, c'est encore mieux, sinon il finit souvent par repartir dans les envies.
+
+La première priorité est l'épargne de précaution, c'est-à-dire une réserve pour les coups durs : une panne de voiture, une facture imprévue, une perte d'emploi. La [Caisse d'Épargne](https://www.caisse-epargne.fr/epargner/epargne-de-precaution/) conseille de viser trois à six mois de dépenses courantes, placés sur un livret réglementé comme le Livret A, le LDDS ou le LEP, que vous pouvez retirer à tout moment.
+
+Une fois cette réserve constituée, vous pouvez rembourser plus vite un crédit coûteux, puis financer des projets à plus long terme.
+
+Pour que l'épargne se fasse vraiment, programmez un virement automatique vers votre livret le jour où votre salaire arrive. L'argent quitte votre compte avant que vous ayez eu le temps de le dépenser, et vous vous habituez très vite à vivre sans lui.
+
+## Les erreurs qui font abandonner la règle 50/30/20
+
+La règle échoue rarement à cause des pourcentages. Elle échoue à cause de la façon dont on l'applique.
+
+La première erreur est de calculer sur le salaire brut. Vos parts paraissent alors plus grosses que l'argent réellement disponible, et le budget est faux dès le premier jour.
+
+La deuxième est de ranger toutes les courses dans les besoins. Le panier de base est un besoin, mais les gâteaux, les plats tout prêts et la bouteille du vendredi soir sont des envies. Si vous les comptez dans les besoins, vos 50 % explosent sans que vous compreniez pourquoi.
+
+La troisième est de viser 20 % d'épargne dès le premier mois quand on part de zéro. Mieux vaut commencer à 5 %, tenir trois mois, puis augmenter. Un budget trop ambitieux tient en général aussi longtemps que les bonnes résolutions du 1er janvier.
+
+## Une règle à adapter, pas à subir
+
+La règle 50/30/20 ne vous dit pas comment vivre. Elle vous donne un point de repère pour savoir si votre argent va là où vous le voulez vraiment.
+
+Si vos chiffres ne collent pas, ce n'est pas un échec. C'est une information : elle vous montre quelle part de votre budget pèse trop lourd, et c'est exactement par là que vous pouvez commencer à reprendre la main.
+
+## Questions fréquentes
+
+Voici les réponses aux questions qui reviennent souvent quand on veut appliquer la règle dans une situation particulière.
+
+### La règle 50/30/20 fonctionne-t-elle en couple ?
+
+Oui. Si vous mettez vos revenus en commun, appliquez les pourcentages au total des deux salaires. Si vous gardez des comptes séparés avec un compte joint pour les dépenses communes, chacun peut appliquer la règle à sa propre part de revenu, après sa contribution au compte joint.
+
+### Comment appliquer la règle avec des revenus irréguliers ?
+
+Basez-vous sur votre mois le plus faible de l'année écoulée, et non sur la moyenne. Les mois où vous gagnez plus, placez la différence sur votre épargne de précaution : elle servira de coussin les mois creux.
+
+### Faut-il ouvrir plusieurs comptes pour suivre la règle ?
+
+Ce n'est pas obligatoire, mais cela aide. Un compte pour les besoins, un autre pour les envies et un livret pour l'épargne vous permettent de voir d'un coup d'œil ce qu'il vous reste dans chaque part, sans faire de calcul.
