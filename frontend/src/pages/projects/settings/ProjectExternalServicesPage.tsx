@@ -5,6 +5,7 @@ import { friendlyApiErrorMessage } from '@/api/client'
 import { listExternalServices, type ExternalServicePublic } from '@/api/externalServices'
 import { useProject } from '@/context/ProjectContext'
 import ExternalServiceCard from './ExternalServiceCard'
+import IllustrationSettingsCard from './IllustrationSettingsCard'
 
 function AccessDenied() {
   return (
@@ -85,6 +86,8 @@ export default function ProjectExternalServicesPage() {
           </button>
         </div>
       )}
+
+      <IllustrationSettingsCard projectId={projectId} />
 
       {services.map((service) => (
         <ExternalServiceCard
