@@ -48,6 +48,10 @@ class OpenAILLMProvider(LLMProvider):
         # compatibles (OpenRouter, Mistral, Gemini...) attendent max_tokens.
         return "max_completion_tokens" if "api.openai.com" in self.base_url else "max_tokens"
 
+    def _extra_payload(self) -> dict:
+        """Champs propres à un endpoint compatible (voir OpenRouter)."""
+        return {}
+
     def _headers(self) -> dict[str, str]:
         return {
             "Authorization": f"Bearer {self.api_key}",
@@ -64,6 +68,7 @@ class OpenAILLMProvider(LLMProvider):
             "messages": messages,
             "temperature": temperature,
             self._max_tokens_field(): self.max_output_tokens,
+            **self._extra_payload(),
         }
 
         self.last_usage = None
