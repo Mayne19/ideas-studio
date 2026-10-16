@@ -161,6 +161,59 @@ def build_fact_ledger(
     }
 
 
+def enrich_markers(ledger: dict, markers: list[dict]) -> list[dict]:
+    """Marqueurs [F#] du rédacteur complétés par l'URL, la citation et le
+    chiffre du fait : matière du futur vérificateur (A7)."""
+    by_id = {f.get("fact_id"): f for f in (ledger or {}).get("facts") or []}
+    enriched = []
+    for marker in markers or []:
+        fact = by_id.get(marker.get("fact_id")) or {}
+        enriched.append({
+            **marker,
+            "known": bool(fact),
+            "url": fact.get("url", ""),
+            "quote_verbatim": fact.get("quote_verbatim", ""),
+            "figure": fact.get("figure", ""),
+        })
+    return enriched
+
+
+def citation_candidates_from_markers(ledger: dict, markers: list[dict], keyword: str = "",
+                                     competitor_hosts: set[str] | None = None) -> list[dict]:
+    """Sources externes candidates pour CitationPass, dans l'ordre des faits
+    réellement utilisés par le rédacteur (marqueurs connus). L'extrait est
+    la citation exacte du fait, ce qui permet à CitationPass de choisir la
+    bonne phrase. Les concurrents de la SERP et les sources faibles sont
+    exclus (on ne renvoie pas le lecteur chez un concurrent)."""
+    from app.services.seo.external_link_service import _clean_url, _is_serp_competitor
+
+    by_id = {f.get("fact_id"): f for f in (ledger or {}).get("facts") or []}
+    links: list[dict] = []
+    seen: set[str] = set()
+    for marker in markers or []:
+        fact = by_id.get(marker.get("fact_id"))
+        if not fact:
+            continue
+        url = _clean_url(fact.get("url") or "")
+        if not url or url in seen or fact.get("source_tier") == "weak":
+            continue
+        if competitor_hosts and _is_serp_competitor(url, competitor_hosts):
+            continue
+        seen.add(url)
+        links.append({
+            "url": url,
+            "anchor_text": fact.get("claim", "")[:80],
+            "placement": "auto",
+            "reason": f"Fait {fact.get('fact_id')} utilisé par le rédacteur",
+            "source_reliability": "high" if fact.get("source_tier") == "strong" else "medium",
+            "domain_tier": fact.get("source_tier") or "neutral",
+            "excerpt": (fact.get("quote_verbatim") or "")[:220],
+            "nofollow_recommended": fact.get("source_tier") != "strong",
+            "fact_id": fact.get("fact_id"),
+        })
+    return links
+
+
 def ledger_to_evidence_pack(ledger: dict) -> dict:
     """Vue compatible EvidencePack (GEO, cohérence, score) du registre."""
     items = []
