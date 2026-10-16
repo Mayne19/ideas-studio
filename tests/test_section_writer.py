@@ -168,3 +168,11 @@ def test_comparison_table_requested_in_one_section_only():
     writer = SectionWriter(FakeProvider(), "=== BRIEF ===", sections, fmt="comparison")
     prompts = [writer._section_prompt(i, "", "") for i in range(len(sections))]
     assert ["<table>" in p and "Obligatoire" in p for p in prompts].count(True) == 1
+
+
+def test_strip_fact_markers_drops_emptied_inline_tags():
+    from app.services.seo.section_writer import strip_fact_markers
+
+    cleaned, markers = strip_fact_markers("<p>Les délais baissent <strong>[F3]</strong>. Fin <em> [F4] </em> :</p>")
+    assert cleaned == "<p>Les délais baissent. Fin :</p>"
+    assert [m["fact_id"] for m in markers] == ["F3", "F4"]
