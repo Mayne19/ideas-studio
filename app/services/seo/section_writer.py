@@ -387,6 +387,20 @@ def format_facts_block(facts: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def already_said(article_so_far: str, limit: int = 1200) -> str:
+    """Première phrase de chaque paragraphe déjà écrit : ce que la suite ne
+    doit pas répéter (les sections écrites isolément redisaient l'intro)."""
+    from app.services.seo.html_text_ops import split_units, text_blocks, unit_heading
+
+    items: list[str] = []
+    for index, unit in enumerate(split_units(article_so_far or "")):
+        firsts = [re.split(r"(?<=[.!?])\s+", b)[0] for b in text_blocks(unit)[:3]]
+        if firsts:
+            label = "Introduction" if index == 0 else unit_heading(unit)
+            items.append(f"[{label}] " + " ".join(firsts))
+    return " ".join(items)[:limit]
+
+
 # ── Marqueurs de faits ───────────────────────────────────────────────────────
 
 _FACT_MARKER_RE = re.compile(r"\s*\[\s*(F\d{1,3}(?:\s*[,;]\s*F\d{1,3})*)\s*\]")
@@ -554,8 +568,10 @@ class SectionWriter:
         prompt_parts = [
             self.brief_text, "", self._outline_list(), "",
             "Rédige uniquement l'introduction de l'article (le texte placé avant le premier <h2>) :",
-            "- Les 2 à 3 premières phrases donnent la réponse directe à la question réelle du lecteur. "
-            "Pas de contexte, de définition ni d'annonce du plan avant cette réponse.",
+            "- Les 2 à 3 premières phrases donnent la réponse directe à la question réelle du lecteur, "
+            "formulée pour lui et sa situation (ce que ça change pour lui), pas comme une définition "
+            "de dictionnaire. Pas de contexte ni d'annonce du plan avant cette réponse.",
+            "- Les phrases s'enchaînent : chacune découle de la précédente.",
             "- Ensuite, une ou deux phrases au plus sur la nuance qui compte (sans énumérer les sections).",
             "- 1 ou 2 paragraphes <p>, environ 60 à 120 mots, aucun titre.",
             *self._common_rules(),
@@ -590,6 +606,9 @@ class SectionWriter:
                 "Ajoute des <h3> seulement si la section regroupe plusieurs sous-points distincts "
                 "(jamais un seul <h3>)."
             )
+        already = already_said(article_so_far)
+        if already:
+            parts.append("Déjà dit plus haut dans l'article (ne le répète pas, appuie-toi dessus) : " + already)
         last = last_paragraph_text(previous_html)
         if last:
             parts.append(f"Fin du texte précédent (enchaîne sans le répéter) : « {last} »")
