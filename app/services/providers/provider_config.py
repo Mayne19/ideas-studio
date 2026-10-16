@@ -24,6 +24,7 @@ class ResolvedProviderConfig:
     model: str | None
     base_url: str | None
     api_key_encrypted: str | None
+    reasoning_mode: str = "off"
 
 
 def _to_config(provider_row: Provider, credential: ProviderCredential | None, model: str | None, binding_id: str) -> ResolvedProviderConfig:
@@ -33,6 +34,7 @@ def _to_config(provider_row: Provider, credential: ProviderCredential | None, mo
         model=model,
         base_url=provider_row.base_url,
         api_key_encrypted=credential.secret_ref if credential else None,
+        reasoning_mode=(credential.reasoning_mode if credential else None) or "off",
     )
 
 
