@@ -2135,7 +2135,7 @@ class SEOGenerationOrchestrator:
         from app.services.seo.section_writer import FORMAT_COMPONENT_INSTRUCTIONS
         from app.services.seo.structure_fixer import apply_deterministic_fixes
         from app.services.seo.structure_validator import validate_structure
-        from app.services.seo.targeted_revision import revise_sections
+        from app.services.seo.targeted_revision import figure_fixes, revise_sections
 
         brief = self.context.get("production_brief") or {}
         figures = [f"{fig['quantity']} : {fig['reference']}" for fig in self.context.get("reference_figures") or []]
@@ -2164,11 +2164,38 @@ class SEOGenerationOrchestrator:
             lines = [f"- {f.get('claim', '')}" + (f" ({f['figure']})" if f.get("figure") else "") for f in items]
             return ("Faits vérifiés utilisables :\n" + "\n".join(lines)) if lines else ""
 
+        allowed_text = facts_text + " " + reference_block
+
+        def polish(text: str) -> str:
+            text = apply_deterministic_fixes(text, draft.title)
+            if self._is_french():
+                from app.services.seo.french_typography import fix_french_typography
+                text = fix_french_typography(text)
+            return text
+
+        def revise(text: str, fixes: list[dict], label: str) -> tuple[str, dict]:
+            revised, revision = revise_sections(
+                text, fixes, self._polish_call_fn(article),
+                facts_text=facts_text, reference_block=reference_block, facts_block_for=facts_block_for,
+                fatal_exceptions=(WritingCancelledError,),
+            )
+            self._step(f"{label} ({len(revision['applied'])} section(s))")
+            return (polish(revised) if revision["applied"] else text), revision
+
+        # A7 déterministe : chiffres absents des faits, corrigés avant le juge.
+        current = content
+        pre_fixes = figure_fixes(current, allowed_text)
+        fact_verification = {"flagged_sections": len(pre_fixes)}
+        if pre_fixes:
+            current, fact_verification["revision"] = revise(current, pre_fixes, "FactVerifier")
+        self._save(article.id, "fact_verification", fact_verification)
+
         rounds: list[dict] = []
         best: tuple[tuple, str, dict] | None = None
         # Rapport de structure du texte réellement jugé (après corrections).
-        current, report = content, validate_structure(content, draft.title, fmt)
-        for attempt in range(3):
+        report = validate_structure(current, draft.title, fmt)
+        max_revisions, stalls, previous = 4, 0, None
+        for attempt in range(max_revisions + 1):
             judgement = judge_article(
                 current, judge_call, title=draft.title or "", keyword=draft.keyword or "", brief=brief,
                 facts=facts, reference_figures=figures, structure_report=report, required_component=required,
@@ -2184,22 +2211,19 @@ class SEOGenerationOrchestrator:
                 best = (rank, current, judgement)
             self._step(f"EditorialJudge #{attempt + 1} ({judgement['content_score']}/95, "
                        f"{len(judgement['blockers'])} blocage(s))")
+            stalls = stalls + 1 if previous is not None and judgement["content_score"] <= previous else 0
+            previous = judgement["content_score"]
             publishable = not judgement["blockers"] and judgement["content_score"] >= self._min_publish_score() - 5
-            if publishable or not judgement["section_fixes"] or attempt == 2:
+            if publishable or attempt == max_revisions or stalls >= 2:
                 break
-            revised, revision = revise_sections(
-                current, judgement["section_fixes"], self._polish_call_fn(article),
-                facts_text=facts_text, reference_block=reference_block, facts_block_for=facts_block_for,
-                fatal_exceptions=(WritingCancelledError,),
-            )
+            # Chiffres encore non vérifiés d'abord, puis consignes du juge.
+            fixes = figure_fixes(current, allowed_text, max_sections=2) + judgement["section_fixes"]
+            if not fixes:
+                break
+            current, revision = revise(current, fixes, f"TargetedRevision #{attempt + 1}")
             rounds[-1]["revision"] = revision
-            self._step(f"TargetedRevision #{attempt + 1} ({len(revision['applied'])} section(s))")
             if not revision["applied"]:
                 break
-            current = apply_deterministic_fixes(revised, draft.title)
-            if self._is_french():
-                from app.services.seo.french_typography import fix_french_typography
-                current = fix_french_typography(current)
             report = validate_structure(current, draft.title, fmt)
 
         final = best[2] if best else None
