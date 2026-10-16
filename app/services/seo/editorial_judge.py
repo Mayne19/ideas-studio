@@ -44,7 +44,26 @@ JUDGE_CRITERIA: dict[str, tuple[int, str]] = {
 CODE_STRUCTURE_POINTS = 5
 CODE_SEO_POINTS = 5
 BLOCKER_TYPES = ("invented_fact", "unsourced_figure", "contradiction", "intent_missed", "missing_component",
-                 "off_topic_fact", "meta_commentary", "reader_drop", "unexplained_jargon", "commercial_copy")
+                 "off_topic_fact", "meta_commentary", "reader_drop", "unexplained_jargon", "commercial_copy",
+                 "heading_mismatch", "obvious_filler")
+
+# Introduction acceptée par le fondateur (lecteur : 90/100) : réponse directe
+# adaptée au but du lecteur, problème concret, annonce de ce qu'il obtient.
+FOUNDER_ACCEPTED_EXAMPLE = (
+    "« Pour créer un questionnaire en ligne sans payer ni limiter le nombre de réponses, deux outils suffisent "
+    "dans la plupart des cas : Google Forms si vous voulez aller vite, Tally si vous voulez un rendu plus soigné "
+    "et des données stockées en Europe. Les six autres outils de ce comparatif ne deviennent intéressants que "
+    "dans des situations précises. Le piège se cache dans les versions gratuites. Celle de Typeform s'arrête "
+    "désormais à 10 réponses par mois. Passé ce seuil, le formulaire se ferme tout seul, souvent au milieu d'une "
+    "campagne d'envoi. Ce comparatif vous donne, pour chacun des 8 outils, la vraie limite de sa version gratuite "
+    "et le premier prix à payer, puis un modèle de questionnaire prêt à copier. »"
+)
+# Passages refusés (« phrases jetées », évidences, tics) : 0/10 pour le fondateur.
+FOUNDER_REJECTED_PASSAGES = (
+    "« Trois temps suffisent. Vous écrivez vos questions sur un site, l'outil vous donne un lien et chaque réponse "
+    "s'enregistre dans un tableau. Aucune installation, aucune ligne de code. » (phrases empilées sans lien, "
+    "évidences sans valeur) ; « Curieusement… », « Franchement… », « Imaginez… » (tics de texte généré)."
+)
 
 # Calibration humaine : introduction refusée par le fondateur (2026-10-16),
 # « aucun lien entre les phrases, on sent le contenu généré, j'ai fermé ».
@@ -108,6 +127,10 @@ def build_judge_prompt(content: str, *, title: str, keyword: str, brief: dict, f
         "rédacteur en chef :",
         FOUNDER_REJECTED_EXAMPLE,
         "Un passage de ce niveau dans l'introduction ou dans une section = clarity ≤ 4 et blocage reader_drop.",
+        "Autres passages refusés : " + FOUNDER_REJECTED_PASSAGES,
+        "Introduction acceptée, le niveau attendu (réponse directe adaptée au but du lecteur, problème concret, "
+        "annonce en une phrase de ce qu'il obtient) :",
+        FOUNDER_ACCEPTED_EXAMPLE,
         "Lis aussi comme un débutant qui ne connaît pas le sujet : si la première phrase ne répond pas "
         "simplement à la question ou si un terme technique arrive sans explication, clarity ≤ 4 et blocage "
         "unexplained_jargon (cite le terme). Une offre commerciale d'un prestataire (ses tarifs, son diagnostic "
@@ -118,7 +141,9 @@ def build_judge_prompt(content: str, *, title: str, keyword: str, brief: dict, f
         "différentes pour la même chose), intent_missed (la question n'a pas de réponse claire), off_topic_fact "
         "(chiffre qui concerne un autre public ou un autre cas), meta_commentary (le texte commente l'article, une "
         "consigne ou « le lecteur »), reader_drop (passage qui fait décrocher : phrases sans fil, tics, "
-        "répétition, ton généré), unexplained_jargon, commercial_copy. Ne signale un blocage que s'il est certain.",
+        "répétition, ton généré), unexplained_jargon, commercial_copy, heading_mismatch (une section traite autre "
+        "chose que ce que son titre promet, ou le titre promet plus que la section), obvious_filler (évidence sans "
+        "valeur : « sans rien installer », « pas besoin de savoir coder »). Ne signale un blocage que s'il est certain.",
         "",
         "Pour chaque section à améliorer, donne une consigne de correction concrète et applicable par un "
         "rédacteur (« remplacer la fourchette X par la référence Y », « supprimer l'affirmation Z non sourcée », "
