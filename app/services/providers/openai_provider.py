@@ -111,6 +111,11 @@ class OpenAILLMProvider(LLMProvider):
                         detail = exc.response.json().get("error", {}).get("message", exc.response.text)
                     except Exception:
                         detail = exc.response.text[:200]
+                    # Modèle qui impose son raisonnement (ex. gemini-3.8-flash) :
+                    # on retente sans le paramètre plutôt que d'échouer.
+                    if exc.response.status_code == 400 and "reasoning" in payload and "easoning is mandatory" in str(detail):
+                        payload.pop("reasoning")
+                        continue
                     last_error = ProviderUnavailableError(
                         f"Provider {self.provider_name} (HTTP {exc.response.status_code}): {detail}"
                     )
