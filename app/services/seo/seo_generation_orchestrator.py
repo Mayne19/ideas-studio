@@ -611,6 +611,10 @@ class SEOGenerationOrchestrator:
         self.context["editorial_angle"] = editorial_angle
         self._step("EditorialAngle")
 
+        # 8b. InformationGainDesign — outil de décision, exemple chiffré, fait
+        # surprenant, erreurs fréquentes : conçus avant le plan (chantier 2).
+        self._design_information_gain(final_keyword, intent_analysis, research_brief)
+
         # 9. ArticleOutline
         from app.core.config import settings as app_settings
         outline = build_outline_dict(
@@ -756,6 +760,8 @@ class SEOGenerationOrchestrator:
         self._save(article.id, "research_brief", research_brief)
         self._save(article.id, "keyword_brief", keyword_brief)
         self._save(article.id, "editorial_angle", editorial_angle)
+        if self.context.get("information_gain") is not None:
+            self._save(article.id, "information_gain", self.context["information_gain"])
         self._save(article.id, "outline", outline)
         self._save(article.id, "image_plan", image_plan_result.get("image_plan", {}))
         self._save(article.id, "image_sources", {"items": image_plan_result.get("image_sources", [])})
@@ -1379,6 +1385,7 @@ class SEOGenerationOrchestrator:
         tous les appels, plan regroupé (H3 sous leur H2), budget de mots par
         section et sources citables."""
         from app.services.seo.article_outline_planner import resolve_outline_format
+        from app.services.seo.information_gain_designer import assign_gain_elements
         from app.services.seo.section_writer import (
             OutlineSection, SectionWriter, assign_facts_to_sections, build_section_brief,
             collect_writer_facts, compute_words_per_section, group_outline_sections,
@@ -1469,6 +1476,9 @@ class SEOGenerationOrchestrator:
             style_example=build_reference_examples_block(),
             fatal_exceptions=(WritingCancelledError,),
             section_facts=section_facts,
+            gain_elements=assign_gain_elements(
+                (self.context.get("information_gain") or {}).get("design"), [s.heading for s in sections],
+            ),
         )
 
     def _ensure_outline_complete(self, section_writer, content: str, step: str) -> str:
@@ -2211,6 +2221,7 @@ class SEOGenerationOrchestrator:
             judgement = judge_article(
                 current, judge_call, title=draft.title or "", keyword=draft.keyword or "", brief=brief,
                 facts=facts, reference_figures=figures, structure_report=report, required_component=required,
+                planned_gain=(self.context.get("information_gain") or {}).get("design"),
                 fatal_exceptions=(WritingCancelledError,),
             )
             if judgement.get("error"):
@@ -2260,6 +2271,29 @@ class SEOGenerationOrchestrator:
                 self._error("StructureFix_Final", str(exc))
         self._save(article.id, "structure_report", validate_structure(chosen, draft.title, fmt))
         return chosen
+
+    def _design_information_gain(self, keyword: str, intent_analysis: dict, research_brief: dict) -> None:
+        from app.services.seo.information_gain_designer import design_information_gain
+        facts = [f for f in (self.context.get("fact_ledger") or {}).get("facts") or [] if isinstance(f, dict)]
+        competitors = [s for s in (research_brief or {}).get("sources_consulted") or [] if isinstance(s, dict)]
+        try:
+            provider = self._get_agent_provider("writer", self.llm)
+        except Exception as exc:
+            self._error("InformationGainDesign", f"Provider indisponible : {exc}")
+            return
+        if provider.is_mock:
+            return
+
+        def call(prompt: str, step: str, temperature: float) -> str:
+            return provider.generate_text(prompt, temperature=temperature)
+
+        report = design_information_gain(
+            keyword, (intent_analysis or {}).get("reader_real_question") or keyword, facts, competitors, call,
+        )
+        self.context["information_gain"] = report
+        if report.get("error"):
+            self._error("InformationGainDesign", report["error"])
+        self._step("InformationGainDesign")
 
     def _min_publish_score(self) -> float:
         from app.models.ai import Pipeline
