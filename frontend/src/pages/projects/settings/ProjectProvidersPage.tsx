@@ -15,6 +15,7 @@ type AIProviderConfig = {
   base_url: string | null
   model: string | null
   is_default: boolean
+  reasoning_mode: 'off' | 'auto'
   last_test_status: string | null
   last_test_error: string | null
   last_tested_at: string | null
@@ -38,6 +39,7 @@ type ProviderFormData = {
   label: string
   api_key: string
   model: string
+  reasoning_mode: 'off' | 'auto'
 }
 
 const emptyForm: ProviderFormData = {
@@ -45,6 +47,7 @@ const emptyForm: ProviderFormData = {
   label: '',
   api_key: '',
   model: '',
+  reasoning_mode: 'off',
 }
 
 type CatalogFormData = {
@@ -126,6 +129,7 @@ export default function ProjectProvidersPage() {
       label: def?.label ?? code,
       api_key: '',
       model: '',
+      reasoning_mode: 'off',
     })
     setEditingId(null)
     setShowForm(true)
@@ -138,6 +142,7 @@ export default function ProjectProvidersPage() {
       label: config.label,
       api_key: '',
       model: config.model ?? '',
+      reasoning_mode: config.reasoning_mode ?? 'off',
     })
     setEditingId(config.id)
     setShowForm(true)
@@ -155,6 +160,7 @@ export default function ProjectProvidersPage() {
         const payload: Record<string, string> = {}
         if (apiKey) payload.api_key = apiKey
         payload.model = model
+        payload.reasoning_mode = form.reasoning_mode
         await api.patch(`/settings/ai-providers/${editingId}`, payload)
       } else {
         await api.post('/settings/ai-providers', {
@@ -163,6 +169,7 @@ export default function ProjectProvidersPage() {
           project_id: projectId,
           api_key: apiKey || undefined,
           model: model || undefined,
+          reasoning_mode: form.reasoning_mode,
         })
       }
       setShowForm(false)
@@ -485,6 +492,9 @@ export default function ProjectProvidersPage() {
             <div className="flex flex-wrap gap-4 text-[12px] text-tertiary">
               <span>Clé API : {config.api_key_configured ? 'Configurée' : 'Non configurée'}</span>
               <span>Modèle : {config.model || 'Non défini'}</span>
+              {config.provider === 'openrouter' && (
+                <span>Raisonnement : {config.reasoning_mode === 'auto' ? 'Activé' : 'Désactivé'}</span>
+              )}
               {config.last_tested_at && <span>Dernier test : {new Date(config.last_tested_at).toLocaleString('fr-FR')}</span>}
             </div>
           </div>
@@ -590,6 +600,23 @@ export default function ProjectProvidersPage() {
                 Modèle utilisé à chaque appel de ce provider par les agents qui n'en définissent pas d'autre.
               </span>
             </div>
+            {form.provider === 'openrouter' && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[12px] font-medium text-secondary">Raisonnement du modèle</label>
+                <select
+                  value={form.reasoning_mode}
+                  onChange={(e) => setForm({ ...form, reasoning_mode: e.target.value as 'off' | 'auto' })}
+                  className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
+                >
+                  <option value="off">Désactivé (recommandé)</option>
+                  <option value="auto">Activé (comportement du modèle)</option>
+                </select>
+                <span className="text-[11px] text-tertiary">
+                  Activé, certains modèles (deepseek-v4-flash) réfléchissent sur presque tous leurs tokens : rédaction plus lente,
+                  plus chère, et réponses longues tronquées.
+                </span>
+              </div>
+            )}
             <div className="flex items-center gap-2 pt-2">
               <button
                 onClick={handleSave}
