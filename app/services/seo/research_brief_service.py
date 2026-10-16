@@ -78,7 +78,12 @@ def build_research_brief(
         ]
         return brief
 
-    results = serp_adapter.search(keyword, limit=12)
+    serp = serp_adapter.search_full(keyword, limit=12)
+    results = serp.get("organic") or []
+    brief.people_also_ask = list(serp.get("people_also_ask") or [])
+    brief.related_searches = list(serp.get("related_searches") or [])
+    brief.answer_box = dict(serp.get("answer_box") or {})
+    brief.knowledge_graph = dict(serp.get("knowledge_graph") or {})
     if not results:
         brief.research_status = "not_available"
         brief.limitations = ["SERP returned no results"]

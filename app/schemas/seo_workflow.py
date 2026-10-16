@@ -107,6 +107,13 @@ class ResearchBrief:
     risks_or_uncertainties: list[str] = field(default_factory=list)
     source_reliability_notes: list[str] = field(default_factory=list)
     limitations: list[str] = field(default_factory=list)
+    # Blocs annexes de la SERP (Serper) : questions « Autres questions
+    # posées » {question, snippet, title, url}, recherches associées,
+    # encadré de réponse et knowledge graph.
+    people_also_ask: list[dict] = field(default_factory=list)
+    related_searches: list[str] = field(default_factory=list)
+    answer_box: dict = field(default_factory=dict)
+    knowledge_graph: dict = field(default_factory=dict)
 
 
 @dataclass
