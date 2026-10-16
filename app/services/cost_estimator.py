@@ -40,7 +40,9 @@ WEB_SEARCH_PRICE_PER_1000 = 10.0
 
 def estimate_agent_writer_cost(model: str, input_tokens: int, output_tokens: int, web_searches: int) -> float:
     """Coût d'un article rédigé par l'agent unique (jetons + recherches)."""
-    price = MODEL_PRICES_EUR.get(f"anthropic/{model}") or FALLBACK_PRICE
+    # « anthropic/claude-opus-5.5 » (OpenRouter) = « claude-opus-5-5 » (Anthropic).
+    key = (model or "").removeprefix("anthropic/").replace(".", "-")
+    price = MODEL_PRICES_EUR.get(f"anthropic/{key}") or FALLBACK_PRICE
     tokens = (input_tokens or 0) / 1000 * price["input_per_1k"] + (output_tokens or 0) / 1000 * price["output_per_1k"]
     return round(tokens + (web_searches or 0) / 1000 * WEB_SEARCH_PRICE_PER_1000, 4)
 
