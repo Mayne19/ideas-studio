@@ -213,6 +213,39 @@ def anthropic_client(api_key: str, timeout_seconds: float = 900.0):
     return anthropic.Anthropic(api_key=api_key, timeout=timeout_seconds)
 
 
+def _provider_key(db, code: str, project_id: str | None):
+    from sqlalchemy import select
+
+    from app.core.security import decrypt_secret
+    from app.models.ai import Provider, ProviderCredential
+
+    provider = db.execute(select(Provider).where(Provider.code == code)).scalar_one_or_none()
+    if provider is None:
+        return None
+    for pid in ([project_id] if project_id else []) + [None]:
+        query = select(ProviderCredential).where(ProviderCredential.provider_id == provider.id)
+        query = query.where(ProviderCredential.project_id == pid) if pid else query.where(ProviderCredential.project_id.is_(None))
+        credential = db.execute(query).scalar_one_or_none()
+        if credential is not None and credential.secret_ref:
+            return decrypt_secret(credential.secret_ref) or None
+    return None
+
+
+def resolve_agent_route(db, project_id: str | None) -> tuple[str | None, str | None, str]:
+    """(fournisseur, clé, modèle) de l'agent : clé Anthropic du CMS en
+    priorité (outils web natifs), sinon OpenRouter avec le même modèle et des
+    outils exécutés par le code (agent_writer_openrouter)."""
+    api_key, model = resolve_agent_credentials(db, project_id)
+    if api_key:
+        return "anthropic", api_key, model
+    openrouter_key = _provider_key(db, "openrouter", project_id)
+    if openrouter_key:
+        from app.services.seo.agent_writer_openrouter import OPENROUTER_AGENT_MODEL
+        or_model = model if "/" in model else OPENROUTER_AGENT_MODEL
+        return "openrouter", openrouter_key, or_model
+    return None, None, model
+
+
 def resolve_agent_credentials(db, project_id: str | None) -> tuple[str | None, str]:
     """(clé Anthropic, modèle) depuis le CMS : clé du fournisseur
     « anthropic » (projet puis globale), modèle de l'agent « agent_writer »
