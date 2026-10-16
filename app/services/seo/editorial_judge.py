@@ -137,7 +137,9 @@ def build_judge_prompt(content: str, *, title: str, keyword: str, brief: dict, f
         "gratuit, son forfait) présentée comme un fait = blocage commercial_copy.",
         "",
         "Blocages (un seul suffit à refuser la publication) : invented_fact (fait ou source inventés), "
-        "unsourced_figure (chiffre précis absent des faits vérifiés et invérifiable), contradiction (deux valeurs "
+        "unsourced_figure (chiffre précis absent des faits vérifiés et invérifiable ; un chiffre calculé à partir "
+        "des faits, calcul montré, ou un montant présenté comme exemple n'en est pas un, mais vérifie que le calcul "
+        "est juste : un calcul faux est un blocage contradiction), contradiction (deux valeurs "
         "différentes pour la même chose), intent_missed (la question n'a pas de réponse claire), off_topic_fact "
         "(chiffre qui concerne un autre public ou un autre cas), meta_commentary (le texte commente l'article, une "
         "consigne ou « le lecteur »), reader_drop (passage qui fait décrocher : phrases sans fil, tics, "
