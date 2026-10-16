@@ -179,7 +179,9 @@ def compute_words_per_section(n_sections: int, wc_min: int | None, wc_max: int |
 
 
 def build_section_brief(brief: dict) -> str:
-    """Brief compact répété dans chaque appel : l'essentiel seulement."""
+    """Brief compact répété dans chaque appel : l'essentiel seulement. Les
+    faits n'y sont plus : chaque section reçoit les siens (voir
+    assign_facts_to_sections), sinon les mêmes faits se répètent partout."""
     lines = ["=== BRIEF ==="]
     for label, key in (
         ("Titre", "title"), ("Mot-clé principal", "keyword"), ("Audience", "audience"),
@@ -190,18 +192,149 @@ def build_section_brief(brief: dict) -> str:
     lines.append(f"Question réelle du lecteur : {brief.get('reader_real_question') or brief.get('title', '')}")
     if brief.get("expected_answer"):
         lines.append(f"Réponse attendue : {brief['expected_answer']}")
+    differentiation = str(brief.get("differentiation") or "").strip()
+    if differentiation:
+        lines.append(f"Ce qui distingue cet article : {differentiation}")
     if brief.get("must_include"):
         lines.append("À inclure dans l'article : " + " ; ".join(str(x) for x in brief["must_include"][:6]))
     if brief.get("must_avoid"):
         lines.append("À éviter : " + " ; ".join(str(x) for x in brief["must_avoid"][:6]))
-    facts = [i for i in (brief.get("evidence_items") or []) if isinstance(i, dict) and i.get("fact")]
-    if facts:
-        lines.append("Faits vérifiés (à utiliser seulement s'ils aident à répondre) :")
-        for item in facts[:6]:
-            fact = str(item.get("fact"))
-            if item.get("figure"):
-                fact += f" [{item['figure']}]"
-            lines.append(f"- {fact}")
+    questions: list[str] = []
+    for q in list(brief.get("sub_questions") or []) + list(brief.get("related_questions") or []):
+        q = str(q).strip()
+        if q and q.lower() not in {x.lower() for x in questions}:
+            questions.append(q)
+    if questions:
+        lines.append("Questions que le lecteur se pose aussi (y répondre là où elles ont leur place) : "
+                     + " ; ".join(questions[:6]))
+    secondary = [str(k).strip() for k in (brief.get("secondary_keywords") or []) if str(k).strip()]
+    if secondary:
+        lines.append("Mots-clés secondaires (à placer seulement s'ils sont naturels) : " + ", ".join(secondary[:8]))
+    return "\n".join(lines)
+
+
+# ── Faits par section ────────────────────────────────────────────────────────
+
+_TOKEN_RE = re.compile(r"\w+", re.UNICODE)
+_STOPWORDS = {
+    "avec", "dans", "pour", "plus", "moins", "sont", "être", "fait", "faire", "cette", "votre", "vous",
+    "leur", "leurs", "comme", "mais", "tout", "tous", "quel", "quelle", "quels", "quelles", "comment",
+    "pourquoi", "entre", "selon", "sans", "sous", "chez", "the", "and", "for", "with", "from",
+}
+
+
+def _tokens(text: str) -> set[str]:
+    text = unicodedata.normalize("NFKD", (text or "").lower())
+    text = "".join(c for c in text if not unicodedata.combining(c))
+    return {t for t in _TOKEN_RE.findall(text) if len(t) >= 4 and t not in _STOPWORDS}
+
+
+def collect_writer_facts(brief: dict, limit: int = 30) -> list[dict]:
+    """Faits disponibles pour le rédacteur, au format commun
+    {fact_id, claim, figure, url, quote, usage_hint, date_or_as_of}. Le
+    registre fact_ledger est prioritaire ; à défaut, les evidence_items."""
+    facts: list[dict] = []
+    ledger = brief.get("fact_ledger") or []
+    if ledger:
+        for item in ledger:
+            if isinstance(item, dict) and item.get("claim"):
+                facts.append({
+                    "fact_id": str(item.get("fact_id") or f"F{len(facts) + 1}"),
+                    "claim": str(item["claim"]).strip(),
+                    "figure": str(item.get("figure") or "").strip(),
+                    "url": str(item.get("url") or "").strip(),
+                    "quote": str(item.get("quote_verbatim") or "").strip(),
+                    "usage_hint": str(item.get("usage_hint") or "").strip(),
+                    "date_or_as_of": str(item.get("date_or_as_of") or "").strip(),
+                })
+    else:
+        for item in brief.get("evidence_items") or []:
+            if isinstance(item, dict) and item.get("fact"):
+                facts.append({
+                    "fact_id": f"F{len(facts) + 1}",
+                    "claim": str(item["fact"]).strip(),
+                    "figure": str(item.get("figure") or "").strip(),
+                    "url": str(item.get("source_url") or "").strip(),
+                    "quote": "",
+                    "usage_hint": str(item.get("usage_hint") or "").strip(),
+                    "date_or_as_of": "",
+                })
+    return facts[:limit]
+
+
+def _section_text(section: "OutlineSection") -> str:
+    return " ".join([section.heading, section.purpose, section.reader_value,
+                     *section.key_points, *section.subheadings])
+
+
+def assign_facts_to_sections(
+    facts: list[dict],
+    sections: list["OutlineSection"],
+    *,
+    reader_question: str = "",
+    per_section: int = 4,
+    intro_count: int = 2,
+) -> dict:
+    """Attribue chaque fait à UNE section (celle dont le titre, le rôle et
+    les points clés recoupent le mieux le fait et son usage_hint), au plus
+    `per_section` faits par section. Un fait sans aucun recoupement n'est
+    attribué à aucune section plutôt que d'être plaqué au hasard.
+    L'introduction reçoit en plus les faits qui répondent le mieux à la
+    question du lecteur.
+    Retourne {"intro": [...], 0: [...], 1: [...], ..., "unassigned": [...]}."""
+    result: dict = {"intro": [], "unassigned": []}
+    for i in range(len(sections)):
+        result[i] = []
+    if not facts:
+        return result
+    section_tokens = [_tokens(_section_text(s)) for s in sections]
+    heading_tokens = [_tokens(s.heading) for s in sections]
+    scored: list[tuple[float, int, int]] = []
+    for fi, fact in enumerate(facts):
+        fact_tokens = _tokens(f"{fact.get('claim', '')} {fact.get('figure', '')}")
+        hint = fact.get("usage_hint") or ""
+        hint_tokens = _tokens(hint)
+        for si in range(len(sections)):
+            score = len(fact_tokens & section_tokens[si])
+            score += len(hint_tokens & section_tokens[si]) + 2 * len(hint_tokens & heading_tokens[si])
+            if hint and headings_match(hint, sections[si].heading):
+                score += 5
+            if score > 0:
+                scored.append((score, fi, si))
+    scored.sort(key=lambda t: (-t[0], t[1], t[2]))
+    assigned: set[int] = set()
+    for _score, fi, si in scored:
+        if fi in assigned or len(result[si]) >= per_section:
+            continue
+        result[si].append(facts[fi])
+        assigned.add(fi)
+    result["unassigned"] = [f for i, f in enumerate(facts) if i not in assigned]
+    if intro_count and reader_question:
+        q_tokens = _tokens(reader_question)
+        ranked = sorted(
+            (
+                (len(_tokens(f"{f.get('claim', '')} {f.get('usage_hint', '')}") & q_tokens), i)
+                for i, f in enumerate(facts)
+            ),
+            key=lambda t: (-t[0], t[1]),
+        )
+        result["intro"] = [facts[i] for score, i in ranked[:intro_count] if score > 0]
+    return result
+
+
+def format_facts_block(facts: list[dict]) -> str:
+    if not facts:
+        return ""
+    lines = ["Faits vérifiés pour cette partie (à utiliser seulement s'ils aident à répondre, sans les déformer) :"]
+    for fact in facts:
+        line = f"- [{fact.get('fact_id', '')}] {fact.get('claim', '')}"
+        if fact.get("figure") and fact["figure"] not in line:
+            line += f" (chiffre : {fact['figure']})"
+        if fact.get("date_or_as_of"):
+            line += f" (date : {fact['date_or_as_of']})"
+        if fact.get("url"):
+            line += f" (source : {fact['url']})"
+        lines.append(line)
     return "\n".join(lines)
 
 
@@ -222,8 +355,12 @@ class SectionWriter:
         style_example: str = "",
         fatal_exceptions: tuple[type[BaseException], ...] = (),
         max_attempts: int = MAX_ATTEMPTS_PER_UNIT,
+        section_facts: dict | None = None,
     ):
         self.write_fn = write_fn
+        # Faits attribués par section (assign_facts_to_sections) : clés
+        # "intro" et index de section.
+        self.section_facts = section_facts or {}
         self.brief_text = brief_text
         self.sections = sections
         self.fmt = fmt or ""
@@ -332,6 +469,9 @@ class SectionWriter:
             "- 1 ou 2 paragraphes <p>, environ 60 à 120 mots, aucun titre.",
             *self._common_rules(),
         ]
+        facts_block = format_facts_block(self.section_facts.get("intro") or [])
+        if facts_block:
+            prompt_parts += ["", facts_block]
         if self.style_example:
             prompt_parts += ["", self.style_example]
         prompt_parts.append("\nRetourne uniquement le HTML de l'introduction.")
@@ -373,6 +513,9 @@ class SectionWriter:
             "- Pas de phrase de résumé ni de « En conclusion » en fin de section.",
             *self._common_rules(),
         ]
+        facts_block = format_facts_block(self.section_facts.get(index) or [])
+        if facts_block:
+            parts += ["", facts_block]
         links = self._links_block(article_so_far)
         if links:
             parts += ["", links]
