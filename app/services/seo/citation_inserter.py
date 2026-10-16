@@ -168,6 +168,26 @@ def normalize_external_rels(content: str, keyword: str = "") -> str:
     return _EXTERNAL_A_RE.sub(_fix, content or "")
 
 
+_FULL_EXTERNAL_A_RE = re.compile(r"""<a\b[^>]*href\s*=\s*(["'])(https?://[^"']+)\1[^>]*>(.*?)</a>""",
+                                 re.IGNORECASE | re.DOTALL)
+
+
+def dedupe_external_links(content: str) -> str:
+    """Une URL externe n'est liée qu'une fois : les liens suivants vers la
+    même page sont retirés (le texte d'ancre reste)."""
+    seen: set[str] = set()
+
+    def _keep_first(match: re.Match) -> str:
+        url = html_lib.unescape(match.group(2)).rstrip("/")
+        if _host(url).endswith("unsplash.com"):
+            return match.group(0)
+        if url in seen:
+            return match.group(3)
+        seen.add(url)
+        return match.group(0)
+    return _FULL_EXTERNAL_A_RE.sub(_keep_first, content or "")
+
+
 def insert_link(content: str, sentence: str, anchor: str, url: str, *, external: bool, follow: bool) -> tuple[str, str | None]:
     """Pose le lien sur `anchor` dans `sentence`. Retourne (contenu, raison
     du refus ou None)."""
@@ -245,7 +265,7 @@ def insert_citations(
     keyword: str = "",
     fatal_exceptions: tuple[type[BaseException], ...] = (),
 ) -> tuple[str, dict]:
-    content = normalize_external_rels(content, keyword)
+    content = dedupe_external_links(normalize_external_rels(content, keyword))
     report: dict = {"inserted": [], "skipped": [], "candidates_external": 0, "candidates_internal": 0,
                     "existing_external": _external_count(content), "error": None}
     present = set(existing_hrefs(content))
