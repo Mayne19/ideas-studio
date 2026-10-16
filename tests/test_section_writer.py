@@ -157,3 +157,14 @@ def test_clean_unit_html_converts_markdown_paragraphs_lists_and_headings():
     assert "<h3>Ce qui fait varier le prix</h3>" in html
     assert "<li>le <strong>nombre de pages</strong> ;</li>" in html
     assert not looks_truncated(html)
+
+
+def test_comparison_table_requested_in_one_section_only():
+    from app.services.seo.section_writer import component_section_index
+
+    sections = group_outline_sections(OUTLINE)
+    assert component_section_index(sections, "comparison") == 0
+    assert component_section_index(sections, "guide") is None
+    writer = SectionWriter(FakeProvider(), "=== BRIEF ===", sections, fmt="comparison")
+    prompts = [writer._section_prompt(i, "", "") for i in range(len(sections))]
+    assert ["<table>" in p and "Obligatoire" in p for p in prompts].count(True) == 1
