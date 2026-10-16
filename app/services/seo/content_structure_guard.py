@@ -37,7 +37,8 @@ _TIC_RE = re.compile(r"\s*(?<![\w'])(?:" + "|".join(re.escape(t) for t in VERBAL
 def strip_tics(text: str) -> str:
     """Retire les tics d'un titre (« Comment fonctionne concrètement X ? »)."""
     cleaned = re.sub(r"\s{2,}", " ", _TIC_RE.sub(" ", text or "")).strip()
-    cleaned = re.sub(r"\s+([,.])", r"\1", cleaned)
+    # Espace avant une virgule ou un point de fin seulement (« .com » garde le sien).
+    cleaned = re.sub(r"\s+([,.])(?=\s|$)", r"\1", cleaned)
     if not cleaned:
         return text
     return cleaned[:1].upper() + cleaned[1:]
