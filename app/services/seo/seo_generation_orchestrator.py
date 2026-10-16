@@ -1581,6 +1581,45 @@ class SEOGenerationOrchestrator:
         self._step(f"CitationPass ({external} externe(s), {len(inserted) - external} interne(s))")
         return linked
 
+    def _recommended_format(self) -> str:
+        return str((self.context.get("intent_analysis") or {}).get("recommended_format") or "")
+
+    def _structure_pass(self, article: Article, draft: _DraftArticle, content: str,
+                        section_writer) -> tuple[str, dict]:
+        """Validateur de structure déterministe puis, si des règles dures
+        échouent, une seule passe de correction par section (appel court,
+        garde-fous : H2/H3, liens et chiffres conservés)."""
+        from app.services.seo.structure_fixer import apply_deterministic_fixes, fix_failing_sections
+        from app.services.seo.structure_validator import validate_structure
+
+        fmt = self._recommended_format()
+        content = apply_deterministic_fixes(content, draft.title)
+        before = validate_structure(content, draft.title, fmt)
+        fix: dict = {"hard_failures_before": before["hard_failures"], "applied": [], "rejected": [], "llm_calls": 0}
+        if not before["hard_failures"]:
+            self._step("StructureValidator (ok)")
+            return content, fix
+        try:
+            fixed, report = fix_failing_sections(
+                content, before, self._polish_call_fn(article),
+                title=draft.title, recommended_format=fmt,
+                fatal_exceptions=(WritingCancelledError,),
+            )
+        except WritingCancelledError:
+            raise
+        except Exception as exc:
+            self._error("StructureFix", f"Correction de structure ignorée : {exc}")
+            return content, fix
+        fixed = self._keep_if_h2_lost(content, fixed, "StructureFix")
+        fixed = self._ensure_outline_complete(section_writer, fixed, "SectionCompleteness_Structure")
+        fix.update(report)
+        fix["hard_failures_after"] = validate_structure(fixed, draft.title, fmt)["hard_failures"]
+        self._step(
+            f"StructureFix ({len(report['applied'])} section(s) corrigée(s), "
+            f"{len(report['rejected'])} rejetée(s), {before['hard_failures']} -> {fix['hard_failures_after']} règle(s) dure(s))"
+        )
+        return fixed, fix
+
     def _generate_content(self, draft: _DraftArticle, outline: dict, keyword_brief: dict, include_callouts: bool | None, include_faq: bool | None = None):
         article = draft.article
         self._raise_if_cancelled(article)
@@ -1678,6 +1717,7 @@ class SEOGenerationOrchestrator:
             apply_structure_guards, check_style_compliance, check_word_count_compliance,
         )
         content = apply_structure_guards(content, draft.title)
+        content, structure_fix = self._structure_pass(article, draft, content, section_writer)
 
         illustration_cfg = self.context.get("illustration_config")
         if illustration_cfg is not None and illustration_cfg.mode == "ai":
@@ -1713,6 +1753,19 @@ class SEOGenerationOrchestrator:
         draft.content = content
         draft.word_count = calculate_word_count(content)
         draft.reading_time_minutes = calculate_reading_time_minutes(draft.word_count)
+
+        # Rapport final sur le HTML publié (images comprises), avec la trace
+        # de la passe de correction.
+        from app.services.seo.structure_validator import validate_structure
+        structure_report = validate_structure(content, draft.title, self._recommended_format())
+        structure_report["fix"] = structure_fix
+        self._save(article.id, "structure_report", structure_report)
+        if structure_report["hard_failures"]:
+            self._log(
+                f"Structure : {structure_report['hard_failures']} règle(s) dure(s) en échec "
+                f"({', '.join(structure_report['failed_hard_rules'])})",
+                level="warning", step="structure_validator", article_id=article.id,
+            )
 
         word_count_check = check_word_count_compliance(
             draft.word_count, self.context.get("word_count_min"), self.context.get("word_count_max"),
