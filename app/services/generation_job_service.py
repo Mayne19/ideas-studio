@@ -205,6 +205,7 @@ def run_generation_job(job_id: str, project_id: str) -> None:
                 angle=request.get("angle"),
                 search_intent=request.get("search_intent"),
                 context_hint=request.get("context_hint"),
+                expert_notes=request.get("expert_notes"),
                 include_faq=request.get("include_faq"),
                 include_callouts=request.get("include_callouts"),
                 progress_cb=on_progress,
