@@ -1752,6 +1752,7 @@ class SEOGenerationOrchestrator:
             from app.services.seo.structure_fixer import remove_body_faq
             content = remove_body_faq(content)
         content = self._editorial_review_loop(article, draft, content, section_writer)
+        content = self._plagiarism_check(article, content)
 
         illustration_cfg = self.context.get("illustration_config")
         if illustration_cfg is not None and illustration_cfg.mode == "ai":
@@ -2260,6 +2261,49 @@ class SEOGenerationOrchestrator:
                 self._error("StructureFix_Final", str(exc))
         self._save(article.id, "structure_report", validate_structure(chosen, draft.title, fmt))
         return chosen
+
+    def _plagiarism_check(self, article: Article, content: str) -> str:
+        """Phrases échantillonnées cherchées en ligne ; une phrase reprise mot
+        pour mot est reformulée (révision ciblée) puis retestée une fois. Un
+        plagiat qui subsiste devient un blocage du verdict éditorial."""
+        from app.services.seo.plagiarism_check import SerpPlagiarismBackend, check_plagiarism
+
+        backend = None
+        if self.serp_adapter.configured:
+            own_domain = (self.project.domain if self.project else "") or ""
+            backend = SerpPlagiarismBackend(self.serp_adapter.search, own_domain=own_domain)
+        report = check_plagiarism(content, backend)
+        if report["matches"]:
+            content, report = self._rewrite_plagiarism(article, content, report, backend)
+            if report["retest"]["matches"]:
+                self._add_plagiarism_blocker(article, report["retest"]["matches"])
+        self._save(article.id, "plagiarism_report", report)
+        self._step(f"PlagiarismCheck ({report['status']}, {len(report['matches'])} correspondance(s))")
+        return content
+
+    def _rewrite_plagiarism(self, article: Article, content: str, report: dict, backend) -> tuple[str, dict]:
+        from app.services.seo.plagiarism_check import check_plagiarism, plagiarism_fixes, retest_candidates
+        from app.services.seo.targeted_revision import revise_sections
+
+        matched = [m["sentence"] for m in report["matches"]]
+        revised, revision = revise_sections(
+            content, plagiarism_fixes(content, matched), self._polish_call_fn(article),
+            fatal_exceptions=(WritingCancelledError,),
+        )
+        if not revision["applied"]:
+            revised = content
+        retest = check_plagiarism(revised, backend, sentences=retest_candidates(content, revised, matched))
+        return revised, {**report, "revision": revision, "retest": retest}
+
+    def _add_plagiarism_blocker(self, article: Article, matches: list[dict]):
+        from app.services.seo.plagiarism_check import plagiarism_blocker
+
+        judgement = self.context.get("editorial_judgement") or {}
+        final = judgement.get("final")
+        if not final:
+            return
+        final.setdefault("blockers", []).append(plagiarism_blocker(matches))
+        self._save(article.id, "editorial_judgement", judgement)
 
     def _min_publish_score(self) -> float:
         from app.models.ai import Pipeline
