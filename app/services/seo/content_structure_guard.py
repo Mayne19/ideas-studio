@@ -30,6 +30,17 @@ VERBAL_TICS = (
     "en d'autres termes", "autrement dit", "de ce fait", "cela dit",
 )
 MAX_TIC_OCCURRENCES = 1
+_TIC_RE = re.compile(r"\s*(?<![\w'])(?:" + "|".join(re.escape(t) for t in VERBAL_TICS) + r")(?![\w'])\s*,?",
+                     re.IGNORECASE)
+
+
+def strip_tics(text: str) -> str:
+    """Retire les tics d'un titre (« Comment fonctionne concrètement X ? »)."""
+    cleaned = re.sub(r"\s{2,}", " ", _TIC_RE.sub(" ", text or "")).strip()
+    cleaned = re.sub(r"\s+([,.])", r"\1", cleaned)
+    if not cleaned:
+        return text
+    return cleaned[:1].upper() + cleaned[1:]
 
 
 def strip_duplicate_h1(content: str, title: str | None) -> str:
