@@ -64,3 +64,21 @@ def test_revise_sections_applies_guarded_rewrite():
     out, report = revise_sections(ARTICLE, REPLY["section_fixes"], call, facts_text="900 à 5 000 €")
     assert report["applied"] and "900 à 5 000 €, 1 500" in out
     assert "Les coûts cachés" in out
+
+
+def test_unverified_figures_flags_only_unknown_amounts():
+    from app.services.seo.targeted_revision import figure_fixes, unverified_figures
+
+    html = ("<p>Un site coûte 900 à 5 000 €.</p><h2>Prix</h2><p>Hébergement mutualisé : 5-15 $/mois. "
+            "Un freelance facture 1 500 à 2 000 €. Comptez 2 ans et 3 devis.</p>")
+    found = unverified_figures(html, "900 à 5 000 € ; 1 500 à 2 000 €")
+    assert list(found) == [1] and "15 $" in found[1][0]
+    assert figure_fixes(html, "900 à 5 000 € ; 1 500 à 2 000 €")[0]["section"] == "Prix"
+
+
+def test_locate_unit_accepts_digest_label_and_small_numbers_pass_guard():
+    from app.services.seo.html_text_ops import split_units
+    units = split_units(ARTICLE)
+    assert locate_unit(units, "SECTION « Les coûts cachés »") == 2
+    before = "<h2>Prix</h2><p>Un freelance facture 1 500 à 2 000 €.</p>"
+    assert guard_revision(before, "<h2>Prix</h2><p>En 2 étapes, un freelance facture 1 500 à 2 000 € en 2026.</p>", "") is None
