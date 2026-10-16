@@ -70,6 +70,11 @@ def _is_trivial_number(n: str) -> bool:
 _FIGURE_RE = re.compile(
     r"\d[\d\s\u00a0.,]*\s?(?:€|\$|euros?|dollars?|%|k€|M€|millions?|milliards?)", re.IGNORECASE)
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
+# Calcul montré ou exemple annoncé (autorisés par le rédacteur, vérifiés par
+# le juge) : « soit 0,39 $ par réponse », « Prenons un loyer de 600 € ».
+_CALC_OR_EXAMPLE_RE = re.compile(
+    r"\b(soit|prenons|par exemple|exemple|imaginons un|si vous [a-zé]+ \d|calcul|au total|multipli|divis)\b|[=×÷]|\d\s*[x*/]\s*\d",
+    re.IGNORECASE)
 
 
 def unverified_figures(content: str, allowed_text: str) -> dict[int, list[str]]:
@@ -81,6 +86,8 @@ def unverified_figures(content: str, allowed_text: str) -> dict[int, list[str]]:
     for index, unit in enumerate(split_units(content)):
         text = html_to_text(re.sub(r"<h[1-6]\b[^>]*>.*?</h[1-6]>", " ", unit, flags=re.IGNORECASE | re.DOTALL))
         for sentence in _SENTENCE_SPLIT_RE.split(text):
+            if _CALC_OR_EXAMPLE_RE.search(sentence):
+                continue
             figures = _FIGURE_RE.findall(sentence)
             nums = {n for f in figures for n in _numbers(f)}
             if any(n not in allowed and not _is_trivial_number(n) for n in nums):
@@ -97,8 +104,9 @@ def figure_fixes(content: str, allowed_text: str, max_sections: int = MAX_SECTIO
         fixes.append({
             "section": section,
             "instructions": "Ces phrases contiennent des chiffres absents des faits vérifiés : remplace chaque "
-                            "chiffre par la valeur des chiffres de référence ou des faits si elle existe, sinon "
-                            "reformule sans chiffre. Phrases : " + " | ".join(f"« {s} »" for s in sentences[:4]),
+                            "chiffre par la valeur des chiffres de référence ou des faits si elle existe, ou montre "
+                            "le calcul qui y mène à partir des faits, ou présente-le comme un exemple (« Prenons… ») ; "
+                            "sinon reformule sans chiffre. Phrases : " + " | ".join(f"« {s} »" for s in sentences[:4]),
         })
     return fixes
 
