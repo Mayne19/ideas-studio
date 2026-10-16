@@ -116,3 +116,17 @@ def test_openrouter_bridge_runs_tools_and_keeps_transcript():
     assert roles[:2] == ["system", "user"] and roles.count("tool") == 2
     report = writer.report()
     assert report["web_searches"] == 1 and report["web_fetches"] == 1 and report["cost_usd"] > 0
+
+
+def test_openrouter_bridge_hard_stop_and_explicit_fetch_error():
+    from app.services.seo.agent_writer_openrouter import AgentBudgetExceeded, OpenRouterAgentClient
+
+    def post(payload):
+        return {"choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [
+            {"id": "1", "type": "function", "function": {"name": "web_fetch", "arguments": '{"url": "https://x.fr"}'}}]},
+            "finish_reason": "tool_calls"}], "usage": {"prompt_tokens": 10, "completion_tokens": 1, "cost": 2.0}}
+
+    client = OpenRouterAgentClient("k", search_fn=lambda q, n: [], fetch_fn=lambda url: "", post=post, max_cost_usd=3.0)
+    with pytest.raises(AgentBudgetExceeded):
+        AgentWriter(client, model="anthropic/claude-opus-5.5", system="s").write("kw")
+    assert "ÉCHEC DE LECTURE" in [m for m in client.transcript if m["role"] == "tool"][0]["content"]
