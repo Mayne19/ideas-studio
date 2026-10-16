@@ -202,3 +202,12 @@ def test_common_rules_allow_calculated_and_hypothetical_figures():
     rules = " ".join(writer._common_rules())
     assert "repris d'une source doit figurer dans les faits vérifiés" in rules
     assert "montre le calcul" in rules and "exemple hypothétique" in rules
+
+
+def test_gain_elements_reach_intro_and_assigned_section():
+    sections = group_outline_sections(OUTLINE)
+    gain = {"intro": {"promise": "Ce comparatif vous donne la vraie limite de chaque outil."},
+            1: {"worked_example": {"situation": "100 réponses", "calculation": ["39 / 100 = 0,39"], "result": "0,39 $"}}}
+    writer = SectionWriter(FakeProvider(), "=== BRIEF ===", sections, gain_elements=gain)
+    assert "0,39" in writer._section_prompt(1, "", "") and "0,39" not in writer._section_prompt(0, "", "")
+    writer.write_intro()
