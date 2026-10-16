@@ -23,9 +23,15 @@ logger = logging.getLogger(__name__)
 
 OPENROUTER_AGENT_MODEL = "anthropic/claude-opus-5.5"
 MAX_TOOL_STEPS = 40
-# Chaque étape renvoie toute la conversation (pages lues comprises) : pages
-# tronquées et limites basses pour tenir le coût (~1 $ par article).
-PAGE_CHARS = 8_000
+# Pages lues en entier ou presque (un concurrent de 3 000 mots ≈ 18 000
+# caractères) : moins de pages, mais complètes (consigne du 2026-10-17).
+PAGE_CHARS = 20_000
+REASONING_EFFORT = "low"
+MAX_COST_USD = 3.0
+
+
+class AgentBudgetExceeded(RuntimeError):
+    pass
 
 TOOLS = [
     {"type": "function", "function": {
@@ -49,7 +55,7 @@ class OpenRouterAgentClient:
     def __init__(self, api_key: str, *, search_fn: Callable[[str, int], list[dict]],
                  fetch_fn: Callable[[str], str], model: str = OPENROUTER_AGENT_MODEL,
                  max_searches: int = 10, max_fetches: int = 15, post: Callable | None = None,
-                 timeout_seconds: float = 600.0):
+                 timeout_seconds: float = 600.0, max_cost_usd: float = MAX_COST_USD):
         self.api_key = api_key
         self.model = model
         self.search_fn = search_fn
@@ -58,6 +64,9 @@ class OpenRouterAgentClient:
         self.max_fetches = max_fetches
         self.timeout_seconds = timeout_seconds
         self._post = post
+        self.max_cost_usd = max_cost_usd
+        self.cost_usd = 0.0
+        self.reasoning_effort = REASONING_EFFORT
         self.transcript: list[dict] = []
         self.searches = 0
         self.fetches = 0
@@ -84,9 +93,18 @@ class OpenRouterAgentClient:
             if self.fetches >= self.max_fetches:
                 return "Limite de pages lues atteinte : rédige avec ce que tu as déjà."
             self.fetches += 1
-            text = self.fetch_fn(str(args.get("url") or "")) or ""
-            return text[:PAGE_CHARS] or "Page illisible ou inaccessible."
+            url = str(args.get("url") or "")
+            text = self.fetch_fn(url) or ""
+            if not text.strip():
+                return (f"ÉCHEC DE LECTURE : la page {url} est vide, bloquée ou illisible. "
+                        "Choisis une autre page (autre concurrent ou autre source).")
+            return text[:PAGE_CHARS]
         return f"Outil inconnu : {name}"
+
+    def _estimate(self, usage: dict) -> float:
+        from app.services.cost_estimator import estimate_agent_writer_cost
+        return estimate_agent_writer_cost(self.model, int(usage.get("prompt_tokens") or 0),
+                                          int(usage.get("completion_tokens") or 0), 0)
 
     def create(self, *, model: str, max_tokens: int, system: str, messages: list[dict], tools=None, **_):
         if not self.transcript:
@@ -100,8 +118,12 @@ class OpenRouterAgentClient:
             data = self._http({"model": self.model, "max_tokens": max_tokens, "messages": self.transcript,
                                # Claude Opus impose son raisonnement sur OpenRouter :
                                # effort réduit plutôt que désactivé (refusé).
-                               "tools": TOOLS, "reasoning": {"effort": "low"}})
+                               "tools": TOOLS, "reasoning": {"effort": self.reasoning_effort}})
             usage = data.get("usage") or {}
+            self.cost_usd += float(usage.get("cost") or 0.0) or self._estimate(usage)
+            if self.cost_usd > self.max_cost_usd:
+                raise AgentBudgetExceeded(
+                    f"arrêt dur : coût cumulé {self.cost_usd:.2f} $ > {self.max_cost_usd:.2f} $")
             prompt_tokens += int(usage.get("prompt_tokens") or 0)
             completion_tokens += int(usage.get("completion_tokens") or 0)
             choice = data["choices"][0]
