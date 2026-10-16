@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.models.core import EditorialProfile, Organization, OrganizationMember, Project, ProjectCredential, ProjectMember, PublishingTarget
 from app.models.reference import CredentialKind, MemberRole, MembershipStatus, ProjectStatus, set_project_status
 from app.schemas.project import ProjectCreate, ProjectUpdate
+from app.services.publication_revalidation_service import redact_secrets
 
 
 def _generate_key() -> str:
@@ -208,7 +209,11 @@ def serialize_project(db: Session, project: Project) -> dict:
         "revalidate_configured": bool(target and target.revalidate_url),
         "last_revalidated_at": target.last_synced_at if target else None,
         "last_revalidate_status": target.last_sync_status if target else None,
-        "last_revalidate_error": target.last_sync_error if target else None,
+        # Redacté à l'affichage aussi : des erreurs stockées avant le passage
+        # du secret en en-tête peuvent contenir l'URL avec ?secret=.
+        "last_revalidate_error": redact_secrets(
+            target.last_sync_error, _decrypted_revalidate_secret(target),
+        ) if target else None,
         "ga4_property_id": target.ga4_property_id if target else None,
         "ga4_configured": bool(target and target.ga4_property_id and target.ga4_service_account_json),
         "created_at": project.created_at,

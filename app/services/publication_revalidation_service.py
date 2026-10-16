@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from typing import Any
 
@@ -10,6 +11,21 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.security import decrypt_secret
 from app.models.core import Project, PublishingTarget
+
+
+_SECRET_PARAM_RE = re.compile(r"((?:secret|token|key|password)=)[^&\s'\"]+", re.IGNORECASE)
+
+
+def redact_secrets(message: str | None, *secrets: str | None) -> str | None:
+    """Masque les secrets dans un message d'erreur stocké ou affiché : les
+    valeurs connues, et tout paramètre secret=/token=/key= d'une URL (les
+    erreurs httpx recopient l'URL complète, query string comprise)."""
+    if not message:
+        return message
+    for secret in secrets:
+        if secret and len(secret) >= 4:
+            message = message.replace(secret, "***")
+    return _SECRET_PARAM_RE.sub(r"\1***", message)
 
 
 def _primary_target(db: Session, project_id: str) -> PublishingTarget | None:
@@ -78,9 +94,10 @@ def trigger_project_revalidation(
             db.commit()
         return {"revalidated": True, "status": "success"}
     except Exception as exc:
+        message = redact_secrets(str(exc), secret)
         if target:
             target.last_sync_status = "error"
-            target.last_sync_error = str(exc)
+            target.last_sync_error = message
             target.last_synced_at = datetime.now(timezone.utc)
             db.commit()
-        return {"revalidated": False, "status": "error", "message": str(exc)}
+        return {"revalidated": False, "status": "error", "message": message}
