@@ -88,3 +88,31 @@ def test_validate_output_and_user_message():
     msg = build_user_message(keyword="k", published_articles=[{"title": "A", "url": "https://s.fr/blog/a"}])
     assert "https://s.fr/blog/a" in msg
     assert "pas de lien interne" in build_user_message(keyword="k")
+
+
+def test_openrouter_bridge_runs_tools_and_keeps_transcript():
+    from app.services.seo.agent_writer_openrouter import OpenRouterAgentClient
+
+    replies = [
+        {"choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [
+            {"id": "1", "type": "function", "function": {"name": "web_search", "arguments": '{"query": "tache"}'}},
+            {"id": "2", "type": "function", "function": {"name": "web_fetch", "arguments": '{"url": "https://a.fr"}'}},
+        ]}, "finish_reason": "tool_calls"}], "usage": {"prompt_tokens": 100, "completion_tokens": 10}},
+        {"choices": [{"message": {"role": "assistant", "content": json.dumps(ARTICLE)}, "finish_reason": "stop"}],
+         "usage": {"prompt_tokens": 300, "completion_tokens": 900}},
+    ]
+    sent = []
+
+    def post(payload):
+        sent.append(payload)
+        return replies.pop(0)
+
+    client = OpenRouterAgentClient("k", search_fn=lambda q, n: [{"title": "A", "link": "https://a.fr", "snippet": "s"}],
+                                   fetch_fn=lambda url: "Texte de la page", post=post)
+    writer = AgentWriter(client, model="anthropic/claude-opus-5.5", system="sys")
+    data = writer.write("Mot-clé : tache")
+    assert data["slug"] == "enlever-tache-de-gras"
+    roles = [m["role"] for m in client.transcript]
+    assert roles[:2] == ["system", "user"] and roles.count("tool") == 2
+    report = writer.report()
+    assert report["web_searches"] == 1 and report["web_fetches"] == 1 and report["cost_usd"] > 0
