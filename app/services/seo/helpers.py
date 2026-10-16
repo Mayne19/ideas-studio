@@ -85,7 +85,11 @@ def detect_h2_directly_followed_by_h3(content: str) -> list[str]:
     content = content or ""
     headings = list(re.finditer(r"<h([2-6])[^>]*>.*?</h\1>", content, re.IGNORECASE | re.DOTALL))
     for current, following in zip(headings, headings[1:]):
-        if current.group(1) == "2" and following.group(1) == "3":
+        # « Directement » : aucun texte entre les deux titres (une image seule
+        # ne compte pas). Un paragraphe entre H2 et H3 est la structure voulue.
+        between = re.sub(r"<figure\b.*?</figure>|<img\b[^>]*>", "", content[current.end():following.start()],
+                         flags=re.IGNORECASE | re.DOTALL)
+        if current.group(1) == "2" and following.group(1) == "3" and not strip_html(between).strip():
             seq = content[max(0, current.start() - 20):following.end() + 20]
             issues.append(seq[:100])
     return issues
