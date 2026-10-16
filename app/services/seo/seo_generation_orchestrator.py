@@ -583,39 +583,9 @@ class SEOGenerationOrchestrator:
                 level="warning", step="CannibalizationCheckOutline",
             )
 
-        # 10. ImagePlan — selon le mode choisi dans Paramètres → Services
-        # externes : photos Unsplash (plan par titre de section, ici),
-        # illustrations IA (générées après la rédaction, depuis le texte
-        # réel des sections) ou aucune image.
-        from app.services.illustration_settings_service import resolve_config
-        illustration_cfg = resolve_config(self.db, self.project_id)
-        self.context["illustration_config"] = illustration_cfg
-        if illustration_cfg.mode == "unsplash":
-            image_plan_result = build_image_plan_dict(final_keyword, outline, db=self.db, project_id=self.project_id)
-            image_plan_result.setdefault("image_plan", {})["mode"] = "unsplash"
-        else:
-            image_plan_result = {
-                "image_plan": {
-                    "mode": illustration_cfg.mode,
-                    "images": [],
-                    "provider_configured": illustration_cfg.mode == "ai",
-                    "limitations": [],
-                },
-                "image_sources": [],
-            }
-        self.context["image_plan"] = image_plan_result.get("image_plan", {})
-        self.context["image_sources"] = image_plan_result.get("image_sources", [])
+        # 10. ImagePlan
+        image_plan_result = self._plan_images(final_keyword, outline)
         self._step("ImagePlan")
-
-        if illustration_cfg.mode == "ai":
-            self.tools_used.append("image_generation")
-        elif illustration_cfg.mode == "none":
-            pass
-        elif image_plan_result.get("image_plan", {}).get("provider_configured"):
-            self.tools_used.append("unsplash")
-        else:
-            self.tools_not_configured.append("image_sourcing")
-            self.limitations.append("Image sourcing provider not configured")
 
         # 11. CalloutPlan
         callout_plan = build_callout_plan_dict(self.db, self.project_id, final_keyword, outline)
@@ -1723,6 +1693,40 @@ class SEOGenerationOrchestrator:
         # AutoScoring : volontairement PAS ici. compute_global_score() a besoin de
         # eeat_checklist/readability_report/originality_report/seo_final_checklist, qui ne
         # sont calculés qu'aux étapes 16-21 de generate_full_article(). Voir _score_article().
+
+    def _plan_images(self, keyword: str, outline: dict) -> dict:
+        """Étape ImagePlan selon le mode choisi dans Paramètres → Services
+        externes : photos Unsplash (plan par titre de section, dès
+        maintenant), illustrations IA (générées après la rédaction, depuis
+        le texte réel des sections, cf. _generate_illustrations) ou aucune."""
+        from app.services.illustration_settings_service import resolve_config
+        cfg = resolve_config(self.db, self.project_id)
+        self.context["illustration_config"] = cfg
+        if cfg.mode == "unsplash":
+            result = build_image_plan_dict(keyword, outline, db=self.db, project_id=self.project_id)
+            result.setdefault("image_plan", {})["mode"] = "unsplash"
+        else:
+            result = {
+                "image_plan": {
+                    "mode": cfg.mode,
+                    "images": [],
+                    "provider_configured": cfg.mode == "ai",
+                    "limitations": [],
+                },
+                "image_sources": [],
+            }
+        self.context["image_plan"] = result.get("image_plan", {})
+        self.context["image_sources"] = result.get("image_sources", [])
+
+        if cfg.mode == "ai":
+            self.tools_used.append("image_generation")
+        elif cfg.mode == "unsplash":
+            if result.get("image_plan", {}).get("provider_configured"):
+                self.tools_used.append("unsplash")
+            else:
+                self.tools_not_configured.append("image_sourcing")
+                self.limitations.append("Image sourcing provider not configured")
+        return result
 
     def _generate_illustrations(self, article: Article, draft: _DraftArticle, outline: dict, content: str, cfg) -> list[dict]:
         """Mode « Générées par IA » : illustrations planifiées depuis le texte
