@@ -56,9 +56,26 @@ def demote_isolated_h3(content: str) -> str:
     return "".join(parts)
 
 
+def strip_heading_tics(content: str) -> str:
+    """« Comment fonctionne concrètement un CMS headless ? » -> « Comment
+    fonctionne un CMS headless ? » : un titre n'a jamais besoin d'un tic."""
+    from app.services.seo.content_structure_guard import VERBAL_TICS
+
+    tic_re = re.compile(r"\s*(?<![\w'])(?:" + "|".join(re.escape(t) for t in VERBAL_TICS) + r")(?![\w'])\s*,?",
+                        re.IGNORECASE)
+
+    def _clean(match: re.Match) -> str:
+        inner = tic_re.sub(" ", match.group(2))
+        inner = re.sub(r"\s{2,}", " ", inner).strip()
+        inner = inner[:1].upper() + inner[1:] if inner else match.group(2)
+        return f"{match.group(1)}{inner}{match.group(3)}"
+
+    return re.sub(r"(<h[23]\b[^>]*>)(.*?)(</h[23]>)", _clean, content or "", flags=re.IGNORECASE | re.DOTALL)
+
+
 def apply_deterministic_fixes(content: str, title: str | None) -> str:
     from app.services.seo.content_structure_guard import apply_structure_guards
-    return demote_isolated_h3(replace_em_dashes(apply_structure_guards(content, title)))
+    return strip_heading_tics(demote_isolated_h3(replace_em_dashes(apply_structure_guards(content, title))))
 
 
 def _headings(html: str) -> list[tuple[str, str]]:
