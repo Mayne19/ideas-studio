@@ -33,6 +33,8 @@ class FakeProvider:
 
     def __call__(self, prompt: str, step: str, temperature: float) -> str:
         self.calls.append(step)
+        if step.startswith("WritingPass_Thread"):
+            return '{"thread": "Du choix à la décision.", "transitions": ["Après le verdict, les prix."]}'
         if step.startswith("WritingPass_Intro"):
             return ("<p>Webflow convient aux sites vitrines soignés, WordPress aux sites qui grossissent. "
                     "Le bon choix dépend surtout du temps que vous voulez passer sur la maintenance "
@@ -69,7 +71,7 @@ def test_every_outline_section_is_written_in_its_own_call():
 
     section_calls = [c for c in provider.calls if c.startswith("WritingPass_Section_")]
     assert len(section_calls) == 5
-    assert provider.calls[0] == "WritingPass_Intro"
+    assert provider.calls[:2] == ["WritingPass_Thread", "WritingPass_Intro"]
     assert provider.calls[-1] == "WritingPass_Closing"  # format comparaison
     assert extract_h2_texts(content) == [s.heading for s in writer.sections]
     assert content.startswith("<p>Webflow convient")
@@ -107,7 +109,7 @@ def test_truncated_section_is_retried():
 
     def provider(prompt, step, temperature):
         calls.append(step)
-        if step.startswith("WritingPass_Section_1") and len(calls) == 2:
+        if step.startswith("WritingPass_Section_1") and len(calls) == 3:
             return "<h2>X</h2><p>Une phrase complète ici pour commencer. Puis une phrase coupée au mil"
         return FakeProvider()(prompt, step, temperature)
 
@@ -211,3 +213,19 @@ def test_gain_elements_reach_intro_and_assigned_section():
     writer = SectionWriter(FakeProvider(), "=== BRIEF ===", sections, gain_elements=gain)
     assert "0,39" in writer._section_prompt(1, "", "") and "0,39" not in writer._section_prompt(0, "", "")
     writer.write_intro()
+
+
+def test_sections_get_thread_and_full_previous_text():
+    from app.services.seo.section_writer import previous_article_text
+
+    provider = FakeProvider()
+    writer = _writer(provider, fmt="explainer")
+    writer.plan_thread()
+    previous = "<p>Intro complète.</p><h2>Webflow ou WordPress : le verdict</h2><p>Premier paragraphe.</p><p>Second paragraphe.</p>"
+    prompt = writer._section_prompt(1, previous, previous)
+    assert "Fil rouge de l'article : Du choix à la décision." in prompt
+    assert "Intro complète." in prompt and "Second paragraphe." in prompt
+    assert "Après le verdict, les prix." in writer._section_prompt(0, "", "")
+    long_text = "<p>" + " ".join(f"mot{i}" for i in range(3000)) + "</p>"
+    truncated = previous_article_text(long_text)
+    assert truncated.startswith("… ") and "mot2999" in truncated and "mot0 " not in truncated
