@@ -1,7 +1,7 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
-import { checkUsername } from '@/api/auth'
+import { checkUsername, getRegistrationStatus } from '@/api/auth'
 import AuthLayout from '@/components/layout/AuthLayout'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
@@ -16,6 +16,22 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  // Lien d'invitation : /register?invitation=<jeton>. Sans invitation,
+  // l'inscription n'est possible que si l'administrateur l'a ouverte.
+  const [searchParams] = useSearchParams()
+  const invitationToken = searchParams.get('invitation') ?? ''
+  const [registrationOpen, setRegistrationOpen] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    if (invitationToken) return
+    let cancelled = false
+    getRegistrationStatus()
+      .then((s) => { if (!cancelled) setRegistrationOpen(s.open) })
+      .catch(() => { if (!cancelled) setRegistrationOpen(null) })
+    return () => { cancelled = true }
+  }, [invitationToken])
+
+  const closed = !invitationToken && registrationOpen === false
 
   if (user) {
     navigate('/projects', { replace: true })
@@ -49,7 +65,7 @@ export default function RegisterPage() {
     }
     setLoading(true)
     try {
-      await register(firstName.trim(), lastName.trim(), email, password, clean)
+      await register(firstName.trim(), lastName.trim(), email, password, clean, invitationToken || undefined)
       navigate('/projects', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la création du compte')
@@ -67,6 +83,19 @@ export default function RegisterPage() {
             Rejoignez Ideas Studio et commencez à produire du contenu SEO.
           </p>
         </div>
+
+        {closed && (
+          <div className="rounded-[10px] bg-warning/10 px-3.5 py-2.5 text-[14px] text-secondary">
+            Les inscriptions sont actuellement sur invitation uniquement. Utilisez le lien reçu par email
+            ou demandez une invitation à un administrateur.
+          </div>
+        )}
+
+        {invitationToken && (
+          <div className="rounded-[10px] bg-surface-soft px-3.5 py-2.5 text-[14px] text-secondary">
+            Vous avez été invité : créez votre compte avec l'adresse email qui a reçu l'invitation.
+          </div>
+        )}
 
         {error && (
           <div className="rounded-[10px] bg-danger/8 px-3.5 py-2.5 text-[14px] text-danger">
@@ -124,7 +153,7 @@ export default function RegisterPage() {
           hint="Au moins 8 caractères"
         />
 
-        <Button type="submit" loading={loading} className="mt-1 w-full justify-center rounded-full">
+        <Button type="submit" loading={loading} disabled={closed} className="mt-1 w-full justify-center rounded-full">
           Créer mon compte
         </Button>
 
