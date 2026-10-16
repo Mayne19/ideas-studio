@@ -16,6 +16,7 @@ class OpenRouterLLMProvider(OpenAILLMProvider):
         writer_model: str | None = None,
         planner_model: str | None = None,
         fallback_model: str | None = None,
+        reasoning_mode: str = "off",
     ):
         super().__init__(
             api_key=api_key,
@@ -27,6 +28,16 @@ class OpenRouterLLMProvider(OpenAILLMProvider):
         self.writer_model = writer_model or model
         self.planner_model = planner_model or model
         self.fallback_model = fallback_model or model
+        self.reasoning_mode = reasoning_mode or "off"
+
+    def _extra_payload(self) -> dict:
+        # Raisonnement activé par défaut sur deepseek-v4-flash : il consommait
+        # ~99 % des tokens et tronquait les passes longues à la limite de
+        # sortie. Le plafond reasoning.max_tokens est ignoré par ce modèle,
+        # seule la désactivation est fiable. Réglable dans le CMS.
+        if self.reasoning_mode == "off":
+            return {"reasoning": {"enabled": False}}
+        return {}
 
     def for_role(self, role: str) -> "OpenRouterLLMProvider":
         """Copie de ce provider pointant sur le modèle du rôle demandé
