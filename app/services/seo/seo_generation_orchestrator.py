@@ -311,8 +311,10 @@ class SEOGenerationOrchestrator:
         if not preferred_title and not keyword:
             try:
                 from app.services.seo.idea_discovery_service import discover_ideas_dict
+                # Une seule idée : seule ideas[0] est utilisée, en demander
+                # davantage gaspillait un appel LLM par idée supplémentaire.
                 ideas = discover_ideas_dict(
-                    self.db, self.project_id, self.llm, self.search, count=5,
+                    self.db, self.project_id, self.llm, self.search, count=1,
                     context_hint=context_hint,
                     project_audience=audience or project_context.get("target_audience"),
                     project_language=getattr(self.project, "language", "fr") or "fr",
