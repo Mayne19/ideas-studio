@@ -583,13 +583,35 @@ class SEOGenerationOrchestrator:
                 level="warning", step="CannibalizationCheckOutline",
             )
 
-        # 10. ImagePlan
-        image_plan_result = build_image_plan_dict(final_keyword, outline, db=self.db, project_id=self.project_id)
+        # 10. ImagePlan — selon le mode choisi dans Paramètres → Services
+        # externes : photos Unsplash (plan par titre de section, ici),
+        # illustrations IA (générées après la rédaction, depuis le texte
+        # réel des sections) ou aucune image.
+        from app.services.illustration_settings_service import resolve_config
+        illustration_cfg = resolve_config(self.db, self.project_id)
+        self.context["illustration_config"] = illustration_cfg
+        if illustration_cfg.mode == "unsplash":
+            image_plan_result = build_image_plan_dict(final_keyword, outline, db=self.db, project_id=self.project_id)
+            image_plan_result.setdefault("image_plan", {})["mode"] = "unsplash"
+        else:
+            image_plan_result = {
+                "image_plan": {
+                    "mode": illustration_cfg.mode,
+                    "images": [],
+                    "provider_configured": illustration_cfg.mode == "ai",
+                    "limitations": [],
+                },
+                "image_sources": [],
+            }
         self.context["image_plan"] = image_plan_result.get("image_plan", {})
         self.context["image_sources"] = image_plan_result.get("image_sources", [])
         self._step("ImagePlan")
 
-        if image_plan_result.get("image_plan", {}).get("provider_configured"):
+        if illustration_cfg.mode == "ai":
+            self.tools_used.append("image_generation")
+        elif illustration_cfg.mode == "none":
+            pass
+        elif image_plan_result.get("image_plan", {}).get("provider_configured"):
             self.tools_used.append("unsplash")
         else:
             self.tools_not_configured.append("image_sourcing")
@@ -1545,6 +1567,10 @@ class SEOGenerationOrchestrator:
         )
         content = apply_structure_guards(content, draft.title)
 
+        illustration_cfg = self.context.get("illustration_config")
+        if illustration_cfg is not None and illustration_cfg.mode == "ai":
+            self.context["image_sources"] = self._generate_illustrations(article, draft, outline, content, illustration_cfg)
+
         image_sources = self.context.get("image_sources") or []
         if image_sources:
             from app.services.seo.image_plan_service import (
@@ -1697,6 +1723,40 @@ class SEOGenerationOrchestrator:
         # AutoScoring : volontairement PAS ici. compute_global_score() a besoin de
         # eeat_checklist/readability_report/originality_report/seo_final_checklist, qui ne
         # sont calculés qu'aux étapes 16-21 de generate_full_article(). Voir _score_article().
+
+    def _generate_illustrations(self, article: Article, draft: _DraftArticle, outline: dict, content: str, cfg) -> list[dict]:
+        """Mode « Générées par IA » : illustrations planifiées depuis le texte
+        rédigé. Repli : photos Unsplash si une clé est configurée, sinon
+        aucune image (jamais d'échec de la génération d'article)."""
+        sources: list[dict] = []
+        try:
+            from app.services.seo.illustration_service import generate_illustrations
+            language = ((self.project.locale if self.project else None) or "fr").split("-")[0]
+            sources, errors = generate_illustrations(
+                self.db, article, content, draft.title, draft.keyword, language, cfg,
+            )
+            for message in errors:
+                self._error("ImageGeneration", message)
+        except Exception as exc:
+            self._error("ImageGeneration", str(exc))
+        image_plan = self.context.setdefault("image_plan", {})
+        image_plan["images"] = sources
+        if sources:
+            self._log(f"{len(sources)} illustration(s) générée(s)", step="ImageGeneration", article_id=article.id)
+            self._save(article.id, "image_plan", image_plan)
+            return sources
+
+        if self.image_sourcing_adapter is not None and self.image_sourcing_adapter.configured:
+            self._log("Aucune illustration générée — repli sur les photos Unsplash", level="warning", step="ImageGeneration")
+            try:
+                fallback = build_image_plan_dict(draft.keyword, outline, db=self.db, project_id=self.project_id)
+                fallback.setdefault("image_plan", {})["mode"] = "unsplash_fallback"
+                self.context["image_plan"] = fallback.get("image_plan", {})
+                self._save(article.id, "image_plan", self.context["image_plan"])
+                return fallback.get("image_sources", [])
+            except Exception as exc:
+                self._error("ImageGenerationFallback", str(exc))
+        return []
 
     def _persist_revision(self, draft: _DraftArticle) -> ArticleRevision:
         article = draft.article
