@@ -25,7 +25,8 @@ logger = logging.getLogger(__name__)
 
 CallFn = Callable[[str, str, float], str]
 
-MAX_FIXES = 8
+MAX_FIXES = 12
+MAX_VERIFIED_FACTS = 30
 # Au-delà, la « correction » ressemble à une réécriture : on refuse.
 MAX_TOTAL_WORD_DROP = 0.08
 
@@ -50,6 +51,11 @@ def build_consistency_prompt(content: str, verified_facts: list[str] | None = No
         "1. Les contradictions : un même chiffre, prix, durée, pourcentage ou affirmation donné avec des "
         "valeurs différentes à deux endroits de l'article.",
         "2. Les doublons : une phrase de l'introduction répétée (identique ou quasi identique) dans une section.",
+        "3. Les affirmations non étayées : une règle, un chiffre ou un effet présenté comme certain, absent "
+        "des faits vérifiés et douteux ou faux (idées reçues SEO, obligations inventées, « Google favorise… », "
+        "« les registres suspendent… »).",
+        "4. Les témoignages inventés : propos ou expérience attribués à une personne ou un client non sourcés.",
+        "5. Les fragments : une phrase incomplète ou sans lien avec le paragraphe qui l'entoure.",
         "",
         "Pour chaque problème, désigne LA phrase à corriger, copiée mot pour mot depuis l'article :",
         "- contradiction : corrige la phrase la moins précise ou la moins étayée (souvent l'introduction) "
@@ -57,16 +63,21 @@ def build_consistency_prompt(content: str, verified_facts: list[str] | None = No
         "action \"replace\", la phrase corrigée ne change que la valeur fautive.",
         "- doublon : garde la phrase de l'introduction, supprime l'occurrence dans la section "
         "(action \"remove\") ; si la section deviendrait vide de sens, reformule-la (action \"replace\").",
+        "- affirmation non étayée : supprime-la (action \"remove\") ou, si le paragraphe en dépend, "
+        "remplace-la par une formulation prudente et exacte sans nouveau chiffre (action \"replace\").",
+        "- témoignage inventé ou fragment : supprime la phrase (action \"remove\").",
+        "Ne signale pas un conseil pratique raisonnable ni une évidence du métier : seulement ce qu'un expert "
+        "relèverait comme faux, invérifiable ou incohérent.",
         "N'invente aucun problème : si l'article est cohérent, renvoie une liste vide.",
         "",
         "Réponds UNIQUEMENT en JSON :",
-        '{"issues": [{"type": "contradiction" | "duplicate", "sentence": "phrase exacte de l\'article", '
+        '{"issues": [{"type": "contradiction" | "duplicate" | "unsupported" | "invented" | "fragment", "sentence": "phrase exacte de l\'article", '
         '"action": "replace" | "remove", "replacement": "phrase corrigée (vide si remove)", '
         '"related_sentence": "l\'autre phrase concernée", "reason": "explication courte"}]}',
     ]
     if verified_facts:
         parts += ["", "Faits vérifiés (font foi en cas de doute) :"]
-        parts += [f"- {fact}" for fact in verified_facts[:8]]
+        parts += [f"- {fact}" for fact in verified_facts[:MAX_VERIFIED_FACTS]]
     parts += ["", "Article :", build_article_digest(content)]
     return "\n".join(parts)
 
