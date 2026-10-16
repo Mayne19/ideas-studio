@@ -335,7 +335,37 @@ def format_facts_block(facts: list[dict]) -> str:
         if fact.get("url"):
             line += f" (source : {fact['url']})"
         lines.append(line)
+    lines.append(
+        "Quand une phrase s'appuie sur un de ces faits, termine-la par son identifiant entre crochets, "
+        "juste avant le point : « … coûte 14 $ par mois [F3]. ». Jamais d'identifiant inventé."
+    )
     return "\n".join(lines)
+
+
+# ── Marqueurs de faits ───────────────────────────────────────────────────────
+
+_FACT_MARKER_RE = re.compile(r"\s*\[\s*(F\d{1,3}(?:\s*[,;]\s*F\d{1,3})*)\s*\]")
+_SENTENCE_BOUNDARY_RE = re.compile(r"(?<=[.!?…])\s+")
+
+
+def strip_fact_markers(html: str, known_ids: set[str] | None = None) -> tuple[str, list[dict]]:
+    """Retire les marqueurs [F3] posés par le rédacteur et renvoie, pour
+    chacun, la phrase qui le porte : trace pour le futur vérificateur de
+    faits (A7) et pour le placement des citations. Un identifiant absent du
+    registre est signalé (known=False), jamais conservé dans le texte."""
+    markers: list[dict] = []
+    for match in _FACT_MARKER_RE.finditer(html or ""):
+        before = re.sub(r"<[^>]+>", " ", (html or "")[: match.start()])
+        before = re.sub(r"\s+", " ", html_lib.unescape(before)).strip()[-500:]
+        sentence = _SENTENCE_BOUNDARY_RE.split(before)[-1] if before else ""
+        for fact_id in re.findall(r"F\d{1,3}", match.group(1)):
+            markers.append({
+                "fact_id": fact_id,
+                "sentence": sentence,
+                "known": known_ids is None or fact_id in known_ids,
+            })
+    cleaned = _FACT_MARKER_RE.sub("", html or "")
+    return cleaned, markers
 
 
 # ── Rédacteur ────────────────────────────────────────────────────────────────
@@ -361,6 +391,10 @@ class SectionWriter:
         # Faits attribués par section (assign_facts_to_sections) : clés
         # "intro" et index de section.
         self.section_facts = section_facts or {}
+        self.known_fact_ids = {
+            str(f.get("fact_id")) for facts in self.section_facts.values() if isinstance(facts, list)
+            for f in facts if isinstance(f, dict) and f.get("fact_id")
+        }
         self.brief_text = brief_text
         self.sections = sections
         self.fmt = fmt or ""
@@ -376,7 +410,7 @@ class SectionWriter:
         self.fatal_exceptions = fatal_exceptions
         self.max_attempts = max(1, max_attempts)
         self.closing_html = ""
-        self.report: dict = {"units": [], "regenerated": [], "missing": []}
+        self.report: dict = {"units": [], "regenerated": [], "missing": [], "fact_markers": []}
         self._consecutive_failures = 0
 
     # ── Appels ──────────────────────────────────────────────────────────
@@ -385,6 +419,7 @@ class SectionWriter:
         """Appelle le modèle avec relance si la sortie est vide, trop courte
         ou tronquée. Retourne la meilleure sortie exploitable ou ""."""
         best = ""
+        best_markers: list[dict] = []
         attempts = 0
         for attempt in range(1, self.max_attempts + 1):
             attempts = attempt
@@ -395,15 +430,20 @@ class SectionWriter:
             except Exception as exc:
                 logger.warning("section_writer: %s tentative %s échouée : %s", step, attempt, exc)
                 continue
-            text = clean_unit_html(raw)
+            # Marqueurs [F#] retirés avant tout contrôle : un paragraphe qui
+            # finit par « [F3] » passerait sinon pour tronqué.
+            text, markers = strip_fact_markers(clean_unit_html(raw), self.known_fact_ids)
             truncated = looks_truncated(text)
             if truncated:
                 text = trim_incomplete_tail(text)
             words = calculate_word_count(text)
             if words > calculate_word_count(best):
                 best = text
+                best_markers = markers
             if not truncated and words >= min_words:
                 break
+        for marker in best_markers:
+            self.report["fact_markers"].append({**marker, "unit": step})
         ok = bool(best)
         self.report["units"].append({
             "step": step, "attempts": attempts, "words": calculate_word_count(best), "ok": ok,
