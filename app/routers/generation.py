@@ -29,6 +29,7 @@ from app.services.providers.llm_provider import (
 from app.services.providers.search_provider import get_search_provider
 from app.services.seo.category_strategy_service import compute_category_strategy_dict
 from app.services.seo.idea_discovery_service import discover_ideas
+from app.services.pipeline_service import cap_ideas_count
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,9 @@ class GenerateArticleResponse(BaseModel):
 
 
 class AutoGenerateIdeasRequest(BaseModel):
-    count: int = 3
+    # Absent = plafond du projet (Paramètres → Pipeline → Idées par lancement) ;
+    # toute valeur supérieure est ramenée à ce plafond.
+    count: int | None = None
     context_hint: str | None = None
 
 
@@ -70,7 +73,8 @@ class AutoGenerateIdeasResponse(BaseModel):
 
 
 class IdeaDiscoverRequest(BaseModel):
-    count: int = 5
+    # Même plafond que l'auto-génération : chaque idée coûte un appel LLM.
+    count: int | None = None
     context_hint: str | None = None
 
 
@@ -263,19 +267,20 @@ def auto_generate_ideas_route(
     except ProviderUnavailableError as exc:
         raise _generation_http_error(exc) from exc
 
+    count = cap_ideas_count(db, project_id, body.count)
     logger.info(
-        "auto_ideas_start provider=%s model=%s is_mock=%s project=%s count=%d",
-        llm.provider_name, llm.model_name, llm.is_mock, project_id, body.count,
+        "auto_ideas_start provider=%s model=%s is_mock=%s project=%s count=%d requested=%s",
+        llm.provider_name, llm.model_name, llm.is_mock, project_id, count, body.count,
     )
 
     generated = []
     errors = []
 
-    for i in range(body.count):
+    for i in range(count):
         try:
             context = body.context_hint
             if context:
-                context += f" (proposition {i + 1}/{body.count})"
+                context += f" (proposition {i + 1}/{count})"
             article = generate_idea(
                 db=db,
                 project_id=project_id,
@@ -331,7 +336,7 @@ def discover_ideas_route(
         project_id=project_id,
         llm=llm,
         search=search,
-        count=body.count,
+        count=cap_ideas_count(db, project_id, body.count),
         context_hint=body.context_hint,
         project_audience=profile.audience if profile else None,
         project_language=project.locale.split("-")[0] if project.locale else "fr",
