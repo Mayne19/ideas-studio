@@ -36,8 +36,9 @@ JUDGE_CRITERIA: dict[str, tuple[int, str]] = {
     "information_gain": (15, "Gain d'information : ce que l'article apporte de plus qu'un article moyen du top "
                              "Google (exemple chiffré complet, cas par profil, méthode, erreurs à éviter)"),
     "depth": (10, "Profondeur : les sous-questions attendues du lecteur sont couvertes, sans remplissage"),
-    "clarity": (10, "Clarté : phrases nettes, vocabulaire précis, enchaînements logiques, ton d'expert "
-                    "qui s'adresse au lecteur, pas de répétition"),
+    "clarity": (10, "Clarté et rétention : accroche dès les premières lignes, chaque section commence par ce "
+                    "que le lecteur veut savoir, aucun passage creux qui fait décrocher, phrases nettes, ton "
+                    "d'expert, pas de répétition"),
     "freshness": (5, "Fraîcheur : prix et données datés ou actuels, aucune année périmée"),
 }
 CODE_STRUCTURE_POINTS = 5
