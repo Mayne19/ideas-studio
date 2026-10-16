@@ -88,7 +88,7 @@ export default function ProjectAgentsPage() {
   const getAssignment = (agentId: string): AgentAssignment | undefined =>
     assignments.find((a) => a.agent_id === agentId)
 
-  const handleAssign = async (agentId: string, providerCode: string) => {
+  const handleAssign = async (agentId: string, providerCode: string, model?: string | null) => {
     const current = getAssignment(agentId)
     setSavingId(agentId)
     setSuccessMsg(null)
@@ -106,6 +106,9 @@ export default function ProjectAgentsPage() {
         agent_id: agentId,
         provider_code: providerCode,
         project_id: projectId,
+        // Modèle propre à l'agent (ex. juge éditorial d'une autre famille que
+        // le rédacteur) ; vide = modèle par défaut du provider.
+        model: model === undefined ? undefined : (model || null),
         enabled: true,
         priority: 0,
       })
@@ -262,18 +265,34 @@ export default function ProjectAgentsPage() {
                       Sans LLM
                     </span>
                   ) : (
-                    <Select
-                      value={ass?.provider_code || ''}
-                      onChange={(e) => handleAssign(agent.agent_id, e.target.value)}
-                      className="!h-8 !px-3 !pr-8 !text-[12px] !font-medium !text-secondary"
-                      options={[
-                        { value: '', label: 'Provider par défaut' },
-                        ...enabledProviders.map((p) => ({
-                          value: p.provider,
-                          label: `${p.label} (${p.provider})`,
-                        })),
-                      ]}
-                    />
+                    <div className="flex flex-col gap-1.5">
+                      <Select
+                        value={ass?.provider_code || ''}
+                        onChange={(e) => handleAssign(agent.agent_id, e.target.value)}
+                        className="!h-8 !px-3 !pr-8 !text-[12px] !font-medium !text-secondary"
+                        options={[
+                          { value: '', label: 'Provider par défaut' },
+                          ...enabledProviders.map((p) => ({
+                            value: p.provider,
+                            label: `${p.label} (${p.provider})`,
+                          })),
+                        ]}
+                      />
+                      {ass && (
+                        <input
+                          key={`${ass.id}-${ass.model ?? ''}`}
+                          type="text"
+                          defaultValue={ass.model ?? ''}
+                          placeholder="Modèle du provider"
+                          title="Modèle propre à cet agent (vide = modèle par défaut du provider). Validé en quittant le champ."
+                          onBlur={(e) => {
+                            const value = e.target.value.trim()
+                            if (value !== (ass.model ?? '')) handleAssign(agent.agent_id, ass.provider_code, value)
+                          }}
+                          className="h-8 rounded-[10px] border border-border bg-surface px-3 text-[12px] text-secondary outline-none focus:border-accent"
+                        />
+                      )}
+                    </div>
                   )}
                 </div>
                 <div className="min-w-0">
