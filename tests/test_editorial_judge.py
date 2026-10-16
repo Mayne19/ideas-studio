@@ -111,3 +111,16 @@ def test_calculated_and_example_figures_are_not_flagged():
             "Prenons un loyer de 600 € par mois. Un freelance facture 3 200 €.</p>")
     found = unverified_figures(html, "Typeform coûte 39 $ pour 100 réponses")
     assert found == {1: ["Un freelance facture 3 200 €."]}
+
+
+def test_exemption_is_strict_for_population_figures_and_examples():
+    from app.services.seo.targeted_revision import unverified_figures
+
+    def flagged(sentence, allowed=""):
+        return bool(unverified_figures(f"<p>Intro.</p><h2>S</h2><p>{sentence}</p>", allowed))
+
+    assert flagged("Par exemple, 73 % des Français abandonnent leur budget.")
+    assert not flagged("Prenons un loyer de 600 € par mois.")
+    assert not flagged("Le forfait revient à soit 0,39 $ par réponse.", "Typeform coûte 39 $ pour 100 réponses")
+    assert flagged("Selon une étude, cela coûte 0,39 $ par réponse.", "39 $ pour 100 réponses")
+    assert flagged("Prenons un loyer de 613 € par mois.")
