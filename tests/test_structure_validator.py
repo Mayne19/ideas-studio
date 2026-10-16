@@ -224,3 +224,11 @@ def test_duplicate_sections_and_paragraphs_are_removed():
     out = remove_duplicates(html)
     assert out.count("<h2>Comment fonctionne") == 1 and "Autre version" not in out
     assert out.count("La confusion la plus courante") == 1 and "<h2>Avantages</h2>" in out
+
+
+def test_body_faq_section_is_removed():
+    from app.services.seo.structure_fixer import remove_body_faq
+
+    html = "<p>Intro.</p><h2>Choisir</h2><p>A.</p><h2>Questions fréquentes sur le sujet</h2><p>Q ? R.</p><h2>Fin</h2><p>B.</p>"
+    out = remove_body_faq(html)
+    assert "Questions fréquentes" not in out and "<h2>Fin</h2>" in out
