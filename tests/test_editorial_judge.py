@@ -124,3 +124,13 @@ def test_exemption_is_strict_for_population_figures_and_examples():
     assert not flagged("Le forfait revient à soit 0,39 $ par réponse.", "Typeform coûte 39 $ pour 100 réponses")
     assert flagged("Selon une étude, cela coûte 0,39 $ par réponse.", "39 $ pour 100 réponses")
     assert flagged("Prenons un loyer de 613 € par mois.")
+
+
+def test_judge_digest_renders_table_rows():
+    from app.services.seo.editorial_judge import article_digest
+
+    html = ("<p>Intro.</p><h2>Tableau de choix</h2><p>Ce tableau vous guide.</p>"
+            "<table><thead><tr><th>Tissu</th><th>Produit</th></tr></thead>"
+            "<tbody><tr><td>Coton</td><td>Liquide vaisselle</td></tr></tbody></table>")
+    digest = article_digest(html)
+    assert "| Tissu | Produit |" in digest and "| Coton | Liquide vaisselle |" in digest
