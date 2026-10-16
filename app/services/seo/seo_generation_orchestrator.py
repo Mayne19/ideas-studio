@@ -1705,41 +1705,10 @@ class SEOGenerationOrchestrator:
 
         self._raise_if_cancelled(article)
 
-        # ── Pass 2 — QualityGate (temp 0.3) ────────────────────────────────
-        # Unique passe d'édition après le premier jet (les anciennes passes de
-        # cohérence et de style réécrivaient tout l'article et diluaient le fond).
-        # Passe froide : suppression des redondances, des phrases creuses,
-        # vérification de la densité du mot-clé et de la conformité aux règles.
-        gate_prompt = (
-            "Passe de contrôle qualité finale sur cet article. Corrige : les phrases "
-            "redondantes ou creuses, les mots courants répétés de près, les ouvertures "
-            "génériques, les superlatifs vides, l'expression-clé complète répétée mécaniquement. "
-            "Ne remplace jamais un nom propre (produit, marque, outil) par « cet outil », "
-            "« la plateforme » ou un pronom : le nom reste. "
-            "Ne change ni le plan (garde chaque titre <h2> et <h3> mot pour mot), ni les faits, "
-            "ni les données, ni les liens. "
-            "Garde la réponse directe des premières phrases intacte. "
-            "Règle absolue : pas de tiret cadratin (—), remplace-le par une virgule, "
-            "un point-virgule ou une reformulation."
-            + self._build_checklist_verification_block()
-            + "\n\nRetourne UNIQUEMENT le HTML complet nettoyé, sans explication, sans backticks.\n\n"
-            f"Contenu :\n{content}"
-        )
-        gated = self._guarded_rewrite_pass(
-            content, gate_prompt, "writer", article, 0.3, "WritingPass_QualityGate", system=writer_system,
-        )
-        # La passe d'édition réécrit l'article entier en un appel : si elle
-        # perd un H2, on garde le premier jet plutôt qu'un article amputé.
-        from app.services.seo.section_writer import lost_h2s
-        dropped_h2 = lost_h2s(content, gated)
-        if dropped_h2:
-            self._error(
-                "WritingPass_QualityGate",
-                f"Réponse rejetée : {len(dropped_h2)} section(s) H2 perdue(s) "
-                f"({', '.join(dropped_h2[:3])}) — contenu précédent conservé.",
-            )
-        else:
-            content = gated
+        # L'ancienne réécriture complète « WritingPass_QualityGate » est
+        # supprimée : en un seul appel elle pouvait perdre l'introduction
+        # (observé 2026-10-16) et faisait doublon avec la relecture, la passe
+        # de cohérence, le juge éditorial et la révision ciblée.
         content = self._ensure_outline_complete(section_writer, content, "SectionCompleteness_Final")
 
         # ── Finition — appels courts et ciblés, jamais de réécriture libre ──
