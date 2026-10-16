@@ -103,9 +103,20 @@ def figure_fixes(content: str, allowed_text: str, max_sections: int = MAX_SECTIO
     return fixes
 
 
+# Commentaire sur l'article ou la consigne recopié dans le texte (« Cette
+# architecture dépasse les simples mentions théoriques… », fuite observée).
+_META_RE = re.compile(
+    r"\b(cette section|cet article|l'article|la section|le lecteur|les lecteurs|la consigne|"
+    r"mentions? théoriques?|dépasse les simples|comme demandé|le rédacteur)\b", re.IGNORECASE)
+
+
 def guard_revision(before: str, after: str, allowed_numbers_text: str) -> str | None:
     if not after.strip():
         return "sortie vide"
+    new_meta = set(m.lower() for m in _META_RE.findall(html_to_text(after))) - \
+        set(m.lower() for m in _META_RE.findall(html_to_text(before)))
+    if new_meta:
+        return "commentaire interne ajouté : " + ", ".join(sorted(new_meta))
     if re.search(r"<h1\b", after, re.IGNORECASE):
         return "H1 ajouté"
     heads_before = [(m.group(1), html_to_text(m.group(2))) for m in _H_RE.finditer(before)]
@@ -135,6 +146,8 @@ def build_revision_prompt(unit_html: str, instructions: str, facts_block: str, r
         "",
         "Règles :",
         "- Applique la consigne, rien d'autre ; garde le reste du texte, le ton et la longueur.",
+        "- La consigne t'est adressée : n'en recopie rien et ne commente jamais le texte (« cette section », "
+        "« cet article », « le lecteur ») ; écris directement le contenu, phrases liées les unes aux autres.",
         "- Garde mot pour mot le titre <h2> (et les <h3> sauf si la consigne les vise), chaque lien <a href>.",
         "- Aucun chiffre, prix, date ou nom absent du texte actuel, des chiffres de référence ou des faits ci-dessous.",
         "- Aucun témoignage ni cas inventé ; pas de tiret cadratin ; HTML simple (<h2>, <h3>, <p>, <ul>, <ol>, "
