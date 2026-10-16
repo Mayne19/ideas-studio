@@ -194,8 +194,12 @@ class AgentWriter:
         searches = self.usage["web_searches"] or self.usage.get("_counted_searches", 0)
         fetches = self.usage["web_fetches"] or self.usage.get("_counted_fetches", 0)
         from app.services.cost_estimator import estimate_agent_writer_cost
+        client_cost = getattr(self.client, "cost_usd", None)
         return {
             "model": self.model,
+            "route": "openrouter" if client_cost is not None else "anthropic",
+            "reasoning": getattr(self.client, "reasoning_effort", None) or "défaut du modèle",
+            "real_cost_usd": round(client_cost, 4) if client_cost is not None else None,
             "duration_s": round(perf_counter() - self.started, 1),
             "calls": self.usage["calls"],
             "input_tokens": self.usage["input_tokens"],
