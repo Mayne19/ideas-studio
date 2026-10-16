@@ -35,6 +35,8 @@ DUEL_CRITERIA = {
     "structure": "Titres, tableaux, listes et composants utiles au lecteur",
     "freshness": "Données actuelles, aucune information périmée",
     "citability": "Facile à citer pour une IA de recherche (réponses autonomes, faits nets)",
+    "retention": "Accroche dès les premières lignes et donne envie de lire jusqu'au bout (au moins 80 %) : "
+                 "chaque section commence par ce que le lecteur veut savoir, aucun passage creux",
 }
 _EXCLUDED_HOST_PARTS = ("youtube.", "reddit.", "quora.", "facebook.", "linkedin.", "tiktok.", "instagram.",
                         "pinterest.", "twitter.", "x.com")
@@ -47,16 +49,51 @@ def _host(url: str) -> str:
         return ""
 
 
-def pick_champion(organic: list[dict], exclude_hosts: tuple[str, ...] = ()) -> dict | None:
-    """Premier résultat organique éditorial (pas une vidéo, un forum ou un
-    réseau social, ni notre propre site)."""
+def pick_champions(organic: list[dict], exclude_hosts: tuple[str, ...] = (), limit: int = 3) -> list[dict]:
+    """Les `limit` premiers résultats organiques éditoriaux (pas de vidéo,
+    forum ni réseau social, ni notre propre site)."""
+    champions: list[dict] = []
     for item in organic or []:
         url = item.get("url") or item.get("link") or ""
         host = _host(url)
         if not host or any(p in host for p in _EXCLUDED_HOST_PARTS) or any(host.endswith(h) for h in exclude_hosts):
             continue
-        return {"url": url, "title": item.get("title", ""), "position": item.get("position")}
-    return None
+        champions.append({"url": url, "title": item.get("title", ""), "position": item.get("position")})
+        if len(champions) >= limit:
+            break
+    return champions
+
+
+def pick_champion(organic: list[dict], exclude_hosts: tuple[str, ...] = ()) -> dict | None:
+    champions = pick_champions(organic, exclude_hosts, limit=1)
+    return champions[0] if champions else None
+
+
+def build_matrix_prompt(champions: list[tuple[str, str]], keyword: str) -> str:
+    parts = [
+        "Tu es rédacteur en chef. Ces articles sont les mieux classés sur Google pour la requête ci-dessous. "
+        "Le n°1 n'est pas forcément le meilleur partout : identifie, sous-sujet par sous-sujet, quel article "
+        "le traite le mieux et ce que contient cette meilleure version, puis ce qui manque à tous.",
+        f"Requête : {keyword}",
+        "",
+        "Réponds UNIQUEMENT en JSON :",
+        '{"subtopics": [{"subtopic": "...", "best": "C1|C2|C3", "best_version": "ce qui la rend la meilleure", '
+        '"to_beat": "ce qu\'il faudrait faire pour faire mieux"}], "missing_everywhere": ["..."], '
+        '"hook_patterns": ["comment le meilleur article accroche le lecteur dès le début"]}',
+    ]
+    for i, (url, md) in enumerate(champions, 1):
+        parts += ["", f"=== C{i} ({url}) ===", md[:14000]]
+    return "\n".join(parts)
+
+
+def build_subtopic_matrix(champions: list[tuple[str, str]], keyword: str, call_fn: CallFn) -> dict:
+    """Matrice « meilleure version de chaque sous-sujet » sur le top 3 :
+    cible à battre section par section."""
+    try:
+        data = extract_json_object(call_fn(build_matrix_prompt(champions, keyword), "ChampionMatrix", 0.2))
+    except Exception as exc:
+        return {"error": str(exc)[:300]}
+    return data if isinstance(data, dict) else {"error": "réponse JSON invalide"}
 
 
 def to_markdown(html: str, url: str = "") -> str:
