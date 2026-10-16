@@ -32,6 +32,8 @@ def _norm(text: str) -> str:
 
 def locate_unit(units: list[str], section: str) -> int | None:
     """Index de l'unité visée par le juge (titre de section ou INTRODUCTION)."""
+    # Le juge recopie parfois l'étiquette du digest : « SECTION « Titre » ».
+    section = re.sub(r"^\s*(?:##\s*)?section\s*", "", section or "", flags=re.IGNORECASE)
     target = _norm(section)
     if not target:
         return None
@@ -44,8 +46,61 @@ def locate_unit(units: list[str], section: str) -> int | None:
     return None
 
 
+_THOUSANDS_RE = re.compile(r"(?<=\d)[\s\u00a0\u202f.](?=\d{3}\b)")
+
+
 def _numbers(text: str) -> set[str]:
-    return {n.replace(",", ".") for n in _NUMBER_RE.findall(text or "")}
+    """Nombres du texte, séparateurs de milliers retirés (« 5 000 » = 5000)."""
+    text = _THOUSANDS_RE.sub("", text or "")
+    return {n.replace(",", ".") for n in _NUMBER_RE.findall(text)}
+
+
+def _is_trivial_number(n: str) -> bool:
+    """Petits entiers (étapes, « 2 ans », « 3 devis ») et années : pas des
+    chiffres à sourcer."""
+    try:
+        value = float(n)
+    except ValueError:
+        return False
+    return (value.is_integer() and value <= 12) or (value.is_integer() and 1990 <= value <= 2035)
+
+
+# Montant, pourcentage ou volume : le chiffre que le lecteur retient et qui
+# doit venir des faits vérifiés.
+_FIGURE_RE = re.compile(
+    r"\d[\d\s\u00a0.,]*\s?(?:€|\$|euros?|dollars?|%|k€|M€|millions?|milliards?)", re.IGNORECASE)
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
+
+
+def unverified_figures(content: str, allowed_text: str) -> dict[int, list[str]]:
+    """A7 déterministe : {index d'unité: phrases portant un montant ou un
+    pourcentage dont les nombres n'apparaissent ni dans les faits vérifiés,
+    ni dans les chiffres de référence, ni dans les notes de l'expert}."""
+    allowed = _numbers(allowed_text)
+    found: dict[int, list[str]] = {}
+    for index, unit in enumerate(split_units(content)):
+        text = html_to_text(re.sub(r"<h[1-6]\b[^>]*>.*?</h[1-6]>", " ", unit, flags=re.IGNORECASE | re.DOTALL))
+        for sentence in _SENTENCE_SPLIT_RE.split(text):
+            figures = _FIGURE_RE.findall(sentence)
+            nums = {n for f in figures for n in _numbers(f)}
+            if any(n not in allowed and not _is_trivial_number(n) for n in nums):
+                found.setdefault(index, []).append(sentence.strip()[:300])
+    return found
+
+
+def figure_fixes(content: str, allowed_text: str, max_sections: int = MAX_SECTIONS_PER_PASS) -> list[dict]:
+    """Consignes de révision pour les chiffres non vérifiés (avant le juge)."""
+    units = split_units(content)
+    fixes = []
+    for index, sentences in list(unverified_figures(content, allowed_text).items())[:max_sections]:
+        section = "INTRODUCTION" if index == 0 else unit_heading(units[index])
+        fixes.append({
+            "section": section,
+            "instructions": "Ces phrases contiennent des chiffres absents des faits vérifiés : remplace chaque "
+                            "chiffre par la valeur des chiffres de référence ou des faits si elle existe, sinon "
+                            "reformule sans chiffre. Phrases : " + " | ".join(f"« {s} »" for s in sentences[:4]),
+        })
+    return fixes
 
 
 def guard_revision(before: str, after: str, allowed_numbers_text: str) -> str | None:
@@ -59,7 +114,10 @@ def guard_revision(before: str, after: str, allowed_numbers_text: str) -> str | 
         return "titre H2 modifié"
     if set(_HREF_RE.findall(before)) - set(_HREF_RE.findall(after)):
         return "lien perdu"
-    new_numbers = _numbers(html_to_text(after)) - _numbers(html_to_text(before)) - _numbers(allowed_numbers_text)
+    new_numbers = {
+        n for n in _numbers(html_to_text(after)) - _numbers(html_to_text(before)) - _numbers(allowed_numbers_text)
+        if not _is_trivial_number(n)
+    }
     if new_numbers:
         return "chiffre(s) nouveau(x) non vérifié(s) : " + ", ".join(sorted(new_numbers)[:5])
     wb, wa = calculate_word_count(before), calculate_word_count(after)
