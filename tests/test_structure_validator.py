@@ -73,3 +73,10 @@ def test_sentence_over_45_words_fails_and_long_share_warns():
     wordy = "<h2>Des phrases longues</h2>" + _para(2, words_per_sentence=35) + _para(1) + _para(3, words_per_sentence=33)
     share = _rule(validate_structure(GOOD + wordy, TITLE), "long_sentence_share")
     assert not share["passed"] and share["severity"] == "warning"
+
+
+def test_four_paragraphs_of_same_length_fail():
+    uniform = _section("Un rythme mécanique", sizes=(3, 3, 3, 3))
+    rule = _rule(validate_structure(GOOD + uniform, TITLE), "paragraph_variation")
+    assert not rule["passed"]
+    assert rule["violations"][0]["section"] == "Un rythme mécanique"
