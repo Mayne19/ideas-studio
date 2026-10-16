@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from html import escape, unescape
 
 from app.schemas.seo_workflow import ImagePlan, asdict
 from app.services.seo.adapters.image_sourcing_adapter import get_brave_image_search_provider, get_image_sourcing_adapter
@@ -126,69 +127,145 @@ def build_image_plan_dict(
 
 
 _H2_RE = re.compile(r"<h2[^>]*>(.*?)</h2>", re.IGNORECASE | re.DOTALL)
+_P_END_RE = re.compile(r"</p\s*>", re.IGNORECASE)
+_FIRST_P_RE = re.compile(r"<p[^>]*>(.*?)</p\s*>", re.IGNORECASE | re.DOTALL)
+_TAG_RE = re.compile(r"<[^>]+>")
+
+UNSPLASH_UTM = "utm_source=ideas_studio&utm_medium=referral"
+UNSPLASH_HOME_URL = f"https://unsplash.com/?{UNSPLASH_UTM}"
+
+
+def _strip_tags(value: str) -> str:
+    return re.sub(r"\s+", " ", unescape(_TAG_RE.sub("", value or ""))).strip()
+
+
+def _with_utm(url: str) -> str:
+    return f"{url}{'&' if '?' in url else '?'}{UNSPLASH_UTM}"
+
+
+def image_alt_text(source: dict) -> str:
+    """Alt rédigé dans la langue de l'article (alt_localized, cf.
+    localize_image_alts) ; à défaut, le titre de la section illustrée.
+    Jamais la description anglaise brute d'Unsplash (alt_text)."""
+    return _strip_tags(source.get("alt_localized") or "") or _strip_tags(source.get("section_heading") or "")
+
+
+def is_unsplash_source(source: dict) -> bool:
+    return (source.get("source_name") or "").lower() == "unsplash"
+
+
+def _unsplash_caption(source: dict) -> str:
+    """Attribution exigée par les Unsplash API Guidelines : photographe et
+    Unsplash, tous deux liés avec les paramètres UTM de l'application."""
+    author = (source.get("author") or "").strip()
+    profile = source.get("author_url") or source.get("source_url")
+    if not author or not profile:
+        return ""
+    return (
+        "<figcaption>Photo : "
+        f'<a href="{escape(_with_utm(profile), quote=True)}">{escape(author)}</a>'
+        f' sur <a href="{escape(UNSPLASH_HOME_URL, quote=True)}">Unsplash</a>'
+        "</figcaption>"
+    )
 
 
 def _image_html(source: dict) -> str:
-    # Licence Unsplash : gratuite, aucune attribution requise pour l'usage —
-    # décision produit du 2026-08-04 de ne pas afficher de légende de crédit.
-    # Pour les images de marque (usage_rights_status == "official_source"),
-    # le statut d'usage n'est pas garanti (dépend des conditions du site
-    # source) : on garde le nom/alt natif de l'image tel que publié par la
-    # marque plutôt que d'en inventer un, l'éditeur reste responsable de
-    # vérifier le droit d'usage avant publication finale.
-    alt = (source.get("alt_text") or "").replace('"', "&quot;")
-    return f'<img src="{source.get("image_url")}" alt="{alt}">'
+    # Les photos Unsplash portent une légende de crédit (photographe +
+    # Unsplash, Unsplash API Guidelines). Pour les images de marque
+    # (usage_rights_status == "official_source"), le statut d'usage n'est pas
+    # garanti (dépend des conditions du site source) : l'éditeur reste
+    # responsable de vérifier le droit d'usage avant publication finale.
+    alt = escape(image_alt_text(source), quote=True)
+    src = escape(source.get("image_url") or "", quote=True)
+    caption = _unsplash_caption(source) if is_unsplash_source(source) else ""
+    return f'<figure><img src="{src}" alt="{alt}">{caption}</figure>'
 
 
 def _normalize_heading(heading: str) -> str:
-    return re.sub(r"<[^>]+>", "", heading).strip().lower().rstrip("?")
+    return _strip_tags(heading).lower().rstrip("?").strip()
 
 
-def insert_images_in_content(content: str, image_sources: list[dict]) -> str:
-    """Insère chaque image à la fin de la section H2 à laquelle elle a été
-    planifiée (appariement par titre de section). Une image sans correspondance
-    de section est insérée après la première section sans image. Accepte les
-    images libres de droits Unsplash (free_with_attribution) et les images de
-    marque sourcées sur un domaine officiel (official_source, cf.
-    plan_section_images)."""
-    usable = [
+def _usable_sources(image_sources: list[dict]) -> list[dict]:
+    return [
         s for s in image_sources
         if s.get("image_url") and s.get("usage_rights_status") in ("free_with_attribution", "official_source")
     ]
+
+
+def _sections(content: str) -> list[tuple[re.Match, int]]:
+    """(titre H2, fin de section) — une section court jusqu'au H2 suivant."""
+    matches = list(_H2_RE.finditer(content))
+    return [
+        (m, matches[i + 1].start() if i + 1 < len(matches) else len(content))
+        for i, m in enumerate(matches)
+    ]
+
+
+def section_first_paragraph(content: str, heading: str, max_length: int = 300) -> str:
+    """Texte du premier paragraphe de la section H2 correspondant à `heading`
+    (contexte de rédaction de l'alt), vide si la section est introuvable."""
+    target = _normalize_heading(heading)
+    if not target or not content:
+        return ""
+    for match, end in _sections(content):
+        current = _normalize_heading(match.group(1))
+        if current and (target in current or current in target):
+            paragraph = _FIRST_P_RE.search(content, match.end(), end)
+            return _strip_tags(paragraph.group(1))[:max_length] if paragraph else ""
+    return ""
+
+
+def _insertion_point(content: str, h2_end: int, section_end: int) -> int:
+    """Juste après le premier paragraphe de la section ; à défaut (section
+    sans paragraphe), juste après le titre H2."""
+    paragraph_end = _P_END_RE.search(content, h2_end, section_end)
+    return paragraph_end.end() if paragraph_end else h2_end
+
+
+def insert_images_in_content(content: str, image_sources: list[dict]) -> str:
+    """Insère chaque image après le premier paragraphe de la section H2 à
+    laquelle elle a été planifiée (appariement par titre de section), dans un
+    <figure> avec légende de crédit pour Unsplash. Une image sans section
+    correspondante va dans la première section restée sans image. Chaque
+    source réellement insérée est marquée `inserted=True` (suivi des
+    téléchargements Unsplash et choix de l'image de couverture). Accepte les
+    images libres de droits Unsplash (free_with_attribution) et les images
+    de marque sourcées sur un domaine officiel (official_source, cf.
+    plan_section_images)."""
+    usable = _usable_sources(image_sources)
     if not usable or not content:
         return content
 
+    sections = _sections(content)
+    if not sections:
+        return content
+
     pending = list(usable)
+    assigned: dict[int, dict] = {}
 
-    def _match_image(html_heading: str) -> dict | None:
-        target = _normalize_heading(html_heading)
-        for idx, source in enumerate(pending):
+    for idx, (match, _end) in enumerate(sections):
+        target = _normalize_heading(match.group(1))
+        for pos, source in enumerate(pending):
             planned = _normalize_heading(source.get("section_heading") or "")
-            if planned and (planned in target or target in planned):
-                return pending.pop(idx)
-        return None
+            if planned and target and (planned in target or target in planned):
+                assigned[idx] = pending.pop(pos)
+                break
 
-    inserted = False
+    # Images restantes (section planifiée absente du contenu final) :
+    # réparties dans les sections encore sans image, dans l'ordre.
+    for idx in range(len(sections)):
+        if not pending:
+            break
+        if idx not in assigned:
+            assigned[idx] = pending.pop(0)
 
-    def _replace(match: re.Match) -> str:
-        nonlocal inserted
-        section = match.group(0)
-        source = _match_image(match.group(1))
-        if source is None:
-            return section
-        return section + _image_html(source)
-
-    content = _H2_RE.sub(_replace, content)
-    inserted = True
-
-    # Images restantes (section planifiée absente du contenu final) : réparties
-    # après les sections sans image, dans l'ordre.
-    if pending:
-        def _fill(match: re.Match) -> str:
-            if not pending:
-                return match.group(0)
-            return match.group(0) + _image_html(pending.pop(0))
-
-        content = _H2_RE.sub(_fill, content)
+    # Insertion de la fin vers le début : les positions déjà calculées
+    # restent valides.
+    for idx in sorted(assigned, reverse=True):
+        match, end = sections[idx]
+        source = assigned[idx]
+        point = _insertion_point(content, match.end(), end)
+        content = content[:point] + _image_html(source) + content[point:]
+        source["inserted"] = True
 
     return content
