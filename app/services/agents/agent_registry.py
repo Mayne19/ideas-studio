@@ -560,11 +560,12 @@ AGENTS: list[AgentDef] = [
     ),
     AgentDef(
         agent_id="quality_gate",
-        name="Porte qualité",
-        description="Décide si l'article peut passer en production",
+        name="Juge éditorial",
+        description="Note l'article sur la grille de 100 points, liste les blocages et les corrections par section ; "
+                    "idéalement un modèle d'une autre famille que le rédacteur",
         category=AgentCategory.review,
         phase="final",
-        requires_llm=False,
+        requires_llm=True,
         icon="gate",
         implementation_ref="editorial_quality_gate",
         status=AgentStatus.active,
