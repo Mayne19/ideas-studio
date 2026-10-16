@@ -26,6 +26,21 @@ def _fetch_adaptor(url: str, timeout: int = 8) -> Any | None:
     Fetch a URL with httpx and wrap the response in a Scrapling Adaptor.
     Does NOT need curl_cffi or playwright — httpx + Adaptor is enough.
     """
+    from app.services.seo.page_cache import active_page_cache
+
+    cache = active_page_cache()
+    if cache is not None:
+        # Génération en cours : une seule requête par URL, partagée entre
+        # research brief, qualité des sources et liens externes.
+        html = cache.get_html(url)
+        if not html:
+            return None
+        try:
+            from scrapling.parser import Adaptor
+            return Adaptor(html, url=url)
+        except Exception as exc:
+            logger.debug("_fetch_adaptor parse failed for %s: %s", url, exc)
+            return None
     try:
         import httpx
         from scrapling.parser import Adaptor
