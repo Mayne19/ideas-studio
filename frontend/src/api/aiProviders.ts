@@ -9,6 +9,7 @@ export type AIProviderPublic = {
   model: string | null
   base_url: string | null
   is_default: boolean
+  reasoning_mode: 'off' | 'auto'
   last_test_status: string | null
   last_test_error: string | null
   last_tested_at: string | null
