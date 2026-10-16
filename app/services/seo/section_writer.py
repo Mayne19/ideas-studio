@@ -390,6 +390,30 @@ def format_facts_block(facts: list[dict]) -> str:
     return "\n".join(lines)
 
 
+MAX_PREVIOUS_WORDS = 2500
+
+
+def previous_article_text(article_so_far: str, max_words: int = MAX_PREVIOUS_WORDS) -> str:
+    """Texte déjà écrit, sans HTML, titres gardés en repères ; les
+    `max_words` derniers mots seulement (le contexte complet évite que
+    chaque section reparte de zéro)."""
+    from app.services.seo.html_text_ops import html_to_text
+
+    html = re.sub(r"<h([23])\b[^>]*>(.*?)</h\1>", lambda m: "\n## " + html_to_text(m.group(2)) + "\n",
+                  article_so_far or "", flags=re.IGNORECASE | re.DOTALL)
+    html = re.sub(r"</(p|li|tr)>", "\n", html, flags=re.IGNORECASE)
+    text = re.sub(r"[ \t]+", " ", html_to_text_keep_lines(html)).strip()
+    words = text.split(" ")
+    if len(words) > max_words:
+        text = "… " + " ".join(words[-max_words:])
+    return text
+
+
+def html_to_text_keep_lines(html: str) -> str:
+    import html as html_lib
+    return html_lib.unescape(re.sub(r"<[^>]+>", " ", html or ""))
+
+
 def already_said(article_so_far: str, limit: int = 1200) -> str:
     """Première phrase de chaque paragraphe déjà écrit : ce que la suite ne
     doit pas répéter (les sections écrites isolément redisaient l'intro)."""
@@ -457,6 +481,9 @@ class SectionWriter:
         self.write_fn = write_fn
         # Éléments de gain d'information affectés ("intro" et index de section).
         self.gain_elements = gain_elements or {}
+        # Fil rouge (plan_thread) : progression de l'article et enchaînement
+        # prévu de chaque section avec la suivante.
+        self.thread: dict = {"thread": "", "transitions": []}
         # Faits attribués par section (assign_facts_to_sections) : clés
         # "intro" et index de section.
         self.section_facts = section_facts or {}
@@ -574,6 +601,32 @@ class SectionWriter:
 
     # ── Unités ──────────────────────────────────────────────────────────
 
+    def plan_thread(self) -> dict:
+        """Un appel court avant l'introduction : la progression de l'article
+        (80 mots au plus) et, pour chaque section, comment elle s'enchaîne
+        avec la suivante. Un échec laisse le rédacteur sans fil rouge."""
+        prompt = "\n".join([
+            self.brief_text, "", self._outline_list(), "",
+            "Avant d'écrire, raconte le fil rouge de cet article : comment il emmène le lecteur de sa question "
+            "à sa décision, en 80 mots au plus. Puis, pour chaque section du plan dans l'ordre, une phrase qui "
+            "dit comment elle s'enchaîne avec la suivante.",
+            'Réponds UNIQUEMENT en JSON : {"thread": "...", "transitions": ["...", "..."]}',
+        ])
+        try:
+            raw = self.write_fn(prompt, "WritingPass_Thread", 0.4)
+        except self.fatal_exceptions:
+            raise
+        except Exception as exc:
+            logger.warning("section_writer: fil rouge en échec : %s", exc)
+            return self.thread
+        from app.services.seo.html_text_ops import extract_json_object
+        data = extract_json_object(raw) or {}
+        thread = " ".join(str(data.get("thread") or "").split()[:90])
+        transitions = [str(t).strip() for t in data.get("transitions") or [] if str(t).strip()]
+        self.thread = {"thread": thread, "transitions": transitions[: len(self.sections)]}
+        self.report["thread"] = self.thread
+        return self.thread
+
     def write_intro(self) -> str:
         prompt_parts = [
             self.brief_text, "", self._outline_list(), "",
@@ -630,12 +683,15 @@ class SectionWriter:
             "Le titre est une promesse : la première phrase de la section la tient, et la section ne traite que "
             "ce que le titre annonce (rien de plus, rien d'un autre sujet)."
         )
-        already = already_said(article_so_far)
-        if already:
-            parts.append("Déjà dit plus haut dans l'article (ne le répète pas, appuie-toi dessus) : " + already)
-        last = last_paragraph_text(previous_html)
-        if last:
-            parts.append(f"Fin du texte précédent (enchaîne sans le répéter) : « {last} »")
+        if self.thread.get("thread"):
+            parts.append(f"Fil rouge de l'article : {self.thread['thread']}")
+        transitions = self.thread.get("transitions") or []
+        if index < len(transitions) and transitions[index]:
+            parts.append(f"Enchaînement prévu pour cette section : {transitions[index]}")
+        previous_text = previous_article_text(article_so_far or previous_html)
+        if previous_text:
+            parts.append("Texte déjà écrit (continue-le sans le répéter, même ton, même vocabulaire) :\n"
+                         f"\"\"\"\n{previous_text}\n\"\"\"")
         if self.words_per_section:
             parts.append(f"Longueur visée : environ {self.words_per_section} mots, moins si le point est simple.")
         component_index = component_section_index(self.sections, self.fmt)
@@ -652,6 +708,13 @@ class SectionWriter:
             f"- Commence exactement par <h2>{html_lib.escape(section.heading, quote=False)}</h2> puis entre "
             "directement dans le sujet, sans répéter l'introduction ni annoncer ce que la section va dire.",
             "- Aucun autre <h2>. Ne traite pas le contenu des autres sections du plan.",
+            "- La première phrase se rattache à ce qui vient d'être dit, puis donne tout de suite la réponse "
+            "que promet le titre.",
+            "- Garde le même ton et le même vocabulaire que le texte déjà écrit.",
+            "- Écris des phrases directes qui s'adressent au lecteur (« Si vous ajoutez de l'eau à ce moment-là, "
+            "vous noyez votre plante ») plutôt que des tournures inversées (« Ajouter de l'eau à ce moment-là "
+            "achève la plante »).",
+            "- Ne dis jamais une évidence que tout lecteur connaît déjà.",
             "- Pas de phrase de résumé ni de « En conclusion » en fin de section.",
             *self._common_rules(),
         ]
@@ -735,6 +798,7 @@ class SectionWriter:
         if not self.sections:
             raise SectionWritingError("Plan vide : aucune section à rédiger.")
         parts: list[str] = []
+        self.plan_thread()
         intro = self.write_intro()
         if intro:
             parts.append(intro)
