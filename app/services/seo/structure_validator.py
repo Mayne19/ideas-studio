@@ -287,6 +287,8 @@ def check_banned_vocabulary(units: list[Unit], title: str | None = None) -> dict
         text = html_to_text(unit.html)
         found = sorted({m.group(1).lower() for m in pattern.finditer(text)})
         found += [e for e in BANNED_EXPRESSIONS if e in text.lower()]
+        found += ["fait la différence"] if re.search(r"fait (?:vraiment |toute |réellement )?la différence",
+                                                     text, re.IGNORECASE) else []
         if found:
             violations.append(_loc(unit, "Vocabulaire banni : " + ", ".join(found)))
     if title:
