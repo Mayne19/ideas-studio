@@ -34,6 +34,7 @@ from app.services.seo.seo_review_service import (
     run_and_store_seo_review,
 )
 from app.services.publication_revalidation_service import trigger_project_revalidation
+from app.services.validation_service import PublishBlockedError
 
 router = APIRouter(tags=["articles"])
 
@@ -179,7 +180,10 @@ def publish_article_route(
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions to publish")
 
-    article = publish_article(db, article)
+    try:
+        article = publish_article(db, article)
+    except PublishBlockedError as exc:
+        raise HTTPException(status_code=400, detail=f"Publication bloquée : {exc}") from exc
 
     project = db.get(Project, article.project_id)
     if project:
@@ -396,7 +400,15 @@ def bulk_publish_articles_route(
                 "reasons": [f"Statut non publiable: {article.status_reason_id}"],
             })
             continue
-        published = publish_article(db, article)
+        try:
+            published = publish_article(db, article)
+        except PublishBlockedError as exc:
+            blocked.append({
+                "article_id": article.id,
+                "title": article.current_revision.title if article.current_revision else "",
+                "reasons": [str(exc)],
+            })
+            continue
         published_count += 1
         if project:
             trigger_project_revalidation(db, project, article=published, event_type="article.published")

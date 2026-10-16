@@ -20,6 +20,7 @@ def check_scheduled_publications():
     from app.models.content import Article
     from app.models.reference import ArticleStatus
     from app.services.article_lifecycle_service import publish_article
+    from app.services.validation_service import PublishBlockedError
 
     db = SessionLocal()
     try:
@@ -42,6 +43,11 @@ def check_scheduled_publications():
                 try:
                     publish_article(db, article)
                     logger.info("Scheduled publication: article %s published", article.id)
+                except PublishBlockedError as e:
+                    # Reste programmé : l'éditeur doit améliorer le score ou
+                    # abaisser le minimum (Paramètres → Pipeline). Le contrôle
+                    # précède toute écriture : rien à annuler.
+                    logger.warning("Scheduled publication blocked for article %s: %s", article.id, e)
                 except Exception as e:
                     logger.error("Failed to publish scheduled article %s: %s", article.id, e)
         db.commit()

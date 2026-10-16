@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from app.models.content import Article, ArticleRevision, ArticleScore
 from app.models.reference import ArticleStatus, RevisionSource, set_article_status
 from app.services.scoring_service import compute_global_score
-from app.services.validation_service import check_validation_thresholds
+from app.services.validation_service import assert_publishable_score, check_validation_thresholds
 
 
 def _clamp_to_publish_window(db: Session, project_id: str, scheduled_at: datetime) -> datetime:
@@ -90,6 +90,10 @@ def _store_global_score(db: Session, article: Article) -> dict:
 
 
 def publish_article(db: Session, article: Article) -> Article:
+    # Garde-fou : score global >= minimum de publication du projet, sinon
+    # PublishBlockedError (convertie en 400 par les routes, journalisée par
+    # le worker de publication programmée).
+    assert_publishable_score(db, article)
     snapshot = _snapshot_revision(db, article, RevisionSource.HUMAN)
     article.published_revision_id = snapshot.id
     set_article_status(article, ArticleStatus.PUBLISHED)
