@@ -577,18 +577,24 @@ class SEOGenerationOrchestrator:
             keyword_brief = apply_prebrief_to_keyword_brief(keyword_brief, idea_prebrief)
             self.context["keyword_brief"] = keyword_brief
 
-        # 7b. EvidencePack — sélection des faits/sources les plus fiables parmi
-        # ceux déjà trouvés par ResearchBrief, pour guider la rédaction
-        try:
-            from app.services.agents.agent_services import build_evidence_pack
-            evidence_pack = build_evidence_pack(
-                final_keyword, final_title, research_brief, db=self.db, project_id=self.project_id,
-            )
-            self.context["evidence_pack"] = evidence_pack
-            self._step("EvidencePack")
-        except Exception as exc:
-            self._error("EvidencePack", str(exc))
-            self.context["evidence_pack"] = {}
+        # 7b. FactLedger — un appel bon marché par page lue (source_pages),
+        # citations vérifiées mot pour mot par le code. Remplace l'EvidencePack
+        # (snippets de 500 caractères), gardé en repli sans pages lues.
+        fact_ledger = self._build_fact_ledger(final_keyword, intent_analysis)
+        if fact_ledger and fact_ledger.get("facts"):
+            from app.services.seo.fact_ledger_service import ledger_to_evidence_pack
+            self.context["evidence_pack"] = ledger_to_evidence_pack(fact_ledger)
+        else:
+            try:
+                from app.services.agents.agent_services import build_evidence_pack
+                evidence_pack = build_evidence_pack(
+                    final_keyword, final_title, research_brief, db=self.db, project_id=self.project_id,
+                )
+                self.context["evidence_pack"] = evidence_pack
+                self._step("EvidencePack (repli snippets)")
+            except Exception as exc:
+                self._error("EvidencePack", str(exc))
+                self.context["evidence_pack"] = {}
 
         # 8. EditorialAngle
         editorial_angle = define_editorial_angle_dict(
@@ -755,6 +761,10 @@ class SEOGenerationOrchestrator:
             # Statistiques à jour : les liens externes ont pu réutiliser le cache.
             source_pages["fetch_stats"] = self.page_cache.stats()
             self._save(article.id, "source_pages", source_pages)
+        if self.context.get("fact_ledger"):
+            self._save(article.id, "fact_ledger", self.context["fact_ledger"])
+        if self.context.get("evidence_pack"):
+            self._save(article.id, "evidence_pack", self.context["evidence_pack"])
 
         # Plage de mots : catégorie (prioritaire) puis profil éditorial projet
         wc_min, wc_max = None, None
@@ -806,6 +816,7 @@ class SEOGenerationOrchestrator:
                 keyword_brief=keyword_brief,
                 research_brief=research_brief,
                 evidence_pack=self.context.get("evidence_pack"),
+                fact_ledger=self.context.get("fact_ledger"),
                 editorial_angle=editorial_angle,
                 outline=outline,
                 human_insights=self.context.get("human_insights"),
@@ -1082,6 +1093,39 @@ class SEOGenerationOrchestrator:
         self._log(f"Article generation completed in {int((perf_counter() - self.started_at) * 1000)}ms", level="info", step="orchestrator", article_id=article.id)
 
         return article
+
+    def _build_fact_ledger(self, keyword: str, intent_analysis: dict) -> dict | None:
+        """Registre des faits à partir des pages lues ; None si aucune page
+        ou aucun provider réel (l'EvidencePack historique prend le relais)."""
+        pages = (self.context.get("source_pages") or {}).get("pages") or []
+        if not pages:
+            return None
+        try:
+            provider = self._get_agent_provider("evidence_pack_builder", self.llm)
+        except Exception as exc:
+            self._error("FactLedger", f"Provider indisponible : {exc}")
+            return None
+        if provider.is_mock:
+            return None
+        from app.services.seo.fact_ledger_service import build_fact_ledger
+
+        def call_json(prompt: str) -> dict:
+            return provider.generate_json(prompt, schema_hint='{"facts": [...]}')
+
+        try:
+            ledger = build_fact_ledger(
+                self.context["source_pages"], keyword, call_json,
+                reader_question=intent_analysis.get("reader_real_question") or "",
+            )
+        except Exception as exc:
+            self._error("FactLedger", str(exc))
+            return None
+        self.context["fact_ledger"] = ledger
+        self._step(
+            f"FactLedger ({len(ledger['facts'])} fait(s) vérifié(s), {ledger['rejected_count']} rejeté(s), "
+            f"{ledger['llm_calls']} appel(s))"
+        )
+        return ledger
 
     def _validate_writing_context(self) -> tuple[bool, list[str]]:
         """Check that critical context artifacts are populated before launching the writer."""
