@@ -94,7 +94,9 @@ def existing_hrefs(content: str) -> list[str]:
 
 
 def _external_count(content: str) -> int:
-    return sum(1 for href in existing_hrefs(content) if href.startswith("http"))
+    # Les crédits photo ne sont pas des citations.
+    return sum(1 for href in existing_hrefs(content)
+               if href.startswith("http") and not _host(href).endswith("unsplash.com"))
 
 
 def _article_digest(content: str) -> str:
@@ -145,6 +147,25 @@ def _anchor_html(url: str, anchor_html: str, external: bool, follow: bool) -> st
         return f'<a href="{href}">{anchor_html}</a>'
     rel = "noopener" if follow else "noopener nofollow"
     return f'<a href="{href}" target="_blank" rel="{rel}">{anchor_html}</a>'
+
+
+_EXTERNAL_A_RE = re.compile(r"""<a\b([^>]*?)href\s*=\s*(["'])(https?://[^"']+)\2([^>]*)>""", re.IGNORECASE)
+
+
+def normalize_external_rels(content: str, keyword: str = "") -> str:
+    """Liens externes posés par le rédacteur : même règle rel que ceux posés
+    ici (follow vers les sources de référence, nofollow sinon), et toujours
+    target=_blank. Les crédits photo (unsplash.com) ne sont pas touchés."""
+    def _fix(match: re.Match) -> str:
+        url = match.group(3)
+        if _host(url).endswith("unsplash.com"):
+            return match.group(0)
+        attrs = re.sub(r"""\s(?:rel|target)\s*=\s*(["'])[^"']*\1""", "", match.group(1) + " " + match.group(4))
+        attrs = " ".join(attrs.split())
+        rel = "noopener" if is_reference_source(url, keyword) else "noopener nofollow"
+        href = html_lib.escape(html_lib.unescape(url), quote=True)
+        return f'<a {attrs + " " if attrs else ""}href="{href}" target="_blank" rel="{rel}">'
+    return _EXTERNAL_A_RE.sub(_fix, content or "")
 
 
 def insert_link(content: str, sentence: str, anchor: str, url: str, *, external: bool, follow: bool) -> tuple[str, str | None]:
@@ -224,6 +245,7 @@ def insert_citations(
     keyword: str = "",
     fatal_exceptions: tuple[type[BaseException], ...] = (),
 ) -> tuple[str, dict]:
+    content = normalize_external_rels(content, keyword)
     report: dict = {"inserted": [], "skipped": [], "candidates_external": 0, "candidates_internal": 0,
                     "existing_external": _external_count(content), "error": None}
     present = set(existing_hrefs(content))
