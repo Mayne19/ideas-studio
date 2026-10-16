@@ -1526,8 +1526,13 @@ class SEOGenerationOrchestrator:
         consistency_report."""
         from app.services.seo.consistency_checker import check_and_fix_consistency
         brief = self.context.get("production_brief") or {}
-        facts = []
-        for item in brief.get("evidence_items") or []:
+        # Chiffres de référence puis faits vérifiés du registre : ils font foi
+        # pour trancher une contradiction ou repérer une affirmation inventée.
+        facts = [f"{fig['quantity']} : {fig['reference']}" for fig in self.context.get("reference_figures") or []]
+        for item in (self.context.get("fact_ledger") or {}).get("facts") or []:
+            if isinstance(item, dict) and item.get("claim"):
+                facts.append(str(item["claim"])[:220])
+        for item in ([] if facts else brief.get("evidence_items") or []):
             if isinstance(item, dict) and item.get("fact"):
                 fact = str(item["fact"])
                 if item.get("figure"):
