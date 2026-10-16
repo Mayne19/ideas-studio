@@ -187,6 +187,13 @@ def refine_intent_with_research(
     idea_angle = idea.get("angle") or ""
     idea_answer = str(idea.get("main_answer_summary") or "").strip()
     idea_questions = [str(q) for q in (idea.get("search_questions") or []) if str(q).strip()][:5]
+    # Questions « Autres questions posées » de Google : candidates directes
+    # aux sous-questions, plus fiables qu'une invention du modèle.
+    paa = [
+        str(item.get("question") or "").strip()
+        for item in ((research_brief or {}).get("people_also_ask") or [])
+        if isinstance(item, dict) and str(item.get("question") or "").strip()
+    ][:6]
 
     prompt = (
         "Tu prépares le brief d'un article. Trouve la vraie question que se pose la personne "
@@ -195,6 +202,7 @@ def refine_intent_with_research(
         + (f"Angle prévu : {idea_angle}\n" if idea_angle else "")
         + (f"Réponse principale prévue : {idea_answer[:400]}\n" if idea_answer else "")
         + ("Questions prévues : " + " ; ".join(idea_questions) + "\n" if idea_questions else "")
+        + ("Questions posées sur Google : " + " ; ".join(paa) + "\n" if paa else "")
         + (f"\nPages déjà classées sur Google :\n{serp_context}\n" if serp_context else "")
         + "\nRéponds UNIQUEMENT avec ce JSON :\n"
         '{"reader_real_question": "la question précise du lecteur, en une phrase", '
@@ -205,7 +213,8 @@ def refine_intent_with_research(
         '"must_avoid": ["hors-sujet ou remplissage à éviter"], '
         '"sub_questions": ["question de suivi que le lecteur se pose vraiment"], '
         '"recommended_angle": "l\'angle de l\'article, en une phrase"}\n'
-        "Règles : must_include 3 à 5 éléments, must_avoid 2 à 4, sub_questions 0 à 4. "
+        "Règles : must_include 3 à 5 éléments, must_avoid 2 à 4, sub_questions 0 à 4 "
+        "(reprends en priorité les questions posées sur Google qui servent la question du lecteur). "
         "Pas de chiffres inventés. Rédige les valeurs dans la langue du titre."
     )
     try:
