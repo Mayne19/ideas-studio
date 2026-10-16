@@ -124,3 +124,12 @@ def test_lists_and_tables_formatting():
     good_table = GOOD + ("<h2>Tableau</h2>" + _para(2)
                          + "<table><tr><th>Plan</th><th>Prix</th></tr><tr><td>Basic</td><td>14 $</td></tr></table>")
     assert _rule(validate_structure(good_table, TITLE), "table_format")["passed"]
+
+
+def test_section_balance_flags_thin_and_oversized_sections():
+    thin = GOOD + "<h2>Trop court</h2><p>Une phrase.</p>"
+    rule = _rule(validate_structure(thin, TITLE), "section_balance")
+    assert not rule["passed"] and rule["severity"] == "warning"
+    huge = GOOD + _section("Énorme", sizes=(4, 1, 3, 2, 4, 1, 3, 2, 4, 1, 3, 2, 4, 1, 3, 2, 4, 1, 3, 2, 4, 1, 3, 2, 4, 1, 3, 2, 4, 1, 3, 2))
+    details = [v["detail"] for v in _rule(validate_structure(huge, TITLE), "section_balance")["violations"]]
+    assert any("fois la médiane" in d for d in details)
