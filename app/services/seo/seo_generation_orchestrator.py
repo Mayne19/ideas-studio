@@ -912,7 +912,7 @@ class SEOGenerationOrchestrator:
                     category=category_name,
                     content=draft.content,
                     faq_json=json.dumps(draft.faq) if draft.faq else None,
-                    cover_image_url=None,
+                    cover_image_url=self.context.get("cover_image_url"),
                     site_name=self.project.name if self.project else None,
                     organization_name=self.project.name if self.project else None,
                 )
@@ -1547,8 +1547,30 @@ class SEOGenerationOrchestrator:
 
         image_sources = self.context.get("image_sources") or []
         if image_sources:
-            from app.services.seo.image_plan_service import insert_images_in_content
+            from app.services.seo.image_plan_service import (
+                insert_images_in_content, localize_image_alts, pick_cover_source, track_unsplash_downloads,
+            )
+            # Alt dans la langue de l'article (un seul appel court), jamais
+            # l'alt anglais brut d'Unsplash ; repli : titre de section.
+            article_language = ((self.project.locale if self.project else None) or "fr").split("-")[0]
+            localize_image_alts(
+                content, image_sources, article_language, draft.keyword,
+                db=self.db, project_id=self.project_id,
+            )
             content = insert_images_in_content(content, image_sources)
+            # Trace des alts localisés et des images réellement insérées.
+            self._save(article.id, "image_sources", {"items": image_sources})
+            try:
+                track_unsplash_downloads(image_sources, self.image_sourcing_adapter)
+            except Exception as exc:
+                self._error("ImageDownloadTracking", str(exc))
+            try:
+                from app.services.cover_image_service import set_cover_image_if_missing
+                cover_url = set_cover_image_if_missing(self.db, article, pick_cover_source(image_sources))
+                if cover_url:
+                    self.context["cover_image_url"] = cover_url
+            except Exception as exc:
+                self._error("CoverImage", str(exc))
 
         draft.content = content
         draft.word_count = calculate_word_count(content)
