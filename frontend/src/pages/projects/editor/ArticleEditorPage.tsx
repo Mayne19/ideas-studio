@@ -14,6 +14,7 @@ import { TableHeader } from '@tiptap/extension-table-header'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { CalloutExtension } from '@/lib/tiptap/CalloutExtension'
 import { EditorImageExtension } from '@/lib/tiptap/EditorImageExtension'
+import { FigureCaptionExtension, FigureExtension } from '@/lib/tiptap/FigureExtension'
 import {
   Eye, BarChart2, Settings, History, Loader2, RefreshCw,
   AlertCircle, MessageCircle, ChevronDown, ChevronUp, Plus, Trash2,
@@ -242,6 +243,8 @@ export default function ArticleEditorPage() {
       UnderlineExtension,
       LinkExtension.configure({ openOnClick: false }),
       EditorImageExtension,
+      FigureExtension,
+      FigureCaptionExtension,
       Placeholder.configure({ placeholder: 'Commencez à rédiger votre article…' }),
       TaskList,
       TaskItem.configure({ nested: true }),
