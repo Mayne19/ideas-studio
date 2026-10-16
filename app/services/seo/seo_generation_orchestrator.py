@@ -1893,39 +1893,19 @@ class SEOGenerationOrchestrator:
         if faq_llm.is_mock:
             return
 
-        # Enrichir avec les vraies questions humaines si disponibles
+        # Questions réelles : « Autres questions posées » de la SERP (avec
+        # l'extrait de réponse Google), puis questions humaines ; le modèle
+        # voit un résumé de tout l'article, pas ses 1 500 premiers caractères.
+        from app.services.seo.faq_builder import build_faq_prompt, select_faq_questions
+        from app.services.seo.section_writer import extract_h2_texts
         insights = self.context.get("human_insights") or {}
-        real_questions = insights.get("questions", [])
-        real_pains = insights.get("pain_points", [])
-        human_context = ""
-        if real_questions:
-            human_context += (
-                "\nVraies questions posées par des utilisateurs réels "
-                "(Google People Also Ask, Reddit, forums, inspire-toi sans les copier) :\n"
-                + "\n".join(f"- {q}" for q in real_questions[:8])
-            )
-        if real_pains:
-            human_context += (
-                "\nVraies douleurs/frustrations des utilisateurs :\n"
-                + "\n".join(f"- {p}" for p in real_pains[:5])
-            )
-
-        faq_intro = (
-            f"Génère 3 à 5 questions fréquentes (FAQ) à partir de cet article"
-            + (f" en t'inspirant de ces vraies questions d'utilisateurs :{human_context}\n\n" if human_context else ".\n")
+        paa = (self.context.get("research_brief") or {}).get("people_also_ask") or []
+        questions = select_faq_questions(
+            paa, extract_h2_texts(draft.content or ""), insights.get("questions") or [],
         )
-
-        faq_prompt = (
-            faq_intro
-            + f"Titre : {draft.title}\n"
-            f"Mot-clé principal : {draft.keyword}\n"
-            f"Extrait du contenu :\n{draft.content[:1500]}\n\n"
-            "Règles strictes :\n"
-            "- Chaque réponse : 1 à 4 phrases maximum\n"
-            "- Les questions ne doivent pas répéter les titres H2 de l'article\n"
-            "- Questions variées : définition, cas d'usage, comparaison, conseil\n"
-            "- Réponses directes, sans formule introductive\n\n"
-            'Réponds uniquement avec un objet JSON au format {"faq":[{"question":"...","answer":"..."}]}.'
+        self.context["faq_questions"] = questions
+        faq_prompt = build_faq_prompt(
+            draft.title, draft.keyword, draft.content or "", questions, insights.get("pain_points") or [],
         )
         try:
             faq_data = faq_llm.generate_json(
