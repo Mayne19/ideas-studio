@@ -27,7 +27,7 @@ import {
   requeueWriting,
   cancelWriting,
 } from '@/api/ideas'
-import { pipelineRunMessage, triggerPipelineRun } from '@/api/pipeline'
+import { getPipelineSettings, pipelineRunMessage, triggerPipelineRun } from '@/api/pipeline'
 import type { PipelineRunResult } from '@/api/pipeline'
 import { listCategories } from '@/api/categories'
 import { useProject } from '@/context/ProjectContext'
@@ -67,7 +67,7 @@ const SCORE_OPTIONS = [
 const VALIDATE_FILTER_OPTIONS = [
   { value: 'all', label: 'Tous' },
   { value: 'ready', label: 'Prêts' },
-  { value: 'high_score', label: 'Score ≥ 90' },
+  { value: 'high_score', label: 'Score publiable' },
   { value: 'warnings', label: 'Warnings critiques' },
   { value: 'no_date', label: 'Sans date planifiée' },
 ]
@@ -921,6 +921,21 @@ function WritingTab({ projectId, categories }: { projectId: string; categories: 
 
 // ── Validate Tab ─────────────────────────────────────────────────────────────
 
+function BlockedReasons({ result }: { result: BulkValidateResponse }) {
+  const blocked = result.blocked_articles ?? []
+  if (blocked.length === 0) return null
+  return (
+    <ul className="mt-1.5 flex flex-col gap-0.5 text-[12px] text-warning">
+      {blocked.slice(0, 5).map((item) => (
+        <li key={item.article_id} className="truncate">
+          <span className="font-medium">{item.title || 'Article'}</span>
+          {item.reasons[0] && <span className="text-tertiary"> — {item.reasons[0]}</span>}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 type ValidateFilter = 'all' | 'ready' | 'high_score' | 'warnings' | 'no_date'
 
 function ValidateTab({ projectId, categories }: { projectId: string; categories: Category[] }) {
@@ -937,6 +952,21 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
   const [error, setError] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<Article | null>(null)
   const [deleting, setDeleting] = useState(false)
+  // Score global minimum de publication (Paramètres → Pipeline) : en dessous,
+  // le backend refuse la publication et la programmation.
+  const [minPublishScore, setMinPublishScore] = useState(90)
+
+  useEffect(() => {
+    let cancelled = false
+    getPipelineSettings(projectId)
+      .then((s) => {
+        if (cancelled || typeof s.min_publish_score !== 'number') return
+        setMinPublishScore(s.min_publish_score)
+        setScoreThreshold((current) => Math.max(current, s.min_publish_score))
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [projectId])
 
   const load = useCallback(() => {
     setLoadStatus('loading')
@@ -953,12 +983,12 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
   const visible = useMemo(() => {
     switch (filter) {
       case 'ready': return articles.filter((a) => a.is_validable && a.scheduled_for)
-      case 'high_score': return articles.filter((a) => (finiteScore(a.global_score) ?? 0) >= 90)
+      case 'high_score': return articles.filter((a) => (finiteScore(a.global_score) ?? 0) >= minPublishScore)
       case 'warnings': return articles.filter((a) => a.critical_warnings.length > 0)
       case 'no_date': return articles.filter((a) => !a.scheduled_for)
       default: return articles
     }
-  }, [articles, filter])
+  }, [articles, filter, minPublishScore])
 
   const eligibleCount = useMemo(
     () => articles.filter((a) => (finiteScore(a.global_score) ?? 0) >= scoreThreshold).length,
@@ -1029,7 +1059,10 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
             onChange={(e) => setScoreThreshold(Number(e.target.value))}
             className="h-10 rounded-[10px] border border-border bg-transparent px-3 text-[14px] text-primary focus:outline-none focus:ring-2 focus:ring-accent/30"
           >
-            {SCORE_THRESHOLD_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {SCORE_THRESHOLD_OPTIONS.filter((o) => Number(o.value) >= minPublishScore).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {!SCORE_THRESHOLD_OPTIONS.some((o) => Number(o.value) === minPublishScore) && (
+              <option value={minPublishScore}>Score ≥ {minPublishScore}</option>
+            )}
           </select>
           <Button
             size="sm"
@@ -1050,11 +1083,17 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
         </select>
       </div>
 
+      <div className="mb-3 rounded-[10px] border border-border bg-surface-soft px-3 py-2 text-[13px] text-secondary">
+        Publication autorisée à partir d'un score global de <span className="font-semibold text-primary">{minPublishScore}/100</span>.
+        En dessous, l'article reste bloqué (réglable de 85 à 100 dans Paramètres → Pipeline). Les sous-scores SEO, GEO et originalité restent indicatifs.
+      </div>
+
       {error && <div className="mb-3 rounded-[10px] border border-danger/20 bg-danger/5 px-3 py-2 text-[14px] text-danger">{error}</div>}
 
       {bulkResult && !confirmMode && (
         <div className="mb-3 rounded-[10px] bg-surface-soft px-3 py-2 text-[14px] text-secondary">
           {bulkResult.validated_count ?? bulkResult.scheduled_count} traité(s), {bulkResult.blocked_count} bloqué(s).
+          <BlockedReasons result={bulkResult} />
         </div>
       )}
 
@@ -1179,6 +1218,7 @@ function ValidateTab({ projectId, categories }: { projectId: string; categories:
             <>
               <div className="rounded-[10px] bg-surface-soft px-3 py-2 text-[14px] text-secondary">
                 {bulkResult.validated_count ?? bulkResult.scheduled_count} traité(s), {bulkResult.blocked_count} bloqué(s).
+                <BlockedReasons result={bulkResult} />
               </div>
               <Button size="sm" className="justify-center" onClick={() => { setConfirmMode(null); setBulkResult(null) }}>Fermer</Button>
             </>
