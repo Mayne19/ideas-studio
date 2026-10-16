@@ -53,3 +53,13 @@ def test_heading_hierarchy_detects_orphan_h3_skips_and_h5():
     assert "Niveau sauté : H2 puis H4" in details
     assert any(d.startswith("H5 interdit") for d in details)
     assert _rule(validate_structure(GOOD, TITLE), "heading_hierarchy")["passed"]
+
+
+def test_paragraph_longer_than_five_sentences_fails_with_location():
+    long_section = _section("Un paragraphe trop long", sizes=(6, 1, 2))
+    report = validate_structure(GOOD + long_section, TITLE)
+    rule = _rule(report, "paragraph_length")
+    assert not rule["passed"]
+    assert rule["violations"][0]["section"] == "Un paragraphe trop long"
+    assert rule["violations"][0]["unit"] == "section:5"
+    assert rule["violations"][0]["detail"].startswith("6 phrases")
