@@ -402,8 +402,8 @@ class SEOGenerationOrchestrator:
         # Mode « agent » : un agent rédacteur unique remplace la recherche, le
         # plan, la rédaction et la révision (app/services/seo/agent_generation.py).
         if self._generation_mode() == "agent":
-            from app.services.seo.agent_writer import resolve_agent_credentials
-            api_key, agent_model = resolve_agent_credentials(self.db, self.project_id)
+            from app.services.seo.agent_writer import resolve_agent_route
+            agent_provider, api_key, agent_model = resolve_agent_route(self.db, self.project_id)
             if api_key:
                 from app.services.seo.agent_generation import generate_with_agent
                 self.context["context_hint"] = context_hint
@@ -412,10 +412,10 @@ class SEOGenerationOrchestrator:
                     category_name=category_name, project_context=project_context,
                     category_strategy=category_strategy, idea_discovery=idea_discovery,
                     cannibalization=cannibalization, audience=audience, existing_article_id=existing_article_id,
-                    api_key=api_key, model=agent_model,
+                    api_key=api_key, model=agent_model, provider=agent_provider,
                 )
-            self.limitations.append("agent_writer: clé Anthropic absente, repli sur l'ancienne chaîne")
-            self._error("AgentWriter", "Clé Anthropic absente (Paramètres → Fournisseurs IA) : repli sur l'ancienne chaîne.")
+            self.limitations.append("agent_writer: aucune clé Anthropic ni OpenRouter, repli sur l'ancienne chaîne")
+            self._error("AgentWriter", "Aucune clé Anthropic ni OpenRouter (Paramètres → Fournisseurs IA) : repli sur l'ancienne chaîne.")
 
         # 5. IntentAnalysis
         intent_analysis = analyze_intent_dict(

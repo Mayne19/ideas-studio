@@ -122,7 +122,8 @@ def _unique_slug(db, project_id: str, wanted: str, article_id: str) -> str:
 def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, final_keyword: str,
                         chosen_category: str | None, category_name: str, project_context: dict,
                         category_strategy: dict, idea_discovery: dict, cannibalization: dict,
-                        audience: str | None, existing_article_id: str | None, api_key: str, model: str) -> Article:
+                        audience: str | None, existing_article_id: str | None, api_key: str, model: str,
+                        provider: str = "anthropic") -> Article:
     from app.models.content import ArticleSeo
     from app.models.ai import WorkflowRun
     from app.services.seo.agent_writer import (
@@ -163,7 +164,13 @@ def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, 
     editor_notes = " ".join(x for x in (orch.context.get("expert_notes") or "", orch.context.get("context_hint") or "") if x)
     user_message = build_user_message(keyword=final_keyword, category=category_name, editor_notes=editor_notes or None,
                                       published_articles=published_articles(db, orch.project))
-    writer = AgentWriter(anthropic_client(api_key), model=model, system=system)
+    if provider == "openrouter":
+        from app.services.seo.agent_writer_openrouter import OpenRouterAgentClient, page_fetcher
+        client = OpenRouterAgentClient(api_key, model=model, search_fn=orch.serp_adapter.search,
+                                       fetch_fn=page_fetcher(orch.page_cache), max_searches=5, max_fetches=8)
+    else:
+        client = anthropic_client(api_key)
+    writer = AgentWriter(client, model=model, system=system)
     run_report: dict = {"rounds": []}
     try:
         orch._step("AgentWriter (recherche et rédaction)")
