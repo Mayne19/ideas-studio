@@ -123,6 +123,12 @@ def guard_revision(before: str, after: str, allowed_numbers_text: str) -> str | 
     heads_after = [(m.group(1), html_to_text(m.group(2))) for m in _H_RE.finditer(after)]
     if heads_before[:1] != heads_after[:1]:
         return "titre H2 modifié"
+    # Une révision ne crée ni ne duplique de section : mêmes H2, dans le même
+    # ordre (une section recopiée en double est passée par ce trou).
+    if [h for h in heads_after if h[0] == "2"] != [h for h in heads_before if h[0] == "2"]:
+        return "sections H2 ajoutées ou supprimées"
+    if len([h for h in heads_after if h[0] == "3"]) > len([h for h in heads_before if h[0] == "3"]) + 1:
+        return "trop de sous-titres H3 ajoutés"
     if set(_HREF_RE.findall(before)) - set(_HREF_RE.findall(after)):
         return "lien perdu"
     new_numbers = {
