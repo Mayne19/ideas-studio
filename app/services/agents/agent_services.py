@@ -774,7 +774,9 @@ def generate_article_title(
         f"Réponse attendue : {expected_answer or ''}\n"
         + (f"Titres des pages concurrentes :\n{competitors}\n" if competitors else "")
         + "\nÉcris le titre H1 de l'article, dans la langue du mot-clé :\n"
-        "- 45 à 65 caractères, majuscule initiale, contient le mot-clé ou sa forme naturelle ;\n"
+        "- 45 à 65 caractères, majuscule initiale, contient le mot-clé ou sa forme naturelle : "
+        "chaque terme porteur de sens du mot-clé y figure (« combien coûte un site vitrine » -> "
+        "« coût », « site », « vitrine ») ;\n"
         "- promet exactement la réponse à la question du lecteur, sans exagération ni clickbait ;\n"
         "- se distingue des titres concurrents ; pas de deux-points en série, pas de tiret cadratin.\n"
         "Réponds UNIQUEMENT avec un JSON valide :\n"
