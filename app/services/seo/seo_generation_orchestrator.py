@@ -1544,10 +1544,26 @@ class SEOGenerationOrchestrator:
             plan = self.context.get(key) or {}
             return (plan.get("links") or []) if isinstance(plan, dict) else []
 
+        # Faits réellement utilisés (marqueurs [F#]) : leurs sources passent en
+        # tête des candidates, avec la citation exacte comme extrait.
+        external = _links("external_links")
+        ledger = self.context.get("fact_ledger") or {}
+        markers = self.context.get("fact_markers") or []
+        if ledger.get("facts") and markers:
+            from app.services.seo.external_link_service import _serp_competitor_hosts
+            from app.services.seo.fact_ledger_service import citation_candidates_from_markers, enrich_markers
+            self._save(article.id, "fact_markers", {"markers": enrich_markers(ledger, markers)})
+            competitor_hosts = _serp_competitor_hosts(
+                (self.context.get("research_brief") or {}).get("sources_consulted") or [], draft.keyword or "",
+            )
+            from_facts = citation_candidates_from_markers(ledger, markers, draft.keyword or "", competitor_hosts)
+            fact_urls = {link["url"] for link in from_facts}
+            external = from_facts + [link for link in external if link.get("url") not in fact_urls]
+
         try:
             linked, report = insert_citations(
                 content, self._polish_call_fn(article),
-                _links("external_links"), _links("internal_links"),
+                external, _links("internal_links"),
                 keyword=draft.keyword or "",
                 fatal_exceptions=(WritingCancelledError,),
             )
@@ -1600,6 +1616,8 @@ class SEOGenerationOrchestrator:
         section_writer = self._build_section_writer(
             draft, production_brief, outline, include_callouts, writer_system,
         )
+        # Même liste que le rapport : les sections régénérées y ajoutent leurs marqueurs.
+        self.context["fact_markers"] = section_writer.report["fact_markers"]
         try:
             content = section_writer.write_article()
         except SectionWritingError as exc:
