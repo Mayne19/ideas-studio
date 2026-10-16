@@ -117,6 +117,7 @@ def to_public_batch(db: Session, articles: list[Article]) -> list[ArticlePublic]
     from app.services.seo.artifacts import get_latest_artifacts_bulk
     from app.services.scoring_service import compute_global_score
     from app.services.validation_service import check_validation_thresholds
+    from app.services.pipeline_service import resolve_min_publish_score
 
     if not articles:
         return []
@@ -209,6 +210,7 @@ def to_public_batch(db: Session, articles: list[Article]) -> list[ArticlePublic]
             "workflow_failed": bool(latest_run and latest_run.status_reason_id == RunStatus.FAILED),
             "workflow_incomplete": bool(latest_run and latest_run.status_reason_id in (RunStatus.QUEUED, RunStatus.RUNNING)),
             "cost_limit_eur": float(pipeline.cost_limit_per_article) if pipeline and pipeline.cost_limit_per_article else None,
+            "min_publish_score": resolve_min_publish_score(pipeline),
             "scheduled_for": article.scheduled_for,
         }
 

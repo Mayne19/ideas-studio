@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.models.ai import Pipeline, WorkflowRun
 from app.models.content import Article, ArticleKeyword, ArticleRevision, ArticleSeo, Keyword
 from app.models.reference import ArticleStatus, KeywordRole, RunStatus, set_article_status
+from app.services.pipeline_service import resolve_min_publish_score
 from app.services.scoring_service import compute_global_score
 from app.services.seo.artifacts import get_latest_artifacts
 
@@ -69,8 +70,37 @@ def _load_validation_context(
             latest_run and latest_run.status_reason_id in (RunStatus.QUEUED, RunStatus.RUNNING)
         ),
         "cost_limit_eur": float(pipeline.cost_limit_per_article) if pipeline and pipeline.cost_limit_per_article else None,
+        "min_publish_score": resolve_min_publish_score(pipeline),
         "scheduled_for": article.scheduled_for,
     }
+
+
+class PublishBlockedError(ValueError):
+    """Publication refusée : score global sous le minimum du projet."""
+
+
+def publish_score_block_reason(scoring: dict, min_score: int) -> str | None:
+    """Seul le score global de qualité bloque la publication (réglage projet
+    « Score minimum de publication », 85-100, défaut 90) ; les sous-scores
+    heuristiques restent des avertissements. Un score incomplet ne peut pas
+    prouver le seuil : il bloque aussi."""
+    if not scoring.get("global_score_valid", False):
+        return scoring.get("incomplete_reason") or "Score global incomplet"
+    global_score = scoring.get("global_score")
+    if global_score is None:
+        return "Score global indisponible"
+    if global_score < min_score:
+        return f"Score global ({global_score}) inférieur au minimum de publication ({min_score}/100)"
+    return None
+
+
+def assert_publishable_score(db: Session, article: Article) -> None:
+    """Garde-fou appelé avant toute publication (manuelle, en masse ou
+    programmée) : lève PublishBlockedError si le score global est trop bas."""
+    scoring = compute_global_score(db, article.id, article=article)
+    reason = publish_score_block_reason(scoring, resolve_min_publish_score(db.get(Pipeline, article.project_id)))
+    if reason:
+        raise PublishBlockedError(reason)
 
 
 def compute_critical_warnings(ctx: dict[str, Any]) -> list[dict]:
@@ -213,15 +243,14 @@ def check_validation_thresholds(
     blocking_reasons: list[str] = []
     non_blocking_warnings: list[dict] = []
 
-    # Le score global est un signal heuristique informatif pour l'éditeur :
-    # il ne bloque plus la publication (seul un score incomplet bloque encore).
-    if not global_score_valid:
-        blocking_reasons.append(scoring.get("incomplete_reason", "Score global incomplet"))
-    elif global_score is not None and global_score < 90:
-        non_blocking_warnings.append({
-            "type": "low_global_score", "severity": "warning",
-            "message": f"Score global ({global_score}) < 90",
-        })
+    # Seul le score global bloque, sous le minimum de publication du projet
+    # (Paramètres → Pipeline, 85-100, défaut 90) ; un score incomplet bloque aussi.
+    min_publish_score = ctx.get("min_publish_score")
+    if min_publish_score is None:
+        min_publish_score = resolve_min_publish_score(db.get(Pipeline, article.project_id))
+    score_block = publish_score_block_reason(scoring, min_publish_score)
+    if score_block:
+        blocking_reasons.append(score_block)
 
     # Sous-scores heuristiques : signalés à l'éditeur, jamais bloquants.
     sub_score_thresholds = (
@@ -257,6 +286,7 @@ def check_validation_thresholds(
 
     return {
         "valid": len(blocking_reasons) == 0,
+        "min_publish_score": min_publish_score,
         "global_score": global_score,
         "global_score_valid": global_score_valid,
         "reasons": blocking_reasons,
