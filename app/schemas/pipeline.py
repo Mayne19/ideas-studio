@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 # Bornes des réglages projet éditables depuis Paramètres → Pipeline.
@@ -32,6 +32,8 @@ class PipelineSettingsUpdate(BaseModel):
     ideas_per_run: Optional[int] = Field(default=None, ge=IDEAS_PER_RUN_MIN, le=IDEAS_PER_RUN_MAX)
     # Score global minimum pour autoriser la publication.
     min_publish_score: Optional[int] = Field(default=None, ge=MIN_PUBLISH_SCORE_MIN, le=MIN_PUBLISH_SCORE_MAX)
+    # « agent » : agent rédacteur unique ; « pipeline » : ancienne chaîne.
+    generation_mode: Optional[Literal["agent", "pipeline"]] = None
     max_pending_drafts: Optional[int] = None
     max_parallel_writing_jobs: Optional[int] = None
     paused_until: Optional[datetime] = None
@@ -61,6 +63,7 @@ class PipelineSettingsPublic(BaseModel):
     ideas_per_week: Optional[int] = None
     ideas_per_run: int = DEFAULT_IDEAS_PER_RUN
     min_publish_score: int = DEFAULT_MIN_PUBLISH_SCORE
+    generation_mode: str = "agent"
     max_pending_drafts: Optional[int] = None
     max_parallel_writing_jobs: Optional[int] = None
     paused_until: Optional[datetime] = None
