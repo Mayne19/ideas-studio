@@ -1057,35 +1057,20 @@ class SEOGenerationOrchestrator:
         except Exception as exc:
             self._error("ClaimExtraction", str(exc))
 
-        # 20b. FactCheckPass (LLM-based)
-        try:
-            if self.agent_router is not None:
-                from app.services.agents.agent_services import fact_check_article
-                fact_check = fact_check_article(draft.content or "", draft.title, draft.keyword, db=self.db, project_id=self.project_id)
-                self._save(article.id, "fact_check_report", fact_check)
-                self._step("FactCheckPass")
-        except Exception as exc:
-            self._error("FactCheckPass", str(exc))
-
-        # 20c. QualityGate (LLM-based) — UN SEUL juge consolide la revue
-        # éditoriale, la rétention, l'engagement et la notation qualité en une
-        # seule décision (quality_grade). Évite les avis contradictoires de
-        # juges séparés évaluant le même texte.
-        try:
-            if self.agent_router is not None:
-                from app.services.agents.agent_services import run_quality_gate
-                gate = run_quality_gate(
-                    draft.content or "", draft.title, draft.keyword,
-                    db=self.db, project_id=self.project_id,
-                )
-                editorial_quality_report = self._get(article.id, "editorial_quality_report") or {}
-                editorial_quality_report["llm_review"] = gate
-                if gate.get("quality_grade") and gate["quality_grade"] != "unknown":
-                    editorial_quality_report["quality_grade"] = gate["quality_grade"]
-                self._save(article.id, "editorial_quality_report", editorial_quality_report)
-                self._step(f"QualityGate — grade {gate.get('quality_grade', 'unknown')}")
-        except Exception as exc:
-            self._error("QualityGate", str(exc))
+        # 20b/20c. L'ancien FactCheck (sans sources) et l'ancien QualityGate
+        # (verdict informatif, jamais utilisé) sont remplacés par le juge
+        # éditorial A8 + révision ciblée A9, exécutés pendant la finition
+        # (voir _editorial_review_loop) : son verdict est repris ici.
+        judgement = (self.context.get("editorial_judgement") or {}).get("final")
+        if judgement:
+            editorial_quality_report = self._get(article.id, "editorial_quality_report") or {}
+            editorial_quality_report["llm_review"] = {
+                "status": "success",
+                "content_score": judgement.get("content_score"),
+                "blockers": judgement.get("blockers"),
+                "summary": judgement.get("summary"),
+            }
+            self._save(article.id, "editorial_quality_report", editorial_quality_report)
 
         # 23. GenerationReport
         self._finalize_report(article, draft, category_name, intent_analysis, research_brief, keyword_brief, outline, faq_plan, callout_plan, image_plan_result)
@@ -1746,6 +1731,7 @@ class SEOGenerationOrchestrator:
         if self._is_french():
             from app.services.seo.french_typography import fix_french_typography
             content = fix_french_typography(content)
+        content = self._editorial_review_loop(article, draft, content, section_writer, structure_fix)
 
         illustration_cfg = self.context.get("illustration_config")
         if illustration_cfg is not None and illustration_cfg.mode == "ai":
@@ -2114,6 +2100,91 @@ class SEOGenerationOrchestrator:
                     draft.faq = normalized
         except Exception:
             pass
+
+    def _editorial_review_loop(self, article: Article, draft: _DraftArticle, content: str,
+                               section_writer, structure_report: dict | None) -> str:
+        """Juge éditorial A8 puis révision ciblée A9 des sections fautives,
+        2 révisions au plus. La meilleure version jugée (sans blocage d'abord,
+        puis meilleure note) est conservée ; le verdict final alimente le
+        score de publication (scoring_service)."""
+        from app.services.seo.editorial_judge import judge_article
+        from app.services.seo.section_writer import FORMAT_COMPONENT_INSTRUCTIONS
+        from app.services.seo.structure_fixer import apply_deterministic_fixes
+        from app.services.seo.structure_validator import validate_structure
+        from app.services.seo.targeted_revision import revise_sections
+
+        brief = self.context.get("production_brief") or {}
+        figures = [f"{fig['quantity']} : {fig['reference']}" for fig in self.context.get("reference_figures") or []]
+        ledger = [f for f in (self.context.get("fact_ledger") or {}).get("facts") or [] if isinstance(f, dict)]
+        facts = [
+            f"{f.get('fact_id')} [{f.get('source_tier') or 'neutral'}] {str(f.get('claim', ''))[:200]} "
+            f"(source : {f.get('url', '')})"
+            for f in ledger
+        ]
+        facts_text = " ".join(f"{f.get('claim', '')} {f.get('figure', '')}" for f in ledger)
+        fmt = self._recommended_format()
+        required = FORMAT_COMPONENT_INSTRUCTIONS.get(fmt, "")
+        reference_block = ("Chiffres de référence (identiques dans tout l'article) :\n" + "\n".join(f"- {f}" for f in figures)) if figures else ""
+
+        def judge_call(prompt: str, step: str, temperature: float) -> str:
+            self._raise_if_cancelled(article)
+            return self._write_pass(prompt, "quality_gate", article, temperature, step)
+
+        def facts_block_for(index: int) -> str:
+            key = "intro" if index == 0 else index - 1
+            items = (getattr(section_writer, "section_facts", {}) or {}).get(key) or []
+            lines = [f"- {f.get('claim', '')}" + (f" ({f['figure']})" if f.get("figure") else "") for f in items]
+            return ("Faits vérifiés utilisables :\n" + "\n".join(lines)) if lines else ""
+
+        rounds: list[dict] = []
+        best: tuple[tuple, str, dict] | None = None
+        current, report = content, structure_report
+        for attempt in range(3):
+            judgement = judge_article(
+                current, judge_call, title=draft.title or "", keyword=draft.keyword or "", brief=brief,
+                facts=facts, reference_figures=figures, structure_report=report, required_component=required,
+                fatal_exceptions=(WritingCancelledError,),
+            )
+            if judgement.get("error"):
+                self._error("EditorialJudge", judgement["error"])
+                rounds.append({"attempt": attempt, "error": judgement["error"]})
+                break
+            rank = (not judgement["blockers"], judgement["content_score"])
+            rounds.append({"attempt": attempt, **judgement})
+            if best is None or rank > best[0]:
+                best = (rank, current, judgement)
+            self._step(f"EditorialJudge #{attempt + 1} ({judgement['content_score']}/95, "
+                       f"{len(judgement['blockers'])} blocage(s))")
+            publishable = not judgement["blockers"] and judgement["content_score"] >= self._min_publish_score() - 5
+            if publishable or not judgement["section_fixes"] or attempt == 2:
+                break
+            revised, revision = revise_sections(
+                current, judgement["section_fixes"], self._polish_call_fn(article),
+                facts_text=facts_text, reference_block=reference_block, facts_block_for=facts_block_for,
+                fatal_exceptions=(WritingCancelledError,),
+            )
+            rounds[-1]["revision"] = revision
+            self._step(f"TargetedRevision #{attempt + 1} ({len(revision['applied'])} section(s))")
+            if not revision["applied"]:
+                break
+            current = apply_deterministic_fixes(revised, draft.title)
+            if self._is_french():
+                from app.services.seo.french_typography import fix_french_typography
+                current = fix_french_typography(current)
+            report = validate_structure(current, draft.title, fmt)
+
+        final = best[2] if best else None
+        self.context["editorial_judgement"] = {"final": final, "rounds": rounds}
+        self._save(article.id, "editorial_judgement", {"final": final, "rounds": rounds})
+        return best[1] if best else content
+
+    def _min_publish_score(self) -> float:
+        from app.models.ai import Pipeline
+        from app.services.pipeline_service import resolve_min_publish_score
+        try:
+            return float(resolve_min_publish_score(self.db.get(Pipeline, self.project_id)))
+        except Exception:
+            return 90.0
 
     def _is_french(self) -> bool:
         return ((self.project.locale if self.project else None) or "fr").startswith("fr")
