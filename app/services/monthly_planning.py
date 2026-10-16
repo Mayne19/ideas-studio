@@ -148,6 +148,13 @@ def generate_monthly_plan(
         for cat in categories:
             category_frequencies[cat.id] = 1
 
+    # Plafond dur par lancement (Paramètres → Pipeline → Idées par lancement) :
+    # au-delà, chaque idée coûterait des appels LLM non demandés.
+    from app.services.pipeline_service import allocate_ideas_per_category, resolve_ideas_per_run
+    ordered = sorted(category_frequencies.items(), key=lambda x: -x[1])
+    category_frequencies = allocate_ideas_per_category(ordered, resolve_ideas_per_run(db, project_id))
+    total_ideas = sum(category_frequencies.values())
+
     # Build niche map for anti-collision (repose sur overrides.niche, plus de colonne dédiée)
     category_niches: dict[str, str | None] = {
         cat.id: (cat.overrides or {}).get("niche") for cat in categories
