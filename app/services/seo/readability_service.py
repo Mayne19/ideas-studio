@@ -73,10 +73,17 @@ def compute_lix(text: str) -> float:
 
 
 def lix_to_score(lix: float) -> float:
-    if lix <= 20: return 95
-    if lix <= 30: return 85
-    if lix <= 40: return 75
-    if lix <= 50: return 60
+    """Barème calibré sur le français (mesure 2026-10-16) : les blogs de
+    référence du fondateur (codeur.com, nocodefactory.fr) tombent entre LIX
+    45 et 53, le français comptant bien plus de mots de 7 lettres et plus
+    que l'anglais. L'ancien barème (anglais/suédois) leur donnait 40 à 60/100.
+    Ici LIX 45 (niveau des meilleurs) = 80, et chaque palier plus clair que
+    la référence reste mieux noté."""
+    if lix <= 35: return 95
+    if lix <= 40: return 90
+    if lix <= 45: return 80
+    if lix <= 50: return 70
+    if lix <= 55: return 55
     if lix <= 60: return 40
     if lix <= 70: return 20
     return 5
