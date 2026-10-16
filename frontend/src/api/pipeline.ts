@@ -20,6 +20,8 @@ export type PipelineSettings = {
   ideas_per_run: number
   // Score global minimum pour publier (85 à 100).
   min_publish_score: number
+  // « agent » : agent rédacteur unique ; « pipeline » : ancienne chaîne.
+  generation_mode?: 'agent' | 'pipeline'
   max_parallel_writing_jobs?: number | null
   total_monthly_from_categories: number | null
   categories_frequencies: Array<{
@@ -49,6 +51,7 @@ export type PipelineSettingsUpdate = {
   cost_limit_per_article_eur?: number | null
   ideas_per_run?: number
   min_publish_score?: number
+  generation_mode?: 'agent' | 'pipeline'
 }
 
 export type PipelineLog = {

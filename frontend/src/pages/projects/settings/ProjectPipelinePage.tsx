@@ -73,6 +73,7 @@ export default function ProjectPipelinePage() {
   const [maxParallelWriting, setMaxParallelWriting] = useState('3')
   const [ideasPerRun, setIdeasPerRun] = useState(2)
   const [minPublishScore, setMinPublishScore] = useState(90)
+  const [generationMode, setGenerationMode] = useState<'agent' | 'pipeline'>('agent')
 
   useEffect(() => {
     if (!projectId) return
@@ -94,6 +95,7 @@ export default function ProjectPipelinePage() {
         setMaxParallelWriting(s.max_parallel_writing_jobs == null ? '3' : String(s.max_parallel_writing_jobs))
         setIdeasPerRun(s.ideas_per_run ?? 2)
         setMinPublishScore(s.min_publish_score ?? 90)
+        setGenerationMode(s.generation_mode ?? 'agent')
         setLogs(l)
         setLoadStatus('success')
         setLoadError('')
@@ -129,6 +131,7 @@ export default function ProjectPipelinePage() {
         max_parallel_writing_jobs: Math.max(1, Math.min(10, Number(maxParallelWriting) || 3)),
         ideas_per_run: ideasPerRun,
         min_publish_score: minPublishScore,
+        generation_mode: generationMode,
       })
       setSettings(updated)
       setDirty(false)
@@ -273,6 +276,24 @@ export default function ProjectPipelinePage() {
           </div>
           <p className="mt-1.5 text-[11px] text-tertiary">
             Un article dont le score global est inférieur ne peut pas être publié. Les sous-scores (SEO, GEO, originalité…) restent de simples avertissements.
+          </p>
+        </div>
+
+        <div>
+          <label htmlFor="generation-mode" className="mb-1.5 block text-[12px] font-medium text-secondary">
+            Mode de génération
+          </label>
+          <select
+            id="generation-mode"
+            value={generationMode}
+            onChange={(e) => { setGenerationMode(e.target.value as 'agent' | 'pipeline'); setDirty(true) }}
+            className="h-9 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
+          >
+            <option value="agent">Agent rédacteur unique (recommandé)</option>
+            <option value="pipeline">Ancienne chaîne en plusieurs étapes (comparaison)</option>
+          </select>
+          <p className="mt-1.5 text-[11px] text-tertiary">
+            L'agent cherche, lit les concurrents et les sources, puis rédige l'article d'un seul tenant. Clé dans Fournisseurs IA (Anthropic), modèle dans Agents (agent_writer).
           </p>
         </div>
       </Card>
