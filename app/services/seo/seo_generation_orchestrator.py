@@ -1473,7 +1473,7 @@ class SEOGenerationOrchestrator:
             external_links=_links("external_links"),
             internal_links=_links("internal_links"),
             conclusion_title=(outline or {}).get("conclusion_title") or "",
-            style_example=build_reference_examples_block(),
+            style_example=build_reference_examples_block(fmt=fmt),
             fatal_exceptions=(WritingCancelledError,),
             section_facts=section_facts,
             gain_elements=assign_gain_elements(
