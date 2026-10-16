@@ -46,7 +46,8 @@ def build_production_brief(
     content_gaps = content_gaps or {}
 
     reader_question = intent_analysis.get("reader_real_question") or title or keyword
-    angle = editorial_angle.get("main_angle")
+    idea_prebrief = intent_analysis.get("idea_prebrief") or {}
+    angle = editorial_angle.get("main_angle") or idea_prebrief.get("angle")
     top_priorities: list[str] = [f"Répondre à la question réelle du lecteur : {reader_question}"]
     if intent_analysis.get("expected_answer"):
         top_priorities.append(f"Réponse attendue : {intent_analysis['expected_answer']}")
@@ -75,6 +76,7 @@ def build_production_brief(
         "editorial_promise": editorial_angle.get("editorial_promise") or "",
         "main_angle": angle or "",
         "differentiation": editorial_angle.get("differentiation") or "",
+        "idea_prebrief": idea_prebrief,
         "word_count_range": word_count_range,
         "top_priorities": top_priorities,
         "secondary_keywords": keyword_brief.get("secondary_keywords") or [],
