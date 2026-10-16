@@ -104,3 +104,9 @@ def test_em_dash_banned_words_and_vous_saturation_fail():
     vous = GOOD + ("<h2>Votre choix</h2><p>Vous comparez les plans. Vous lisez les limites. "
                    "Vous choisissez trop vite.</p>" + _para(2))
     assert not _rule(validate_structure(vous, TITLE), "vous_saturation")["passed"]
+
+
+def test_conclusion_starting_with_en_conclusion_fails():
+    ending = "<h2>Le mot de la fin</h2><p>En conclusion, Webflow vaut son prix.</p>" + _para(2)
+    rule = _rule(validate_structure(GOOD + ending, TITLE), "conclusion_opening")
+    assert not rule["passed"] and rule["violations"][0]["section"] == "Le mot de la fin"
