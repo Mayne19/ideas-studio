@@ -329,6 +329,19 @@ class SEOGenerationOrchestrator:
                     self.limitations.append("IdeaGenerator: aucune idée générée, repli statique")
             except Exception as exc:
                 self._error("IdeaGenerator", str(exc))
+        # 3c. IdeaHandoff — pré-brief de l'idée (angle, format, réponse
+        # principale, questions, mots-clés secondaires) écrit par idea_engine
+        # et jusque-là jamais relu.
+        from app.services.seo.idea_handoff import (
+            apply_prebrief_to_idea, apply_prebrief_to_intent, apply_prebrief_to_keyword_brief,
+            load_idea_prebrief,
+        )
+        idea_prebrief = load_idea_prebrief(self.db, existing_article_id)
+        self.context["idea_prebrief"] = idea_prebrief
+        if idea_prebrief:
+            idea_discovery = apply_prebrief_to_idea(idea_discovery, idea_prebrief)
+            audience = audience or idea_prebrief.get("audience") or None
+            self._step("IdeaHandoff")
         self.context["idea_discovery"] = idea_discovery
         self._step("IdeaDiscovery")
 
@@ -469,6 +482,10 @@ class SEOGenerationOrchestrator:
         except Exception as exc:
             self._error("IntentAnalysisRefine", str(exc))
 
+        if idea_prebrief:
+            intent_analysis = apply_prebrief_to_intent(intent_analysis, idea_prebrief)
+            self.context["intent_analysis"] = intent_analysis
+
         # 6f. TitleGeneration — un article lancé avec un simple mot-clé
         # recevait ce mot-clé brut (en minuscules) comme titre publié.
         if not preferred_title and final_title.strip().lower() == final_keyword.strip().lower():
@@ -516,6 +533,9 @@ class SEOGenerationOrchestrator:
             self._step("KeywordResearch")
         except Exception as exc:
             self._error("KeywordResearch", str(exc))
+        if idea_prebrief:
+            keyword_brief = apply_prebrief_to_keyword_brief(keyword_brief, idea_prebrief)
+            self.context["keyword_brief"] = keyword_brief
 
         # 7b. EvidencePack — sélection des faits/sources les plus fiables parmi
         # ceux déjà trouvés par ResearchBrief, pour guider la rédaction
