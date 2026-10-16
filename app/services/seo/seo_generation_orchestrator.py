@@ -1751,7 +1751,8 @@ class SEOGenerationOrchestrator:
             body_text = html_to_text(content)
             content = fix_french_typography(content)
             # Casse anglaise (« Le Coût Réel… ») dans le titre et les intertitres.
-            draft.title = fix_title_case(draft.title or "", body_text)
+            from app.services.seo.content_structure_guard import strip_tics
+            draft.title = strip_tics(fix_title_case(draft.title or "", body_text))
             content = re.sub(
                 r"(<h[23]\b[^>]*>)(.*?)(</h[23]>)",
                 lambda m: m.group(1) + fix_title_case(m.group(2), body_text) + m.group(3),
@@ -1897,7 +1898,8 @@ class SEOGenerationOrchestrator:
             meta_title = clean_meta_text(raw_title, 255) or draft.title[:255]
             if self._is_french():
                 from app.services.seo.french_typography import fix_title_case
-                meta_title = fix_title_case(meta_title, draft.title or "")
+                from app.services.seo.content_structure_guard import strip_tics
+                meta_title = strip_tics(fix_title_case(meta_title, draft.title or ""))
             draft.meta_title = self._typo(meta_title)
 
         if not draft.meta_description:
