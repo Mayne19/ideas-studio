@@ -180,6 +180,8 @@ class SEOGenerationOrchestrator:
         self.context: dict = {}
         self.started_at = perf_counter()
         self.workflow_run: WorkflowRun | None = None
+        from app.services.seo.page_cache import PageCache
+        self.page_cache = PageCache()
 
     def _log(self, message: str, level: str = "info", step: str | None = None, article_id: str | None = None):
         log_step(self.db, self.project_id, message, level=level, step=step or "orchestrator", article_id=article_id)
@@ -262,6 +264,31 @@ class SEOGenerationOrchestrator:
         ]
 
     def generate_full_article(
+        self,
+        preferred_title: str | None = None,
+        keyword: str | None = None,
+        category_id: str | None = None,
+        audience: str | None = None,
+        angle: str | None = None,
+        search_intent: str | None = None,
+        context_hint: str | None = None,
+        include_faq: bool | None = None,
+        include_callouts: bool | None = None,
+        existing_article_id: str | None = None,
+    ) -> Article:
+        # Un seul téléchargement par URL pour toute la génération : research
+        # brief, qualité des sources, lecture des pages et liens externes
+        # partagent ce cache.
+        from app.services.seo.page_cache import page_cache_scope
+        with page_cache_scope(self.page_cache):
+            return self._generate_full_article(
+                preferred_title=preferred_title, keyword=keyword, category_id=category_id,
+                audience=audience, angle=angle, search_intent=search_intent, context_hint=context_hint,
+                include_faq=include_faq, include_callouts=include_callouts,
+                existing_article_id=existing_article_id,
+            )
+
+    def _generate_full_article(
         self,
         preferred_title: str | None = None,
         keyword: str | None = None,
@@ -395,6 +422,19 @@ class SEOGenerationOrchestrator:
                 self._step("SourceQuality")
             except Exception as exc:
                 self._error("SourceQuality", str(exc))
+            # 6b'. SourcePages — texte principal complet du top 5 et de
+            # sources primaires, lu depuis le cache (pas de retéléchargement).
+            try:
+                from app.services.seo.source_pages_service import build_source_pages
+                source_pages = build_source_pages(research_brief, final_keyword, self.page_cache)
+                self.context["source_pages"] = source_pages
+                self._step(
+                    f"SourcePages ({len(source_pages['pages'])} page(s) lue(s), "
+                    f"{len(source_pages['skipped'])} ignorée(s))"
+                )
+            except Exception as exc:
+                self._error("SourcePages", str(exc))
+                self.context["source_pages"] = {"pages": [], "skipped": []}
         else:
             self.limitations.append("No real SERP research available")
 
@@ -710,6 +750,11 @@ class SEOGenerationOrchestrator:
         self._save(article.id, "external_links", external_links)
         self._save(article.id, "human_insights", self.context.get("human_insights") or {})
         self._save(article.id, "content_gaps", self.context.get("content_gaps") or {})
+        if self.context.get("source_pages") is not None:
+            source_pages = dict(self.context["source_pages"])
+            # Statistiques à jour : les liens externes ont pu réutiliser le cache.
+            source_pages["fetch_stats"] = self.page_cache.stats()
+            self._save(article.id, "source_pages", source_pages)
 
         # Plage de mots : catégorie (prioritaire) puis profil éditorial projet
         wc_min, wc_max = None, None
