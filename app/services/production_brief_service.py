@@ -35,6 +35,7 @@ def build_production_brief(
     keyword_brief: dict | None = None,
     research_brief: dict | None = None,
     evidence_pack: dict | None = None,
+    fact_ledger: dict | None = None,
     editorial_angle: dict | None = None,
     outline: dict | None = None,
     human_insights: dict | None = None,
@@ -104,6 +105,9 @@ def build_production_brief(
         "faq_planned": bool(outline.get("faq_planned")),
         "callouts_planned": bool(outline.get("callouts_planned")),
         "evidence_items": evidence_pack.get("evidence_items") or [],
+        # Registre des faits vérifiés (fact_id, citation exacte, URL) : prioritaire
+        # sur evidence_items pour le rédacteur.
+        "fact_ledger": [f for f in ((fact_ledger or {}).get("facts") or []) if isinstance(f, dict)],
         "human_insights": {
             "questions": (human_insights.get("questions") or [])[:10],
             "pain_points": (human_insights.get("pain_points") or [])[:8],
