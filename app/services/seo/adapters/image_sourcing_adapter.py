@@ -134,13 +134,24 @@ class ImageSourcingAdapter:
             data = resp.json()
             results = []
             for item in data.get("results", [])[:limit]:
+                user = item.get("user") or {}
+                links = item.get("links") or {}
                 results.append({
                     "image_url": item["urls"]["regular"],
-                    "source_url": item["links"]["html"],
+                    "source_url": links.get("html", ""),
                     "source_name": "Unsplash",
-                    "author": item["user"]["name"],
+                    "author": user.get("name"),
+                    # Profil du photographe : lien d'attribution obligatoire
+                    # (Unsplash API Guidelines), complété des paramètres UTM
+                    # au rendu (image_plan_service._image_html).
+                    "author_url": (user.get("links") or {}).get("html"),
+                    # À appeler quand la photo est réellement utilisée
+                    # (track_download) — exigence des Unsplash API Guidelines.
+                    "download_location": links.get("download_location"),
                     "license": "Unsplash License",
-                    "alt_text": item.get("alt_description", ""),
+                    # Description anglaise brute : indice pour rédiger l'alt
+                    # localisé, jamais insérée telle quelle dans l'article.
+                    "alt_text": item.get("alt_description") or "",
                     "caption": "",
                     "usage_rights_status": "free_with_attribution",
                 })
@@ -150,6 +161,28 @@ class ImageSourcingAdapter:
         except Exception as exc:
             self.last_error = str(exc)
             return []
+
+    def track_download(self, download_location: str | None) -> bool:
+        """Signale à Unsplash qu'une photo est utilisée (endpoint
+        download_location, Unsplash API Guidelines). Limité au domaine
+        api.unsplash.com : l'URL vient d'une réponse API, jamais d'un tiers."""
+        if not self.configured or not download_location:
+            return False
+        if not str(download_location).startswith("https://api.unsplash.com/"):
+            return False
+        try:
+            import httpx
+            from app.core.config import settings
+            resp = httpx.get(
+                download_location,
+                headers={"Authorization": f"Client-ID {self.api_key}"},
+                timeout=settings.SEARCH_TIMEOUT_SECONDS or 30,
+            )
+            resp.raise_for_status()
+            return True
+        except Exception as exc:
+            self.last_error = str(exc)
+            return False
 
     def get_status(self) -> dict:
         return {
