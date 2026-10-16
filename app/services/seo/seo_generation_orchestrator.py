@@ -1747,6 +1747,10 @@ class SEOGenerationOrchestrator:
                 lambda m: m.group(1) + fix_title_case(m.group(2), body_text) + m.group(3),
                 content, flags=re.IGNORECASE | re.DOTALL,
             )
+        if include_faq is not False:
+            # La FAQ est produite à part : pas de section FAQ dans le corps.
+            from app.services.seo.structure_fixer import remove_body_faq
+            content = remove_body_faq(content)
         content = self._editorial_review_loop(article, draft, content, section_writer)
 
         illustration_cfg = self.context.get("illustration_config")
@@ -1887,8 +1891,13 @@ class SEOGenerationOrchestrator:
             draft.meta_title = self._typo(meta_title)
 
         if not draft.meta_description:
+            from app.services.seo.html_text_ops import html_to_text
+            article_start = html_to_text(draft.content or "")[:700]
             desc_prompt = (
                 f"Écris une meta description SEO (140-160 caractères) pour : {draft.title}. Mot-clé : {draft.keyword}\n"
+                f"Début de l'article :\n{article_start}\n\n"
+                "Elle résume ce que l'article apporte concrètement au lecteur, d'après ce début. N'invente aucune "
+                "offre, aucun outil « à nous », aucune promesse absente de l'article ; pas de « Découvrez ».\n"
                 "Réponds UNIQUEMENT avec la meta description, sans Markdown, sans introduction, "
                 "sans analyse, sans note de longueur, un seul paragraphe de texte brut."
             )
