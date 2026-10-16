@@ -850,6 +850,61 @@ def plan_section_images(
         return {"status": "error", "message": str(exc), "sections": []}
 
 
+def write_image_alt_texts(
+    images: list[dict],
+    language: str,
+    article_keyword: str = "",
+    db=None,
+    project_id: str | None = None,
+) -> list[str]:
+    """Rédige l'attribut alt de chaque image dans la langue de l'article, en
+    UN seul appel court pour tout le lot (agent media_planner, le même que la
+    planification d'images). Chaque entrée de `images` porte section_heading,
+    section_excerpt (premier paragraphe) et photo_hint (description anglaise
+    brute d'Unsplash, simple indice — jamais recopiée).
+
+    Retourne une liste alignée sur `images` (chaîne vide = repli sur le titre
+    de section côté appelant), ou [] si aucun provider réel n'est disponible."""
+    if not images:
+        return []
+    router = _get_router(db)
+    try:
+        provider = router.get_provider("media_planner", project_id=project_id)
+    except Exception as exc:
+        logger.warning("Image alt provider resolution failed: %s", exc)
+        return []
+    if provider.is_mock:
+        return []
+
+    lines = []
+    for i, image in enumerate(images):
+        lines.append(
+            f"{i + 1}. Section : {image.get('section_heading') or '—'}\n"
+            f"   Début de section : {image.get('section_excerpt') or '—'}\n"
+            f"   Contenu de la photo (anglais, indicatif) : {image.get('photo_hint') or '—'}"
+        )
+    prompt = (
+        f"Langue de l'article : {language}. Mot-clé : {article_keyword or '—'}.\n\n"
+        "Pour chaque image ci-dessous, rédige un texte alternatif (attribut alt) qui décrit "
+        "ce que montre la photo, en lien avec le sujet de sa section.\n"
+        f"Règles : écrit en langue '{language}' uniquement, 6 à 15 mots, 125 caractères maximum, "
+        "pas de « image de » ni « photo de », pas de bourrage de mots-clés, pas de guillemets.\n\n"
+        + "\n".join(lines)
+        + '\n\nRéponds UNIQUEMENT avec un JSON valide : {"alts": ["...", "..."]} '
+        f"({len(images)} éléments, dans le même ordre)."
+    )
+    try:
+        result = provider.generate_json(prompt, schema_hint='{"alts": ["..."]}')
+    except Exception as exc:
+        logger.warning("Image alt writer failed: %s", exc)
+        return []
+    alts = result.get("alts") if isinstance(result, dict) else None
+    if not isinstance(alts, list):
+        return []
+    cleaned = [str(a).strip().strip('"«» ') if isinstance(a, str) else "" for a in alts[: len(images)]]
+    return cleaned + [""] * (len(images) - len(cleaned))
+
+
 def judge_surprise_moment(content: str, title: str, keyword: str, db=None, project_id: str | None = None) -> dict[str, Any]:
     """Juge si l'article contient au moins une observation, formulation ou
     angle absent des 10 premiers résultats Google sur le même sujet —

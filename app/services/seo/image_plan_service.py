@@ -269,3 +269,37 @@ def insert_images_in_content(content: str, image_sources: list[dict]) -> str:
         source["inserted"] = True
 
     return content
+
+
+def localize_image_alts(
+    content: str,
+    image_sources: list[dict],
+    language: str,
+    keyword: str = "",
+    db=None,
+    project_id: str | None = None,
+) -> None:
+    """Renseigne `alt_localized` sur chaque image utilisable, rédigé dans la
+    langue de l'article par UN seul appel LLM court (agent media_planner) qui
+    décrit l'image dans le contexte de sa section. Sans provider ou en cas
+    d'échec, image_alt_text() retombe sur le titre de la section."""
+    usable = [s for s in _usable_sources(image_sources) if not s.get("alt_localized")]
+    if not usable:
+        return
+    items = [
+        {
+            "section_heading": _strip_tags(s.get("section_heading") or ""),
+            "section_excerpt": section_first_paragraph(content, s.get("section_heading") or ""),
+            "photo_hint": _strip_tags(s.get("alt_text") or "")[:200],
+        }
+        for s in usable
+    ]
+    try:
+        from app.services.agents.agent_services import write_image_alt_texts
+        alts = write_image_alt_texts(items, language, keyword, db=db, project_id=project_id)
+    except Exception:
+        alts = []
+    for source, alt in zip(usable, alts):
+        alt = _strip_tags(alt or "")[:150]
+        if alt:
+            source["alt_localized"] = alt
