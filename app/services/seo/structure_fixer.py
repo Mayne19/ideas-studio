@@ -59,23 +59,42 @@ def demote_isolated_h3(content: str) -> str:
 def strip_heading_tics(content: str) -> str:
     """« Comment fonctionne concrètement un CMS headless ? » -> « Comment
     fonctionne un CMS headless ? » : un titre n'a jamais besoin d'un tic."""
-    from app.services.seo.content_structure_guard import VERBAL_TICS
+    from app.services.seo.content_structure_guard import strip_tics
 
-    tic_re = re.compile(r"\s*(?<![\w'])(?:" + "|".join(re.escape(t) for t in VERBAL_TICS) + r")(?![\w'])\s*,?",
-                        re.IGNORECASE)
+    return re.sub(r"(<h[23]\b[^>]*>)(.*?)(</h[23]>)", lambda m: m.group(1) + strip_tics(m.group(2)) + m.group(3),
+                  content or "", flags=re.IGNORECASE | re.DOTALL)
 
-    def _clean(match: re.Match) -> str:
-        inner = tic_re.sub(" ", match.group(2))
-        inner = re.sub(r"\s{2,}", " ", inner).strip()
-        inner = inner[:1].upper() + inner[1:] if inner else match.group(2)
-        return f"{match.group(1)}{inner}{match.group(3)}"
 
-    return re.sub(r"(<h[23]\b[^>]*>)(.*?)(</h[23]>)", _clean, content or "", flags=re.IGNORECASE | re.DOTALL)
+def remove_duplicates(content: str) -> str:
+    """Section H2 au titre identique à une précédente (titres normalisés) et
+    paragraphe recopié mot pour mot : seule la première occurrence reste."""
+    from app.services.seo.html_text_ops import split_units, unit_heading
+
+    def norm(text: str) -> str:
+        return re.sub(r"\W+", " ", html_to_text(text).lower()).strip()
+
+    kept, seen_headings = [], set()
+    for index, unit in enumerate(split_units(content or "")):
+        heading = norm(unit_heading(unit)) if index else ""
+        if heading and heading in seen_headings:
+            continue
+        seen_headings.add(heading)
+        kept.append(unit)
+    seen_paragraphs: set[str] = set()
+
+    def _dedupe_p(match: re.Match) -> str:
+        key = norm(match.group(0))
+        if len(key.split()) >= 8 and key in seen_paragraphs:
+            return ""
+        seen_paragraphs.add(key)
+        return match.group(0)
+    return re.sub(r"<p\b[^>]*>.*?</p>", _dedupe_p, "".join(kept), flags=re.IGNORECASE | re.DOTALL)
 
 
 def apply_deterministic_fixes(content: str, title: str | None) -> str:
     from app.services.seo.content_structure_guard import apply_structure_guards
-    return strip_heading_tics(demote_isolated_h3(replace_em_dashes(apply_structure_guards(content, title))))
+    return remove_duplicates(strip_heading_tics(
+        demote_isolated_h3(replace_em_dashes(apply_structure_guards(content, title)))))
 
 
 def _headings(html: str) -> list[tuple[str, str]]:
