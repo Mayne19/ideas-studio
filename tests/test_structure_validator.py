@@ -34,3 +34,11 @@ def test_reference_article_passes_every_rule():
     assert failed == []
     assert report["status"] == "pass"
     assert report["stats"]["sections"] == 4
+
+
+def test_h1_in_body_or_missing_title_fails():
+    report = validate_structure("<h1>Titre</h1>" + GOOD, TITLE)
+    rule = _rule(report, "single_h1")
+    assert not rule["passed"] and rule["severity"] == "hard"
+    assert rule["violations"][0]["detail"].startswith("H1 dans le corps")
+    assert not _rule(validate_structure(GOOD, ""), "single_h1")["passed"]
