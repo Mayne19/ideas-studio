@@ -1731,7 +1731,7 @@ class SEOGenerationOrchestrator:
         if self._is_french():
             from app.services.seo.french_typography import fix_french_typography
             content = fix_french_typography(content)
-        content = self._editorial_review_loop(article, draft, content, section_writer, structure_fix)
+        content = self._editorial_review_loop(article, draft, content, section_writer)
 
         illustration_cfg = self.context.get("illustration_config")
         if illustration_cfg is not None and illustration_cfg.mode == "ai":
@@ -2102,7 +2102,7 @@ class SEOGenerationOrchestrator:
             pass
 
     def _editorial_review_loop(self, article: Article, draft: _DraftArticle, content: str,
-                               section_writer, structure_report: dict | None) -> str:
+                               section_writer) -> str:
         """Juge éditorial A8 puis révision ciblée A9 des sections fautives,
         2 révisions au plus. La meilleure version jugée (sans blocage d'abord,
         puis meilleure note) est conservée ; le verdict final alimente le
@@ -2138,7 +2138,8 @@ class SEOGenerationOrchestrator:
 
         rounds: list[dict] = []
         best: tuple[tuple, str, dict] | None = None
-        current, report = content, structure_report
+        # Rapport de structure du texte réellement jugé (après corrections).
+        current, report = content, validate_structure(content, draft.title, fmt)
         for attempt in range(3):
             judgement = judge_article(
                 current, judge_call, title=draft.title or "", keyword=draft.keyword or "", brief=brief,
