@@ -19,7 +19,7 @@ import httpx
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.services.seo.champion_duel import dissect_champion, pick_champion, run_duel, to_markdown  # noqa: E402
+from app.services.seo.champion_duel import build_subtopic_matrix, pick_champions, run_duel, to_markdown  # noqa: E402
 
 JUDGES = [("gemini", "google/gemini-3.8-flash"), ("mistral", "mistralai/mistral-large-4-0")]
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
@@ -66,6 +66,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("article_ids", nargs="+")
     parser.add_argument("--out", default="champion_duel_report.json")
+    parser.add_argument("--top", type=int, default=3, help="nombre de champions à affronter")
     args = parser.parse_args()
 
     judges = [(name, openrouter_call(model)) for name, model in JUDGES]
@@ -73,33 +74,39 @@ def main() -> int:
     for article_id in args.article_ids:
         ours = our_article(article_id)
         keyword = ours["keyword"] or ours["title"]
-        champion = pick_champion(serp(keyword), exclude_hosts=("theslash.fr",))
-        if not champion:
-            print(f"{keyword} : aucun champion trouvé")
-            continue
-        page = httpx.get(champion["url"], headers={"User-Agent": UA}, timeout=30, follow_redirects=True)
-        champion_md = to_markdown(page.text, champion["url"])
         ours_md = to_markdown(ours["html"])
-        if len(champion_md.split()) < 200:
-            print(f"{keyword} : page du champion illisible ({champion['url']})")
+        champions = []
+        for champ in pick_champions(serp(keyword), exclude_hosts=("theslash.fr",), limit=args.top + 2):
+            try:
+                page = httpx.get(champ["url"], headers={"User-Agent": UA}, timeout=30, follow_redirects=True)
+                md = to_markdown(page.text, champ["url"])
+            except Exception:
+                continue
+            if len(md.split()) >= 200:
+                champions.append((champ, md))
+            if len(champions) >= args.top:
+                break
+        if not champions:
+            print(f"{keyword} : aucun champion lisible")
             continue
-        dissection = dissect_champion(champion_md, keyword, judges[0][1])
-        duel = run_duel(ours_md, champion_md, keyword, keyword, judges)
-        entry = {"keyword": keyword, "article_id": article_id, "champion": champion,
-                 "words": {"ours": len(ours_md.split()), "champion": len(champion_md.split())},
-                 "dissection": dissection, "duel": duel}
+        matrix = build_subtopic_matrix([(c["url"], md) for c, md in champions], keyword, judges[0][1])
+        entry = {"keyword": keyword, "article_id": article_id, "ours_words": len(ours_md.split()),
+                 "matrix": matrix, "duels": []}
+        print(f"\n## {keyword} (nous : {entry['ours_words']} mots)")
+        for champ, md in champions:
+            duel = run_duel(ours_md, md, keyword, keyword, judges)
+            entry["duels"].append({"champion": champ, "words": len(md.split()), "duel": duel})
+            if duel.get("criteria"):
+                losing = ", ".join(duel["losing_criteria"]) or "aucun"
+                print(f"  vs n°{champ.get('position')} {champ['url']} ({len(md.split())} mots) : "
+                      f"{duel['ours_total']} / {duel['champion_total']} — publié {duel['publish_rate']:.0%} "
+                      f"lecteur {duel['reader_rate']:.0%} IA {duel['ai_rate']:.0%} — "
+                      f"{'VICTOIRE' if duel['won'] else 'DÉFAITE'} — critères perdus : {losing}")
+            else:
+                print(f"  vs {champ['url']} : duel invalide", [r.get("error") for r in duel.get("rounds", [])])
+        entry["beats_all"] = all(d["duel"].get("won") for d in entry["duels"])
+        print(f"  => {'BAT LE TOP ' + str(len(champions)) if entry['beats_all'] else 'NE BAT PAS TOUT LE TOP'}")
         report.append(entry)
-        print(f"\n## {keyword}\nchampion : {champion['url']} (pos. {champion.get('position')})")
-        print(f"mots : nous {entry['words']['ours']} / champion {entry['words']['champion']}")
-        if duel.get("criteria"):
-            print(f"total : nous {duel['ours_total']} / champion {duel['champion_total']} — "
-                  f"publié {duel['publish_rate']:.0%}, lecteur {duel['reader_rate']:.0%}, IA {duel['ai_rate']:.0%} — "
-                  f"{'VICTOIRE' if duel['won'] else 'DÉFAITE'}")
-            for key, c in duel["criteria"].items():
-                mark = "<" if c["ours"] < c["champion"] else ("=" if c["ours"] == c["champion"] else ">")
-                print(f"  {key:17} nous {c['ours']:5} {mark} champion {c['champion']}")
-        else:
-            print("  duel invalide :", [r.get("error") for r in duel.get("rounds", [])])
     with open(args.out, "w", encoding="utf-8") as fh:
         json.dump(report, fh, ensure_ascii=False, indent=2)
     print(f"\nrapport : {args.out}")
