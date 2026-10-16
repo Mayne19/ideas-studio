@@ -11,6 +11,7 @@ from app.services.optimization_engine import review_published_articles
 from app.services.notification_service import create_notification
 from app.services.log_service import log_step
 from app.services.idea_engine import generate_idea
+from app.services.pipeline_service import cap_ideas_count
 from app.services.providers.llm_provider import get_llm_provider
 from app.services.providers.search_provider import get_search_provider
 from app.core.config import settings
@@ -65,7 +66,8 @@ def generation_already_ran(db: Session, project_id: str, schedule: dict, now: da
 
 
 def generate_daily_ideas(db: Session) -> dict:
-    """Generate ideas for all active projects, up to IDEAS_PER_DAY per project."""
+    """Generate ideas for all active projects, up to IDEAS_PER_DAY per project,
+    capped by each project's ideas_per_run setting."""
     llm = get_llm_provider()
 
     projects = db.execute(select(Project).where(Project.status_reason_id != ProjectStatus.ARCHIVED)).scalars().all()
@@ -79,7 +81,7 @@ def generate_daily_ideas(db: Session) -> dict:
         # Résolu par projet : chaque projet peut avoir sa propre clé de
         # recherche (Paramètres → Services externes).
         search = get_search_provider(project.id)
-        for _ in range(settings.IDEAS_PER_DAY):
+        for _ in range(cap_ideas_count(db, project.id, settings.IDEAS_PER_DAY)):
             idea = generate_idea(
                 db=db,
                 project_id=project.id,
@@ -166,7 +168,8 @@ def _run_ideas(db: Session, project_id: str) -> dict:
     active_days = schedule.get("active_days", []) if schedule else []
     active_day_count = len(active_days) or 7
     weekly_target = max(1, pipeline.articles_per_week) if pipeline else settings.IDEAS_PER_DAY
-    daily_target = max(1, ceil(weekly_target / active_day_count))
+    # Plafond dur par lancement (Paramètres → Pipeline → Idées par lancement).
+    daily_target = cap_ideas_count(db, project_id, max(1, ceil(weekly_target / active_day_count)))
 
     generated = 0
     skipped = 0
