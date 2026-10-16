@@ -452,8 +452,11 @@ class SectionWriter:
         fatal_exceptions: tuple[type[BaseException], ...] = (),
         max_attempts: int = MAX_ATTEMPTS_PER_UNIT,
         section_facts: dict | None = None,
+        gain_elements: dict | None = None,
     ):
         self.write_fn = write_fn
+        # Éléments de gain d'information affectés ("intro" et index de section).
+        self.gain_elements = gain_elements or {}
         # Faits attribués par section (assign_facts_to_sections) : clés
         # "intro" et index de section.
         self.section_facts = section_facts or {}
@@ -592,6 +595,10 @@ class SectionWriter:
         facts_block = format_facts_block(self.section_facts.get("intro") or [])
         if facts_block:
             prompt_parts += ["", facts_block]
+        from app.services.seo.information_gain_designer import format_gain_block
+        gain_block = format_gain_block(self.gain_elements.get("intro") or {})
+        if gain_block:
+            prompt_parts += ["", gain_block]
         if self.style_example:
             prompt_parts += ["", self.style_example]
         prompt_parts.append("\nRetourne uniquement le HTML de l'introduction.")
@@ -651,6 +658,10 @@ class SectionWriter:
         facts_block = format_facts_block(self.section_facts.get(index) or [])
         if facts_block:
             parts += ["", facts_block]
+        from app.services.seo.information_gain_designer import format_gain_block
+        gain_block = format_gain_block(self.gain_elements.get(index) or {})
+        if gain_block:
+            parts += ["", gain_block]
         links = self._links_block(article_so_far)
         if links:
             parts += ["", links]
