@@ -114,6 +114,8 @@ class OpenRouterAgentClient:
             content = last["content"] if isinstance(last["content"], str) else "".join(_text(b) for b in last["content"])
             self.transcript.append({"role": "user", "content": content})
         prompt_tokens = completion_tokens = 0
+        # Compteurs de cet appel seulement (AgentWriter additionne les appels).
+        searches_before, fetches_before = self.searches, self.fetches
         for _ in range(MAX_TOOL_STEPS):
             data = self._http({"model": self.model, "max_tokens": max_tokens, "messages": self.transcript,
                                # Claude Opus impose son raisonnement sur OpenRouter :
@@ -136,8 +138,9 @@ class OpenRouterAgentClient:
                     content=[SimpleNamespace(type="text", text=message.get("content") or "")], stop_reason=stop,
                     usage=SimpleNamespace(input_tokens=prompt_tokens, output_tokens=completion_tokens,
                                           cache_read_input_tokens=0,
-                                          server_tool_use=SimpleNamespace(web_search_requests=self.searches,
-                                                                          web_fetch_requests=self.fetches)),
+                                          server_tool_use=SimpleNamespace(
+                                              web_search_requests=self.searches - searches_before,
+                                              web_fetch_requests=self.fetches - fetches_before)),
                 )
             for call in calls:
                 try:
