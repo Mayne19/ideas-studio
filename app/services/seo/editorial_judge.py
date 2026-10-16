@@ -1,0 +1,189 @@
+"""Juge éditorial A8 (chaîne v2) : la grille de 100 points de l'audit.
+
+Remplace le « score global » heuristique comme critère de publication. Un
+modèle d'une autre famille que le rédacteur (réglable dans le CMS : agent
+« quality_gate ») lit l'article avec le brief, les chiffres de référence et
+le registre des faits, puis note chaque critère, liste les blocages et donne
+une consigne de correction par section fautive (consommée par A9,
+targeted_revision).
+
+Grille (docs/AUDIT-CHAINE-EDITORIALE-2026-10.md §4.3) :
+- notés par le juge (90 pts) : intention 15, exactitude 20, sources 15,
+  gain d'information 15, profondeur 10, clarté 10, fraîcheur 5 ;
+- calculés par le code (10 pts) : structure 5 (structure_validator),
+  SEO 5 (seo_final_checklist, ajouté au score final).
+Publiable : total ≥ seuil du pipeline (90 par défaut) et aucun blocage.
+"""
+from __future__ import annotations
+
+import logging
+from datetime import date
+from typing import Callable
+
+from app.services.seo.html_text_ops import extract_json_object, split_units, text_blocks, unit_heading
+
+logger = logging.getLogger(__name__)
+
+CallFn = Callable[[str, str, float], str]
+
+JUDGE_CRITERIA: dict[str, tuple[int, str]] = {
+    "intent": (15, "Adéquation à l'intention : la réponse à la question réelle du lecteur arrive dans les 100 "
+                   "premiers mots, l'article entier sert cette question"),
+    "accuracy": (20, "Exactitude : aucun chiffre, règle ou affirmation faux, inventé, hors sujet (autre public) "
+                     "ou contradictoire ; aucune idée reçue présentée comme un fait"),
+    "sources": (15, "Fiabilité et traçabilité : les chiffres viennent des faits vérifiés, les sources citées "
+                    "sont fiables (officielles, primaires) et liées au bon endroit"),
+    "information_gain": (15, "Gain d'information : ce que l'article apporte de plus qu'un article moyen du top "
+                             "Google (exemple chiffré complet, cas par profil, méthode, erreurs à éviter)"),
+    "depth": (10, "Profondeur : les sous-questions attendues du lecteur sont couvertes, sans remplissage"),
+    "clarity": (10, "Clarté : phrases nettes, vocabulaire précis, enchaînements logiques, ton d'expert "
+                    "qui s'adresse au lecteur, pas de répétition"),
+    "freshness": (5, "Fraîcheur : prix et données datés ou actuels, aucune année périmée"),
+}
+CODE_STRUCTURE_POINTS = 5
+CODE_SEO_POINTS = 5
+BLOCKER_TYPES = ("invented_fact", "unsourced_figure", "contradiction", "intent_missed", "missing_component",
+                 "off_topic_fact")
+
+
+def article_digest(content: str) -> str:
+    lines: list[str] = []
+    for index, unit in enumerate(split_units(content)):
+        blocks = text_blocks(unit)
+        if not blocks:
+            continue
+        lines.append("## INTRODUCTION" if index == 0 else f"## SECTION « {unit_heading(unit)} »")
+        lines.extend(f"- {b}" for b in blocks)
+        if "<table" in unit.lower():
+            lines.append("- [tableau présent dans cette section]")
+        lines.append("")
+    return "\n".join(lines).strip()
+
+
+def build_judge_prompt(content: str, *, title: str, keyword: str, brief: dict, facts: list[str],
+                       reference_figures: list[str], required_component: str = "") -> str:
+    criteria = "\n".join(f"- {key} ({pts} pts) : {desc}" for key, (pts, desc) in JUDGE_CRITERIA.items())
+    parts = [
+        "Tu es rédacteur en chef d'un média web exigeant (niveau des meilleurs blogs experts français). "
+        "Tu notes un article avant publication. Sois sévère et précis : 90/100 veut dire « je publie tel quel "
+        "sous mon nom ». Cite des passages exacts comme preuves.",
+        "",
+        f"Date du jour : {date.today().isoformat()}",
+        f"Titre : {title}",
+        f"Mot-clé : {keyword}",
+        f"Question réelle du lecteur : {brief.get('reader_real_question') or title}",
+    ]
+    if brief.get("expected_answer"):
+        parts.append(f"Réponse attendue : {brief['expected_answer']}")
+    if brief.get("audience"):
+        parts.append(f"Lecteur : {brief['audience']}")
+    if required_component:
+        parts.append(f"Composant obligatoire du format : {required_component}")
+    if reference_figures:
+        parts += ["", "Chiffres de référence (font foi) :", *[f"- {f}" for f in reference_figures]]
+    if facts:
+        parts += ["", "Faits vérifiés disponibles (avec leur source) :", *[f"- {f}" for f in facts[:40]]]
+    parts += [
+        "",
+        "Grille (note chaque critère de 0 à son maximum) :",
+        criteria,
+        "",
+        "Blocages (un seul suffit à refuser la publication) : invented_fact (fait ou source inventés), "
+        "unsourced_figure (chiffre précis absent des faits vérifiés et invérifiable), contradiction (deux valeurs "
+        "différentes pour la même chose), intent_missed (la question n'a pas de réponse claire), off_topic_fact "
+        "(chiffre qui concerne un autre public ou un autre cas). Ne signale un blocage que s'il est certain.",
+        "",
+        "Pour chaque section à améliorer, donne une consigne de correction concrète et applicable par un "
+        "rédacteur (« remplacer la fourchette X par la référence Y », « supprimer l'affirmation Z non sourcée », "
+        "« ajouter un exemple chiffré complet à partir des faits F… ») ; 4 sections au plus, les plus rentables.",
+        "",
+        "Réponds UNIQUEMENT en JSON :",
+        '{"criteria": {"intent": {"score": 0, "evidence": "..."}, "accuracy": {...}, "sources": {...}, '
+        '"information_gain": {...}, "depth": {...}, "clarity": {...}, "freshness": {...}}, '
+        '"blockers": [{"type": "contradiction", "section": "titre de section ou INTRODUCTION", '
+        '"detail": "passage exact et explication"}], '
+        '"section_fixes": [{"section": "titre exact de la section ou INTRODUCTION", "instructions": "..."}], '
+        '"summary": "deux phrases"}',
+        "",
+        "Article :",
+        article_digest(content),
+    ]
+    return "\n".join(parts)
+
+
+def _clamp(value, maximum: int) -> float:
+    try:
+        return max(0.0, min(float(value), float(maximum)))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def structure_points(structure_report: dict | None) -> float:
+    """5 points moins 2 par règle dure en échec (structure_validator)."""
+    if not structure_report:
+        return float(CODE_STRUCTURE_POINTS)
+    hard = len(structure_report.get("failed_hard_rules") or [])
+    return float(max(0, CODE_STRUCTURE_POINTS - 2 * hard))
+
+
+def parse_judgement(raw: str, *, structure_report: dict | None = None) -> dict | None:
+    data = extract_json_object(raw)
+    if not isinstance(data, dict) or not isinstance(data.get("criteria"), dict):
+        return None
+    criteria: dict[str, dict] = {}
+    for key, (maximum, _) in JUDGE_CRITERIA.items():
+        item = data["criteria"].get(key) or {}
+        if not isinstance(item, dict):
+            item = {"score": item}
+        criteria[key] = {"score": _clamp(item.get("score"), maximum), "max": maximum,
+                         "evidence": str(item.get("evidence") or "")[:400]}
+    blockers = [
+        {"type": str(b.get("type")), "section": str(b.get("section") or "")[:200], "detail": str(b.get("detail") or "")[:400]}
+        for b in data.get("blockers") or []
+        if isinstance(b, dict) and str(b.get("type")) in BLOCKER_TYPES
+    ]
+    required = next((r for r in (structure_report or {}).get("rules") or []
+                     if r.get("rule") == "required_elements" and not r.get("passed")), None)
+    if required:
+        blockers.append({"type": "missing_component", "section": "", "detail": required.get("label", "")})
+    fixes = [
+        {"section": str(f.get("section") or "").strip(), "instructions": str(f.get("instructions") or "").strip()[:600]}
+        for f in data.get("section_fixes") or []
+        if isinstance(f, dict) and str(f.get("instructions") or "").strip()
+    ][:4]
+    judged = sum(c["score"] for c in criteria.values())
+    structure = structure_points(structure_report)
+    return {
+        "criteria": criteria,
+        "structure_points": structure,
+        "content_score": round(judged + structure, 1),  # sur 95 ; le SEO (5) s'ajoute au scoring final
+        "blockers": blockers,
+        "section_fixes": fixes,
+        "summary": str(data.get("summary") or "")[:600],
+    }
+
+
+def judge_article(content: str, call_fn: CallFn, *, title: str, keyword: str, brief: dict,
+                  facts: list[str], reference_figures: list[str], structure_report: dict | None = None,
+                  required_component: str = "",
+                  fatal_exceptions: tuple[type[BaseException], ...] = ()) -> dict:
+    """Jugement complet, ou {"error": ...} si l'appel ou le JSON échoue."""
+    prompt = build_judge_prompt(content, title=title, keyword=keyword, brief=brief, facts=facts,
+                                reference_figures=reference_figures, required_component=required_component)
+    try:
+        raw = call_fn(prompt, "EditorialJudge", 0.1)
+    except fatal_exceptions:
+        raise
+    except Exception as exc:
+        logger.warning("editorial_judge: appel en échec : %s", exc)
+        return {"error": str(exc)[:300]}
+    judgement = parse_judgement(raw, structure_report=structure_report)
+    if judgement is None:
+        return {"error": "réponse JSON invalide"}
+    return judgement
+
+
+def final_score(judgement: dict, seo_checklist_score: float | None) -> float:
+    """Note sur 100 : contenu (95) + SEO technique (5)."""
+    seo = (seo_checklist_score or 0.0) / 100.0 * CODE_SEO_POINTS
+    return round(min(100.0, float(judgement.get("content_score") or 0.0) + seo), 1)
