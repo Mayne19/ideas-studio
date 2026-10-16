@@ -80,3 +80,16 @@ def test_four_paragraphs_of_same_length_fail():
     rule = _rule(validate_structure(GOOD + uniform, TITLE), "paragraph_variation")
     assert not rule["passed"]
     assert rule["violations"][0]["section"] == "Un rythme mécanique"
+
+
+def test_intro_over_ten_percent_or_generic_fails():
+    long_intro = _para(4) + _para(3) + _para(4) + _para(3)
+    body = "\n".join(SECTIONS * 2)
+    report = validate_structure(long_intro + body, TITLE)
+    assert report["stats"]["words"] >= 600
+    assert not _rule(report, "intro_length")["passed"]
+    generic = "<p>Dans cet article, nous allons voir combien coûte Webflow.</p>" + "\n".join(SECTIONS)
+    rule = _rule(validate_structure(generic, TITLE), "intro_generic_opening")
+    assert not rule["passed"] and rule["violations"][0]["unit"] == "intro"
+    missing = _rule(validate_structure("\n".join(SECTIONS), TITLE), "intro_length")
+    assert missing["violations"][0]["detail"] == "Introduction absente"
