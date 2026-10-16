@@ -44,6 +44,21 @@ class User(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
 
+class PlatformSetting(Base):
+    """Réglage global de l'instance (clé/valeur), éditable par le staff
+    depuis l'interface — voir v3_0007 et app/services/platform_settings_service.py."""
+
+    __tablename__ = "platform_settings"
+    __table_args__ = {"schema": "core"}
+
+    key: Mapped[str] = mapped_column(Text, primary_key=True)
+    value: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    updated_by: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("core.users.id", ondelete="SET NULL"), nullable=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+
 class Organization(Base):
     __tablename__ = "organizations"
     __table_args__ = {"schema": "core"}
