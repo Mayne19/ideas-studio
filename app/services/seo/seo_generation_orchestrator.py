@@ -993,6 +993,9 @@ class SEOGenerationOrchestrator:
                     organization_name=self.project.name if self.project else None,
                 )
                 draft.structured_data_json = structured_data
+                seo_row = self.db.get(ArticleSeo, article.id)
+                if seo_row is not None and isinstance(structured_data, dict) and structured_data.get("schemas"):
+                    seo_row.structured_data = structured_data
                 self._save(article.id, "structured_data", structured_data)
                 self._step("StructuredDataBuilder")
             except Exception as exc:
@@ -2025,6 +2028,13 @@ class SEOGenerationOrchestrator:
             self.db.add(seo)
         seo.meta_title = draft.meta_title
         seo.meta_description = draft.meta_description
+        if isinstance(draft.structured_data_json, dict) and draft.structured_data_json.get("schemas"):
+            seo.structured_data = draft.structured_data_json
+        # Mot-clé principal : sans ce lien, maillage interne, cannibalisation
+        # et rescoring ne retrouvaient pas le mot-clé des articles générés.
+        if draft.keyword:
+            from app.services.article_service import set_primary_keyword
+            set_primary_keyword(self.db, self.project_id, article.id, draft.keyword)
         self.db.flush()
         return revision
 
