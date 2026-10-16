@@ -109,8 +109,13 @@ def score_structured_data(metadata: Any) -> float:
     if isinstance(metadata, dict):
         schema = metadata.get("structured_data_json") or metadata.get("json_ld") or []
     else:
-        raw = getattr(metadata, "structured_data_json", None)
-        schema = raw if isinstance(raw, list) else []
+        schema = getattr(metadata, "structured_data_json", None)
+    # build_structured_data renvoie {"status", "schemas": [...]} : sans ce
+    # dépliage, le JSON-LD réellement généré comptait pour 0.
+    if isinstance(schema, dict):
+        schema = schema.get("schemas") or schema.get("@graph") or ([schema] if schema.get("@type") else [])
+    if not isinstance(schema, list):
+        schema = []
 
     if not schema:
         return 0.0
