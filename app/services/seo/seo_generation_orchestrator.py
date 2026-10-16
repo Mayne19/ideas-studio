@@ -1394,6 +1394,22 @@ class SEOGenerationOrchestrator:
             )
         brief_parts.append("Pas de FAQ : elle est générée séparément.")
 
+        # Chiffres de référence : une seule fourchette par grandeur pour tout
+        # l'article, sinon chaque section reprend la source de ses faits.
+        ledger_facts = (self.context.get("fact_ledger") or {}).get("facts") or []
+        if ledger_facts:
+            from app.services.seo.figure_reconciler import format_reference_figures, reconcile_figures
+            figures = reconcile_figures(
+                ledger_facts, draft.keyword or "", self._polish_call_fn(article),
+                fatal_exceptions=(WritingCancelledError,),
+            )
+            self._save(article.id, "reference_figures", figures)
+            block = format_reference_figures(figures["figures"])
+            if block:
+                brief_parts.append(block)
+                self.context["reference_figures"] = figures["figures"]
+            self._step(f"FigureReconciliation ({len(figures['figures'])} grandeur(s))")
+
         def write_fn(prompt: str, step: str, temperature: float) -> str:
             self._raise_if_cancelled(article)
             return self._write_pass(prompt, "writer", article, temperature, step, system=writer_system)
