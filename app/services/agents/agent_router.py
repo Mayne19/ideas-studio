@@ -177,6 +177,9 @@ class AgentRouter:
 # Agents qui produisent ou réécrivent le texte long de l'article : ils
 # utilisent OPENROUTER_WRITER_MODEL, tous les autres OPENROUTER_PLANNER_MODEL.
 _WRITER_ROLE_AGENTS = {"editor"}
+# Agent de relecture (orthographe, grammaire, style) : il utilise
+# OPENROUTER_PROOFREADER_MODEL (vide = modèle planner).
+_PROOFREADER_ROLE_AGENTS = {"language_quality"}
 
 
 def _apply_openrouter_role_model(provider: LLMProvider, agent_id: str) -> LLMProvider:
@@ -188,6 +191,8 @@ def _apply_openrouter_role_model(provider: LLMProvider, agent_id: str) -> LLMPro
     if getattr(settings, f"AGENT_{agent_id.upper()}_MODEL", None):
         return provider
     canonical_id = resolve_agent_id(agent_id)
+    if canonical_id in _PROOFREADER_ROLE_AGENTS:
+        return provider.for_role("proofreader")
     agent = get_agent(canonical_id)
     is_writer = canonical_id in _WRITER_ROLE_AGENTS or (agent is not None and agent.phase == "writing")
     return provider.for_role("writer" if is_writer else "planner")

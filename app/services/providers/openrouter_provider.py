@@ -15,6 +15,7 @@ class OpenRouterLLMProvider(OpenAILLMProvider):
         max_retries: int = 3,
         writer_model: str | None = None,
         planner_model: str | None = None,
+        proofreader_model: str | None = None,
         fallback_model: str | None = None,
         reasoning_mode: str = "off",
     ):
@@ -27,6 +28,8 @@ class OpenRouterLLMProvider(OpenAILLMProvider):
         )
         self.writer_model = writer_model or model
         self.planner_model = planner_model or model
+        # Vide = modèle du rôle planner (comportement historique de la relecture).
+        self.proofreader_model = proofreader_model or self.planner_model
         self.fallback_model = fallback_model or model
         self.reasoning_mode = reasoning_mode or "off"
 
@@ -41,9 +44,15 @@ class OpenRouterLLMProvider(OpenAILLMProvider):
 
     def for_role(self, role: str) -> "OpenRouterLLMProvider":
         """Copie de ce provider pointant sur le modèle du rôle demandé
-        ('writer' pour la rédaction, 'planner' pour le reste). Retourne
-        self quand le modèle du rôle est déjà le modèle courant."""
-        target = self.writer_model if role == "writer" else self.planner_model
+        ('writer' pour la rédaction, 'proofreader' pour la relecture,
+        'planner' pour le reste). Retourne self quand le modèle du rôle est
+        déjà le modèle courant."""
+        if role == "writer":
+            target = self.writer_model
+        elif role == "proofreader":
+            target = self.proofreader_model
+        else:
+            target = self.planner_model
         if not target or target == self.model:
             return self
         clone = copy.copy(self)
