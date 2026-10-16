@@ -160,6 +160,27 @@ def check_isolated_h3(units: list[Unit]) -> dict:
     return _rule("isolated_h3", "Pas de H3 isolé", WARNING, violations)
 
 
+def check_verbal_tics(units: list[Unit]) -> dict:
+    """Chaque tic de langage (« concrètement », « en réalité »…) au plus
+    MAX_TIC_OCCURRENCES fois dans tout l'article, titres compris : au-delà,
+    le lecteur « sent » le texte généré."""
+    from app.services.seo.content_structure_guard import MAX_TIC_OCCURRENCES, VERBAL_TICS
+
+    seen: dict[str, int] = {}
+    violations = []
+    for unit in units:
+        text = html_to_text(unit.html).lower()
+        for tic in VERBAL_TICS:
+            for _ in re.finditer(r"(?<![\w'])" + re.escape(tic) + r"(?![\w'])", text):
+                seen[tic] = seen.get(tic, 0) + 1
+                if seen[tic] > MAX_TIC_OCCURRENCES:
+                    violations.append(_loc(
+                        unit, f"Tic de langage répété « {tic} » : le remplacer par une vraie liaison logique "
+                              "(cause, conséquence, exemple) ou le supprimer", tic,
+                    ))
+    return _rule("verbal_tics", "Tics de langage une fois au plus", HARD, violations)
+
+
 def check_h2_lead_paragraph(units: list[Unit]) -> dict:
     """Un H2 n'est jamais suivi directement d'un H3 : au moins un paragraphe
     annonce d'abord la réponse de la section (aussi contrôlé par la
@@ -409,6 +430,7 @@ def validate_structure(content: str, title: str | None = None, recommended_forma
         check_heading_hierarchy(content),
         check_isolated_h3(units),
         check_h2_lead_paragraph(units),
+        check_verbal_tics(units),
         check_paragraph_length(units),
         sentence_hard,
         sentence_soft,
