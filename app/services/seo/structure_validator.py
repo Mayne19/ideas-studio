@@ -356,6 +356,7 @@ def check_section_balance(units: list[Unit]) -> dict:
 _FORMAT_COMPONENTS = {
     "comparison": ("table", "Un tableau comparatif <table>"),
     "how_to": ("steps", "Des étapes en liste numérotée <ol> (ou des H3 numérotés)"),
+    "price_guide": ("table", "Un tableau des fourchettes de prix <table>"),
     "list": ("items", "Au moins 3 éléments présentés en H3 ou en liste"),
 }
 
@@ -372,10 +373,12 @@ def check_required_elements(units: list[Unit], content: str, recommended_format:
     violations = []
     fmt = (recommended_format or "").strip()
     lower = (content or "").lower()
-    if fmt == "comparison" and "<table" not in lower:
-        target = _component_section(units, ("compar", "tableau", "récap", "critère", "verdict", "versus", " vs"))
-        violations.append(_loc(target, "Format comparatif sans tableau : ajouter un tableau <table> comparatif")
-                          if target else {"unit": "body", "section": "", "detail": "Tableau comparatif absent", "excerpt": ""})
+    if fmt in ("comparison", "price_guide") and "<table" not in lower:
+        target = _component_section(units, ("compar", "tableau", "récap", "critère", "verdict", "versus", " vs",
+                                            "prix", "coût", "tarif", "budget"))
+        what = "comparatif" if fmt == "comparison" else "des fourchettes de prix par scénario"
+        violations.append(_loc(target, f"Tableau {what} absent : ajouter un tableau <table> {what}")
+                          if target else {"unit": "body", "section": "", "detail": f"Tableau {what} absent", "excerpt": ""})
     elif fmt == "how_to":
         numbered_h3 = len(re.findall(r"<h3\b[^>]*>\s*(?:[ée]tape\s*)?\d", content or "", re.IGNORECASE))
         if "<ol" not in lower and numbered_h3 < 2:
@@ -389,7 +392,7 @@ def check_required_elements(units: list[Unit], content: str, recommended_format:
             violations.append({"unit": "body", "section": "", "detail": "Format liste avec moins de 3 éléments", "excerpt": ""})
     label = _FORMAT_COMPONENTS.get(fmt, ("", "Composants du format"))[1]
     return _rule("required_elements", f"Composant attendu du format : {label}", HARD, violations,
-                 fixable=fmt in ("comparison", "how_to"))
+                 fixable=fmt in ("comparison", "price_guide", "how_to"))
 
 
 # ── Point d'entrée ───────────────────────────────────────────────────────────
