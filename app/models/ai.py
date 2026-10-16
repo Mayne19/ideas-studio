@@ -58,6 +58,9 @@ class ProviderCredential(Base):
     # Les agents avec un AgentBinding restent inchangés : ils utilisent leur
     # provider assigné, indépendamment de is_default.
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Raisonnement interne du modèle : 'off' (désactivé, défaut) ou 'auto'
+    # (comportement du modèle). Voir migration v3_0009.
+    reasoning_mode: Mapped[str] = mapped_column(Text, nullable=False, default="off", server_default="off")
     last_test_at: Mapped[datetime | None] = mapped_column(nullable=True)
     last_test_ok: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=_now)
