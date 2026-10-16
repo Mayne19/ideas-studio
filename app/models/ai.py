@@ -204,6 +204,8 @@ class Pipeline(Base):
     ideas_per_run: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=2, server_default=text("2"))
     # Score global minimum pour publier (85-100), voir v3_0006.
     min_publish_score: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=90, server_default=text("90"))
+    # « agent » (agent rédacteur unique) ou « pipeline » (ancienne chaîne).
+    generation_mode: Mapped[str] = mapped_column(Text, nullable=False, default="agent", server_default="agent")
     max_pending_drafts: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=10)
     max_parallel_jobs: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=2)
     schedule: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
