@@ -18,6 +18,9 @@ MODEL_PRICES_EUR: dict[str, dict[str, float]] = {
     # Claude
     "anthropic/claude-sonnet": {"input_per_1k": 0.00300, "output_per_1k": 0.01500},
     "anthropic/claude-haiku": {"input_per_1k": 0.00025, "output_per_1k": 0.00125},
+    # Agent rédacteur (tarif Anthropic relevé le 2026-10-17, en dollars) :
+    # 4 $ / M jetons en entrée, 20 $ / M en sortie.
+    "anthropic/claude-opus-5-5": {"input_per_1k": 0.004, "output_per_1k": 0.020},
     # Mistral
     "mistral/mistral-small-latest": {"input_per_1k": 0.00100, "output_per_1k": 0.00200},
     "mistral/mistral-medium-latest": {"input_per_1k": 0.00275, "output_per_1k": 0.00810},
@@ -30,6 +33,16 @@ MODEL_PRICES_EUR: dict[str, dict[str, float]] = {
 }
 
 FALLBACK_PRICE = {"input_per_1k": 0.0, "output_per_1k": 0.0}
+# Recherche web côté Anthropic : 10 $ pour 1 000 recherches ; lecture de page
+# (web_fetch) sans supplément.
+WEB_SEARCH_PRICE_PER_1000 = 10.0
+
+
+def estimate_agent_writer_cost(model: str, input_tokens: int, output_tokens: int, web_searches: int) -> float:
+    """Coût d'un article rédigé par l'agent unique (jetons + recherches)."""
+    price = MODEL_PRICES_EUR.get(f"anthropic/{model}") or FALLBACK_PRICE
+    tokens = (input_tokens or 0) / 1000 * price["input_per_1k"] + (output_tokens or 0) / 1000 * price["output_per_1k"]
+    return round(tokens + (web_searches or 0) / 1000 * WEB_SEARCH_PRICE_PER_1000, 4)
 
 
 def get_model_price(provider: str, model: str | None) -> dict[str, float] | None:
