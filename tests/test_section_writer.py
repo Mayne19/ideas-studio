@@ -141,3 +141,19 @@ def test_junk_urls_and_snippet_facts():
     ])
     assert facts == ["WordPress is used by 43.5% of all the websites (source : w3techs.com)"]
     assert not any(f.startswith("http") for f in facts)
+
+
+def test_clean_unit_html_converts_markdown_paragraphs_lists_and_headings():
+    from app.services.seo.section_writer import clean_unit_html, looks_truncated
+
+    raw = (
+        "Un site vitrine coûte entre 1 500 et 5 000 €.\n\n"
+        "### Ce qui fait varier le prix\n\n"
+        "- le **nombre de pages** ;\n- les fonctionnalités.\n\n"
+        "Le budget dépend surtout de vos contenus."
+    )
+    html = clean_unit_html(raw)
+    assert "<p>Un site vitrine" in html
+    assert "<h3>Ce qui fait varier le prix</h3>" in html
+    assert "<li>le <strong>nombre de pages</strong> ;</li>" in html
+    assert not looks_truncated(html)
