@@ -32,6 +32,34 @@ MAX_ATTEMPTS_PER_UNIT = 2
 MAX_EXTERNAL_LINKS = 3
 # Formats qui méritent une fin explicite (verdict, prochaine étape).
 CLOSING_FORMATS = ("comparison", "how_to", "list")
+
+# Composant obligatoire du format (vérifié par structure_validator, règle
+# required_elements) : demandé dès la rédaction, à une seule section, plutôt
+# que laissé à la passe de correction.
+FORMAT_COMPONENT_INSTRUCTIONS = {
+    "comparison": (
+        "Obligatoire dans cette section : un tableau comparatif <table> avec une ligne d'en-tête <th>, "
+        "3 à 6 lignes, construit uniquement avec les chiffres et faits fournis (aucun chiffre inventé), "
+        "précédé d'une phrase qui dit ce qu'il compare."
+    ),
+    "how_to": "Obligatoire dans cette section : les étapes en liste numérotée <ol>, une action concrète par étape.",
+}
+_COMPONENT_HINTS = {
+    "comparison": ("compar", "tableau", "récap", "critère", "versus", " vs", " ou ", "formule", "quelle"),
+    "how_to": ("étape", "etape", "comment", "méthode", "procédure"),
+}
+
+
+def component_section_index(sections: list, fmt: str) -> int | None:
+    """Section qui doit porter le composant du format : la première dont le
+    titre l'annonce, sinon la première section."""
+    if fmt not in FORMAT_COMPONENT_INSTRUCTIONS or not sections:
+        return None
+    hints = _COMPONENT_HINTS[fmt]
+    for i, section in enumerate(sections):
+        if any(h in f" {section.heading.lower()} " for h in hints):
+            return i
+    return 0
 _CLOSING_HINTS = (
     "conclusion", "verdict", "recommandation", "prochaine étape", "par où commencer",
     "que choisir", "lequel choisir", "en pratique", "notre avis",
@@ -544,6 +572,8 @@ class SectionWriter:
             parts.append(f"Fin du texte précédent (enchaîne sans le répéter) : « {last} »")
         if self.words_per_section:
             parts.append(f"Longueur visée : environ {self.words_per_section} mots, moins si le point est simple.")
+        if index == component_section_index(self.sections, self.fmt):
+            parts.append(FORMAT_COMPONENT_INSTRUCTIONS[self.fmt])
         parts += [
             "",
             "Consignes :",
