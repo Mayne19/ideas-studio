@@ -98,7 +98,9 @@ class OpenRouterAgentClient:
         prompt_tokens = completion_tokens = 0
         for _ in range(MAX_TOOL_STEPS):
             data = self._http({"model": self.model, "max_tokens": max_tokens, "messages": self.transcript,
-                               "tools": TOOLS, "reasoning": {"enabled": False}})
+                               # Claude Opus impose son raisonnement sur OpenRouter :
+                               # effort réduit plutôt que désactivé (refusé).
+                               "tools": TOOLS, "reasoning": {"effort": "low"}})
             usage = data.get("usage") or {}
             prompt_tokens += int(usage.get("prompt_tokens") or 0)
             completion_tokens += int(usage.get("completion_tokens") or 0)
