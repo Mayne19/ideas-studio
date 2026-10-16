@@ -572,6 +572,8 @@ class SectionWriter:
             "formulée pour lui et sa situation (ce que ça change pour lui), pas comme une définition "
             "de dictionnaire. Pas de contexte ni d'annonce du plan avant cette réponse.",
             "- Les phrases s'enchaînent : chacune découle de la précédente.",
+            "- Test du débutant : quelqu'un qui ne connaît rien au sujet comprend la première phrase sans "
+            "relire ; pas de jargon ni de formule abstraite (« architecture découplée », « arbitrer »).",
             "- Ensuite, une ou deux phrases au plus sur la nuance qui compte (sans énumérer les sections).",
             "- 1 ou 2 paragraphes <p>, environ 60 à 120 mots, aucun titre.",
             *self._common_rules(),
