@@ -1332,6 +1332,12 @@ class SEOGenerationOrchestrator:
             "- Utilise les liaisons naturelles du français (parce que, donc, mais, sauf si, du coup, c'est pour "
             "ça que) quand elles portent un vrai lien logique.",
             "- Ne répète jamais ce qu'une partie précédente a déjà dit.",
+            "Le lecteur ne connaît pas le sujet (sauf si le profil éditorial dit le contraire) :",
+            "- Chaque terme technique est expliqué en mots simples à sa première apparition, entre "
+            "parenthèses ou par une comparaison de la vie courante ; s'il n'est pas nécessaire, ne l'emploie pas.",
+            "- Une idée par phrase, du connu vers l'inconnu ; pas d'abstraction sans exemple.",
+            "- N'entre dans les détails d'outils techniques (serveurs, bases de données, librairies) que si "
+            "la question du lecteur le demande.",
             "Style :",
             "- Chaque phrase apporte une information concrète ; supprime celles qui n'apportent rien.",
             "- Paragraphes courts (1 à 4 phrases), rythme varié.",
