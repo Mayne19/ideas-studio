@@ -2,9 +2,9 @@ from __future__ import annotations
 
 """A2 Research Reader, partie lecture (chaîne v2, étape 5).
 
-Lit en entier le top 5 organique et jusqu'à 3 sources primaires (site
+Lit en entier le top 5 organique et jusqu'à 4 sources primaires (site
 officiel d'une entité du mot-clé, .gouv, documentation, page tarifs) trouvées
-dans les résultats. Les pages passent par le PageCache de la génération : une
+par des requêtes dédiées (search_primary_candidates) puis dans les résultats. Les pages passent par le PageCache de la génération : une
 URL déjà téléchargée par le research brief n'est pas retéléchargée. Le texte
 principal (trafilatura) est tronqué à MAX_CHARS_PER_PAGE et stocké dans
 l'artefact `source_pages`, matière première du fact_ledger.
@@ -20,7 +20,14 @@ from app.services.seo.page_cache import PageCache, active_page_cache
 logger = logging.getLogger(__name__)
 
 TOP_ORGANIC = 5
-MAX_PRIMARY = 3
+MAX_PRIMARY = 4
+# Requêtes dédiées aux sources primaires : le top organique d'un mot-clé
+# commercial ne contient presque que des blogs concurrents (exclus des
+# citations), d'où des faits sans source citable.
+PRIMARY_QUERIES = (
+    "{keyword} site:gouv.fr OR site:insee.fr OR site:europa.eu",
+    "{keyword} étude chiffres officiels",
+)
 MAX_CHARS_PER_PAGE = 12_000
 TIME_BUDGET_SECONDS = 40
 _PRIMARY_HOST_PREFIXES = ("docs.", "developer.", "developers.", "help.", "support.")
@@ -59,8 +66,31 @@ def is_primary_source(url: str, keyword: str = "") -> bool:
     return host.startswith(_PRIMARY_HOST_PREFIXES)
 
 
+def search_primary_candidates(keyword: str, search_fn, limit: int = 8) -> list[tuple[str, str]]:
+    """[(url, titre)] des sources primaires trouvées par PRIMARY_QUERIES.
+    `search_fn(query, limit) -> [{url|link, title}]` ; une requête en échec
+    est ignorée."""
+    found: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for template in PRIMARY_QUERIES:
+        try:
+            results = search_fn(template.format(keyword=keyword), limit) or []
+        except Exception as exc:
+            logger.debug("source_pages: recherche primaire échouée : %s", exc)
+            continue
+        for r in results:
+            if not isinstance(r, dict):
+                continue
+            url = r.get("url") or r.get("link") or ""
+            if url and url not in seen and is_primary_source(url, keyword):
+                seen.add(url)
+                found.append((url, r.get("title", "")))
+    return found
+
+
 def select_source_urls(research_brief: dict, keyword: str, top_n: int = TOP_ORGANIC,
-                       max_primary: int = MAX_PRIMARY) -> list[dict]:
+                       max_primary: int = MAX_PRIMARY,
+                       extra_candidates: list[tuple[str, str]] | None = None) -> list[dict]:
     """[{url, role: competitor|primary, title}] : top N organiques puis
     jusqu'à `max_primary` sources primaires repérées dans le reste des
     résultats, les liens découverts, les PAA et l'encadré de réponse."""
@@ -82,7 +112,8 @@ def select_source_urls(research_brief: dict, keyword: str, top_n: int = TOP_ORGA
     for src in organic[:top_n]:
         _add(src["url"], "competitor", src.get("title", ""))
 
-    candidates: list[tuple[str, str]] = [(s["url"], s.get("title", "")) for s in organic[top_n:]]
+    candidates: list[tuple[str, str]] = list(extra_candidates or [])
+    candidates += [(s["url"], s.get("title", "")) for s in organic[top_n:]]
     candidates += [(u, "") for u in research.get("discovered_links") or [] if isinstance(u, str)]
     candidates += [(q.get("url", ""), q.get("title", "")) for q in research.get("people_also_ask") or []
                    if isinstance(q, dict)]
@@ -120,6 +151,7 @@ def build_source_pages(
     max_chars: int = MAX_CHARS_PER_PAGE,
     extractor=None,
     time_budget: float = TIME_BUDGET_SECONDS,
+    search_fn=None,
 ) -> dict:
     """Artefact `source_pages` : {pages: [{url, role, title, text, chars,
     word_count, source_tier, method}], skipped: [{url, reason}], fetch_stats}."""
@@ -132,7 +164,8 @@ def build_source_pages(
     pages: list[dict] = []
     skipped: list[dict] = []
     started = perf_counter()
-    for item in select_source_urls(research_brief, keyword):
+    extra = search_primary_candidates(keyword, search_fn) if search_fn else []
+    for item in select_source_urls(research_brief, keyword, extra_candidates=extra):
         url = item["url"]
         if perf_counter() - started > time_budget:
             skipped.append({"url": url, "reason": "time_budget_exceeded"})
