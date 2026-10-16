@@ -110,3 +110,17 @@ def test_conclusion_starting_with_en_conclusion_fails():
     ending = "<h2>Le mot de la fin</h2><p>En conclusion, Webflow vaut son prix.</p>" + _para(2)
     rule = _rule(validate_structure(GOOD + ending, TITLE), "conclusion_opening")
     assert not rule["passed"] and rule["violations"][0]["section"] == "Le mot de la fin"
+
+
+def test_lists_and_tables_formatting():
+    one_item = GOOD.replace("</p>\n<h2>Les coûts cachés", "</p><ul><li>Seul point</li></ul>\n<h2>Les coûts cachés", 1)
+    lists = _rule(validate_structure(one_item, TITLE), "list_format")
+    assert not lists["passed"] and lists["violations"][0]["detail"] == "Liste d'un seul élément"
+    bad_table = GOOD + ("<h2>Tableau</h2>" + _para(2)
+                        + "<table><tr><td>Plan</td><td>Prix</td></tr><tr><td>Basic</td></tr></table>")
+    details = [v["detail"] for v in _rule(validate_structure(bad_table, TITLE), "table_format")["violations"]]
+    assert "Tableau sans ligne d'en-tête (<th>)" in details
+    assert any(d.startswith("Nombre de colonnes irrégulier") for d in details)
+    good_table = GOOD + ("<h2>Tableau</h2>" + _para(2)
+                         + "<table><tr><th>Plan</th><th>Prix</th></tr><tr><td>Basic</td><td>14 $</td></tr></table>")
+    assert _rule(validate_structure(good_table, TITLE), "table_format")["passed"]
