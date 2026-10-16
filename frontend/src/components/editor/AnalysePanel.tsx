@@ -438,6 +438,60 @@ function flagLabel(flag: string): string {
   return flag
 }
 
+/* ─── Structure report (app/services/seo/structure_validator.py) ── */
+
+interface StructureViolation { section?: string; detail?: string; excerpt?: string }
+interface StructureRule {
+  rule: string
+  label: string
+  severity: 'hard' | 'warning'
+  passed: boolean
+  violations?: StructureViolation[]
+}
+
+function StructureReportBlock({ report }: { report: Record<string, unknown> }) {
+  const rules = Array.isArray(report.rules) ? (report.rules as StructureRule[]) : []
+  if (rules.length === 0) return null
+  const failed = rules.filter((r) => !r.passed)
+  const passedCount = rules.length - failed.length
+  return (
+    <div>
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-tertiary mb-1.5">
+        Règles de structure ({passedCount}/{rules.length} respectées)
+      </p>
+      <div className="flex flex-col gap-1">
+        {failed.map((rule) => (
+          <div
+            key={rule.rule}
+            className={`rounded-[8px] px-2.5 py-1.5 ${rule.severity === 'hard' ? 'bg-danger/5' : 'bg-warning/5'}`}
+          >
+            <div className="flex items-start gap-1.5">
+              {rule.severity === 'hard'
+                ? <XCircle size={11} className="mt-0.5 shrink-0 text-danger" />
+                : <AlertTriangle size={11} className="mt-0.5 shrink-0 text-warning" />}
+              <span className="text-[12px] text-secondary">
+                {rule.label}{rule.severity === 'hard' ? ' (bloquant)' : ''}
+              </span>
+            </div>
+            {(rule.violations ?? []).slice(0, 4).map((v, i) => (
+              <p key={i} className="ml-4 mt-0.5 text-[11px] leading-snug text-tertiary">
+                {v.section ? `${v.section} : ` : ''}{v.detail}
+                {v.excerpt ? ` « ${v.excerpt} »` : ''}
+              </p>
+            ))}
+          </div>
+        ))}
+        {failed.length === 0 && (
+          <div className="flex items-start gap-1.5 rounded-[8px] bg-success/5 px-2.5 py-1.5">
+            <CheckCircle size={11} className="mt-0.5 shrink-0 text-success" />
+            <span className="text-[12px] text-secondary">Toutes les règles de structure sont respectées</span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function V2SignalsBreakdown({ report }: { report: V2Report }) {
   const signals = report.signals ?? {}
   if (Object.keys(signals).length === 0) return null
@@ -631,6 +685,10 @@ function ScoreDetailPanel({
               ))}
             </div>
           </div>
+        )}
+
+        {selected === 'Qualité' && getArtifact(article, 'structure_report') && (
+          <StructureReportBlock report={getArtifact(article, 'structure_report') as Record<string, unknown>} />
         )}
 
         {v2Report && <V2SignalsBreakdown report={v2Report} />}
