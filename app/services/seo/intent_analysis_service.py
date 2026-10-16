@@ -7,7 +7,7 @@ from app.schemas.seo_workflow import IntentAnalysis, asdict
 
 logger = logging.getLogger(__name__)
 
-RECOMMENDED_FORMATS = ("simple_question", "how_to", "comparison", "explainer", "list")
+RECOMMENDED_FORMATS = ("simple_question", "how_to", "comparison", "price_guide", "explainer", "list")
 
 # Correspondance format recommandé -> article_type historique (lu par la FAQ,
 # le rapport et le repli de plan).
@@ -15,6 +15,7 @@ _FORMAT_TO_ARTICLE_TYPE = {
     "simple_question": "simple_question",
     "how_to": "guide",
     "comparison": "comparison",
+    "price_guide": "evergreen_information",
     "explainer": "evergreen_information",
     "list": "evergreen_information",
 }
@@ -42,6 +43,8 @@ _INTENT_MARKERS = {
     ),
 }
 _HOW_TO_MARKERS = ("comment", "étapes", "tutoriel", "how to", "tutorial", "guide")
+# Guide prix : la question porte sur un coût (« combien coûte », « prix d'un… »).
+_PRICE_MARKERS = ("combien", "prix", "tarif", "tarifs", "coût", "coûte", "coute", "budget", "cost", "price", "pricing")
 _QUESTION_MARKERS = (
     "quoi", "qu'est-ce", "pourquoi", "quand", "quel", "quelle", "quels", "quelles",
     "combien", "faut-il", "est-ce", "what", "why", "when", "which", "is", "can", "does",
@@ -52,6 +55,7 @@ FIRST_BLOCK_GOALS = {
     "simple_question": "Répondre directement à la question dès les premières phrases.",
     "how_to": "Donner tout de suite la marche à suivre résumée.",
     "comparison": "Donner tout de suite la recommandation selon le profil du lecteur.",
+    "price_guide": "Donner tout de suite la fourchette de prix principale et ce qui la fait varier.",
     "explainer": "Expliquer l'essentiel en deux ou trois phrases dès le début.",
     "list": "Annoncer tout de suite ce que la liste apporte et à qui.",
 }
@@ -107,6 +111,8 @@ def analyze_intent(
 
     if re.match(r"^\s*\d+\s", title_lower):
         recommended_format = "list"
+    elif _count_hits(head, _PRICE_MARKERS) and not _count_hits(head, ("vs", "versus", "ou")):
+        recommended_format = "price_guide"
     elif explicit_intent == "commercial":
         recommended_format = "comparison"
     elif how_to_hits:
@@ -207,7 +213,8 @@ def refine_intent_with_research(
         + "\nRéponds UNIQUEMENT avec ce JSON :\n"
         '{"reader_real_question": "la question précise du lecteur, en une phrase", '
         '"expected_answer": "la réponse attendue, en 2 à 3 phrases concrètes", '
-        '"recommended_format": "simple_question | how_to | comparison | explainer | list", '
+        '"recommended_format": "simple_question | how_to | comparison | price_guide | explainer | list '
+        '(price_guide si la question porte sur un prix, un coût ou un budget)", '
         '"explicit_intent": "informational | commercial | transactional | navigational", '
         '"must_include": ["point indispensable pour bien répondre"], '
         '"must_avoid": ["hors-sujet ou remplissage à éviter"], '
