@@ -1,6 +1,61 @@
 from __future__ import annotations
 
 
+def empty_serp_extras() -> dict:
+    return {"people_also_ask": [], "related_searches": [], "answer_box": {}, "knowledge_graph": {}}
+
+
+def _clip(value, limit: int = 600) -> str:
+    text = " ".join(str(value or "").split())
+    return text[:limit]
+
+
+def parse_serper_extras(data: dict) -> dict:
+    """Blocs annexes d'une réponse Serper, normalisés : questions « Autres
+    questions posées » (avec l'extrait de réponse et sa source), recherches
+    associées, encadré de réponse et knowledge graph."""
+    extras = empty_serp_extras()
+    if not isinstance(data, dict):
+        return extras
+    seen: set[str] = set()
+    for item in data.get("peopleAlsoAsk") or []:
+        if not isinstance(item, dict):
+            continue
+        question = _clip(item.get("question"), 200)
+        if not question or question.lower() in seen:
+            continue
+        seen.add(question.lower())
+        extras["people_also_ask"].append({
+            "question": question,
+            "snippet": _clip(item.get("snippet")),
+            "title": _clip(item.get("title"), 200),
+            "url": str(item.get("link") or ""),
+        })
+    for item in data.get("relatedSearches") or []:
+        query = _clip(item.get("query") if isinstance(item, dict) else item, 150)
+        if query and query not in extras["related_searches"]:
+            extras["related_searches"].append(query)
+    box = data.get("answerBox")
+    if isinstance(box, dict) and box:
+        extras["answer_box"] = {
+            "title": _clip(box.get("title"), 200),
+            "answer": _clip(box.get("answer")),
+            "snippet": _clip(box.get("snippet")),
+            "url": str(box.get("link") or ""),
+        }
+    graph = data.get("knowledgeGraph")
+    if isinstance(graph, dict) and graph:
+        attributes = graph.get("attributes") if isinstance(graph.get("attributes"), dict) else {}
+        extras["knowledge_graph"] = {
+            "title": _clip(graph.get("title"), 200),
+            "type": _clip(graph.get("type"), 100),
+            "description": _clip(graph.get("description")),
+            "url": str(graph.get("descriptionLink") or graph.get("website") or ""),
+            "attributes": {_clip(k, 80): _clip(v, 200) for k, v in list(attributes.items())[:12]},
+        }
+    return extras
+
+
 _FALLBACK_MODES = {
     "serper": "serper",
     "serpapi": "serpapi",
@@ -36,6 +91,7 @@ class SerpAdapter:
     trust_level = "none"
 
     def __init__(self, credential=None):
+        self.last_extras = empty_serp_extras()
         if credential is None:
             from app.services.providers.external_services import env_credential
             credential = env_credential("search")
@@ -50,21 +106,32 @@ class SerpAdapter:
             self.fallback_mode = _FALLBACK_MODES[credential.provider]
 
     def search(self, query: str, limit: int = 10) -> list[dict]:
+        """Résultats organiques seuls (compat). Les blocs annexes de la
+        dernière requête Serper restent lisibles dans `last_extras`."""
+        return self.search_full(query, limit)["organic"]
+
+    def search_full(self, query: str, limit: int = 10) -> dict:
+        """Réponse SERP complète : organic + peopleAlsoAsk, relatedSearches,
+        answerBox et knowledgeGraph (Serper seulement ; les autres
+        fournisseurs ne renvoient que les résultats organiques)."""
+        self.last_extras = empty_serp_extras()
         if not self.configured:
-            return []
+            return {"organic": [], **empty_serp_extras()}
         try:
             provider = self.credential.provider
             if provider == "serper":
-                return self._search_serper(query, limit)
-            if provider == "serpapi":
-                return self._search_serpapi(query, limit)
-            if provider == "brave":
-                return self._search_brave(query, limit)
-            return self._search_google(query, limit)
+                organic = self._search_serper(query, limit)
+            elif provider == "serpapi":
+                organic = self._search_serpapi(query, limit)
+            elif provider == "brave":
+                organic = self._search_brave(query, limit)
+            else:
+                organic = self._search_google(query, limit)
         except Exception as exc:
             self.last_error = str(exc)
             self.real_data_available = False
-            return []
+            return {"organic": [], **empty_serp_extras()}
+        return {"organic": organic, **self.last_extras}
 
     def _search_serper(self, query: str, limit: int) -> list[dict]:
         import httpx
@@ -81,6 +148,7 @@ class SerpAdapter:
             {"title": item.get("title", ""), "url": item.get("link", ""), "snippet": item.get("snippet", "")}
             for item in data.get("organic", [])[:limit]
         ]
+        self.last_extras = parse_serper_extras(data)
         if results:
             self.real_data_available = True
         return results
