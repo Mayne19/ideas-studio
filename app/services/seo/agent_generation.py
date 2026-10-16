@@ -167,7 +167,7 @@ def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, 
     if provider == "openrouter":
         from app.services.seo.agent_writer_openrouter import OpenRouterAgentClient, page_fetcher
         client = OpenRouterAgentClient(api_key, model=model, search_fn=orch.serp_adapter.search,
-                                       fetch_fn=page_fetcher(orch.page_cache), max_searches=5, max_fetches=8)
+                                       fetch_fn=page_fetcher(orch.page_cache), max_searches=4, max_fetches=6)
     else:
         client = anthropic_client(api_key)
     writer = AgentWriter(client, model=model, system=system)
