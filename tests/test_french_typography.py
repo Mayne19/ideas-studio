@@ -23,3 +23,14 @@ def test_quotes_and_tags_untouched():
 def test_idempotent():
     once = fix_french_text("Pourquoi? Parce que: voilà.")
     assert fix_french_text(once) == once
+
+
+def test_title_case_is_lowered_except_proper_nouns():
+    from app.services.seo.french_typography import fix_title_case
+
+    body = "Avec Webflow ou avec WordPress, le choix dépend de France Num et du budget."
+    assert fix_title_case("Le Coût Réel d'un Site Vitrine Professionnel en 2026", body) == \
+        "Le coût réel d'un site vitrine professionnel en 2026"
+    assert fix_title_case("Webflow Ou WordPress Pour Un Freelance Exigeant", body) == \
+        "Webflow ou WordPress pour un freelance exigeant"
+    assert fix_title_case("Site vitrine : le vrai budget en 2026", body) == "Site vitrine : le vrai budget en 2026"
