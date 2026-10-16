@@ -19,7 +19,7 @@ NUANCE_MARKERS = [
     # contredisait directement la consigne donnée au writer, condamnant ce
     # signal à rester bas quel que soit le nombre de passes d'amélioration.
     # Liste alignée sur les connecteurs que le prompt encourage réellement.
-    "cependant", "en revanche",
+    "cependant", "en revanche", "pourtant", "en réalité",
     "curieusement", "malgré tout", "paradoxalement",
     "tout compte fait", "d'un côté", "d'un autre côté",
     "il convient de nuancer", "selon les cas", "cela dépend",
