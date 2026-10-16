@@ -145,3 +145,31 @@ def test_required_elements_follow_recommended_format():
     steps = GOOD.replace("</p>\n<h2>Les coûts", "</p><ol><li>Créer un compte</li><li>Choisir un plan</li></ol>\n<h2>Les coûts", 1)
     assert _rule(validate_structure(steps, TITLE, "how_to"), "required_elements")["passed"]
     assert _rule(validate_structure(GOOD, TITLE, "explainer"), "required_elements")["passed"]
+
+
+def test_section_fix_is_targeted_and_guarded():
+    from app.services.seo.structure_fixer import fix_failing_sections, replace_em_dashes
+
+    assert replace_em_dashes("<p>Le plan — souvent — suffit.</p>") == "<p>Le plan, souvent, suffit.</p>"
+    bad = INTRO + "\n" + SECTIONS[0] + "\n" + _section("Les coûts cachés", sizes=(6, 1, 2))
+    report = validate_structure(bad, TITLE)
+    calls = []
+
+    def fixer(prompt, step, temperature):
+        calls.append(step)
+        return "<h2>Les coûts cachés</h2>" + _para(3) + _para(1) + _para(2) + _para(3)
+
+    fixed, fix = fix_failing_sections(bad, report, fixer, title=TITLE)
+    assert calls == ["StructureFix_section:2"]
+    assert fix["applied"] == ["section:2"]
+    assert _rule(validate_structure(fixed, TITLE), "paragraph_length")["passed"]
+
+    def drops_heading(prompt, step, temperature):
+        return _para(3) + _para(1)
+
+    kept, fix = fix_failing_sections(bad, report, drops_heading, title=TITLE)
+    assert kept == bad and fix["rejected"][0]["reason"] == "titres H2/H3 modifiés"
+
+    with_number = bad.replace("<h2>Les coûts cachés</h2>", "<h2>Les coûts cachés</h2><p>Le domaine coûte 12 € par an.</p>")
+    loses_number = fix_failing_sections(with_number, validate_structure(with_number, TITLE), fixer, title=TITLE)[1]
+    assert loses_number["rejected"][0]["reason"].startswith("chiffre(s) perdu(s)")
