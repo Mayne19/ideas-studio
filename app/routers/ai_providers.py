@@ -46,6 +46,7 @@ def _to_public(credential: ProviderCredential, provider_row: Provider) -> AIProv
         base_url=provider_row.base_url,
         model=credential.model,
         is_default=credential.is_default,
+        reasoning_mode=credential.reasoning_mode or "off",
         last_test_status="connected" if credential.last_test_ok else ("error" if credential.last_test_ok is False else None),
         last_test_error=None,
         last_tested_at=credential.last_test_at,
@@ -100,6 +101,7 @@ def create_provider(
         project_id=data.project_id,
         secret_ref=encrypt_secret(data.api_key) or "",
         model=data.model,
+        reasoning_mode=data.reasoning_mode,
     )
     db.add(credential)
     db.commit()
@@ -123,6 +125,8 @@ def update_provider(
         credential.secret_ref = encrypt_secret(data.api_key) or ""
     if data.model is not None:
         credential.model = data.model
+    if data.reasoning_mode is not None:
+        credential.reasoning_mode = data.reasoning_mode
     if data.is_default is True:
         # Un seul is_default=true par project_id (index unique partiel côté
         # DB). SQLAlchemy regroupe les UPDATE de plusieurs objets modifiés
@@ -191,7 +195,7 @@ def test_provider(
         from app.services.providers.provider_config import ResolvedProviderConfig
         from app.services.providers.llm_provider import build_provider_from_config
 
-        shim = ResolvedProviderConfig(id=credential.id, provider=provider_row.code, model=None, base_url=provider_row.base_url, api_key_encrypted=credential.secret_ref)
+        shim = ResolvedProviderConfig(id=credential.id, provider=provider_row.code, model=None, base_url=provider_row.base_url, api_key_encrypted=credential.secret_ref, reasoning_mode=credential.reasoning_mode or "off")
         test_prov = build_provider_from_config(shim)
         if test_prov is None:
             credential.last_test_ok = False
