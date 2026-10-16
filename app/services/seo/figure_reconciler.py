@@ -50,6 +50,8 @@ def build_reconcile_prompt(facts: list[dict], keyword: str) -> str:
         "- source « strong » d'abord ; sinon la fourchette la plus partagée par les sources ;",
         "- distingue les grandeurs différentes (prix total ≠ prix par page ≠ coût annuel) ;",
         "- n'invente aucun chiffre : la référence reprend un fait ou l'enveloppe de plusieurs faits.",
+        "- écarte les faits qui visent un autre public ou un autre cas que le lecteur de l'article "
+        "(administrations, grands comptes…) : ils ne deviennent jamais une référence.",
         "",
         'Réponds en JSON : {"figures": [{"quantity": "prix d\'un site vitrine chez un freelance", '
         '"reference": "900 à 5 000 €, 1 500 à 2 000 € en moyenne", "fact_ids": ["F2", "F21"]}]}',
