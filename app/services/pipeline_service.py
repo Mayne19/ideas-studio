@@ -180,6 +180,27 @@ def _active_pipeline_categories(db: Session, project_id: str) -> list[Category]:
     return [c for c in categories if c.is_pipeline_enabled is not False and _category_monthly_frequency(c) > 0]
 
 
+def allocate_ideas_per_category(frequencies: list[tuple[str, int]], cap: int) -> dict[str, int]:
+    """Répartit au plus `cap` idées entre les catégories, en tourniquet dans
+    l'ordre de priorité reçu et sans dépasser le volume mensuel de chacune.
+    Ex. cap=2, [(A, 4), (B, 1), (C, 3)] -> {A: 1, B: 1} : une idée chacune
+    pour les catégories les plus prioritaires plutôt que tout sur la première."""
+    allocation: dict[str, int] = {}
+    remaining = max(0, int(cap or 0))
+    pending = [(cid, max(0, int(freq or 0))) for cid, freq in frequencies if freq]
+    while remaining > 0 and pending:
+        next_round = []
+        for cid, freq in pending:
+            if remaining <= 0:
+                break
+            allocation[cid] = allocation.get(cid, 0) + 1
+            remaining -= 1
+            if allocation[cid] < freq:
+                next_round.append((cid, freq))
+        pending = next_round
+    return allocation
+
+
 def _normalize_topic(value: str | None) -> str:
     if not value:
         return ""
@@ -447,14 +468,21 @@ def run_pipeline(db: Session, project_id: str) -> dict:
                 project_audience = profile.audience if profile else None
                 project_language = project.locale.split("-")[0] if project and project.locale else "fr"
                 active_categories = _active_pipeline_categories(db, project_id)
-                total_expected_ideas = sum(_category_monthly_frequency(category) for category in active_categories)
+                allocation = allocate_ideas_per_category(
+                    [(category.id, _category_monthly_frequency(category)) for category in active_categories],
+                    resolve_ideas_per_run(db, project_id),
+                )
+                total_expected_ideas = sum(allocation.values())
 
                 if not active_categories or total_expected_ideas <= 0:
                     errors.append("Aucune catégorie active avec volume mensuel configuré.")
 
-                # Phase 1: Generate ideas (always)
+                # Phase 1: Generate ideas (always) — plafonnées par lancement
+                # (Paramètres → Pipeline → Idées par lancement).
                 for category in active_categories:
-                    frequency = _category_monthly_frequency(category)
+                    frequency = allocation.get(category.id, 0)
+                    if frequency <= 0:
+                        continue
                     category_report = {
                         "category_id": category.id,
                         "category_name": category.name,
