@@ -51,7 +51,9 @@ export type AutoGenerateIdeasResponse = {
   generated: number
 }
 
-export function autoGenerateIdeas(projectId: string, count: number = 3, context_hint?: string | null): Promise<AutoGenerateIdeasResponse> {
+// count omis : le backend applique le plafond « Idées par lancement » du projet
+// (1 à 3, défaut 2) ; une valeur supérieure est de toute façon ramenée à ce plafond.
+export function autoGenerateIdeas(projectId: string, count?: number, context_hint?: string | null): Promise<AutoGenerateIdeasResponse> {
   return api.post<AutoGenerateIdeasResponse>(`/projects/${projectId}/ideas/auto-generate`, { count, context_hint }, { timeoutMs: 180000 })
 }
 
@@ -69,8 +71,8 @@ export type DiscoverIdeasResponse = {
   generated: number
 }
 
-export function discoverIdeas(projectId: string, topic: string, count: number = 5): Promise<DiscoverIdeasResponse> {
-  return api.post<DiscoverIdeasResponse>(`/projects/${projectId}/ideas/discover`, { topic, count }, { timeoutMs: 180000 })
+export function discoverIdeas(projectId: string, topic: string, count: number = 1): Promise<DiscoverIdeasResponse> {
+  return api.post<DiscoverIdeasResponse>(`/projects/${projectId}/ideas/discover`, { context_hint: topic, count }, { timeoutMs: 180000 })
 }
 
 export type SendToProductionResponse = {
