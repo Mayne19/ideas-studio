@@ -176,3 +176,16 @@ def test_strip_fact_markers_drops_emptied_inline_tags():
     cleaned, markers = strip_fact_markers("<p>Les délais baissent <strong>[F3]</strong>. Fin <em> [F4] </em> :</p>")
     assert cleaned == "<p>Les délais baissent. Fin :</p>"
     assert [m["fact_id"] for m in markers] == ["F3", "F4"]
+
+
+def test_price_guide_and_list_components():
+    from app.services.seo.intent_analysis_service import analyze_intent
+    from app.services.seo.section_writer import component_section_index
+
+    assert analyze_intent("combien coûte un site vitrine", "combien coûte un site vitrine").recommended_format == "price_guide"
+    assert analyze_intent("webflow ou wordpress", "webflow ou wordpress").recommended_format != "price_guide"
+    sections = group_outline_sections(OUTLINE)
+    assert component_section_index(sections, "price_guide") == 1  # « Les prix réels »
+    assert component_section_index(sections, "list") is None
+    writer = SectionWriter(FakeProvider(), "=== BRIEF ===", sections, fmt="list")
+    assert all("pour qui il convient" in writer._section_prompt(i, "", "") for i in range(len(sections)))
