@@ -78,5 +78,6 @@ SORTIE : uniquement ce JSON.
   "sources": [{"url": "", "title": "", "used_for": ""}],
   "facts": [{"value": "", "source_url": "", "quote": "citation exacte de la source, mot pour mot"}],
   "competitors": [{"url": "", "weaknesses": [""]}],
+  "sub_questions": ["sous-question des concurrents ou des « Autres questions posées » listée avant d'écrire"],
   "self_review": {"answer_in_first_100_words": true, "calculations_checked": true, "notes": ""}
 }

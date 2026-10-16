@@ -319,7 +319,8 @@ def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, 
     draft.reading_time_minutes = calculate_reading_time_minutes(draft.word_count)
     article.slug = _unique_slug(db, orch.project_id, best.get("slug") or draft.title, article.id)
     orch._persist_revision(draft)
-    orch._save(article.id, "agent_writer_output", {k: best.get(k) for k in ("sources", "facts", "competitors", "self_review")})
+    orch._save(article.id, "agent_writer_output",
+               {k: best.get(k) for k in ("sources", "facts", "competitors", "sub_questions", "self_review")})
     orch._save(article.id, "plagiarism_report", plag_report)
 
     _finish_seo(orch, article, draft, category_name, best)
