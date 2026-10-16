@@ -492,6 +492,7 @@ export default function ProjectIntegrationPage() {
             </div>
             <span className="text-[12px] text-tertiary">
               À coller côté Vercel/Next.js (variable d'environnement lue par votre route /api/ideas-studio/revalidate).
+              Il est transmis dans l'en-tête <code>x-ideas-studio-secret</code> (et le corps JSON), jamais dans l'URL.
               Chaque projet a son propre secret : pas besoin de le partager entre plusieurs sites.
             </span>
           </label>
