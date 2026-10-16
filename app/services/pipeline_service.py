@@ -9,7 +9,17 @@ from sqlalchemy.orm import Session
 from app.models.ai import Pipeline, PipelineRun
 from app.models.content import Article, Category
 from app.models.reference import ArticleStatus, RunStatus, set_run_status
-from app.schemas.pipeline import PipelineSettingsUpdate, PipelineSettingsPublic, PipelineLogPublic
+from app.schemas.pipeline import (
+    DEFAULT_IDEAS_PER_RUN,
+    DEFAULT_MIN_PUBLISH_SCORE,
+    IDEAS_PER_RUN_MAX,
+    IDEAS_PER_RUN_MIN,
+    MIN_PUBLISH_SCORE_MAX,
+    MIN_PUBLISH_SCORE_MIN,
+    PipelineLogPublic,
+    PipelineSettingsPublic,
+    PipelineSettingsUpdate,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +96,49 @@ def _summary_from_run(run: PipelineRun, run_summary: dict | None = None) -> dict
         "started_at": run.started_at.isoformat(),
         "finished_at": run.finished_at.isoformat() if run.finished_at else None,
     }
+
+
+def _clamp_ideas_per_run(value) -> int:
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        return DEFAULT_IDEAS_PER_RUN
+    return max(IDEAS_PER_RUN_MIN, min(IDEAS_PER_RUN_MAX, value))
+
+
+def _clamp_min_publish_score(value) -> int:
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        return DEFAULT_MIN_PUBLISH_SCORE
+    return max(MIN_PUBLISH_SCORE_MIN, min(MIN_PUBLISH_SCORE_MAX, value))
+
+
+def resolve_ideas_per_run(db: Session, project_id: str) -> int:
+    """Plafond dur d'idées créées par lancement pour ce projet (1-3, défaut
+    2), réglable dans Paramètres → Pipeline. Appliqué partout où des idées
+    sont créées (pipeline, auto-génération, découverte, scheduler,
+    planification mensuelle) : chaque idée coûte des appels LLM."""
+    pipe = db.get(Pipeline, project_id)
+    return _clamp_ideas_per_run(pipe.ideas_per_run if pipe else None)
+
+
+def cap_ideas_count(db: Session, project_id: str, requested: int | None) -> int:
+    """Nombre d'idées effectivement autorisé pour une demande : la valeur
+    demandée (défaut = plafond) bornée par le plafond du projet."""
+    cap = resolve_ideas_per_run(db, project_id)
+    if requested is None:
+        return cap
+    try:
+        requested = int(requested)
+    except (TypeError, ValueError):
+        return cap
+    return max(0, min(requested, cap))
+
+
+def resolve_min_publish_score(pipeline: Pipeline | None) -> int:
+    """Score global minimum de publication (85-100, défaut 90)."""
+    return _clamp_min_publish_score(pipeline.min_publish_score if pipeline else None)
 
 
 def _category_frequency_summary(db: Session, project_id: str) -> tuple[int, list[dict]]:
@@ -211,6 +264,8 @@ def _model_to_settings(pipe: Pipeline, db: Session | None = None) -> PipelineSet
         articles_per_week=pipe.articles_per_week,
         category_priorities=schedule.get("category_priorities", {}),
         ideas_per_week=pipe.ideas_per_week,
+        ideas_per_run=_clamp_ideas_per_run(pipe.ideas_per_run),
+        min_publish_score=_clamp_min_publish_score(pipe.min_publish_score),
         max_pending_drafts=pipe.max_pending_drafts,
         max_parallel_writing_jobs=pipe.max_parallel_jobs,
         paused_until=pipe.paused_until,
@@ -253,6 +308,8 @@ def get_pipeline(db: Session, project_id: str) -> PipelineSettingsPublic | None:
             articles_per_week=5,
             category_priorities={},
             ideas_per_week=5,
+            ideas_per_run=DEFAULT_IDEAS_PER_RUN,
+            min_publish_score=DEFAULT_MIN_PUBLISH_SCORE,
             max_pending_drafts=10,
             paused_until=None,
             paused_indefinitely=False,
@@ -276,6 +333,8 @@ _PIPELINE_FIELD_MAP = {
     "enabled": "is_enabled",
     "articles_per_week": "articles_per_week",
     "ideas_per_week": "ideas_per_week",
+    "ideas_per_run": "ideas_per_run",
+    "min_publish_score": "min_publish_score",
     "max_pending_drafts": "max_pending_drafts",
     "max_parallel_writing_jobs": "max_parallel_jobs",
     "paused_until": "paused_until",
