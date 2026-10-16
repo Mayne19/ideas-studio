@@ -298,6 +298,19 @@ AGENTS: list[AgentDef] = [
         output_json_field="style_adaptation_json",
     ),
     AgentDef(
+        agent_id="agent_writer",
+        name="Agent rédacteur unique",
+        description="Cherche, lit les concurrents et les sources, puis rédige l'article d'un seul tenant "
+                    "(mode de génération « agent », clé Anthropic) ; modèle par défaut claude-opus-5-5",
+        category=AgentCategory.creation,
+        phase="writing",
+        requires_llm=True,
+        icon="pen-tool",
+        implementation_ref="agent_writer",
+        status=AgentStatus.active,
+        output_json_field="content_html",
+    ),
+    AgentDef(
         agent_id="writer",
         name="Rédacteur",
         description="Rédige le contenu principal de l'article",
