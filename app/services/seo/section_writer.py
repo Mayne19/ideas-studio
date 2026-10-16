@@ -557,8 +557,12 @@ class SectionWriter:
 
     def _common_rules(self) -> list[str]:
         return [
-            "- N'écris aucun chiffre, prix, pourcentage, date ou nom d'étude absent des faits vérifiés "
-            "ou des extraits de sources fournis.",
+            "- Tout chiffre, prix, date ou nom d'étude repris d'une source doit figurer dans les faits vérifiés "
+            "ou les extraits fournis.",
+            "- Tu peux calculer un nouveau chiffre à partir de ces faits (pourcentage d'un montant, coût par "
+            "unité, total) : montre le calcul en une phrase pour que le lecteur puisse le refaire.",
+            "- Tu peux construire un exemple hypothétique avec des montants ronds (« Prenons un loyer de 600 € »), "
+            "à condition de l'annoncer clairement comme un exemple.",
             "- N'invente aucun témoignage, cas client, anecdote vécue ni propos attribué à quelqu'un "
             "(« un freelance le confirme », « un client nous a dit ») : présente le raisonnement directement.",
             "- HTML simple uniquement : <h2>, <h3>, <p>, <ul>, <ol>, <li>, <table>, <blockquote>, <strong>, "
