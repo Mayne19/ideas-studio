@@ -124,6 +124,8 @@ def test_no_insertion_when_model_finds_nothing_twice():
 
 
 def test_respects_existing_external_links_budget():
+    from app.services.seo.citation_inserter import normalize_external_rels
+
     article = ARTICLE.replace(
         "Les dispositifs publics",
         '<a href="https://a.example.org/x">Les dispositifs</a> <a href="https://b.example.org/y">publics</a> '
@@ -131,7 +133,7 @@ def test_respects_existing_external_links_budget():
     )
     fake = FakeLinker([PICKS])
     content, report = insert_citations(article, fake, EXTERNAL, [], keyword="webflow")
-    assert content == article
+    assert content == normalize_external_rels(article, "webflow")
     assert fake.prompts == []
     assert report["existing_external"] == 3
 
@@ -157,3 +159,18 @@ def test_non_reference_source_gets_nofollow():
     )
     assert reason is None
     assert 'rel="noopener nofollow">logiciel libre</a>' in content
+
+
+def test_normalize_external_rels_follows_reference_sources():
+    from app.services.seo.citation_inserter import normalize_external_rels
+
+    html = (
+        "<p><a href='https://www.francenum.gouv.fr/guide' target='_blank' rel='nofollow'>France Num</a> "
+        "<a href=\"https://blog.example.com/x\">un blog</a> "
+        "<a href=\"https://unsplash.com/@p\">Per</a> <a href=\"/interne\">interne</a></p>"
+    )
+    out = normalize_external_rels(html, "site vitrine")
+    assert '<a href="https://www.francenum.gouv.fr/guide" target="_blank" rel="noopener">France Num</a>' in out
+    assert '<a href="https://blog.example.com/x" target="_blank" rel="noopener nofollow">un blog</a>' in out
+    assert '<a href="https://unsplash.com/@p">Per</a>' in out
+    assert '<a href="/interne">interne</a>' in out
