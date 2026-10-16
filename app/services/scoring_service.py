@@ -104,7 +104,7 @@ def compute_global_score(
             ["eeat_checklist", "readability_report", "originality_report", "geo_optimization",
              "seo_final_checklist", "human_presence_report",
              "production_brief", "human_insights", "editorial_angle",
-             "external_links", "content_gaps"],
+             "external_links", "content_gaps", "editorial_judgement"],
         )
     eeat_json = artifacts.get("eeat_checklist")
     readability_json = artifacts.get("readability_report")
@@ -207,10 +207,33 @@ def compute_global_score(
             if human_presence is None: missing.append("Présence humaine")
             incomplete_reason = f"Scores manquants : {', '.join(missing)}"
 
+    # Chaîne v2 : le juge éditorial (grille de 100 points, blocages) devient
+    # le score de publication ; la formule heuristique ci-dessus reste
+    # exposée comme « lint » (lint_score) pour diagnostic.
+    lint_score = global_score
+    judgement = ((artifacts.get("editorial_judgement") or {}).get("final")) if artifacts else None
+    editorial_blockers: list = []
+    scoring_note = ("Scoring v2.3 — SEO×27% · EEAT×18% · Lisibilité×15% · Originalité×16% · "
+                    "Présence humaine×14% · Valeur ajoutée×10%. Volume non noté.")
+    if isinstance(judgement, dict) and judgement.get("content_score") is not None:
+        from app.services.seo.editorial_judge import final_score
+        global_score = final_score(judgement, seo)
+        editorial_blockers = judgement.get("blockers") or []
+        global_score_valid = not editorial_blockers
+        incomplete_reason = (
+            "Blocage éditorial : " + "; ".join(f"{b.get('type')} ({b.get('detail', '')[:120]})" for b in editorial_blockers[:3])
+            if editorial_blockers else None
+        )
+        scoring_note = ("Score éditorial v2 — grille de 100 points du juge (intention, exactitude, sources, "
+                        "gain d'information, profondeur, clarté, fraîcheur) + structure et SEO calculés.")
+
     return {
         "global_score": global_score,
         "global_score_valid": global_score_valid,
         "incomplete_reason": incomplete_reason,
+        "lint_score": lint_score,
+        "editorial_blockers": editorial_blockers,
+        "editorial_criteria": (judgement or {}).get("criteria") if isinstance(judgement, dict) else None,
         "seo_contrib": seo,
         "eeat_contrib": eeat,
         "readability_contrib": readability,
@@ -221,7 +244,7 @@ def compute_global_score(
         "value_added_contrib": value_added,
         "value_added_flags": value_added_flags,
         "content_format": get_format(article) if article is not None else None,
-        "scoring_note": "Scoring v2.3 — SEO×27% · EEAT×18% · Lisibilité×15% · Originalité×16% · Présence humaine×14% · Valeur ajoutée×10%. Volume non noté.",
+        "scoring_note": scoring_note,
     }
 
 
