@@ -44,7 +44,7 @@ JUDGE_CRITERIA: dict[str, tuple[int, str]] = {
 CODE_STRUCTURE_POINTS = 5
 CODE_SEO_POINTS = 5
 BLOCKER_TYPES = ("invented_fact", "unsourced_figure", "contradiction", "intent_missed", "missing_component",
-                 "off_topic_fact", "meta_commentary", "reader_drop")
+                 "off_topic_fact", "meta_commentary", "reader_drop", "unexplained_jargon", "commercial_copy")
 
 # Calibration humaine : introduction refusée par le fondateur (2026-10-16),
 # « aucun lien entre les phrases, on sent le contenu généré, j'ai fermé ».
@@ -108,13 +108,17 @@ def build_judge_prompt(content: str, *, title: str, keyword: str, brief: dict, f
         "rédacteur en chef :",
         FOUNDER_REJECTED_EXAMPLE,
         "Un passage de ce niveau dans l'introduction ou dans une section = clarity ≤ 4 et blocage reader_drop.",
+        "Lis aussi comme un débutant qui ne connaît pas le sujet : si la première phrase ne répond pas "
+        "simplement à la question ou si un terme technique arrive sans explication, clarity ≤ 4 et blocage "
+        "unexplained_jargon (cite le terme). Une offre commerciale d'un prestataire (ses tarifs, son diagnostic "
+        "gratuit, son forfait) présentée comme un fait = blocage commercial_copy.",
         "",
         "Blocages (un seul suffit à refuser la publication) : invented_fact (fait ou source inventés), "
         "unsourced_figure (chiffre précis absent des faits vérifiés et invérifiable), contradiction (deux valeurs "
         "différentes pour la même chose), intent_missed (la question n'a pas de réponse claire), off_topic_fact "
         "(chiffre qui concerne un autre public ou un autre cas), meta_commentary (le texte commente l'article, une "
         "consigne ou « le lecteur »), reader_drop (passage qui fait décrocher : phrases sans fil, tics, "
-        "répétition, ton généré). Ne signale un blocage que s'il est certain.",
+        "répétition, ton généré), unexplained_jargon, commercial_copy. Ne signale un blocage que s'il est certain.",
         "",
         "Pour chaque section à améliorer, donne une consigne de correction concrète et applicable par un "
         "rédacteur (« remplacer la fourchette X par la référence Y », « supprimer l'affirmation Z non sourcée », "
