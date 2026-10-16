@@ -88,6 +88,8 @@ def build_report(cur, article_id: str) -> str:
     lines.append("- Cohérence (informatif) : " + (" | ".join(report.get("consistency_info") or []) or "rien"))
     lines += ["", "**Concurrents et failles**"]
     lines += [f"- {c.get('url')} : " + " ; ".join(c.get("weaknesses") or []) for c in output.get("competitors") or []]
+    lines += ["", "**Sous-questions listées avant d'écrire (concurrents et « Autres questions posées »)**"]
+    lines += [f"- {q}" for q in output.get("sub_questions") or []]
     lines += ["", "**Sources**"]
     lines += [f"- {s.get('url')} — {s.get('title', '')} — {s.get('used_for', '')}" for s in output.get("sources") or []]
     lines += ["", "**Faits (citation exacte)**"]
