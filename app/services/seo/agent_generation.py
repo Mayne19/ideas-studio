@@ -63,17 +63,86 @@ def assembly_errors(data: dict) -> list[str]:
     return errors
 
 
+# Seules ces règles déclenchent un tour de correction payant (consigne du
+# 2026-10-17) : les autres (longueur des paragraphes, variation…) restent
+# informatives, sinon les corrections abîment l'article.
+CORRECTION_RULES = ("no_em_dash", "banned_vocabulary", "verbal_tics", "single_h1", "heading_hierarchy")
+INTRO_MAX_WORDS, INTRO_MAX_SHARE = 150, 0.15
+
+
 def structure_errors(content: str, title: str) -> list[str]:
+    from app.services.seo.html_text_ops import html_to_text, split_units
     from app.services.seo.structure_validator import validate_structure
 
     report = validate_structure(content, title)
     errors = []
     for rule in report.get("rules") or []:
-        if rule.get("passed") or rule.get("severity") != "hard":
+        if rule.get("passed") or rule.get("rule") not in CORRECTION_RULES:
             continue
         for v in (rule.get("violations") or [])[:3]:
             where = f" (section « {v['section']} »)" if v.get("section") else ""
             errors.append(f"{rule['label']}{where} : {v.get('detail', '')}")
+    intro_words = len(html_to_text(split_units(content)[0]).split()) if content else 0
+    total_words = len(html_to_text(content).split()) or 1
+    if intro_words > INTRO_MAX_WORDS and intro_words / total_words > INTRO_MAX_SHARE:
+        errors.append(f"Introduction trop longue : {intro_words} mots (au plus {INTRO_MAX_WORDS} mots ou "
+                      f"{int(INTRO_MAX_SHARE * 100)} % de l'article).")
+    return errors
+
+
+def link_errors(content: str) -> list[str]:
+    """Une même URL au plus une fois dans le corps."""
+    counts: dict[str, int] = {}
+    for url in re.findall(r"""<a\b[^>]*href\s*=\s*["']([^"']+)["']""", content or "", re.IGNORECASE):
+        key = url.split("#")[0].rstrip("/")
+        counts[key] = counts.get(key, 0) + 1
+    return [f"L'URL {url} est liée {n} fois : garde un seul lien, au premier endroit où la source sert."
+            for url, n in counts.items() if n > 1]
+
+
+_STEP_HEADING_RE = re.compile(r"\b(étapes?|gestes?|méthode|marche à suivre|procédure)\b", re.IGNORECASE)
+_COUNT_WORDS = {"deux": 2, "trois": 3, "quatre": 4, "cinq": 5, "six": 6, "sept": 7, "huit": 8, "neuf": 9, "dix": 10}
+
+
+def html_render_errors(content: str) -> list[str]:
+    """Tableaux avec en-tête ; méthode à étapes en liste numérotée."""
+    from app.services.seo.html_text_ops import html_to_text, split_units, unit_heading
+
+    errors = []
+    for table in re.findall(r"<table\b.*?</table>", content or "", re.IGNORECASE | re.DOTALL):
+        if "<th" not in table.lower():
+            errors.append("Un tableau n'a pas de ligne d'en-tête (<thead> avec <th>).")
+        rows = re.findall(r"<tr\b.*?</tr>", table, re.IGNORECASE | re.DOTALL)
+        widths = {len(re.findall(r"<t[hd]\b", r, re.IGNORECASE)) for r in rows}
+        if len(widths) > 1:
+            errors.append("Un tableau a des lignes de longueurs différentes : chaque ligne doit avoir le même nombre de cellules.")
+    for unit in split_units(content or "")[1:]:
+        if _STEP_HEADING_RE.search(unit_heading(unit)) and "<ul" in unit.lower() and "<ol" not in unit.lower():
+            errors.append(f"La section « {unit_heading(unit)} » présente des étapes en liste à puces : utilise une liste numérotée <ol>.")
+    return errors
+
+
+def announced_count_errors(content: str) -> list[str]:
+    """« Les quatre gestes » dans un titre : la section doit en contenir
+    exactement quatre (éléments de liste ou H3)."""
+    from app.services.seo.html_text_ops import split_units, unit_heading
+
+    errors = []
+    for unit in split_units(content or "")[1:]:
+        heading = unit_heading(unit)
+        m = re.search(r"\b(" + "|".join(_COUNT_WORDS) + r"|\d{1,2})\s+(?:[a-zéèêàâîïôûç]+\s+)?(erreurs|étapes|gestes|"
+                      r"questions|conseils|astuces|raisons|signes|règles|critères|outils|méthodes|solutions)",
+                      heading.lower())
+        if not m:
+            continue
+        announced = int(m.group(1)) if m.group(1).isdigit() else _COUNT_WORDS[m.group(1)]
+        body = re.sub(r"^\s*<h2\b[^>]*>.*?</h2>", "", unit, flags=re.IGNORECASE | re.DOTALL)
+        h3 = len(re.findall(r"<h3\b", body, re.IGNORECASE))
+        items = max((len(re.findall(r"<li\b", lst, re.IGNORECASE))
+                     for lst in re.findall(r"<[ou]l\b.*?</[ou]l>", body, re.IGNORECASE | re.DOTALL)), default=0)
+        if announced not in (h3, items):
+            errors.append(f"Le titre « {heading} » annonce {announced} {m.group(2)}, la section en contient "
+                          f"{h3 or items}.")
     return errors
 
 
@@ -91,6 +160,28 @@ def consistency_errors(content: str, call_fn) -> list[str]:
         for i in data.get("issues") or []
         if isinstance(i, dict) and i.get("type") == "contradiction"
     ][:5]
+
+
+def heading_mismatch_errors(orch, article, candidate: dict) -> list[str]:
+    """Titre qui ne tient pas sa promesse : verdict du juge éditorial
+    (blocage heading_mismatch), seule faute « de sens » corrigée."""
+    from app.services.seo.editorial_judge import judge_article
+
+    def judge_call(prompt: str, step: str, temperature: float) -> str:
+        return orch._write_pass(prompt, "quality_gate", article, temperature, step)
+
+    try:
+        judgement = judge_article(candidate.get("content_html") or "", judge_call, title=candidate.get("title") or "",
+                                  keyword=article_keyword(orch), brief={}, facts=[], reference_figures=[])
+    except Exception:
+        return []
+    orch.context["agent_last_judgement"] = judgement
+    return [f"Titre en désaccord avec sa section : {b.get('section', '')} ({b.get('detail', '')})"
+            for b in judgement.get("blockers") or [] if b.get("type") == "heading_mismatch"]
+
+
+def article_keyword(orch) -> str:
+    return str((orch.context.get("idea_discovery") or {}).get("main_keyword") or "")
 
 
 def plagiarism_errors(orch: "SEOGenerationOrchestrator", content: str) -> tuple[list[str], dict]:
@@ -181,11 +272,15 @@ def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, 
         return _fail(orch, article, draft, category_name, f"Agent rédacteur indisponible : {exc}", writer, run_report)
 
     def check(candidate: dict) -> tuple[list[str], dict]:
+        """Fautes dures seulement (elles déclenchent une correction) ; la
+        cohérence est informative et rangée dans le rapport."""
         content = candidate.get("content_html") or ""
         errors = structure_errors(content, candidate.get("title") or final_title)
-        errors += assembly_errors(candidate)
-        errors += consistency_errors(content, orch._polish_call_fn(article))
+        errors += assembly_errors(candidate) + link_errors(content) + html_render_errors(content)
+        errors += announced_count_errors(content)
+        errors += heading_mismatch_errors(orch, article, candidate)
         plag_errors, plag_report = plagiarism_errors(orch, content)
+        plag_report["consistency_info"] = consistency_errors(content, orch._polish_call_fn(article))
         return errors + plag_errors, plag_report
 
     best, (best_errors, plag_report) = data, check(data)
@@ -228,6 +323,7 @@ def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, 
     orch._save(article.id, "plagiarism_report", plag_report)
 
     _finish_seo(orch, article, draft, category_name, best)
+    run_report["consistency_info"] = (plag_report or {}).get("consistency_info") or []
     run_report.update(writer.report())
     orch._save(article.id, "agent_writer_report", run_report)
     orch._score_article(article, draft)
