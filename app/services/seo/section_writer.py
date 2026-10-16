@@ -77,6 +77,9 @@ def lost_h2s(before: str, after: str) -> list[str]:
     return [h for h in extract_h2_texts(before) if not any(headings_match(h, a) for a in after_h2)]
 
 
+_HTML_BLOCK_RE = re.compile(r"<(?:p|ul|ol|table|blockquote)\b", re.IGNORECASE)
+
+
 def clean_unit_html(raw: str) -> str:
     """Nettoie une sortie de modèle : backticks, Markdown résiduel, <h1>,
     texte brut sans balise."""
@@ -84,12 +87,15 @@ def clean_unit_html(raw: str) -> str:
     text = re.sub(r"^```[a-zA-Z]*\s*", "", text)
     text = re.sub(r"\s*```\s*$", "", text).strip()
     text = re.sub(r"<h1\b[^>]*>.*?</h1>", "", text, flags=re.IGNORECASE | re.DOTALL)
-    text = re.sub(r"^###\s+(.+)$", r"<h3>\1</h3>", text, flags=re.MULTILINE)
-    text = re.sub(r"^##\s+(.+)$", r"<h2>\1</h2>", text, flags=re.MULTILINE)
+    text = re.sub(r"^#\s+.+$", "", text, flags=re.MULTILINE)
+    if not _HTML_BLOCK_RE.search(text):
+        # Sortie en Markdown (ou texte brut), fréquente chez certains modèles
+        # (ex. Gemini) : sans conversion complète, les paragraphes restent
+        # nus et le contrôle de troncature efface toute la section.
+        import markdown
+
+        text = markdown.markdown(text, extensions=["tables", "sane_lists"])
     text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
-    if "<" not in text:
-        paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
-        text = "\n".join(f"<p>{p}</p>" for p in paragraphs)
     return text.strip()
 
 
