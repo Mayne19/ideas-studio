@@ -225,6 +225,14 @@ def update_project(db: Session, project: Project, data: ProjectUpdate) -> dict:
     update_data = data.model_dump(exclude_unset=True)
     site_url = update_data.pop("site_url", None)
     revalidate_url = update_data.pop("revalidate_url", None)
+    if revalidate_url is not None:
+        revalidate_url = revalidate_url.strip()
+        if revalidate_url:
+            # Requêtée côté serveur à chaque publication : jamais vers le
+            # réseau interne (SSRF), HTTPS obligatoire. Vérifiée avant toute
+            # modification pour ne rien enregistrer à moitié.
+            from app.core.ssrf_guard import assert_safe_external_url
+            assert_safe_external_url(revalidate_url)
     ga4_property_id = update_data.pop("ga4_property_id", None)
     ga4_service_account_json = update_data.pop("ga4_service_account_json", None)
 
@@ -263,7 +271,7 @@ def update_project(db: Session, project: Project, data: ProjectUpdate) -> dict:
         if site_url is not None:
             target.site_url = site_url
         if revalidate_url is not None:
-            target.revalidate_url = revalidate_url
+            target.revalidate_url = revalidate_url or None
         if ga4_property_id is not None:
             target.ga4_property_id = ga4_property_id
         if ga4_service_account_json is not None:
