@@ -778,6 +778,20 @@ export default function ArticlesPage() {
               onChange={(e) => setGenerateForm((f) => ({ ...f, angle: e.target.value || null }))}
               placeholder="Guide pratique avec exemples"
             />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[12px] font-medium text-secondary">Notes d'expert (optionnel, recommandé)</label>
+              <textarea
+                value={generateForm.expert_notes ?? ''}
+                onChange={(e) => setGenerateForm((f) => ({ ...f, expert_notes: e.target.value || null }))}
+                rows={4}
+                maxLength={4000}
+                placeholder="Votre savoir de terrain : prix réellement facturés, un cas client, l'erreur que vous voyez le plus souvent…"
+                className="rounded-[10px] border border-border bg-surface px-3 py-2 text-[14px] text-primary outline-none focus:border-accent"
+              />
+              <span className="text-[11px] text-tertiary">
+                Ce que Google ne trouve nulle part ailleurs : intégré en priorité par le rédacteur, c'est le principal levier d'un article premium.
+              </span>
+            </div>
             <div className="flex flex-wrap items-center gap-4">
               <ToggleSwitch
                 checked={generateForm.include_faq ?? false}

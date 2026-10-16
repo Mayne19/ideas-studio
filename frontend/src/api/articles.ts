@@ -140,6 +140,7 @@ export type GenerateArticleRequest = {
   angle?: string | null
   search_intent?: string | null
   context_hint?: string | null
+  expert_notes?: string | null
   include_faq?: boolean | null
   include_callouts?: boolean | null
 }
