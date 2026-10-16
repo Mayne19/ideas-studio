@@ -14,6 +14,7 @@ SECTION_RANGE_BY_FORMAT = {
     "how_to": (4, 7),
     "explainer": (4, 6),
     "comparison": (4, 6),
+    "price_guide": (4, 6),
     "list": (5, 9),
 }
 
@@ -220,6 +221,7 @@ def _build_outline_heuristic(
         follow_up = {
             "how_to": "Les étapes, dans l'ordre",
             "comparison": "Comment choisir selon votre situation",
+            "price_guide": "Exemple de budget complet",
             "list": "La liste en détail",
         }.get(fmt, "Les cas particuliers à connaître")
         sections.append({
