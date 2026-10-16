@@ -195,3 +195,10 @@ def test_definition_queries_are_explainers():
     from app.services.seo.intent_analysis_service import analyze_intent
 
     assert analyze_intent("qu'est-ce qu'un cms headless", "qu'est-ce qu'un cms headless").recommended_format == "explainer"
+
+
+def test_common_rules_allow_calculated_and_hypothetical_figures():
+    writer = SectionWriter(FakeProvider(), "=== BRIEF ===", group_outline_sections(OUTLINE))
+    rules = " ".join(writer._common_rules())
+    assert "repris d'une source doit figurer dans les faits vérifiés" in rules
+    assert "montre le calcul" in rules and "exemple hypothétique" in rules

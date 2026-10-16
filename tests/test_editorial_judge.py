@@ -95,3 +95,19 @@ def test_guard_rejects_revision_that_duplicates_a_section():
     before = "<h2>Définition</h2><p>Un CMS headless sépare le contenu de son affichage.</p>"
     after = before + "<h2>Comment fonctionne un CMS headless ?</h2><p>Le contenu passe par une API.</p>"
     assert guard_revision(before, after, "") == "sections H2 ajoutées ou supprimées"
+
+
+def test_judge_prompt_accepts_calculated_figures_but_checks_math():
+    from app.services.seo.editorial_judge import build_judge_prompt
+
+    prompt = build_judge_prompt("<p>x</p>", title="t", keyword="k", brief={}, facts=[], reference_figures=[])
+    assert "chiffre calculé à partir des faits" in prompt and "un calcul faux est un blocage contradiction" in prompt
+
+
+def test_calculated_and_example_figures_are_not_flagged():
+    from app.services.seo.targeted_revision import unverified_figures
+
+    html = ("<p>Intro.</p><h2>Coût</h2><p>Typeform coûte 39 $ pour 100 réponses, soit 0,39 $ par réponse. "
+            "Prenons un loyer de 600 € par mois. Un freelance facture 3 200 €.</p>")
+    found = unverified_figures(html, "Typeform coûte 39 $ pour 100 réponses")
+    assert found == {1: ["Un freelance facture 3 200 €."]}
