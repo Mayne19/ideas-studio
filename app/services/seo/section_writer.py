@@ -571,14 +571,18 @@ class SectionWriter:
         prompt_parts = [
             self.brief_text, "", self._outline_list(), "",
             "Rédige uniquement l'introduction de l'article (le texte placé avant le premier <h2>) :",
-            "- Les 2 à 3 premières phrases donnent la réponse directe à la question réelle du lecteur, "
-            "formulée pour lui et sa situation (ce que ça change pour lui), pas comme une définition "
-            "de dictionnaire. Pas de contexte ni d'annonce du plan avant cette réponse.",
+            "- Trois paragraphes <p> courts, dans cet ordre, environ 90 à 140 mots au total, aucun titre :",
+            "  1. La réponse directe, adaptée à ce que le lecteur veut obtenir (son but, sa contrainte), avec la "
+            "recommandation concrète qui en découle ; une phrase peut annoncer qu'il existe d'autres cas traités "
+            "plus bas, pour donner envie de lire la suite.",
+            "  2. Le problème concret : le piège, le risque ou l'enjeu que le lecteur ne voit pas encore, avec un "
+            "fait précis tiré des faits vérifiés.",
+            "  3. Une seule phrase qui annonce concrètement ce que l'article lui donne (« Ce comparatif vous donne, "
+            "pour chacun des 8 outils, … puis un modèle prêt à copier »), sans « vous découvrirez » ni reprise du titre.",
             "- Les phrases s'enchaînent : chacune découle de la précédente.",
             "- Test du débutant : quelqu'un qui ne connaît rien au sujet comprend la première phrase sans "
             "relire ; pas de jargon ni de formule abstraite (« architecture découplée », « arbitrer »).",
-            "- Ensuite, une ou deux phrases au plus sur la nuance qui compte (sans énumérer les sections).",
-            "- 1 ou 2 paragraphes <p>, environ 60 à 120 mots, aucun titre.",
+            "- Ni question rhétorique ni « Imaginez » pour commencer.",
             *self._common_rules(),
         ]
         facts_block = format_facts_block(self.section_facts.get("intro") or [])
@@ -611,6 +615,10 @@ class SectionWriter:
                 "Ajoute des <h3> seulement si la section regroupe plusieurs sous-points distincts "
                 "(jamais un seul <h3>)."
             )
+        parts.append(
+            "Le titre est une promesse : la première phrase de la section la tient, et la section ne traite que "
+            "ce que le titre annonce (rien de plus, rien d'un autre sujet)."
+        )
         already = already_said(article_so_far)
         if already:
             parts.append("Déjà dit plus haut dans l'article (ne le répète pas, appuie-toi dessus) : " + already)
