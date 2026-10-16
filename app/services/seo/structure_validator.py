@@ -54,6 +54,8 @@ BANNED_WORDS = (
 BANNED_EXPRESSIONS = (
     "le contenu est roi", "dans le paysage numérique actuel", "à l'ère du digital",
     "passer à la vitesse supérieure", "sortir du lot", "se démarquer de la concurrence",
+    # Retours du fondateur (2026-10-16) : marqueurs de texte généré.
+    "imaginez", "franchement", "curieusement", "c'est ce qui fait la différence", "le saviez-vous",
 )
 # Guide §1.10 : ouvertures de conclusion interdites.
 CONCLUSION_OPENERS = ("en conclusion", "pour résumer", "pour conclure", "en résumé", "nous avons vu que")
