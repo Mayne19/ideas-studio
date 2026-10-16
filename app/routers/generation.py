@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -44,6 +44,9 @@ class GenerateArticleRequest(BaseModel):
     angle: str | None = None
     search_intent: str | None = None
     context_hint: str | None = None
+    # Savoir de terrain du fondateur (prix réels, cas client, erreurs vues) :
+    # intégré en priorité par le rédacteur, source de gain d'information.
+    expert_notes: str | None = Field(default=None, max_length=4000)
     include_faq: bool | None = None
     include_callouts: bool | None = None
     use_orchestrator: bool = True
