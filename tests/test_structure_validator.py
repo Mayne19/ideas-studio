@@ -201,3 +201,15 @@ def test_isolated_h3_is_demoted_without_losing_text():
     out = demote_isolated_h3(html)
     assert "<p><strong>Ce que chaque option inclut</strong></p>" in out
     assert out.count("<h3") == 2
+
+
+def test_verbal_tics_limited_and_stripped_from_headings():
+    from app.services.seo.structure_fixer import strip_heading_tics
+    from app.services.seo.structure_validator import validate_structure
+
+    html = ("<p>Concrètement, un CMS sépare deux choses.</p><h2>Fonctionnement</h2>"
+            "<p>Concrètement, le contenu passe par une API. En effet, c'est simple.</p>")
+    rule = next(r for r in validate_structure(html, "T")["rules"] if r["rule"] == "verbal_tics")
+    assert not rule["passed"] and len(rule["violations"]) == 1
+    assert strip_heading_tics("<h2>Comment fonctionne concrètement un CMS headless ?</h2>") == \
+        "<h2>Comment fonctionne un CMS headless ?</h2>"

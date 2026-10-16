@@ -82,3 +82,10 @@ def test_locate_unit_accepts_digest_label_and_small_numbers_pass_guard():
     assert locate_unit(units, "SECTION « Les coûts cachés »") == 2
     before = "<h2>Prix</h2><p>Un freelance facture 1 500 à 2 000 €.</p>"
     assert guard_revision(before, "<h2>Prix</h2><p>En 2 étapes, un freelance facture 1 500 à 2 000 € en 2026.</p>", "") is None
+
+
+def test_guard_rejects_meta_commentary_leak():
+    before = "<h2>Architecture</h2><p>Payload CMS expose une API REST consommée par Next.js.</p>"
+    after = ("<h2>Architecture</h2><p>Payload CMS expose une API REST consommée par Next.js. Cette architecture "
+             "dépasse les simples mentions théoriques de React.</p>")
+    assert guard_revision(before, after, "").startswith("commentaire interne")
