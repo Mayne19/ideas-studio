@@ -105,6 +105,33 @@ class ExternalServiceCredential(Base):
     updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
 
 
+class IllustrationSettings(Base):
+    """Réglages des images d'illustration des articles (Paramètres →
+    Services externes) : mode (ai | unsplash | none) et, pour le mode IA,
+    modèle, style visuel, couleurs de marque et nombre max d'images. Une
+    ligne par projet ; project_id NULL = défaut global. Résolution : projet,
+    puis global, puis défauts du code — voir
+    app/services/illustration_settings_service.py."""
+
+    __tablename__ = "illustration_settings"
+    __table_args__ = (
+        Index(
+            "illustration_settings_unique_project", "project_id",
+            unique=True, postgresql_where=text("project_id IS NOT NULL"), sqlite_where=text("project_id IS NOT NULL"),
+        ),
+        {"schema": "ai"},
+    )
+
+    id: Mapped[str] = _uuid_pk()
+    project_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("core.projects.id", ondelete="CASCADE"), nullable=True
+    )
+    mode: Mapped[str] = mapped_column(Text, nullable=False, default="unsplash")
+    config: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+
 class Agent(Base):
     __tablename__ = "agents"
     __table_args__ = {"schema": "ai"}
