@@ -491,6 +491,10 @@ def generate_idea(
         "needs_images": idea_data.get("needs_images"),
         "estimated_difficulty": idea_data.get("estimated_difficulty"),
         "secondary_keywords": idea_data.get("secondary_keywords", []),
+        "search_questions": [
+            str(q).strip() for q in (idea_data.get("search_questions") or [])
+            if isinstance(idea_data.get("search_questions"), list) and str(q).strip()
+        ][:8],
         "serp_summary": idea_data.get("serp_summary", {}),
         "proposal_source": "ia_generation",
         "generated_at": datetime.now(timezone.utc).isoformat(),
