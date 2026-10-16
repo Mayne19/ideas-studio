@@ -183,13 +183,18 @@ def refine_intent_with_research(
             snippet = (source.get("snippet") or "")[:180]
             lines.append(f"- {source.get('title', '')} : {snippet}")
     serp_context = "\n".join(lines)
-    idea_angle = (idea_discovery or {}).get("angle") or ""
+    idea = idea_discovery or {}
+    idea_angle = idea.get("angle") or ""
+    idea_answer = str(idea.get("main_answer_summary") or "").strip()
+    idea_questions = [str(q) for q in (idea.get("search_questions") or []) if str(q).strip()][:5]
 
     prompt = (
         "Tu prépares le brief d'un article. Trouve la vraie question que se pose la personne "
         "qui cherche ce sujet, et ce qu'elle doit lire pour repartir satisfaite.\n\n"
         f"Titre : {title}\nMot-clé : {keyword}\n"
         + (f"Angle prévu : {idea_angle}\n" if idea_angle else "")
+        + (f"Réponse principale prévue : {idea_answer[:400]}\n" if idea_answer else "")
+        + ("Questions prévues : " + " ; ".join(idea_questions) + "\n" if idea_questions else "")
         + (f"\nPages déjà classées sur Google :\n{serp_context}\n" if serp_context else "")
         + "\nRéponds UNIQUEMENT avec ce JSON :\n"
         '{"reader_real_question": "la question précise du lecteur, en une phrase", '
