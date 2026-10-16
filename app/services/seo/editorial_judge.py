@@ -17,6 +17,7 @@ Publiable : total ≥ seuil du pipeline (90 par défaut) et aucun blocage.
 from __future__ import annotations
 
 import logging
+import re
 from datetime import date
 from typing import Callable
 
@@ -87,8 +88,14 @@ def article_digest(content: str) -> str:
             continue
         lines.append("## INTRODUCTION" if index == 0 else f"## SECTION « {unit_heading(unit)} »")
         lines.extend(f"- {b}" for b in blocks)
-        if "<table" in unit.lower():
-            lines.append("- [tableau présent dans cette section]")
+        # Tableau rendu ligne par ligne : une simple mention faisait croire au
+        # juge que le tableau manquait (faux heading_mismatch, 2026-10-17).
+        for table in re.findall(r"<table\b.*?</table>", unit, re.IGNORECASE | re.DOTALL):
+            lines.append("- Tableau :")
+            for row in re.findall(r"<tr\b.*?</tr>", table, re.IGNORECASE | re.DOTALL):
+                cells = [re.sub(r"<[^>]+>", "", c).strip()
+                         for c in re.findall(r"<t[hd]\b[^>]*>(.*?)</t[hd]>", row, re.IGNORECASE | re.DOTALL)]
+                lines.append("  | " + " | ".join(cells) + " |")
         lines.append("")
     return "\n".join(lines).strip()
 
