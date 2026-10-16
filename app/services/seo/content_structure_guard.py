@@ -17,13 +17,19 @@ _H_TAG_RE = re.compile(r"<h([1-6])\b[^>]*>(.*?)</h\1>", re.IGNORECASE | re.DOTAL
 # par content_structure_guard, human_presence_service, eeat_service et
 # article_reviewer_service pour rester synchronisée avec le prompt.
 TRANSITION_BLACKLIST = (
-    "en outre", "de plus", "par ailleurs", "néanmoins", "toutefois",
-    "ainsi", "dès lors", "en somme", "en définitive", "d'autre part",
-    "à cet égard", "en effet", "effectivement", "notamment", "de surcroît",
-    "qui plus est", "honnêtement", "à bien y réfléchir",
+    "en outre", "de plus", "par ailleurs", "dès lors", "en somme", "en définitive", "d'autre part",
+    "à cet égard", "de surcroît", "qui plus est", "honnêtement", "à bien y réfléchir",
 )
-# "pourtant" et "en réalité" restent autorisés : le guide éditorial du
-# fondateur les recommande comme transitions naturelles de contraste.
+# Liaisons naturelles mais devenues des tics quand le modèle les répète
+# (« Concrètement… », « En réalité… » : retour du fondateur, 2026-10-16) :
+# autorisées une fois par article, jamais plus. Les interdire toutes privait
+# le texte de liens logiques et le rendait décousu.
+VERBAL_TICS = (
+    "concrètement", "en réalité", "en effet", "effectivement", "notamment", "toutefois", "néanmoins",
+    "il faut savoir que", "il est important de", "il convient de", "force est de constater",
+    "en d'autres termes", "autrement dit", "de ce fait", "cela dit",
+)
+MAX_TIC_OCCURRENCES = 1
 
 
 def strip_duplicate_h1(content: str, title: str | None) -> str:
