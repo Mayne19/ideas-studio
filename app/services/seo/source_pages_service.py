@@ -66,6 +66,27 @@ def is_primary_source(url: str, keyword: str = "") -> bool:
     return host.startswith(_PRIMARY_HOST_PREFIXES)
 
 
+# Pages officielles hors sujet ramenées par « site:gouv.fr » : offres
+# d'emploi, missions de bénévolat, fiches commerciales d'« activateurs »
+# France Num (l'offre d'une agence n'est pas une source primaire).
+_NON_SOURCE_URL_PARTS = (
+    "emploi", "offre-emploi", "offres_emploi", "alternance", "recrutement", "stage", "benevolat",
+    "missions-benevolat", "/activateurs/", "/annuaire", "candidature",
+)
+
+
+def _relevant_to_keyword(title: str, snippet: str, keyword: str) -> bool:
+    """Au moins la moitié des termes significatifs du mot-clé dans le titre
+    ou l'extrait du résultat."""
+    from app.services.seo.seo_final_checklist_service import _kw_stems
+
+    stems = set(_kw_stems(keyword))
+    if not stems:
+        return True
+    present = set(_kw_stems(f"{title} {snippet}"))
+    return len(stems & present) >= max(1, (len(stems) + 1) // 2)
+
+
 def search_primary_candidates(keyword: str, search_fn, limit: int = 8) -> list[tuple[str, str]]:
     """[(url, titre)] des sources primaires trouvées par PRIMARY_QUERIES.
     `search_fn(query, limit) -> [{url|link, title}]` ; une requête en échec
@@ -82,6 +103,10 @@ def search_primary_candidates(keyword: str, search_fn, limit: int = 8) -> list[t
             if not isinstance(r, dict):
                 continue
             url = r.get("url") or r.get("link") or ""
+            if any(part in url.lower() for part in _NON_SOURCE_URL_PARTS):
+                continue
+            if not _relevant_to_keyword(r.get("title", ""), r.get("snippet", ""), keyword):
+                continue
             if url and url not in seen and is_primary_source(url, keyword):
                 seen.add(url)
                 found.append((url, r.get("title", "")))
