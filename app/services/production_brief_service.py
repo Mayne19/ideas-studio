@@ -14,6 +14,17 @@ from __future__ import annotations
 
 
 
+def _merge_questions(primary: list, extra: list, limit: int = 8) -> list[str]:
+    """Questions du brief mots-clés complétées par les « Autres questions
+    posées » de Google (sous-questions réelles), sans doublon."""
+    merged: list[str] = []
+    for q in list(primary) + list(extra):
+        q = str(q or "").strip()
+        if q and q.lower() not in {m.lower() for m in merged}:
+            merged.append(q)
+    return merged[:limit]
+
+
 def build_production_brief(
     *,
     keyword: str = "",
@@ -81,7 +92,11 @@ def build_production_brief(
         "top_priorities": top_priorities,
         "secondary_keywords": keyword_brief.get("secondary_keywords") or [],
         "long_tail_variants": keyword_brief.get("long_tail_variants") or [],
-        "related_questions": keyword_brief.get("related_questions") or [],
+        "related_questions": _merge_questions(
+            keyword_brief.get("related_questions") or [],
+            [q.get("question", "") for q in research_brief.get("people_also_ask") or [] if isinstance(q, dict)],
+        ),
+        "people_also_ask": [q for q in (research_brief.get("people_also_ask") or []) if isinstance(q, dict)][:8],
         "sections": outline.get("sections") or [],
         "intro_goal": outline.get("intro_goal") or "",
         "first_block_goal": outline.get("first_block_goal") or "",
