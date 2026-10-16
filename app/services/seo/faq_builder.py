@@ -90,6 +90,9 @@ def build_faq_prompt(title: str, keyword: str, content: str, questions: list[dic
         "Règles strictes :",
         "- Chaque réponse : 1 à 4 phrases maximum",
         "- Les questions ne doivent pas répéter les titres H2 de l'article",
+        "- Uniquement des questions que l'article ne traite pas ou ne fait qu'effleurer, mais dont le lecteur a "
+        "besoin (le fondateur : « si l'article en parle déjà, pourquoi le reprendre ? ») ; une question déjà "
+        "traitée dans une section est exclue, même reformulée",
         "- Une réponse ne contredit jamais l'article",
         "- Réponses directes, sans formule introductive",
         "",
