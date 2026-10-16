@@ -183,3 +183,21 @@ def test_h2_directly_followed_by_h3_fails():
     rule = lambda r: next(x for x in r["rules"] if x["rule"] == "h2_lead_paragraph")
     assert not rule(validate_structure(bad, "Titre"))["passed"]
     assert rule(validate_structure(good, "Titre"))["passed"]
+
+
+def test_h2_h3_helper_only_flags_direct_succession():
+    from app.services.seo.helpers import detect_h2_directly_followed_by_h3
+
+    assert detect_h2_directly_followed_by_h3("<h2>A</h2><h3>B</h3><p>x</p>")
+    assert detect_h2_directly_followed_by_h3("<h2>A</h2><figure><img src='x'></figure><h3>B</h3>")
+    assert not detect_h2_directly_followed_by_h3("<h2>A</h2><p>Réponse.</p><h3>B</h3><p>x</p>")
+
+
+def test_isolated_h3_is_demoted_without_losing_text():
+    from app.services.seo.structure_fixer import demote_isolated_h3
+
+    html = ("<p>Intro.</p><h2>Prix</h2><p>Réponse.</p><h3>Ce que chaque option inclut</h3><p>Détail.</p>"
+            "<h2>Devis</h2><p>R.</p><h3>Un</h3><p>a</p><h3>Deux</h3><p>b</p>")
+    out = demote_isolated_h3(html)
+    assert "<p><strong>Ce que chaque option inclut</strong></p>" in out
+    assert out.count("<h3") == 2

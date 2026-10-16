@@ -174,3 +174,14 @@ def test_normalize_external_rels_follows_reference_sources():
     assert '<a href="https://blog.example.com/x" target="_blank" rel="noopener nofollow">un blog</a>' in out
     assert '<a href="https://unsplash.com/@p">Per</a>' in out
     assert '<a href="/interne">interne</a>' in out
+
+
+def test_duplicate_external_links_keep_first():
+    from app.services.seo.citation_inserter import dedupe_external_links
+
+    html = ('<p><a href="https://a.gouv.fr/x">selon le service public</a> puis '
+            '<a href="https://a.gouv.fr/x/">Whois</a> et <a href="https://unsplash.com/@p">P</a> '
+            '<a href="https://unsplash.com/@p">P</a></p>')
+    out = dedupe_external_links(html)
+    assert out.count("https://a.gouv.fr/x") == 1 and "puis Whois et" in out
+    assert out.count("unsplash.com/@p") == 2
