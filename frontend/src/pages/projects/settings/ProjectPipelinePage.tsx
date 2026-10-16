@@ -11,6 +11,8 @@ import ToggleSwitch from '@/components/ui/ToggleSwitch'
 import { useProject } from '@/context/ProjectContext'
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
+const IDEAS_PER_RUN_OPTIONS = [1, 2, 3]
+const PUBLISH_SCORE_OPTIONS = Array.from({ length: 16 }, (_, i) => 85 + i)
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1)
 const WEEKDAYS = [
   { value: 0, label: 'Lundi' },
@@ -69,6 +71,8 @@ export default function ProjectPipelinePage() {
   const [publishHourEnd, setPublishHourEnd] = useState(10)
   const [costLimitPerArticle, setCostLimitPerArticle] = useState('')
   const [maxParallelWriting, setMaxParallelWriting] = useState('3')
+  const [ideasPerRun, setIdeasPerRun] = useState(2)
+  const [minPublishScore, setMinPublishScore] = useState(90)
 
   useEffect(() => {
     if (!projectId) return
@@ -88,6 +92,8 @@ export default function ProjectPipelinePage() {
         setPublishHourEnd(s.publish_hour_end ?? 10)
         setCostLimitPerArticle(s.cost_limit_per_article_eur == null ? '' : String(s.cost_limit_per_article_eur))
         setMaxParallelWriting(s.max_parallel_writing_jobs == null ? '3' : String(s.max_parallel_writing_jobs))
+        setIdeasPerRun(s.ideas_per_run ?? 2)
+        setMinPublishScore(s.min_publish_score ?? 90)
         setLogs(l)
         setLoadStatus('success')
         setLoadError('')
@@ -121,6 +127,8 @@ export default function ProjectPipelinePage() {
         publish_hour_end: publishHourEnd,
         cost_limit_per_article_eur: costLimitPerArticle.trim() === '' ? null : Number(costLimitPerArticle),
         max_parallel_writing_jobs: Math.max(1, Math.min(10, Number(maxParallelWriting) || 3)),
+        ideas_per_run: ideasPerRun,
+        min_publish_score: minPublishScore,
       })
       setSettings(updated)
       setDirty(false)
@@ -218,6 +226,55 @@ export default function ProjectPipelinePage() {
             ))}
           </div>
         )}
+      </Card>
+
+      {/* Coûts et qualité — s'appliquent aussi aux lancements manuels */}
+      <Card padding="sm">
+        <p className="mb-4 text-[14px] font-medium text-primary">Coûts et qualité</p>
+
+        <div className="mb-4">
+          <label htmlFor="ideas-per-run" className="mb-1.5 block text-[12px] font-medium text-secondary">
+            Idées par lancement
+          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              id="ideas-per-run"
+              value={ideasPerRun}
+              onChange={(e) => { setIdeasPerRun(Number(e.target.value)); setDirty(true) }}
+              className="h-9 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
+            >
+              {IDEAS_PER_RUN_OPTIONS.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+            <span className="text-[12px] text-tertiary">idée(s) maximum à chaque génération</span>
+          </div>
+          <p className="mt-1.5 text-[11px] text-tertiary">
+            Plafond strict pour économiser les crédits IA : pipeline, génération automatique, découverte et planification n'en créent jamais davantage.
+          </p>
+        </div>
+
+        <div>
+          <label htmlFor="min-publish-score" className="mb-1.5 block text-[12px] font-medium text-secondary">
+            Score minimum de publication
+          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              id="min-publish-score"
+              value={minPublishScore}
+              onChange={(e) => { setMinPublishScore(Number(e.target.value)); setDirty(true) }}
+              className="h-9 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
+            >
+              {PUBLISH_SCORE_OPTIONS.map((n) => (
+                <option key={n} value={n}>{n}/100</option>
+              ))}
+            </select>
+            <span className="text-[12px] text-tertiary">score global de qualité requis</span>
+          </div>
+          <p className="mt-1.5 text-[11px] text-tertiary">
+            Un article dont le score global est inférieur ne peut pas être publié. Les sous-scores (SEO, GEO, originalité…) restent de simples avertissements.
+          </p>
+        </div>
       </Card>
 
       {/* Planification (visible seulement si activé) */}

@@ -16,6 +16,10 @@ export type PipelineSettings = {
   articles_per_week: number
   category_priorities: Record<string, number>
   cost_limit_per_article_eur: number | null
+  // Plafond dur d'idées créées par lancement (1 à 3).
+  ideas_per_run: number
+  // Score global minimum pour publier (85 à 100).
+  min_publish_score: number
   max_parallel_writing_jobs?: number | null
   total_monthly_from_categories: number | null
   categories_frequencies: Array<{
@@ -43,6 +47,8 @@ export type PipelineSettingsUpdate = {
   articles_per_week?: number
   category_priorities?: Record<string, number>
   cost_limit_per_article_eur?: number | null
+  ideas_per_run?: number
+  min_publish_score?: number
 }
 
 export type PipelineLog = {
