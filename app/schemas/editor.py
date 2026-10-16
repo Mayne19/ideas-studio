@@ -84,6 +84,7 @@ class PreviewResponse(BaseModel):
     callouts: list = []
     author_name: Optional[str] = None
     reading_time_minutes: Optional[int] = None
+    cover_image_url: Optional[str] = None
     status: int
 
 

@@ -151,3 +151,5 @@ class ArticlePublicApiResponse(BaseModel):
     published_at: Optional[datetime] = None
     updated_at: datetime
     has_draft_changes: Optional[bool] = None
+    # Image de couverture (content.article_media role=cover), absente si aucune.
+    cover_image_url: Optional[str] = None

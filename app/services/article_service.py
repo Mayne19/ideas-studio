@@ -520,6 +520,7 @@ def get_public_article_by_slug(db: Session, project_id: str, slug: str) -> Artic
 
 
 def _to_public_response(db: Session, article: Article, category: Category | None) -> ArticlePublicApiResponse:
+    from app.services.cover_image_service import get_cover_image_url
     revision = article.published_revision or article.current_revision
     seo = db.get(ArticleSeo, article.id)
     keyword = primary_keyword(db, article.id)
@@ -549,4 +550,5 @@ def _to_public_response(db: Session, article: Article, category: Category | None
         published_at=article.published_at,
         updated_at=article.updated_at,
         has_draft_changes=article.current_revision_id != article.published_revision_id,
+        cover_image_url=get_cover_image_url(db, article.id),
     )

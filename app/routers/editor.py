@@ -231,6 +231,8 @@ def preview_article(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    from app.services.cover_image_service import get_cover_image_url
+
     article = _get_article_or_404(db, article_id)
     _check_member(db, current_user.id, article.project_id)
     revision = article.current_revision
@@ -250,5 +252,6 @@ def preview_article(
         callouts=revision.callouts if revision else [],
         author_name=article.author_name,
         reading_time_minutes=revision.reading_time_minutes if revision else None,
+        cover_image_url=get_cover_image_url(db, article.id),
         status=article.status_reason_id,
     )
