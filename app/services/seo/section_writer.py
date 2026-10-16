@@ -191,7 +191,10 @@ def group_outline_sections(outline: dict | None) -> list[OutlineSection]:
     for raw in (outline or {}).get("sections") or []:
         if not isinstance(raw, dict) or not str(raw.get("heading") or "").strip():
             continue
-        heading = str(raw["heading"]).strip()
+        # Sans tic dès le plan : le titre écrit reste identique au plan (sinon
+        # le contrôle de complétude croit la section absente et la réécrit).
+        from app.services.seo.content_structure_guard import strip_tics
+        heading = strip_tics(str(raw["heading"]).strip())
         try:
             level = int(raw.get("level") or 2)
         except (TypeError, ValueError):
