@@ -63,3 +63,13 @@ def test_paragraph_longer_than_five_sentences_fails_with_location():
     assert rule["violations"][0]["section"] == "Un paragraphe trop long"
     assert rule["violations"][0]["unit"] == "section:5"
     assert rule["violations"][0]["detail"].startswith("6 phrases")
+
+
+def test_sentence_over_45_words_fails_and_long_share_warns():
+    section = "<h2>Une phrase fleuve</h2>" + _para(1, words_per_sentence=50) + _para(3) + _para(1)
+    report = validate_structure(GOOD + section, TITLE)
+    assert not _rule(report, "sentence_length")["passed"]
+    assert "50 mots" in _rule(report, "sentence_length")["violations"][0]["detail"]
+    wordy = "<h2>Des phrases longues</h2>" + _para(2, words_per_sentence=35) + _para(1) + _para(3, words_per_sentence=33)
+    share = _rule(validate_structure(GOOD + wordy, TITLE), "long_sentence_share")
+    assert not share["passed"] and share["severity"] == "warning"
