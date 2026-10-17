@@ -112,9 +112,10 @@ Les scores ne sont plus calculés ni affichés : la qualité est garantie par le
 
 ## Phases
 
-1. **Codex : nettoyage du backend.** Suppression de tout ce qui est listé dans « Ce qu'on supprime », mise à jour des tests.
-2. **Codex : nouveau parcours côté backend.** Statuts des sujets et articles (idée, en rédaction, à relire, validé, programmé, publié, à mettre à jour), routes de l'API, calendrier de publication automatique, liste des mises à jour.
-3. **Claude Code : branchement du rédacteur.** Le rédacteur du laboratoire devient le service de rédaction, en mode local (rédacteur sur le Mac de Mayne qui récupère les sujets et dépose les résultats).
-4. **Codex : front-end simplifié.** Les 5 écrans et la page de paramètres décrits plus haut, suppression des anciens écrans.
-5. **Codex : base de données et documentation.** Migration de suppression des colonnes inutiles, README réécrit (rôle de l'application, installation, parcours, rédaction locale).
-6. **Claude Code : vérification finale.** Test de bout en bout : un sujet ajouté, rédigé, relu, validé, programmé et publié.
+1. **Codex : nouveau parcours côté backend.** Statuts (idée, en rédaction, à relire, validé, programmé, publié, à mettre à jour), routes de l'API, routes de dépôt pour le rédacteur local, validation basée sur les 3 contrôles techniques au lieu de scoring_service, calendrier de publication automatique, liste des mises à jour. L'ancien pipeline reste en place.
+2. **Codex : bascule des points d'entrée.** Routers, generation_job_service, production_queue, pipeline_service, validation et publication passent au nouveau parcours.
+3. **Claude Code : branchement du rédacteur local.** Le rédacteur local est branché sur les nouvelles routes.
+4. **Codex : suppression de l'ancien pipeline.** Suppression par petits lots, un lot par commit, avec tests verts après chaque lot.
+5. **Codex : front-end simplifié.** Les 5 écrans et la page de paramètres décrits plus haut, avec un parcours simplifié.
+6. **Codex : base de données et documentation.** Migration de suppression des colonnes inutiles et README réécrit.
+7. **Claude Code : test de bout en bout.** Test d'un sujet ajouté, rédigé, relu, validé, programmé et publié.
