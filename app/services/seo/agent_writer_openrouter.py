@@ -52,6 +52,20 @@ TOOLS = [
 ]
 
 
+def _url_key(url: str) -> str:
+    """Clé de comparaison d'URL : sans schéma, « www. », ancre ni barre finale."""
+    from urllib.parse import urlsplit
+
+    try:
+        parts = urlsplit((url or "").strip())
+    except ValueError:
+        return ""
+    host = (parts.hostname or "").lower().removeprefix("www.")
+    if not host:
+        return ""
+    return host + (parts.path.rstrip("/") or "/") + (f"?{parts.query}" if parts.query else "")
+
+
 def _text(block) -> str:
     return getattr(block, "text", None) or (block.get("text") if isinstance(block, dict) else "") or ""
 
@@ -72,6 +86,7 @@ class OpenRouterAgentClient:
         self.failed_fetches = 0
         self.fetch_log: list[dict] = []
         self.search_log: list[str] = []
+        self.seen_urls: set[str] = set()
         self.timeout_seconds = timeout_seconds
         self._post = post
         self.max_cost_usd = max_cost_usd
@@ -98,6 +113,7 @@ class OpenRouterAgentClient:
             self.searches += 1
             self.search_log.append(str(args.get("query") or ""))
             results = self.search_fn(str(args.get("query") or ""), 10) or []
+            self.seen_urls |= {_url_key(r.get("url") or r.get("link") or "") for r in results} - {""}
             return json.dumps([{"title": r.get("title", ""), "url": r.get("url") or r.get("link", ""),
                                 "snippet": r.get("snippet", "")} for r in results], ensure_ascii=False)
         if name == "web_fetch":
@@ -106,6 +122,14 @@ class OpenRouterAgentClient:
             if self.failed_fetches >= self.max_failed_fetches:
                 return "Limite d'échecs de lecture atteinte : rédige avec ce que tu as déjà."
             url = str(args.get("url") or "")
+            if _url_key(url) not in self.seen_urls:
+                # URL devinée par le modèle (souvent une 404) : refusée sans
+                # téléchargement ; elle compte dans le plafond d'échecs, pas
+                # dans le budget de lectures (consigne du 2026-10-17).
+                self.failed_fetches += 1
+                self.fetch_log.append({"url": url, "chars": 0, "failed": True, "method": "refusée",
+                                       "note": "URL absente des résultats de recherche"})
+                return "URL inventée : choisis une URL issue d'une recherche."
             text = self.fetch_fn(url) or ""
             chars = len(text.strip())
             entry = {"url": url, "chars": chars} | dict(getattr(self.fetch_fn, "last", None) or {})

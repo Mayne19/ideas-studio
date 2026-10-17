@@ -370,9 +370,17 @@ def prose_count_errors(content: str) -> list[str]:
     return errors
 
 
-def heading_mismatch_errors(orch, article, candidate: dict) -> list[str]:
-    """Titre qui ne tient pas sa promesse : verdict du juge éditorial
-    (blocage heading_mismatch), seule faute « de sens » corrigée."""
+def fact_lines(candidate: dict) -> list[str]:
+    """Faits de l'agent tels que le juge les reçoit (valeur, citation, source)."""
+    return [f"{f.get('value', '')} — « {f.get('quote', '')} » (source : {f.get('source_url', '')})"
+            for f in candidate.get("facts") or [] if isinstance(f, dict)]
+
+
+def judge_errors(orch, article, candidate: dict) -> list[str]:
+    """Fautes « de sens » du juge éditorial corrigées par un tour : titre qui
+    ne tient pas sa promesse (heading_mismatch) et chiffre absent des faits
+    cités (unsourced_figure, passage renvoyé tel quel). Le juge reçoit les
+    faits de l'agent pour ne pas signaler un chiffre bien sourcé."""
     from app.services.seo.editorial_judge import judge_article
 
     def judge_call(prompt: str, step: str, temperature: float) -> str:
@@ -380,12 +388,46 @@ def heading_mismatch_errors(orch, article, candidate: dict) -> list[str]:
 
     try:
         judgement = judge_article(candidate.get("content_html") or "", judge_call, title=candidate.get("title") or "",
-                                  keyword=article_keyword(orch), brief={}, facts=[], reference_figures=[])
+                                  keyword=article_keyword(orch), brief={}, facts=fact_lines(candidate),
+                                  reference_figures=[], competitors=sorted(competitor_hosts(candidate)),
+                                  strict_facts=True)
     except Exception:
         return []
     orch.context["agent_last_judgement"] = judgement
-    return [f"Titre en désaccord avec sa section : {b.get('section', '')} ({b.get('detail', '')})"
-            for b in judgement.get("blockers") or [] if b.get("type") == "heading_mismatch"]
+    errors = []
+    for b in judgement.get("blockers") or []:
+        if b.get("type") == "heading_mismatch":
+            errors.append(f"Titre en désaccord avec sa section : {b.get('section', '')} ({b.get('detail', '')})")
+        elif b.get("type") == "unsourced_figure":
+            errors.append(f"Chiffre ou affirmation sans citation dans « facts » (section {b.get('section', '')}) : "
+                          f"{b.get('detail', '')}. Ajoute le fait avec sa citation exacte, ou retire-le.")
+    return errors
+
+
+def correction_rounds(writer, check, data: dict, run_report: dict, step=lambda label: None) -> tuple[dict, list, dict]:
+    """Au plus deux tours de correction sur les fautes dures. Une erreur
+    pendant un tour (dont l'arrêt dur du coût) termine la boucle : le
+    meilleur article déjà obtenu (au pire celui du tour 0) est gardé."""
+    best, (best_errors, plag_report) = data, check(data)
+    run_report["rounds"].append({"round": 0, "errors": best_errors})
+    for round_no in (1, 2):
+        if not best_errors:
+            break
+        try:
+            corrected = writer.correct(best_errors)
+        except Exception as exc:
+            run_report["rounds"].append({"round": round_no, "error": str(exc)[:300]})
+            break
+        if corrected is None:
+            run_report["rounds"].append({"round": round_no, "error": "JSON corrigé inexploitable"})
+            continue
+        errors, report = check(corrected)
+        run_report["rounds"].append({"round": round_no, "errors": errors})
+        if len(errors) <= len(best_errors):
+            best, best_errors, plag_report = corrected, errors, report
+        step(f"AgentWriter correction #{round_no} ({len(errors)} erreur(s) restante(s))")
+    run_report["remaining_errors"] = best_errors
+    return best, best_errors, plag_report
 
 
 def article_keyword(orch) -> str:
@@ -490,30 +532,12 @@ def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, 
         errors += announced_count_errors(content) + prose_count_errors(content) + competitor_errors(candidate)
         errors += fact_errors(candidate)
         errors += self_review_errors(candidate)
-        errors += heading_mismatch_errors(orch, article, candidate)
+        errors += judge_errors(orch, article, candidate)
         plag_errors, plag_report = plagiarism_errors(orch, content)
         plag_report["consistency_info"] = consistency_errors(content, orch._polish_call_fn(article))
         return errors + plag_errors, plag_report
 
-    best, (best_errors, plag_report) = data, check(data)
-    run_report["rounds"].append({"round": 0, "errors": best_errors})
-    for round_no in (1, 2):
-        if not best_errors:
-            break
-        try:
-            corrected = writer.correct(best_errors)
-        except Exception as exc:
-            run_report["rounds"].append({"round": round_no, "error": str(exc)[:300]})
-            break
-        if corrected is None:
-            run_report["rounds"].append({"round": round_no, "error": "JSON corrigé inexploitable"})
-            continue
-        errors, report = check(corrected)
-        run_report["rounds"].append({"round": round_no, "errors": errors})
-        if len(errors) <= len(best_errors):
-            best, best_errors, plag_report = corrected, errors, report
-        orch._step(f"AgentWriter correction #{round_no} ({len(errors)} erreur(s) restante(s))")
-    run_report["remaining_errors"] = best_errors
+    best, best_errors, plag_report = correction_rounds(writer, check, data, run_report, orch._step)
 
     content = best.get("content_html") or ""
     if orch._is_french():
@@ -590,10 +614,8 @@ def _finish_seo(orch, article: Article, draft, category_name: str, best: dict) -
         def judge_call(prompt: str, step: str, temperature: float) -> str:
             return orch._write_pass(prompt, "quality_gate", article, temperature, step)
 
-        facts = [f"{f.get('value', '')} — « {f.get('quote', '')} » (source : {f.get('source_url', '')})"
-                 for f in best.get("facts") or [] if isinstance(f, dict)]
         judgement = judge_article(draft.content, judge_call, title=draft.title, keyword=draft.keyword or "",
-                                  brief={}, facts=facts, reference_figures=[],
+                                  brief={}, facts=fact_lines(best), reference_figures=[],
                                   structure_report=validate_structure(draft.content, draft.title),
                                   competitors=sorted(competitor_hosts(best)), strict_facts=True)
         if not judgement.get("error"):

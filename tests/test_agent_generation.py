@@ -157,3 +157,61 @@ def test_competitor_matching_uses_registered_domain_without_suffix_false_positiv
         {"url": "https://one.example/a"},
     ]}
     assert not any("Seulement" in error for error in competitor_errors(public_sources))
+
+
+def test_judge_unsourced_figure_becomes_a_hard_fault_with_facts_sent():
+    from types import SimpleNamespace
+
+    from app.services.seo import agent_generation
+
+    seen = {}
+
+    def fake_judge(content, call_fn, **kwargs):
+        seen.update(kwargs)
+        return {"blockers": [
+            {"type": "unsourced_figure", "section": "Mélatonine", "detail": "« les plus de 60 ans » sans citation"},
+            {"type": "heading_mismatch", "section": "Lumière", "detail": "le titre promet le retour"},
+            {"type": "contradiction", "section": "x", "detail": "informatif"}]}
+
+    import app.services.seo.editorial_judge as judge_module
+    original = judge_module.judge_article
+    judge_module.judge_article = fake_judge
+    try:
+        orch = SimpleNamespace(context={}, _write_pass=lambda *a: "")
+        candidate = {"content_html": "<p>x</p>", "title": "T",
+                     "facts": [{"value": "1 h par jour", "quote": "une heure par jour", "source_url": "https://inserm.fr/a"}],
+                     "competitors": [{"url": "https://www.lonelyplanet.fr/x"}]}
+        errors = agent_generation.judge_errors(orch, None, candidate)
+    finally:
+        judge_module.judge_article = original
+    assert len(errors) == 2
+    assert "« les plus de 60 ans » sans citation" in errors[0] and "citation exacte" in errors[0]
+    assert "Titre en désaccord" in errors[1]
+    assert seen["facts"] == ["1 h par jour — « une heure par jour » (source : https://inserm.fr/a)"]
+    assert seen["strict_facts"] is True and seen["competitors"] == ["lonelyplanet.fr"]
+
+
+def test_strict_judge_prompt_exempts_shown_calculations_and_examples():
+    from app.services.seo.editorial_judge import STRICT_FACTS_CALCULATION_RULE, build_judge_prompt
+
+    strict = build_judge_prompt("<p>x</p>", title="T", keyword="k", brief={}, facts=["f"], reference_figures=[],
+                                strict_facts=True)
+    loose = build_judge_prompt("<p>x</p>", title="T", keyword="k", brief={}, facts=["f"], reference_figures=[])
+    assert STRICT_FACTS_CALCULATION_RULE in strict and STRICT_FACTS_CALCULATION_RULE not in loose
+    assert "calcul montré" in STRICT_FACTS_CALCULATION_RULE and "exemple" in STRICT_FACTS_CALCULATION_RULE
+
+
+def test_hard_stop_during_a_correction_round_keeps_the_round_zero_article():
+    from app.services.seo.agent_generation import correction_rounds
+    from app.services.seo.agent_writer_openrouter import AgentBudgetExceeded
+
+    class Writer:
+        def correct(self, errors):
+            raise AgentBudgetExceeded("arrêt dur : coût cumulé 1.02 $ > 1.00 $")
+
+    first = {"title": "Tour 0", "content_html": "<p>article</p>"}
+    report: dict = {"rounds": []}
+    best, errors, plag = correction_rounds(Writer(), lambda c: (["faute"], {"status": "clean"}), first, report)
+    assert best is first and errors == ["faute"] and plag == {"status": "clean"}
+    assert report["rounds"][0] == {"round": 0, "errors": ["faute"]}
+    assert "arrêt dur" in report["rounds"][1]["error"] and report["remaining_errors"] == ["faute"]
