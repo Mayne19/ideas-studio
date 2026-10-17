@@ -1,3 +1,5 @@
+# Pourquoi votre basilic meurt (et comment le sauver avant qu'il soit trop tard)
+
 Si votre basilic acheté en pot meurt en quelques jours, ce n'est presque jamais de votre faute. Le pot vendu en supermarché contient des dizaines de jeunes plants serrés les uns contre les autres, qui se disputent le peu de terre et d'eau disponibles. Il suffit ensuite d'une nuit trop fraîche ou d'un arrosage de trop pour que tout s'effondre.
 
 La bonne nouvelle, c'est qu'un basilic qui commence à faner peut presque toujours être sauvé, à condition d'agir vite. Le problème, c'est que les conseils trouvés en ligne se contredisent : certains disent d'arroser tous les jours, d'autres une fois par semaine, certains parlent de plein soleil, d'autres de mi-ombre.
@@ -29,15 +31,15 @@ Les trois premiers cas sont de loin les plus fréquents. Ils méritent une expli
 
 ### Le froid, ennemi numéro un du basilic
 
-Le basilic vient de régions chaudes et supporte très mal le froid, bien plus mal que la plupart des plantes d'intérieur. Selon une [étude publiée dans Frontiers in Plant Science](https://www.frontiersin.org/journals/plant-science/articles/10.3389/fpls.2023.1237577/full), ses feuilles commencent à s'abîmer en dessous de 12 °C, et les dégâts deviennent graves en dessous de 10 °C. À 5 °C, la température d'un réfrigérateur, les feuilles peuvent noircir en trois jours seulement.
+Le basilic est une plante de climat chaud, très sensible au froid. Selon une [étude publiée dans Frontiers in Plant Science](https://www.frontiersin.org/journals/plant-science/articles/10.3389/fpls.2023.1237577/full), ses feuilles commencent à s'abîmer en dessous de 12 °C, et les dégâts deviennent graves en dessous de 10 °C. À 5 °C, une température proche de celle d'un réfrigérateur, les feuilles peuvent noircir en trois jours seulement.
 
-C'est pour cette raison qu'un basilic placé au frigo, ou laissé la nuit contre une vitre froide au printemps, se couvre de taches noires. Pour lui, une pièce de vie chauffée est le meilleur endroit, et la fenêtre de la cuisine ne convient que si elle ne refroidit pas trop pendant la nuit.
+Si vous rangez votre basilic au frigo, ou si vous le laissez la nuit contre une vitre froide au printemps, ses feuilles se couvrent de taches noires. Placez-le plutôt dans une pièce chauffée. La fenêtre de la cuisine convient aussi, à condition qu'elle ne devienne pas trop froide la nuit.
 
 ### Trop d'eau ou pas assez : deux signes qui se ressemblent
 
 Un basilic qui manque d'eau et un basilic qui en reçoit trop ont le même air triste : ses feuilles pendent. La seule façon de faire la différence est de toucher la terre.
 
-Si la terre est sèche, la plante a soif et un bon arrosage la redresse en quelques heures. Si elle est encore mouillée, c'est l'inverse : les racines baignent dans l'eau, elles manquent d'air et commencent à pourrir. Ajouter de l'eau à ce moment-là, en croyant bien faire, achève souvent la plante.
+Si la terre est sèche, votre plante a soif, et un bon arrosage la redressera en quelques heures. Si la terre est encore mouillée, c'est l'inverse : les racines baignent déjà dans l'eau, elles manquent d'air et commencent à pourrir. Si vous ajoutez de l'eau à ce moment-là, vous croyez bien faire, mais en réalité vous noyez votre plante.
 
 ### Le manque de lumière, plus discret
 
@@ -60,13 +62,13 @@ Il n'existe pas de bon calendrier d'arrosage pour le basilic, et c'est justement
 
 Plutôt que de suivre une fréquence, fiez-vous à la terre. Enfoncez un doigt d'environ une phalange dans le terreau : s'il ressort sec, arrosez, et s'il ressort humide, attendez. Cette méthode, conseillée par GrowVeg, s'adapte d'elle-même à la saison et à la taille du pot.
 
-Le moment de l'arrosage compte aussi. La RHS conseille d'arroser le matin, car le basilic supporte mal d'avoir les racines mouillées pendant la nuit, et d'éviter de mouiller les feuilles. Pensez enfin à vider la soucoupe une fois que l'eau en trop s'est écoulée, pour que le pot ne trempe pas en permanence.
+L'heure de l'arrosage compte aussi. La RHS conseille d'arroser le matin, car le basilic supporte mal d'avoir les racines mouillées pendant la nuit, et d'éviter de mouiller les feuilles. Pensez enfin à vider la soucoupe une fois que l'eau en trop s'est écoulée, pour que le pot ne trempe pas en permanence.
 
 ## Pincer le basilic pour qu'il reste touffu
 
 Une erreur fréquente consiste à cueillir les grandes feuilles du bas. La plante perd alors ses meilleures feuilles et continue de pousser en hauteur, avec une tige de plus en plus nue.
 
-Il vaut mieux couper l'extrémité des tiges, juste au-dessus d'une paire de feuilles. À cet endroit, deux nouvelles pousses vont apparaître, et le basilic devient plus large et plus fourni au fil des récoltes. Chaque cueillette sert donc à la fois votre cuisine et votre plante.
+Coupez plutôt le haut des tiges, juste au-dessus d'une paire de feuilles. À cet endroit, deux nouvelles pousses apparaissent, et votre basilic devient plus large et plus fourni à chaque récolte. Chaque fois que vous cueillez, vous remplissez donc votre assiette tout en aidant votre plante à grossir.
 
 Surveillez aussi l'apparition des fleurs, en général au milieu ou à la fin de l'été. Une fois en fleurs, le basilic produit des feuilles de moins bonne qualité, c'est pourquoi la RHS conseille de couper les tiges florales dès qu'on les voit. Une seule exception : laisser fleurir un pied fait le bonheur des abeilles, qui adorent son nectar.
 
@@ -80,6 +82,12 @@ Le deuxième est d'arroser par réflexe, tous les jours, sans regarder la terre.
 
 Le troisième est de le garder dans son emballage d'origine, ce cône de plastique transparent qui entoure le pot. Il retient l'humidité autour des feuilles et favorise la pourriture grise. Avouons-le, on l'a presque tous laissé une semaine « pour le protéger », et le basilic nous l'a rarement pardonné.
 
+## Un basilic bien installé vous le rend tout l'été
+
+Le basilic du supermarché a la réputation d'une plante qui meurt en une semaine. Pourtant, il meurt surtout de ses conditions de départ : trop de plants dans trop peu de terre, puis un passage brutal au froid ou à l'humidité.
+
+Un quart d'heure pour séparer les plants, un doigt dans la terre avant chaque arrosage et une coupe au bon endroit suffisent à changer son destin. Le même pot qui finissait à la poubelle peut alors vous fournir des feuilles fraîches jusqu'à la fin de l'été.
+
 ## Questions fréquentes sur le basilic qui meurt
 
 Voici les réponses aux questions qui reviennent le plus souvent quand un basilic commence à dépérir.
@@ -88,27 +96,18 @@ Voici les réponses aux questions qui reviennent le plus souvent quand un basili
 
 Oui, tant que les tiges restent vertes et fermes. Coupez les parties noires ou molles, séparez les plants, puis rempotez-les dans un terreau léger. Si toutes les tiges sont molles et brunes à la base, la plante est en général perdue.
 
-### Pourquoi mon basilic a des feuilles noires ?
+### Comment faire des boutures de basilic ?
 
-Des feuilles noires sont presque toujours le signe d'un coup de froid. Le basilic s'abîme dès que la température descend sous 12 °C, par exemple au réfrigérateur ou contre une fenêtre froide la nuit.
+Coupez une tige qui ne porte pas de fleurs, juste sous une feuille, puis retirez les feuilles du bas, comme le conseille la [RHS](https://www.rhs.org.uk/herbs/basil). Placez ensuite la tige dans un verre d'eau près d'une fenêtre lumineuse et changez l'eau régulièrement. Dès que des racines apparaissent, plantez-la dans un petit pot de terreau léger : vous obtenez un nouveau pied gratuitement.
 
-### Faut-il arroser le basilic tous les jours ?
+### Faut-il mettre de l'engrais au basilic ?
 
-Pas forcément. Arrosez seulement quand le premier centimètre de terre est sec au toucher. En plein été, cela peut arriver chaque jour, mais à l'intérieur en automne, une à deux fois par semaine suffit souvent.
+Ce n'est pas obligatoire, mais un basilic cultivé en pot épuise vite sa terre. [GrowVeg](https://www.growveg.com/guides/the-real-reason-supermarket-basil-always-dies/) conseille un engrais liquide universel environ toutes les deux semaines pendant la belle saison. Respectez la dose indiquée sur l'emballage, car trop d'engrais abîme les racines.
 
-### Le basilic repousse-t-il après avoir été coupé ?
+### Comment conserver des feuilles de basilic coupées ?
 
-Oui, à condition de couper juste au-dessus d'une paire de feuilles. Deux nouvelles tiges repartent alors à cet endroit. Si vous coupez la tige au ras de la terre, elle ne repousse pas.
+Ne les mettez pas au réfrigérateur, car le froid les noircit en quelques jours. Placez plutôt les tiges dans un verre d'eau à température ambiante, comme un bouquet de fleurs, et changez l'eau tous les deux jours.
 
 ### Le basilic peut-il passer l'hiver dans la maison ?
 
 Il peut tenir quelques mois à l'intérieur, dans une pièce chauffée et bien éclairée. En hiver, le manque de lumière l'affaiblit cependant beaucoup, et beaucoup de jardiniers préfèrent ressemer ou racheter un pot au printemps.
-
-## Un basilic bien installé vous le rend tout l'été
-
-Le basilic du supermarché a la réputation d'une plante qui meurt en une semaine. En réalité, il meurt surtout de ses conditions de départ : trop de plants dans trop peu de terre, puis un passage brutal au froid ou à l'humidité.
-
-Un quart d'heure pour séparer les plants, un doigt dans la terre avant chaque arrosage et une coupe au bon endroit suffisent à changer son destin. Le même pot qui finissait à la poubelle peut alors vous fournir des feuilles fraîches jusqu'à la fin de l'été.
-
-
----

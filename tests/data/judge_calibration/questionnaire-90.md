@@ -4,7 +4,7 @@ Pour créer un questionnaire en ligne sans payer ni limiter le nombre de répons
 
 Le piège se cache dans les versions gratuites. Celle de Typeform, l'un des noms les plus connus du secteur, s'arrête désormais à 10 réponses par mois. Passé ce seuil, le formulaire se ferme tout seul, souvent au milieu d'une campagne d'envoi.
 
-Pour vous éviter ce genre de mauvaise surprise, vous découvrirez ci-dessous ce que chaque outil offre réellement sans payer, à partir de quand il devient payant et pour quel type de projet il est le plus adapté. Enfin, une méthode simple et un modèle prêt à copier vous aideront à créer votre premier questionnaire.
+Ce comparatif vous donne, pour chacun des 8 outils, la vraie limite de sa version gratuite et le premier prix à payer, puis un modèle de questionnaire prêt à copier.
 
 ## Comment fonctionne un outil de questionnaire en ligne ?
 
@@ -16,9 +16,9 @@ Chaque fois qu'une personne remplit le questionnaire, sa réponse est enregistr�
 
 C'est ce gain de temps qui explique pourquoi le questionnaire papier a presque disparu, sauf auprès des publics qui n'ont pas de smartphone.
 
-## Trois questions à vous poser avant de choisir un outil que vous pouvez recevoir
+## Trois questions à vous poser avant de choisir un outil
 
-Avant de comparer les fonctions de chaque outil, il est important d'estimer combien de personnes vont répondre à votre questionnaire. C'est ce qui déterminera si un outil gratuit vous suffit ou si vous devrez payer un abonnement. Pourtant, la plupart des comparatifs ne l'indiquent jamais clairement.
+Avant de comparer les outils, trois questions vous aident à savoir lequel vous convient. La plus importante porte sur le nombre de personnes qui vont répondre à votre questionnaire : c'est ce qui déterminera si un outil gratuit vous suffit ou si vous devrez payer un abonnement. Pourtant, la plupart des comparatifs ne l'indiquent jamais clairement.
 
 ### Combien de réponses attendez-vous ?
 
@@ -32,9 +32,11 @@ Dès que votre questionnaire demande un nom, une adresse e-mail ou un âge, les 
 
 Pour un petit sondage entre amis, ce point a peu d'importance. Pour une entreprise, une école ou un cabinet médical, il vaut mieux choisir un outil qui stocke les réponses en Europe, ou même en France, afin d'éviter tout problème avec la loi.
 
-### Le questionnaire représente-t-il votre entreprise ?
+### Le design du questionnaire compte-t-il pour vous ?
 
-Si vous envoyez votre questionnaire à des clients, il donne une image de votre entreprise avant même qu'ils lisent la première question. Un formulaire aux couleurs de votre marque paraît plus sérieux et donne davantage envie de répondre jusqu'au bout. Pour une enquête entre collègues, en revanche, un design simple suffit largement.
+Si votre questionnaire s'adresse à des clients, son apparence compte. Un formulaire à votre logo et à vos couleurs paraît plus professionnel qu'un formulaire générique, et les gens hésitent moins à le remplir jusqu'au bout. Sur ce point, les outils ne se valent pas : Google Forms et Microsoft Forms offrent peu de choix de mise en page, alors que Tally et Typeform soignent beaucoup plus le rendu.
+
+Pour une enquête entre collègues, en revanche, ce critère compte peu : un design simple suffit.
 
 ## Quatre outils gratuits qui ne limitent pas le nombre de réponses
 
@@ -62,7 +64,9 @@ La prise en main demande seulement un petit temps d'adaptation. Pour ajouter une
 
 Si votre entreprise ou votre école utilise déjà Microsoft 365 (Word, Excel, Outlook, Teams), vous avez probablement accès à Microsoft Forms sans rien payer de plus. Il fonctionne comme Google Forms : vous créez vos questions, vous partagez un lien et vous consultez les résultats sous forme de graphiques.
 
-Son avantage tient à son lien direct avec les autres outils Microsoft. Les réponses s'ouvrent dans Excel, et un questionnaire se partage dans Teams en un clic. Les possibilités de personnalisation visuelle restent cependant limitées. Pour un sondage interne, il n'y a donc aucune raison de payer un autre outil.
+Son avantage tient à son lien direct avec les autres outils Microsoft. Les réponses s'ouvrent dans Excel, et un questionnaire se partage dans Teams en un clic. Les possibilités de personnalisation visuelle restent cependant limitées.
+
+Pour un sondage interne, il n'y a donc aucune raison de payer un autre outil.
 
 ### LimeSurvey, pour les mémoires et la recherche
 
@@ -186,7 +190,7 @@ Google Forms et Tally sont les deux meilleurs outils gratuits sans limite de ré
 
 ### Typeform est-il encore gratuit ?
 
-Typeform propose toujours une version gratuite, mais elle est limitée à 10 réponses par mois pour l'ensemble du compte. Pour une véritable enquête, il faut passer à la formule Basic, qui coûte 39 $ par mois pour 100 réponses.
+Oui, mais seulement pour 10 réponses par mois sur l'ensemble du compte. Au-delà, il faut passer à la formule Basic, à 39 $ par mois pour 100 réponses.
 
 ### Quel outil de questionnaire respecte le RGPD ?
 
@@ -200,11 +204,8 @@ Commencez par demander à votre université si elle propose LimeSurvey. Si ce n'
 
 Visez entre 8 et 15 questions fermées, ce qui représente 3 à 5 minutes de remplissage. Au-delà, le nombre de personnes qui abandonnent avant la fin augmente.
 
-## Le bon outil est celui qui tient jusqu'à la dernière réponse
+## Pourquoi un questionnaire échoue, même avec le bon outil
 
 Un questionnaire échoue rarement à cause de son design. Le plus souvent, il échoue parce que le formulaire s'est fermé après quelques réponses, parce que les données ont été stockées au mauvais endroit ou parce qu'une question mal formulée a faussé les résultats.
 
 Choisir l'outil ne prend que quelques minutes. Relire et tester ses questions demande plus de temps, mais c'est cette étape qui fait la qualité des réponses que vous recevrez.
-
-
----
