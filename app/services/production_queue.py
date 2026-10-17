@@ -5,7 +5,6 @@ from sqlalchemy import select
 from app.models.content import Article
 from app.models.ai import Pipeline, WorkflowRun
 from app.models.reference import ArticleStatus, RunStatus, WorkflowPhase, set_article_status, set_run_status
-from app.services.article_service import primary_keyword
 from app.services.log_service import log_step
 
 logger = logging.getLogger(__name__)
@@ -133,105 +132,6 @@ def claim_for_writing(db: Session, project_id: str, limit: int) -> list[str]:
     return claimed
 
 
-def write_queued_article(article_id: str, project_id: str) -> dict:
-    """Rédige un article réclamé, dans sa propre session (exécutable en thread parallèle)."""
-    from app.core.database import SessionLocal
-    from app.services.providers.llm_provider import get_llm_provider, ProviderUnavailableError
-    from app.services.providers.search_provider import get_search_provider
-    from app.services.agents.agent_router import get_agent_router
-    from app.services.seo.seo_generation_orchestrator import WritingCancelledError, generate_full_article
-    from app.core.database import set_current_project_id
-
-    db = SessionLocal()
-    # Thread dédié (ThreadPoolExecutor) : le contexte project_id du thread
-    # appelant ne se propage pas automatiquement, on le repose ici depuis le
-    # paramètre déjà reçu, avant toute requête RLS.
-    set_current_project_id(project_id)
-    try:
-        article = db.get(Article, article_id)
-        if not article:
-            return {"id": article_id, "status": "not_found"}
-        title = article.current_revision.title if article.current_revision else ""
-        try:
-            llm = get_llm_provider(project_id=project_id)
-            search = get_search_provider(project_id)
-            generate_full_article(
-                db=db,
-                project_id=project_id,
-                llm=llm,
-                search=search,
-                agent_router=get_agent_router(db=db),
-                preferred_title=title,
-                keyword=primary_keyword(db, article_id),
-                category_id=article.category_id,
-                search_intent=article.search_intent,
-                existing_article_id=article_id,
-            )
-            db.commit()
-            db.refresh(article)
-            log_step(
-                db, project_id,
-                f"Rédaction terminée ({article.status_reason_id}) : {title}",
-                level="info" if article.status_reason_id != ArticleStatus.FAILED else "error",
-                step="writing_queue", article_id=article_id,
-            )
-            db.commit()
-            return {"id": article_id, "status": article.status_reason_id}
-        except WritingCancelledError:
-            db.rollback()
-            article = db.get(Article, article_id)
-            if article:
-                set_article_status(article, ArticleStatus.IDEA_PROPOSED)
-                article.updated_at = datetime.now(timezone.utc)
-                run = _latest_run(db, article_id)
-                if run:
-                    set_run_status(run, RunStatus.CANCELLED)
-                    run.finished_at = datetime.now(timezone.utc)
-                log_step(
-                    db, project_id,
-                    f"Rédaction annulée à la demande : {title}",
-                    level="info", step="writing_queue", article_id=article_id,
-                )
-                db.commit()
-            return {"id": article_id, "status": "cancelled"}
-        except ProviderUnavailableError as exc:
-            db.rollback()
-            article = db.get(Article, article_id)
-            if article:
-                # Pas d'échec définitif : provider indisponible, on remet en file
-                set_article_status(article, ArticleStatus.WRITING_REQUESTED)
-                article.updated_at = datetime.now(timezone.utc)
-                log_step(
-                    db, project_id,
-                    f"Provider IA indisponible, rédaction remise en file : {title} ({exc})",
-                    level="warning", step="writing_queue", article_id=article_id,
-                )
-                db.commit()
-            return {"id": article_id, "status": "requeued", "error": str(exc)}
-        except Exception as exc:
-            logger.exception("Writing job failed for article %s", article_id)
-            db.rollback()
-            article = db.get(Article, article_id)
-            if article:
-                set_article_status(article, ArticleStatus.FAILED)
-                article.updated_at = datetime.now(timezone.utc)
-                run = _latest_run(db, article_id)
-                if run:
-                    set_run_status(run, RunStatus.FAILED)
-                    run.error = str(exc)[:2000]
-                    run.finished_at = datetime.now(timezone.utc)
-                log_step(
-                    db, project_id,
-                    f"Rédaction échouée : {title} — {exc}",
-                    level="error", step="writing_queue", article_id=article_id,
-                )
-                db.commit()
-            return {"id": article_id, "status": "failed", "error": str(exc)}
-    finally:
-        set_current_project_id(None)
-        db.close()
-
-
 def resolve_max_parallel(db: Session, project_id: str) -> int:
     pipe = db.get(Pipeline, project_id)
     value = pipe.max_parallel_jobs if pipe and pipe.max_parallel_jobs else 3
@@ -242,8 +142,8 @@ def process_writing_queue(db: Session, project_id: str, max_parallel: int | None
     """Expose la file au rédacteur local sans appeler l'ancien orchestrateur.
 
     Les sujets restent en ``WRITING_REQUESTED`` jusqu'au dépôt Markdown par le
-    rédacteur. Les anciennes fonctions de claim et de rédaction sont conservées
-    pour la compatibilité du code historique, mais ne sont plus appelées ici.
+    rédacteur. Les anciennes fonctions de claim sont conservées pour la
+    compatibilité des appels de suivi, mais ne déclenchent plus de rédaction.
     """
     pending_ids = db.execute(
         select(Article.id)
