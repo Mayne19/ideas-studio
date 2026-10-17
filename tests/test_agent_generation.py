@@ -139,6 +139,12 @@ def test_competitor_matching_uses_registered_domain_without_suffix_false_positiv
         {**elle, "content_html": "<p>Selon Elle, ce produit convient.</p>"}))
     assert any("elle" in error for error in competitor_errors(
         {**elle, "content_html": "<p>Le magazine Elle recommande ce produit.</p>"}))
+    assert not any("concurrent" in error.lower() for error in competitor_errors(
+        {**elle, "content_html": "<ul><li>Elle sèche vite à l'air.</li></ul>"}))
+    assert not any("concurrent" in error.lower() for error in competitor_errors(
+        {**elle, "content_html": "<h2>Le lin</h2><p>Elle se froisse vite.</p>"}))
+    assert not any("concurrent" in error.lower() for error in competitor_errors(
+        {**elle, "content_html": "<p>Deux précautions : Elle doit sécher à plat.</p>"}))
 
     public_sources = {**candidate, "competitors": [], "sources": [
         {"url": "https://sante.gouv.fr/a"}, {"url": "https://service-public.gouv.fr/a"},

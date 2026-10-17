@@ -10,6 +10,7 @@ rapport de génération.
 from __future__ import annotations
 
 import json
+import logging
 import re
 import unicodedata
 import uuid
@@ -26,6 +27,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from app.services.seo.seo_generation_orchestrator import SEOGenerationOrchestrator
 
 MAX_FAQ, MIN_FAQ = 6, 3
+logger = logging.getLogger(__name__)
 
 
 def published_articles(db, project) -> list[dict]:
@@ -231,6 +233,7 @@ def _load_common_word_brands() -> set[str]:
         return {_fold_accents(line.strip().lower()) for line in _COMMON_WORD_BRANDS_PATH.read_text(encoding="utf-8").splitlines()
                 if line.strip() and not line.lstrip().startswith("#")}
     except OSError:  # pragma: no cover - packaging failure fallback
+        logger.warning("common_word_brands.txt is missing; using the minimal fallback list")
         return {"ideal"}
 
 
@@ -247,8 +250,8 @@ def _mentions_competitor(raw_text: str, name: str) -> bool:
             if not re.search(r"(?:site|magazine|blog|selon|d['’]après)\s+$", prefix, re.IGNORECASE):
                 continue
         elif name in _COMMON_WORD_BRANDS:
-            prefix = folded[:match.start()].rstrip()
-            sentence_start = not prefix or bool(re.search(r"[.!?;]\s*$", prefix))
+            prefix = folded[:match.start()].rstrip(" \t\r\f\v")
+            sentence_start = not prefix or bool(re.search(r"[.!?;:\n]\s*$", prefix))
             if sentence_start:
                 next_words = _fold_accents(raw_text[match.end():match.end() + 80]).lower()
                 verbs = re.findall(r"[a-zà-ÿ]+", next_words)
@@ -261,7 +264,7 @@ def _mentions_competitor(raw_text: str, name: str) -> bool:
 def competitor_errors(candidate: dict) -> list[str]:
     """Concurrents : jamais liés, jamais nommés, jamais sources ; au moins 3
     domaines de sources admissibles (consigne du 2026-10-17)."""
-    from app.services.seo.html_text_ops import html_to_text
+    from html import unescape
 
     content = candidate.get("content_html") or ""
     hosts = competitor_hosts(candidate)
@@ -269,7 +272,10 @@ def competitor_errors(candidate: dict) -> list[str]:
     for url in re.findall(r"""<a\b[^>]*href\s*=\s*["']([^"']+)["']""", content, re.IGNORECASE):
         if _registered_domain(_host(url)) in hosts:
             errors.append(f"Lien vers un concurrent ({_host(url)}) : supprime ce lien, un concurrent n'est jamais une source.")
-    raw_text = html_to_text(content)
+    block_end = re.compile(r"</(?:h[1-6]|p|li|blockquote|tr|td|th)\s*>", re.IGNORECASE)
+    raw_text = unescape(re.sub(r"<[^>]+>", " ", block_end.sub("\n", content)))
+    raw_text = re.sub(r"[ \t\r\f\v]+", " ", raw_text)
+    raw_text = re.sub(r" *\n *", "\n", raw_text).strip()
     text = raw_text.lower()
     for host in hosts:
         for name in _brand_variants(host):
