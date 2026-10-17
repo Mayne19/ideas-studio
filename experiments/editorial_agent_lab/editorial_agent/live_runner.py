@@ -22,6 +22,7 @@ from typing import Any
 from dotenv import load_dotenv
 
 from .existing_pipeline_adapter import ExistingPipelineWebAdapter, from_environment, from_ideas_studio
+from .claude_cli_client import find_claude_cli
 from .prompting import load_system_prompt
 
 
@@ -212,6 +213,9 @@ def resolve_model_route(project_id: str | None = None) -> tuple[str, str, str]:
         # cause ni la valeur d'un secret dans l'interface.
         pass
 
+    if find_claude_cli():
+        return "claude_cli", "", "opus"
+
     raise LiveRunError(
         "Aucune clé Anthropic/OpenRouter accessible pour le test. Le laboratoire "
         "cherche d'abord les variables d'environnement, puis les credentials "
@@ -259,6 +263,10 @@ def _make_client(route: str, key: str, model: str, config: LiveRunConfig, adapte
         from app.services.seo.agent_writer import anthropic_client
 
         return anthropic_client(key, timeout_seconds=900.0)
+    if route == "claude_cli":
+        from .claude_cli_client import ClaudeCliClient
+
+        return ClaudeCliClient(model=model or "opus", timeout_seconds=900.0)
     if route == "openrouter":
         from app.services.seo.agent_writer_openrouter import OpenRouterAgentClient, page_fetcher, reader_get
 
