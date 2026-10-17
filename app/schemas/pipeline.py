@@ -36,6 +36,8 @@ class PipelineSettingsUpdate(BaseModel):
     generation_mode: Optional[Literal["agent", "pipeline"]] = None
     # Arrêt dur du coût d'un article de l'agent (dollars) et lecture de secours.
     agent_max_cost_usd: Optional[float] = Field(default=None, gt=0, le=20)
+    # Champ accepté pour la compatibilité des clients historiques ; il n'est plus persisté.
+    agent_reader_fallback: Optional[bool] = None
     max_pending_drafts: Optional[int] = None
     max_parallel_writing_jobs: Optional[int] = None
     paused_until: Optional[datetime] = None
