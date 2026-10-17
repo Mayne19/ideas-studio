@@ -131,6 +131,7 @@ class ArticleDraft(BaseModel):
     sources: list[dict[str, str]] = Field(default_factory=list)
     facts: list[dict[str, str]] = Field(default_factory=list)
     competitors: list[dict[str, object]] = Field(default_factory=list)
+    sub_questions: list[str] = Field(default_factory=list)
     self_review: dict[str, object] = Field(default_factory=dict)
 
 

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+from datetime import date
+from pathlib import Path
 
 from .models import (
     ArticlePlan,
@@ -13,6 +15,30 @@ from .models import (
     ReaderIntent,
     SiteContext,
 )
+
+
+def load_system_prompt(
+    *,
+    site_name: str = "le site",
+    site_domain: str = "ce site",
+    language: str = "français",
+    country: str = "France",
+    today: date | None = None,
+) -> str:
+    """Charge le prompt du laboratoire et remplace uniquement ses variables."""
+
+    path = Path(__file__).resolve().parents[1] / "AGENT_WRITER_PROMPT.md"
+    text = path.read_text(encoding="utf-8")
+    values = {
+        "{site_name}": site_name or "le site",
+        "{site_domain}": site_domain or "ce site",
+        "{language}": language or "français",
+        "{country}": country or "France",
+        "{date}": (today or date.today()).isoformat(),
+    }
+    for key, value in values.items():
+        text = text.replace(key, value)
+    return text
 
 
 def build_writer_context(

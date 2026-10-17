@@ -14,4 +14,10 @@ def test_plan_manifest_is_complete_and_only_claims_validated_evidence() -> None:
         if step["status"] == "validated":
             assert step["evidence"]
         else:
-            assert step["status"] == "planned"
+            assert step["status"] in {
+                "planned",
+                "ready_for_live_run",
+                "out_of_algorithm",
+                "post_run_only",
+                "pending_real_sample",
+            }

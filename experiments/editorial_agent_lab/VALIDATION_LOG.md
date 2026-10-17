@@ -59,7 +59,13 @@ remplacer l'analyse sémantique du modèle.
 
 ### Limitation connue
 
-La commande pytest n'est pas disponible dans le runtime courant. La factory
-`from_ideas_studio()` n'a pas été déclarée validée en conditions CMS, car ce
-runtime ne contient pas `pydantic_settings`, une dépendance du projet. Aucun
-appel réseau réel ni appel payant au modèle n'a été lancé.
+Le runtime projet `.venv` contient bien pytest et `pydantic_settings` ; les 23
+tests du laboratoire passent, la compilation passe et `git diff --check` passe.
+Le nouveau lanceur réel est installé, mais son essai unique a été bloqué avant
+tout appel réseau : aucune clé Anthropic/OpenRouter n'est accessible dans le
+runtime du terminal, et aucun credential CMS ne peut être résolu sans la
+configuration de l'application. Aucun crédit n'a donc été consommé.
+
+La validation humaine et la transformation des remarques en règles sont des
+étapes postérieures au laboratoire. Elles ne sont plus comptées comme des
+étapes de l'algorithme.
