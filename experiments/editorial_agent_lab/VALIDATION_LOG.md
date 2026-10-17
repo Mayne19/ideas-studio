@@ -18,13 +18,24 @@ pas encore une validation de production avec de vraies clés et de vraies pages.
 - A13 : le scanner local signale une phrase identique et produit une suggestion
   séparée sans modifier le texte original.
 - A14 : une égalité de sécurité conserve la version la plus ancienne.
+- A4 : un dossier concurrentiel incomplet est bloqué et les forces comme les
+  faiblesses sont obligatoires.
+- A5 : l'intention minimale du lecteur peut être construite à partir d'une
+  lacune concurrentielle.
+- A7 : les sources insuffisamment diversifiées et les sources dominantes sont
+  détectées.
+- A9 : les contrats de sections et de FAQ sont contrôlés avant rédaction.
+- A10 : le recouvrement entre une question FAQ et une section du corps est
+  détecté avant rédaction.
 
 ### Preuve exécutée
 
 Le runtime Python fourni par l'environnement a exécuté les tests du laboratoire
 par appel direct des fonctions de test : tous les tests ont renvoyé `PASS`.
 La compilation Python du dossier a également réussi et `git diff --check` ne
-signale aucune erreur.
+signale aucune erreur. Les validations A4, A5, A7, A9 et A10 sont des
+validations de contrats déterministes ; elles ne prétendent pas encore
+remplacer l'analyse sémantique du modèle.
 
 ### Limitation connue
 

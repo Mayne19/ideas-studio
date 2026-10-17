@@ -80,6 +80,15 @@ class SectionPlan(BaseModel):
     information_not_to_repeat: list[str] = Field(default_factory=list)
 
 
+class H3Plan(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    heading: str
+    purpose: str
+    reader_question: str
+    facts_to_use: list[str] = Field(default_factory=list)
+
+
 class FaqPlanItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

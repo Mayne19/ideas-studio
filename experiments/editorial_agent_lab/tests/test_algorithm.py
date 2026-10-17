@@ -15,6 +15,12 @@ from experiments.editorial_agent_lab.editorial_agent.existing_pipeline_adapter i
     ExistingPipelineWebAdapter,
 )
 from experiments.editorial_agent_lab.editorial_agent.similarity import scan_exact_phrases
+from experiments.editorial_agent_lab.editorial_agent.planning import (
+    build_reader_intent,
+    validate_competitor_dossier,
+    validate_plan_coverage,
+    validate_source_diversity,
+)
 from experiments.editorial_agent_lab.editorial_agent.validators import (
     choose_best_version,
     validate_draft,
@@ -169,3 +175,48 @@ def test_existing_pipeline_adapter_reports_empty_reads() -> None:
     assert adapter.fetch_page("https://example.com/page") == ""
     assert adapter.stats()["pages_read"] == 0
     assert adapter.stats()["fetch_errors"]
+
+
+def test_planning_requires_competitor_strengths_and_weaknesses() -> None:
+    competitors = [
+        {"url": "https://example.com", "title": "A", "content": "texte"},
+    ]
+    from experiments.editorial_agent_lab.editorial_agent.models import CompetitorPage
+
+    pages = [CompetitorPage(**competitor) for competitor in competitors]
+    issues = validate_competitor_dossier(pages)
+    assert any(issue.code == "not_enough_competitors" for issue in issues)
+    assert any(issue.code == "missing_competitor_strengths" for issue in issues)
+
+
+def test_source_diversity_rejects_one_dominant_domain() -> None:
+    facts = [
+        FactRecord(value=str(index), definition="x", source_url="https://source.example/fact", source_kind="official", verified=True)
+        for index in range(4)
+    ]
+    assert any(issue.code == "insufficient_source_diversity" for issue in validate_source_diversity(facts))
+    assert any(issue.code == "dominant_source" for issue in validate_source_diversity(facts))
+
+
+def test_plan_rejects_faq_overlap_with_body() -> None:
+    plan = make_plan().model_copy(update={
+        "faq": [FaqPlanItem(
+            question="Quelle option choisir ?",
+            reason_not_in_article="La question est prévue dans la FAQ.",
+            facts_to_use=["faq-fact"],
+        )],
+    })
+    issues = validate_plan_coverage(plan)
+    assert any(issue.code == "faq_question_overlap" for issue in issues)
+
+
+def test_reader_intent_uses_a_missing_competitor_topic() -> None:
+    from experiments.editorial_agent_lab.editorial_agent.models import CompetitorPage
+
+    reader = build_reader_intent("choisir un outil", [CompetitorPage(
+        url="https://example.com",
+        title="Concurrent",
+        content="texte",
+        missing_topics=["le coût réel"],
+    )])
+    assert reader.likely_trap == "le coût réel"
