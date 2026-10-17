@@ -10,7 +10,7 @@ from sqlalchemy.engine.url import make_url
 from alembic.config import Config
 from alembic import command
 from app.core.config import settings
-from app.routers import auth, projects, health, categories, articles, public_api, tracking, ideas, seo, performance, recommendations, notifications, members, editor, versions, media, invitations, editorial_setup, callouts, pipeline, generation, comments, search, search_console, profile, ai_providers, activity, webhooks, kanban_columns, ai_agents, monitoring, analytics, external_services, illustrations, editorial_workflow, local_writer
+from app.routers import auth, projects, health, categories, articles, public_api, tracking, ideas, seo, performance, recommendations, notifications, members, editor, versions, media, invitations, editorial_setup, callouts, pipeline, generation, comments, search, search_console, profile, ai_providers, activity, webhooks, kanban_columns, ai_agents, monitoring, analytics, external_services, illustrations, editorial_workflow, writing_schedule, local_writer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -283,6 +283,7 @@ app.include_router(public_api.router)
 app.include_router(tracking.router)
 app.include_router(ideas.router)
 app.include_router(editorial_workflow.router)
+app.include_router(writing_schedule.router)
 app.include_router(local_writer.router)
 app.include_router(seo.router)
 app.include_router(performance.router)
