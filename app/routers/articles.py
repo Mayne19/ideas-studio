@@ -180,10 +180,18 @@ def publish_article_route(
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions to publish")
 
-    try:
-        article = publish_article(db, article)
-    except PublishBlockedError as exc:
-        raise HTTPException(status_code=400, detail=f"Publication bloquée : {exc}") from exc
+    from app.services.editorial_workflow_service import is_workflow_managed
+    if is_workflow_managed(db, article.id):
+        from app.services.editorial_workflow_service import publish_due_article
+        try:
+            article = publish_due_article(db, article)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=f"Publication bloquée : {exc}") from exc
+    else:
+        try:
+            article = publish_article(db, article)
+        except PublishBlockedError as exc:
+            raise HTTPException(status_code=400, detail=f"Publication bloquée : {exc}") from exc
 
     project = db.get(Project, article.project_id)
     if project:
