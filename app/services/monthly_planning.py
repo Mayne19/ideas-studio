@@ -112,6 +112,7 @@ def generate_monthly_plan(
     agent_router=None,
     generation_day: int = DEFAULT_GENERATION_DAY,
     force: bool = False,
+    respect_run_cap: bool = True,
 ) -> dict:
     """Generate ideas for the next month based on category frequencies."""
     from app.models.core import Project
@@ -152,7 +153,8 @@ def generate_monthly_plan(
     # au-delà, chaque idée coûterait des appels LLM non demandés.
     from app.services.pipeline_service import allocate_ideas_per_category, resolve_ideas_per_run
     ordered = sorted(category_frequencies.items(), key=lambda x: -x[1])
-    category_frequencies = allocate_ideas_per_category(ordered, resolve_ideas_per_run(db, project_id))
+    if respect_run_cap:
+        category_frequencies = allocate_ideas_per_category(ordered, resolve_ideas_per_run(db, project_id))
     total_ideas = sum(category_frequencies.values())
 
     # Build niche map for anti-collision (repose sur overrides.niche, plus de colonne dédiée)

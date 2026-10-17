@@ -58,6 +58,10 @@ export function listProductionUpdates(projectId: string): Promise<ProductionArti
   return api.get<ProductionArticle[]>(`/projects/${projectId}/editorial-workflow/updates`)
 }
 
+export function generateProductionIdeas(projectId: string): Promise<{ ideas_generated: number; categories_used: number; status: string }> {
+  return api.post(`/projects/${projectId}/editorial-workflow/generate-monthly-ideas`, { force: true }, { timeoutMs: 180000 })
+}
+
 export function requestProductionWriting(projectId: string, articleId: string): Promise<ProductionArticle> {
   return api.post<ProductionArticle>(`/projects/${projectId}/editorial-workflow/articles/${articleId}/request-writing`)
 }

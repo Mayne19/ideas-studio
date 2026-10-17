@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AlertTriangle, CheckCircle, Edit3, RefreshCw, X, XCircle } from '@/components/ui/hugeIcons'
-import { deleteIdea, generateMonthlyPlan } from '@/api/ideas'
+import { deleteIdea } from '@/api/ideas'
 import { patchArticle } from '@/api/articles'
 import { getPipelineSettings } from '@/api/pipeline'
 import type { PipelineSettings } from '@/api/pipeline'
 import {
   listProductionArticles,
+  generateProductionIdeas,
   listProductionUpdates,
   listProductionWritingQueue,
   rejectProductionArticle,
@@ -119,6 +120,6 @@ export default function PipelinePage() {
   const loadCounts = useCallback(async () => { if (!projectId) return; try { const [ideas, writing, review, updates, settings] = await Promise.all([listProductionArticles(projectId, 'idea'), listProductionWritingQueue(projectId), listProductionArticles(projectId, 'review'), listProductionUpdates(projectId), getPipelineSettings(projectId)]); setCounts({ ideas: ideas.length, writing: writing.length, review: review.length, updates: updates.length }); setPipeline(settings) } catch { setError('Impossible de charger la production.') } }, [projectId]); useEffect(() => { void loadCounts() }, [loadCounts])
   if (!projectId) return <ErrorState message="Projet introuvable." />
   const activeProjectId = projectId
-  async function generateIdeas() { setGenerating(true); setMessage(''); try { const result = await generateMonthlyPlan(activeProjectId, true); setMessage(`${result.ideas_generated || 0} idée(s) générée(s).`); await loadCounts() } catch { setMessage('La génération des idées a échoué.') } finally { setGenerating(false) } }
+  async function generateIdeas() { setGenerating(true); setMessage(''); try { const result = await generateProductionIdeas(activeProjectId); setMessage(`${result.ideas_generated || 0} idée(s) générée(s).`); await loadCounts() } catch { setMessage('La génération des idées a échoué.') } finally { setGenerating(false) } }
   return <div className="mx-auto flex max-w-6xl flex-col gap-5 p-1"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-[11px] font-medium uppercase tracking-[0.16em] text-tertiary">Parcours éditorial</p><h1 className="mt-1 text-[25px] font-semibold tracking-[-0.03em] text-primary">Production</h1><p className="mt-1 text-[13px] text-secondary">Les idées, la rédaction, la validation et les mises à jour dans un seul espace.</p></div>{activeTab === 'ideas' && <Button size="sm" onClick={() => void generateIdeas()} loading={generating}>Générer les idées du mois</Button>}</div>{message && <p className="text-[12px] text-secondary">{message}</p>}{error && <ErrorMessage message={error} />}<div className="flex border-b border-border">{TABS.map((tab) => <TabButton key={tab.key} tab={tab} active={activeTab === tab.key} count={counts[tab.key]} onClick={() => setParams({ tab: tab.key })} />)}</div>{activeTab === 'ideas' && <IdeasTab projectId={projectId} onRefresh={() => void loadCounts()} />}{activeTab === 'writing' && <WritingTab projectId={projectId} />}{activeTab === 'review' && <ReviewTab projectId={projectId} threshold={pipeline?.min_publish_score ?? 90} />}{activeTab === 'updates' && <UpdatesTab projectId={projectId} />}</div>
 }

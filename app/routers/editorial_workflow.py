@@ -44,6 +44,10 @@ class ScheduleRequest(BaseModel):
     scheduled_for: datetime
 
 
+class MonthlyIdeasRequest(BaseModel):
+    force: bool = True
+
+
 class WorkflowArticleResponse(BaseModel):
     id: str
     title: str
@@ -111,6 +115,31 @@ def _list_articles(
         for article in articles
         if status is None or workflow_status(article) == status
     ]
+
+
+@router.post("/generate-monthly-ideas")
+def generate_monthly_ideas(
+    project_id: str,
+    body: MonthlyIdeasRequest = MonthlyIdeasRequest(),
+    db: Session = Depends(get_db),
+    _member=Depends(require_project_role(*_WRITE_ROLES)),
+):
+    from app.services.agents.agent_router import get_agent_router
+    from app.services.providers.llm_provider import get_llm_provider
+    from app.services.providers.search_provider import get_search_provider
+    from app.services.monthly_planning import generate_monthly_plan
+
+    result = generate_monthly_plan(
+        db=db,
+        project_id=project_id,
+        llm=get_llm_provider(project_id=project_id),
+        search=get_search_provider(project_id),
+        agent_router=get_agent_router(db=db),
+        force=body.force,
+        respect_run_cap=False,
+    )
+    db.commit()
+    return result
 
 
 @router.get("/articles", response_model=list[WorkflowArticleResponse])
