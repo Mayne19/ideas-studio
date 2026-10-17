@@ -250,8 +250,19 @@ def test_fetch_refuses_urls_absent_from_search_results():
     client._run_tool("web_search", {"query": "inserm"})
     assert client._run_tool("web_fetch", {"url": "https://www.cdc.gov/invente.html"}) == (
         "URL inventée : choisis une URL issue d'une recherche.")
-    assert fetched == [] and client.fetches == 0 and client.failed_fetches == 0
+    assert fetched == [] and client.fetches == 0 and client.failed_fetches == 1
     assert client.fetch_log[-1]["method"] == "refusée"
     # Même page, écrite autrement (schéma, www, barre finale) : acceptée.
     assert client._run_tool("web_fetch", {"url": "http://inserm.fr/dossier/chronobiologie?utm=1"}) == "a" * 2000
     assert client.fetches == 1
+
+
+def test_invented_urls_count_in_the_failure_cap():
+    from app.services.seo.agent_writer_openrouter import OpenRouterAgentClient
+
+    client = OpenRouterAgentClient("k", search_fn=lambda q, n: [], fetch_fn=lambda url: "a" * 2000)
+    for i in range(6):
+        assert client._run_tool("web_fetch", {"url": f"https://invente{i}.fr"}).startswith("URL inventée")
+    assert client._run_tool("web_fetch", {"url": "https://invente7.fr"}) == (
+        "Limite d'échecs de lecture atteinte : rédige avec ce que tu as déjà.")
+    assert client.fetches == 0 and client.failed_fetches == 6
