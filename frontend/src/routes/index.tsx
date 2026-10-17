@@ -32,11 +32,6 @@ const AnalyticsPage = lazy(() => import('@/pages/projects/analytics/AnalyticsPag
 const RecommendationsPage = lazy(() => import('@/pages/projects/recommendations/RecommendationsPage'))
 const GeneratePage = lazy(() => import('@/pages/projects/generate/GeneratePage'))
 const CalendarPage = lazy(() => import('@/pages/projects/calendar/CalendarPage'))
-const IdeasPage = lazy(() => import('@/pages/projects/editorial/IdeasPage'))
-const WritingPage = lazy(() => import('@/pages/projects/editorial/WritingPage'))
-const ReviewPage = lazy(() => import('@/pages/projects/editorial/ReviewPage'))
-const PublicationPage = lazy(() => import('@/pages/projects/editorial/PublicationPage'))
-const UpdatesPage = lazy(() => import('@/pages/projects/editorial/UpdatesPage'))
 
 const NotificationsPage = lazy(() => import('@/pages/projects/notifications/NotificationsPage'))
 const ProjectStrategyPage = lazy(() => import('@/pages/projects/settings/ProjectStrategyPage'))
@@ -310,46 +305,6 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<LoadingState />}>
             <PipelinePage />
-          </Suspense>
-        ),
-      },
-      {
-        path: 'projects/:projectId/editorial/ideas',
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <IdeasPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: 'projects/:projectId/editorial/writing',
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <WritingPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: 'projects/:projectId/editorial/review',
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <ReviewPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: 'projects/:projectId/editorial/publication',
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <PublicationPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: 'projects/:projectId/editorial/updates',
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <UpdatesPage />
           </Suspense>
         ),
       },
