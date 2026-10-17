@@ -1,0 +1,87 @@
+{
+  "meta_title": "Enlever une tache de gras sur un vêtement : la méthode",
+  "meta_description": "Absorber, prétraiter au liquide vaisselle, laver à la bonne température, ne rien sécher trop tôt : la méthode pour enlever une tache de gras d'un vêtement.",
+  "slug": "enlever-tache-de-gras-vetement",
+  "mot_cle_principal": "enlever une tache de gras sur un vêtement",
+  "sources": [
+    {
+      "titre": "Mississippi State University Extension : How to remove pesky stains",
+      "url": "https://extension.msstate.edu/blogs/extension-for-real-life/how-remove-pesky-stains"
+    },
+    {
+      "titre": "UFC-Que Choisir : comprendre les étiquettes des vêtements",
+      "url": "https://www.quechoisir.org/decryptage-lave-linge-et-seche-linge-comprendre-les-etiquettes-des-vetements-n68191"
+    },
+    {
+      "titre": "Ariel : Grease stains",
+      "url": "https://ariel.co.uk/en-gb/how-to-wash/stain-removal/grease-stains"
+    },
+    {
+      "titre": "Tide : How to remove grease stains",
+      "url": "https://tide.com/en-us/how-to-wash-clothes/how-to-remove-stains/grease-stains"
+    },
+    {
+      "titre": "Tide : How to remove motor oil stains",
+      "url": "https://tide.com/en-us/how-to-wash-clothes/how-to-remove-stains/motor-oil-stains"
+    },
+    {
+      "titre": "The Woolmark Company : Removing stains from wool",
+      "url": "https://www.woolmark.com/care/removing-stains-from-wool/"
+    },
+    {
+      "titre": "Persil : How to remove oil stains",
+      "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/how-to-remove-oil-stains.html"
+    },
+    {
+      "titre": "Persil : How to get grease smell out of clothes",
+      "url": "https://www.persillaundry.com/us/en/laundry-help/laundry-tips/how-to-remove-stains/how-to-get-grease-smell-out-of-clothes.html"
+    },
+    {
+      "titre": "Staffordshire Fire and Rescue Service : tumble dryer fire warning",
+      "url": "https://www.staffordshirefire.gov.uk/news/posts/businesses-and-homes-issued-with-tumble-dryer-fire-warning"
+    }
+  ],
+  "images": [
+    {
+      "apres_le_titre": "Les premiers gestes dans les minutes qui suivent la tache",
+      "montre": "Une main qui tamponne une tache d'huile sur un tee-shirt avec un essuie-tout, puis la même tache couverte de fécule de maïs",
+      "texte_alternatif": "Tache de gras tamponnée avec un essuie-tout puis couverte de fécule de maïs pour absorber l'huile"
+    },
+    {
+      "apres_le_titre": "La méthode pour un vêtement lavable en machine",
+      "montre": "Un vêtement retourné, la tache posée contre un essuie-tout plié, et du liquide vaisselle appliqué sur l'envers du tissu",
+      "texte_alternatif": "Liquide vaisselle appliqué sur l'envers d'une tache de gras posée sur un essuie-tout"
+    },
+    {
+      "apres_le_titre": "Vêtements à nettoyer à sec uniquement",
+      "montre": "Gros plan sur une étiquette d'entretien avec la cuve et sa température, le carré du sèche-linge et le cercle du nettoyage professionnel",
+      "texte_alternatif": "Étiquette d'entretien d'un vêtement montrant la température de lavage maximale et le symbole du nettoyage à sec"
+    }
+  ],
+  "liens_internes_places": [],
+  "liens_internes_suggeres": [
+    "Comprendre les symboles d'entretien sur l'étiquette d'un vêtement",
+    "Enlever une tache de sang sur un vêtement",
+    "Enlever une tache de vin rouge sur un tissu",
+    "Détacher un vêtement en soie ou en laine sans l'abîmer",
+    "Utiliser un sèche-linge sans risque d'incendie"
+  ],
+  "faq": [
+    {
+      "question": "Une tache de graisse de moteur ou de chaîne de vélo part-elle de la même façon ?",
+      "reponse": "Oui, le principe est le même, mais le prétraitement doit être plus long : un trempage de quelques minutes dans de l'eau tiède additionnée de lessive liquide, puis un lavage à la température la plus élevée qu'autorise l'étiquette, sans séchage à chaud tant que la trace reste visible."
+    },
+    {
+      "question": "Peut-on mettre au sèche-linge des torchons ou des tenues très chargés en graisse ?",
+      "reponse": "C'est déconseillé sans précautions, car les restes de graisse peuvent s'enflammer. Laissez le cycle de refroidissement aller jusqu'au bout, laissez le linge refroidir à l'air avant de le ranger et séchez les torchons sur un fil quand c'est possible."
+    },
+    {
+      "question": "Une auréole est apparue autour de la tache après le traitement : que faire ?",
+      "reponse": "Elle vient presque toujours d'un produit qui n'a pas été assez rincé avant le séchage. Rincez toute la zone, puis lavez le vêtement en entier si l'étiquette le permet."
+    },
+    {
+      "question": "L'odeur de graisse reste après le lavage : est-ce grave ?",
+      "reponse": "Non, mais c'est le signe qu'il reste du gras dans les fibres. Refaites le traitement et relavez : un parfum pour le linge ne ferait que masquer l'odeur."
+    }
+  ]
+}

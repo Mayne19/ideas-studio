@@ -1,0 +1,590 @@
+{
+  "algorithm": "editorial-agent-lab/live-claude-style",
+  "keyword": "La règle 50/30/20 : comment l'appliquer en France, même avec un petit salaire",
+  "model": "anthropic/claude-opus-5.5",
+  "route": "openrouter",
+  "duration_s": 254.43,
+  "cost_usd": 1.374,
+  "agent": {
+    "fetch_log": [
+      {
+        "url": "https://www.lafinancepourtous.com/outils/questions-reponses/budget-qu-est-ce-que-la-regle-des-50-30-20/",
+        "chars": 1654,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 186539,
+        "text_chars": 1654,
+        "failed": false
+      },
+      {
+        "url": "https://finary.com/fr/blog/finance-perso/budget/regle-50-30-20",
+        "chars": 12407,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 254945,
+        "text_chars": 12407,
+        "failed": false
+      },
+      {
+        "url": "https://www.raisin.com/fr-fr/epargne/regle-50-30-20/",
+        "chars": 6209,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 519944,
+        "text_chars": 6209,
+        "failed": false
+      },
+      {
+        "url": "https://www.service-public.gouv.fr/particuliers/actualites/A18916",
+        "chars": 2025,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 56800,
+        "text_chars": 2025,
+        "failed": false
+      },
+      {
+        "url": "https://www.caisse-epargne.fr/jeunes/gerer-depenses-epargner/",
+        "chars": 5907,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 318999,
+        "text_chars": 5907,
+        "failed": false
+      },
+      {
+        "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2367",
+        "chars": 14398,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 174685,
+        "text_chars": 14398,
+        "failed": false
+      },
+      {
+        "url": "https://www.insee.fr/fr/statistiques/8612566?sommaire=8612596",
+        "chars": 14979,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 181950,
+        "text_chars": 14979,
+        "failed": false
+      },
+      {
+        "url": "https://drees.solidarites-sante.gouv.fr/sites/default/files/2020-08/dd25_depenses_pre-engagees_quel_poids_dans_le_budget_des_menages.pdf",
+        "chars": 0,
+        "method": "secours",
+        "status": 200,
+        "html_chars": 6035,
+        "text_chars": 0,
+        "failed": true
+      },
+      {
+        "url": "https://www.mesquestionsdargent.fr/intervenants-sociaux-et-pcb/point-conseil-budget",
+        "chars": 7369,
+        "method": "secours",
+        "status": 200,
+        "html_chars": 605684,
+        "text_chars": 7369,
+        "failed": false
+      },
+      {
+        "url": "https://www.mesdroitssociaux.gouv.fr/simulateurs",
+        "chars": 7816,
+        "method": "secours",
+        "status": 200,
+        "html_chars": 58440,
+        "text_chars": 7816,
+        "failed": false
+      },
+      {
+        "url": "https://solidarites.gouv.fr/point-conseil-budget-pcb",
+        "chars": 29479,
+        "method": "secours",
+        "status": 200,
+        "html_chars": 6035,
+        "text_chars": 29479,
+        "failed": false
+      }
+    ],
+    "search_log": [
+      "règle 50/30/20 budget France petit salaire",
+      "montant SMIC net mensuel 2026",
+      "Insee dépenses pré-engagées part revenu ménages modestes logement",
+      "service-public LEP plafond taux conditions revenu fiscal de référence 2026",
+      "Point conseil budget service-public gratuit accompagnement",
+      "mesdroitssociaux.gouv.fr simulateur aides prime d'activité APL"
+    ],
+    "model": "anthropic/claude-opus-5.5",
+    "route": "openrouter",
+    "reasoning": "high",
+    "real_cost_usd": 1.314,
+    "duration_s": 254.4,
+    "calls": 1,
+    "input_tokens": 235913,
+    "output_tokens": 18518,
+    "cache_read_input_tokens": 0,
+    "web_searches": 6,
+    "web_fetches": 10,
+    "cost_usd": 1.374
+  },
+  "structure": {
+    "status": "fail",
+    "hard_failures": 3,
+    "warning_count": 1,
+    "failed_hard_rules": [
+      "h2_lead_paragraph",
+      "paragraph_length",
+      "paragraph_variation"
+    ],
+    "failed_warning_rules": [
+      "list_format"
+    ],
+    "passed_count": 15,
+    "rule_count": 19,
+    "recommended_format": "",
+    "stats": {
+      "words": 1996,
+      "sections": 8,
+      "intro_words": 191
+    },
+    "rules": [
+      {
+        "rule": "single_h1",
+        "label": "Un seul H1 (le titre), jamais dans le corps",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": false
+      },
+      {
+        "rule": "heading_hierarchy",
+        "label": "Hiérarchie H2/H3 sans saut de niveau",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": false
+      },
+      {
+        "rule": "isolated_h3",
+        "label": "Pas de H3 isolé",
+        "severity": "warning",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "h2_lead_paragraph",
+        "label": "Un paragraphe entre chaque H2 et son premier H3",
+        "severity": "hard",
+        "passed": false,
+        "violations": [
+          {
+            "unit": "section:8",
+            "section": "Questions fréquentes",
+            "detail": "H2 suivi directement d'un H3 : ajouter sous le H2 un court paragraphe qui répond à la question de la section avec les informations déjà présentes",
+            "excerpt": ""
+          }
+        ],
+        "section_fixable": true
+      },
+      {
+        "rule": "verbal_tics",
+        "label": "Tics de langage une fois au plus",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "paragraph_length",
+        "label": "Paragraphes courts",
+        "severity": "hard",
+        "passed": false,
+        "violations": [
+          {
+            "unit": "section:1",
+            "section": "Pourquoi les pourcentages 50/30/20 ne tiennent pas avec un petit salaire",
+            "detail": "7 phrases, 90 mots (max 5 phrases / 120 mots)",
+            "excerpt": "Ces 739 € doivent couvrir des dépenses difficiles à réduire. D'après l' Insee , les dépen…"
+          },
+          {
+            "unit": "section:3",
+            "section": "Classer vos dépenses dans les trois catégories",
+            "detail": "6 phrases, 83 mots (max 5 phrases / 120 mots)",
+            "excerpt": "Les sources ne rangent pas les crédits au même endroit. La Finance pour tous les place da…"
+          },
+          {
+            "unit": "section:6",
+            "section": "Où placer la petite part d'épargne",
+            "detail": "8 phrases, 127 mots (max 5 phrases / 120 mots)",
+            "excerpt": "Le livret d'épargne populaire (LEP) est fait pour cette situation. Son taux est fixé par…"
+          },
+          {
+            "unit": "section:7",
+            "section": "Garder l'ordre de la règle plutôt que ses chiffres",
+            "detail": "5 phrases, 121 mots (max 5 phrases / 120 mots)",
+            "excerpt": "La règle 50/30/20 a été conçue pour des revenus qui laissent de la marge. Avec un petit s…"
+          }
+        ],
+        "section_fixable": true
+      },
+      {
+        "rule": "sentence_length",
+        "label": "Aucune phrase de plus de 45 mots",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "long_sentence_share",
+        "label": "Peu de phrases longues",
+        "severity": "warning",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "paragraph_variation",
+        "label": "Longueur des paragraphes variée",
+        "severity": "hard",
+        "passed": false,
+        "violations": [
+          {
+            "unit": "section:8",
+            "section": "Questions fréquentes",
+            "detail": "4 paragraphes consécutifs de longueur proche ([60, 46, 46, 48] mots)",
+            "excerpt": ""
+          }
+        ],
+        "section_fixable": true
+      },
+      {
+        "rule": "intro_length",
+        "label": "Introduction de 10 % du texte au plus",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "intro_generic_opening",
+        "label": "Introduction sans ouverture générique",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "no_em_dash",
+        "label": "Aucun tiret cadratin",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "banned_vocabulary",
+        "label": "Ni superlatif vide ni expression usée",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "vous_saturation",
+        "label": "Pas trois « vous » d'affilée",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "conclusion_opening",
+        "label": "Fin sans « En conclusion » ni résumé",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "list_format",
+        "label": "Listes de 2 à 10 éléments courts",
+        "severity": "warning",
+        "passed": false,
+        "violations": [
+          {
+            "unit": "section:4",
+            "section": "Fixer vos propres pourcentages en quatre étapes",
+            "detail": "Élément de liste de 43 mots (max 40)",
+            "excerpt": "Fixez un montant d'épargne, même petit. Choisissez une somme que vous pouvez tenir tous l…"
+          }
+        ],
+        "section_fixable": true
+      },
+      {
+        "rule": "table_format",
+        "label": "Tableaux avec en-tête et colonnes régulières",
+        "severity": "warning",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "section_balance",
+        "label": "Sections équilibrées",
+        "severity": "warning",
+        "passed": true,
+        "violations": [],
+        "section_fixable": false
+      },
+      {
+        "rule": "required_elements",
+        "label": "Composant attendu du format : Composants du format",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": false
+      }
+    ]
+  },
+  "plagiarism": {
+    "status": "clean",
+    "backend": "serp",
+    "sentences": [
+      "Avec un Smic net à temps plein de 1 477,93 € par mois, la moitié du salaire représente environ 739 €.",
+      "Partez de vos dépenses essentielles réelles, même si elles dépassent largement 50 %.",
+      "D'après l' Insee, les dépenses dites « pré-engagées » représentaient en moyenne 30,3 % du revenu disponible des ménages en 2024.",
+      "Prenez votre salaire net après prélèvement à la source, celui qui arrive sur votre compte.",
+      "En couple, si vous partagez les dépenses, additionnez les revenus du foyer et appliquez la répartition au total.",
+      "Ce n'est pas qu'ils coûtent trop cher : c'est qu'on les oublie au moment de faire ses comptes.",
+      "Ce chiffre est votre point de départ, qu'il soit de 60 % ou de 75 %.",
+      "Dans les trois cas, vous gardez l'essentiel de la méthode : savoir ce que coûtent vos besoins, épargner avant de dépenser, et vous autoriser une part d'envies connue à l'avance.",
+      "Pendant cette période, ne rien épargner pendant quelques mois n'est pas un échec.",
+      "Une personne seule payée au Smic se trouve en général en dessous.",
+      "Si même cette répartition est impossible, le problème ne se règle plus avec un tableau de budget : il faut agir sur les charges et les revenus.",
+      "Mieux vaut l'utiliser pour constituer ou compléter votre réserve de précaution, ou pour financer à l'avance les dépenses annuelles comme la rentrée ou les vacances."
+    ],
+    "matches": []
+  },
+  "blocking_issues": [
+    {
+      "code": "h2_lead_paragraph",
+      "message": "Un paragraphe entre chaque H2 et son premier H3"
+    },
+    {
+      "code": "paragraph_length",
+      "message": "Paragraphes courts"
+    },
+    {
+      "code": "paragraph_variation",
+      "message": "Longueur des paragraphes variée"
+    }
+  ],
+  "warnings": [],
+  "correction_rounds": 0,
+  "selected_version": 1,
+  "article": {
+    "title": "Règle 50/30/20 : comment l'adapter en France avec un petit salaire",
+    "meta_title": "Règle 50/30/20 : l'adapter avec un petit salaire",
+    "meta_description": "La règle 50/30/20 coince quand on gagne autour du Smic. Voici comment calculer vos propres pourcentages, classer vos dépenses et épargner malgré tout.",
+    "slug": "regle-50-30-20-petit-salaire-france",
+    "content_html": "<p>Avec un Smic net à temps plein de 1 477,93 € par mois, la moitié du salaire représente environ 739 €. Dans beaucoup de villes, cette somme couvre à peine un loyer. Il faut encore payer les courses, l'électricité, l'assurance et le trajet jusqu'au travail.</p><p>La règle 50/30/20 propose un découpage simple : la moitié du revenu pour les besoins, 30 % pour les envies, 20 % pour l'épargne. Si vous l'appliquez à la lettre avec un petit revenu, vous aurez vite l'impression de la rater tous les mois, alors que vous ne gérez pas forcément mal votre argent. Le problème vient des chiffres, pas de vous.</p><p>Ce qui sert vraiment dans cette méthode, ce n'est pas le trio de pourcentages. C'est l'ordre dans lequel elle vous fait regarder votre argent, et cet ordre marche aussi avec 1 500 € par mois.</p><aside class=\"summary\"><p class=\"summary-title\">En résumé</p><p>Avec un petit salaire, gardez la logique de la règle 50/30/20 mais pas ses chiffres. Partez de vos dépenses essentielles réelles, même si elles dépassent largement 50 %. Ensuite, mettez de côté chaque mois une petite somme fixe, versée automatiquement, avant de répartir ce qui reste entre vos envies.</p></aside><h2>Pourquoi les pourcentages 50/30/20 ne tiennent pas avec un petit salaire</h2><p>La méthode vient des États-Unis. Elle a été <a href=\"https://finary.com/fr/blog/finance-perso/budget/regle-50-30-20\">popularisée en 2005 par Elizabeth Warren et sa fille Amelia Warren Tyagi</a> dans un livre de gestion budgétaire. Elle répartit le revenu après impôts. Elle n'a donc pas été pensée à partir des loyers français ni d'un salaire minimum.</p><p>Faites le calcul avec le Smic. Selon <a href=\"https://www.service-public.gouv.fr/particuliers/actualites/A18916\">Service-Public</a>, le Smic mensuel net à temps plein est de 1 477,93 € depuis sa revalorisation du 1er juin 2026. La règle donnerait alors environ 739 € pour les besoins, 443 € pour les envies et 296 € pour l'épargne. Le Smic augmente chaque 1er janvier, et parfois en cours d'année quand l'inflation est forte. Refaites donc toujours le calcul avec le montant de votre propre fiche de paie.</p><p>Ces 739 € doivent couvrir des dépenses difficiles à réduire. D'après l'<a href=\"https://www.insee.fr/fr/statistiques/8612566?sommaire=8612596\">Insee</a>, les dépenses dites « pré-engagées » représentaient en moyenne 30,3 % du revenu disponible des ménages en 2024. Ce sont les dépenses fixées par un contrat difficile à renégocier rapidement : logement, énergie, assurances, télécoms, cantine. Le logement en représentait à lui seul 22,8 %. Cette moyenne compte aussi les propriétaires qui ont fini de rembourser leur crédit. Pour un locataire au salaire modeste, la part est souvent bien plus lourde. Et l'alimentation et les transports ne sont pas encore comptés.</p><p><a href=\"https://www.lafinancepourtous.com/outils/questions-reponses/budget-qu-est-ce-que-la-regle-des-50-30-20/\">La Finance pour tous</a>, le site d'éducation financière de l'Institut pour l'éducation financière du public, le dit clairement : il n'existe pas de règle officielle de budget. Une personne aux faibles ressources ne pourra pas consacrer 20 % de son revenu à l'épargne. Le site considère toutefois la méthode utile pour repérer ses habitudes et les postes trop élevés. C'est cet usage qu'il faut garder.</p><h2>Partir du revenu qui arrive vraiment sur votre compte</h2><p>La règle s'applique à ce que vous pouvez réellement dépenser. Prenez votre salaire net après prélèvement à la source, celui qui arrive sur votre compte. Ajoutez ensuite les sommes que vous recevez chaque mois de façon régulière : prime d'activité, aide au logement, allocations familiales. Si votre aide au logement est versée directement à votre propriétaire, ne l'ajoutez pas à vos revenus. Comptez seulement le loyer qui reste à votre charge, pour ne pas la compter deux fois.</p><p>Vérifiez aussi que vous ne passez pas à côté d'une aide. Le simulateur officiel <a href=\"https://www.mesdroitssociaux.gouv.fr/simulateurs\">Mes droits sociaux</a> teste 58 aides nationales et locales en une seule fois. Il est gratuit et demande environ vingt minutes. Sur un petit budget, une aide oubliée change souvent plus le résultat que n'importe quelle répartition.</p><p>Si vos revenus changent d'un mois à l'autre (intérim, temps partiel variable, heures supplémentaires), ne prenez pas votre meilleur mois comme base. Finary conseille de calculer une moyenne sur plusieurs mois, par exemple les six derniers. Les mois plus favorables servent alors à compenser les plus faibles. En couple, si vous partagez les dépenses, additionnez les revenus du foyer et appliquez la répartition au total.</p><h2>Classer vos dépenses dans les trois catégories</h2><p>Reprenez vos relevés bancaires des deux ou trois derniers mois et rangez chaque dépense dans une catégorie. Les <strong>besoins</strong> sont les dépenses que vous ne pouvez pas supprimer sans conséquence grave : loyer et charges, énergie, assurances, transport pour aller travailler, alimentation de base, santé, forfait téléphone et internet. Les <strong>envies</strong> regroupent tout ce qui améliore le quotidien sans être indispensable : sorties, restaurant, abonnements de loisir, achats plaisir. L'<strong>épargne</strong> désigne l'argent mis de côté.</p><p>Certaines dépenses tombent entre les deux. Un forfait mobile est un besoin, mais le surcoût d'une offre haut de gamme est une envie. Si vous coupez la dépense en deux de cette façon, vous voyez mieux où se trouve la marge.</p><h3>Lisser les dépenses qui ne tombent pas tous les mois</h3><p>Les vêtements, la rentrée scolaire, les anniversaires ou les vacances déséquilibrent souvent un budget serré. Ce n'est pas qu'ils coûtent trop cher : c'est qu'on les oublie au moment de faire ses comptes. La <a href=\"https://www.caisse-epargne.fr/jeunes/gerer-depenses-epargner/\">Caisse d'Epargne</a> range ces dépenses occasionnelles à part et conseille de leur réserver une somme à l'avance. Estimez leur coût sur l'année, divisez par douze, puis ajoutez ce montant aux besoins ou aux envies selon leur nature.</p><h3>Ranger correctement les crédits</h3><p>Les sources ne rangent pas les crédits au même endroit. La Finance pour tous les place dans les charges fixes. Finary les met dans les 20 %, avec l'épargne. La solution la plus simple est de couper en deux. La mensualité que vous êtes obligé de payer va dans les besoins, car vous ne pouvez pas la sauter. Un remboursement en plus de ce que prévoit le contrat va dans la part épargne, car il améliore votre situation de la même façon qu'une économie.</p><h2>Fixer vos propres pourcentages en quatre étapes</h2><p>Une fois vos dépenses classées, vous pouvez construire une répartition qui correspond à votre situation réelle, au lieu de chercher à tenir celle d'un revenu plus élevé.</p><ol><li><strong>Calculez la part de vos besoins.</strong> Divisez le total de vos dépenses essentielles par votre revenu mensuel. Ce chiffre est votre point de départ, qu'il soit de 60 % ou de 75 %.</li><li><strong>Fixez un montant d'épargne, même petit.</strong> Choisissez une somme que vous pouvez tenir tous les mois, puis programmez un virement automatique le jour où votre salaire arrive. L'argent mis de côté en premier ne risque pas de partir avec les dépenses du mois.</li><li><strong>Gardez le reste pour vos envies.</strong> Cette part n'est pas du gaspillage. C'est elle qui vous permet de tenir votre budget sur la durée, au lieu de l'abandonner après quelques semaines de privations.</li><li><strong>Vérifiez après un mois réel.</strong> Si votre compte est passé à découvert, réduisez d'abord la part des envies, puis le montant épargné. Si vous avez fini le mois avec de l'argent en trop, augmentez légèrement le virement d'épargne.</li></ol><p>Le tableau ci-dessous montre trois répartitions possibles pour un Smic net arrondi à 1 478 €. Ce sont des exemples pour voir les ordres de grandeur, pas des normes à suivre.</p><table><thead><tr><th>Situation</th><th>Besoins</th><th>Envies</th><th>Épargne</th></tr></thead><tbody><tr><td>Loyer modéré</td><td>60 % soit 887 €</td><td>30 % soit 443 €</td><td>10 % soit 148 €</td></tr><tr><td>Loyer plus lourd</td><td>70 % soit 1 035 €</td><td>20 % soit 295 €</td><td>10 % soit 148 €</td></tr><tr><td>Grande ville ou charges élevées</td><td>80 % soit 1 182 €</td><td>15 % soit 222 €</td><td>5 % soit 74 €</td></tr></tbody></table><p>Dans les trois cas, vous gardez l'essentiel de la méthode : savoir ce que coûtent vos besoins, épargner avant de dépenser, et vous autoriser une part d'envies connue à l'avance.</p><h2>Quand les dépenses essentielles absorbent presque tout le salaire</h2><p>Si vos besoins dépassent nettement les 80 % de l'exemple ci-dessus, changer de méthode de budget ne suffira pas. Il faut agir sur les montants eux-mêmes. Commencez par les charges fixes. On ne peut pas les supprimer, mais on peut souvent les réduire : comparer les offres d'énergie, d'assurance ou de téléphonie, baisser sa consommation, ou renégocier un prêt, comme le rappelle la Caisse d'Epargne. Refaites aussi la vérification des aides décrite plus haut si votre situation a changé : naissance, séparation, baisse d'heures de travail.</p><p>Si vous n'arrivez pas à équilibrer vos comptes, faites-vous aider. Les <a href=\"https://solidarites.gouv.fr/point-conseil-budget-pcb\">Points conseil budget</a> sont un service gratuit, labellisé par l'État, qui accompagne les personnes en difficulté financière et cherche à prévenir le surendettement. Ils sont ouverts à tous, quel que soit le revenu. Pendant cette période, ne rien épargner pendant quelques mois n'est pas un échec. L'objectif prioritaire est d'éviter le découvert.</p><h2>Où placer la petite part d'épargne</h2><p>Avec un petit salaire, l'épargne sert d'abord à faire face aux imprévus : une réparation de voiture, un appareil électroménager en panne, une facture inattendue. Cette réserve de précaution vous évite un découvert ou un crédit coûteux le jour où la dépense arrive. Elle doit donc rester disponible à tout moment et sans risque.</p><p>Le <a href=\"https://www.service-public.gouv.fr/particuliers/vosdroits/F2367\">livret d'épargne populaire (LEP)</a> est fait pour cette situation. Son taux est fixé par l'État, les intérêts ne sont soumis ni à l'impôt ni aux prélèvements sociaux, et les retraits sont libres et gratuits. Il faut verser au moins 30 € à l'ouverture, puis au moins 10 € à chaque versement, dans la limite de 10 000 €. Il est réservé aux revenus modestes : en métropole, le plafond de revenu fiscal de référence est de 23 028 € pour une personne seule (1 part) pour une ouverture en 2026. Ce plafond est révisé chaque année. Une personne seule payée au Smic se trouve en général en dessous. Pour en être sûr, regardez la ligne « revenu fiscal de référence » de votre avis d'imposition. Chaque personne ne peut avoir qu'un seul LEP.</p><p>Les placements à plus long terme ne viennent qu'après. Ils n'ont de sens qu'une fois cette réserve constituée, car on ne doit pas avoir à y toucher au premier imprévu.</p><h2>Garder l'ordre de la règle plutôt que ses chiffres</h2><p>La règle 50/30/20 a été conçue pour des revenus qui laissent de la marge. Avec un petit salaire, ses pourcentages ne sont pas un objectif à atteindre. Ce qui reste valable, c'est sa logique : partir du revenu qui arrive réellement sur votre compte, ranger honnêtement vos dépenses, mettre de côté une somme fixe avant de dépenser, et garder une part connue pour vos envies. Une répartition à 70/20/10 ou à 80/15/5 que vous tenez tous les mois vaut mieux qu'un 50/30/20 que vous ratez à chaque fois. Si même cette répartition est impossible, le problème ne se règle plus avec un tableau de budget : il faut agir sur les charges et les revenus.</p><h2>Questions fréquentes</h2><h3>Faut-il épargner si l'on est à découvert ou si l'on a un crédit renouvelable ?</h3><p>En général, non : remboursez d'abord ce qui vous coûte le plus cher. Les agios d'un découvert et les intérêts d'un crédit renouvelable sont presque toujours plus élevés que ce que rapporte un livret. Gardez seulement une toute petite réserve pour ne pas retomber dans le rouge au premier imprévu, et mettez le reste de la part épargne sur ce remboursement.</p><h3>Un étudiant ou un apprenti peut-il ouvrir un LEP ?</h3><p>Pas tant qu'il est rattaché au foyer fiscal de ses parents. Il faut avoir sa propre déclaration de revenus pour ouvrir un LEP. S'il n'a pas encore reçu son premier avis d'imposition, la banque peut accepter une déclaration sur l'honneur, puis demander l'avis quand il arrive.</p><h3>Que faire d'une prime, d'un 13e mois ou d'un remboursement d'impôt ?</h3><p>Ne l'ajoutez pas à votre revenu mensuel, car vous ne la recevrez pas tous les mois. Mieux vaut l'utiliser pour constituer ou compléter votre réserve de précaution, ou pour financer à l'avance les dépenses annuelles comme la rentrée ou les vacances. Cela allège les mois suivants.</p><h3>Faut-il une application ou un tableur pour suivre ce budget ?</h3><p>Non. Une feuille de papier et vos relevés bancaires suffisent pour classer vos dépenses et calculer vos pourcentages. Une application fait gagner du temps parce qu'elle classe les dépenses toute seule, mais elle ne change pas la méthode. Le plus important est de refaire le point chaque mois.</p>",
+    "faq": [
+      {
+        "question": "Faut-il épargner si l'on est à découvert ou si l'on a un crédit renouvelable ?",
+        "answer": "En général, non : remboursez d'abord ce qui vous coûte le plus cher. Les agios d'un découvert et les intérêts d'un crédit renouvelable sont presque toujours plus élevés que ce que rapporte un livret. Gardez seulement une toute petite réserve pour ne pas retomber dans le rouge au premier imprévu, et mettez le reste de la part épargne sur ce remboursement."
+      },
+      {
+        "question": "Un étudiant ou un apprenti peut-il ouvrir un LEP ?",
+        "answer": "Pas tant qu'il est rattaché au foyer fiscal de ses parents. Il faut avoir sa propre déclaration de revenus pour ouvrir un LEP. S'il n'a pas encore reçu son premier avis d'imposition, la banque peut accepter une déclaration sur l'honneur, puis demander l'avis quand il arrive."
+      },
+      {
+        "question": "Que faire d'une prime, d'un 13e mois ou d'un remboursement d'impôt ?",
+        "answer": "Ne l'ajoutez pas à votre revenu mensuel, car vous ne la recevrez pas tous les mois. Mieux vaut l'utiliser pour constituer ou compléter votre réserve de précaution, ou pour financer à l'avance les dépenses annuelles comme la rentrée ou les vacances."
+      },
+      {
+        "question": "Faut-il une application ou un tableur pour suivre ce budget ?",
+        "answer": "Non. Une feuille de papier et vos relevés bancaires suffisent pour classer vos dépenses et calculer vos pourcentages. Une application fait gagner du temps parce qu'elle classe les dépenses toute seule, mais elle ne change pas la méthode."
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.service-public.gouv.fr/particuliers/actualites/A18916",
+        "title": "Salaire minimum : le Smic va augmenter le 1er juin (Service-Public)",
+        "used_for": "Montant du Smic net mensuel à temps plein et principe des revalorisations"
+      },
+      {
+        "url": "https://finary.com/fr/blog/finance-perso/budget/regle-50-30-20",
+        "title": "Budget 50/30/20 : la règle pour gérer son argent (Finary)",
+        "used_for": "Origine de la règle, base après impôts, revenus variables, classement des dettes, virement automatique"
+      },
+      {
+        "url": "https://www.lafinancepourtous.com/outils/questions-reponses/budget-qu-est-ce-que-la-regle-des-50-30-20/",
+        "title": "Budget : qu'est-ce que la règle des 50/30/20 ? (La Finance pour tous)",
+        "used_for": "Absence de règle officielle, limite pour les faibles revenus, crédits classés en charges fixes"
+      },
+      {
+        "url": "https://www.raisin.com/fr-fr/epargne/regle-50-30-20/",
+        "title": "Règle 50/30/20 : comment gérer son budget simplement (Raisin)",
+        "used_for": "Flexibilité des pourcentages, application au revenu d'un foyer, rôle de la part envies"
+      },
+      {
+        "url": "https://www.insee.fr/fr/statistiques/8612566?sommaire=8612596",
+        "title": "Consommation et épargne des ménages, France portrait social (Insee)",
+        "used_for": "Part des dépenses pré-engagées et du logement dans le revenu disponible"
+      },
+      {
+        "url": "https://www.mesdroitssociaux.gouv.fr/simulateurs",
+        "title": "Simuler vos aides (Mes droits sociaux)",
+        "used_for": "Simulateur officiel de 58 aides"
+      },
+      {
+        "url": "https://www.caisse-epargne.fr/jeunes/gerer-depenses-epargner/",
+        "title": "Comment gérer ses dépenses et mettre de l'argent de côté (Caisse d'Epargne)",
+        "used_for": "Classement des dépenses occasionnelles et imprévues, pistes de réduction des charges fixes"
+      },
+      {
+        "url": "https://solidarites.gouv.fr/point-conseil-budget-pcb",
+        "title": "Point conseil budget (ministère des Solidarités)",
+        "used_for": "Service gratuit labellisé par l'État de prévention du surendettement"
+      },
+      {
+        "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2367",
+        "title": "Livret d'épargne populaire (LEP) (Service-Public)",
+        "used_for": "Plafonds de revenus, plafond de versements, versements minimums, fiscalité, rattachement fiscal"
+      }
+    ],
+    "facts": [
+      {
+        "value": "Smic mensuel net à temps plein : 1 477,93 € depuis le 1er juin 2026",
+        "source_url": "https://www.service-public.gouv.fr/particuliers/actualites/A18916"
+      },
+      {
+        "value": "Le Smic augmente chaque 1er janvier et est revalorisé en cours d'année en cas de forte inflation",
+        "source_url": "https://www.service-public.gouv.fr/particuliers/actualites/A18916"
+      },
+      {
+        "value": "Règle popularisée en 2005 par Elizabeth Warren et Amelia Warren Tyagi, appliquée au revenu après impôts",
+        "source_url": "https://finary.com/fr/blog/finance-perso/budget/regle-50-30-20"
+      },
+      {
+        "value": "Revenu variable : moyenne sur plusieurs mois, par exemple les six derniers",
+        "source_url": "https://finary.com/fr/blog/finance-perso/budget/regle-50-30-20"
+      },
+      {
+        "value": "Dépenses pré-engagées : 30,3 % du revenu disponible brut en 2024, dont 22,8 % pour le logement",
+        "source_url": "https://www.insee.fr/fr/statistiques/8612566?sommaire=8612596"
+      },
+      {
+        "value": "Il n'existe pas de règle officielle ; une personne aux faibles ressources ne pourra pas consacrer 20 % à l'épargne",
+        "source_url": "https://www.lafinancepourtous.com/outils/questions-reponses/budget-qu-est-ce-que-la-regle-des-50-30-20/"
+      },
+      {
+        "value": "Simulateur officiel : 58 aides, environ 20 à 25 minutes",
+        "source_url": "https://www.mesdroitssociaux.gouv.fr/simulateurs"
+      },
+      {
+        "value": "LEP : plafond de RFR de 23 028 € pour 1 part en métropole (2026), versements plafonnés à 10 000 €, 30 € minimum à l'ouverture puis 10 €, intérêts exonérés d'impôt et de prélèvements sociaux, un LEP par personne",
+        "source_url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2367"
+      },
+      {
+        "value": "Points conseil budget : service gratuit labellisé par l'État pour prévenir le surendettement",
+        "source_url": "https://solidarites.gouv.fr/point-conseil-budget-pcb"
+      },
+      {
+        "value": "Calcul : 1 477,93 € x 0,50 = 739 € ; x 0,30 = 443 € ; x 0,20 = 296 € (arrondis)",
+        "source_url": "https://www.service-public.gouv.fr/particuliers/actualites/A18916"
+      }
+    ],
+    "competitors": [
+      {
+        "url": "https://www.lafinancepourtous.com/outils/questions-reponses/budget-qu-est-ce-que-la-regle-des-50-30-20/",
+        "strengths": [
+          "Source pédagogique neutre",
+          "Rappelle qu'aucune règle n'est officielle",
+          "Signale la limite pour les faibles revenus"
+        ],
+        "weaknesses": [
+          "Très court",
+          "Aucune méthode d'adaptation chiffrée",
+          "Pas de solution concrète pour un petit salaire"
+        ]
+      },
+      {
+        "url": "https://finary.com/fr/blog/finance-perso/budget/regle-50-30-20",
+        "strengths": [
+          "Origine précise de la méthode",
+          "Traite les revenus variables et les dettes",
+          "Conseil d'automatisation de l'épargne"
+        ],
+        "weaknesses": [
+          "Exemple sur 2 500 € éloigné d'un petit salaire",
+          "Orientation vers l'investissement et des outils commerciaux",
+          "Aides sociales et LEP à peine abordés"
+        ]
+      },
+      {
+        "url": "https://www.raisin.com/fr-fr/epargne/regle-50-30-20/",
+        "strengths": [
+          "Insiste sur la flexibilité",
+          "Exemple concret de répartition",
+          "Mention du budget de foyer"
+        ],
+        "weaknesses": [
+          "Contenu largement promotionnel",
+          "Exemple parisien à 2 500 € peu représentatif",
+          "Rien sur les situations où les besoins absorbent tout"
+        ]
+      }
+    ],
+    "sub_questions": [
+      "Pourquoi la règle 50/30/20 ne fonctionne-t-elle pas au Smic ?",
+      "Quel revenu prendre comme base de calcul ?",
+      "Faut-il compter les aides sociales dans le revenu ?",
+      "Comment classer les dépenses occasionnelles et les crédits ?",
+      "Comment fixer ses propres pourcentages ?",
+      "À quoi ressemble une répartition réaliste avec un Smic ?",
+      "Que faire si les dépenses essentielles absorbent presque tout ?",
+      "Où placer une petite épargne ?"
+    ],
+    "editorial_plan": {
+      "intro": "Partir du calcul concret : la moitié d'un Smic net, environ 739 €, couvre à peine un loyer. Faire apparaître le sentiment d'échec que provoque la règle appliquée à la lettre, puis annoncer que c'est l'ordre de la méthode, pas ses chiffres, qui reste utile.",
+      "summary_callout": "Garder la logique, pas les chiffres : partir des besoins réels, épargner une petite somme fixe automatiquement, répartir le reste en envies.",
+      "sections": [
+        "H2 Pourquoi les pourcentages ne tiennent pas : origine américaine, calcul sur le Smic, poids des dépenses pré-engagées (Insee), absence de règle officielle.",
+        "H2 Partir du revenu réel : net après impôt, aides régulières sans les compter deux fois, simulateur officiel, revenus variables, couple.",
+        "H2 Classer les dépenses : trois catégories et zones grises ; H3 lisser les dépenses occasionnelles ; H3 ranger les crédits (contradiction entre sources résolue).",
+        "H2 Fixer ses pourcentages en quatre étapes : liste numérotée et tableau de trois profils au Smic.",
+        "H2 Quand les besoins absorbent presque tout : réduire les charges fixes, renvoi aux aides, Points conseil budget.",
+        "H2 Où placer la petite épargne : réserve de précaution, LEP et ses conditions, long terme ensuite."
+      ],
+      "conclusion": "Garder l'ordre de la règle plutôt que ses chiffres : synthèse sans fait nouveau.",
+      "faq_questions": [
+        "Épargner en cas de découvert ou de crédit renouvelable : le corps classe les crédits mais ne dit pas lequel rembourser en priorité.",
+        "LEP pour un étudiant ou un apprenti rattaché : cas particulier hors du parcours principal (Service-Public).",
+        "Primes et remboursements d'impôt : revenus non mensuels absents du corps.",
+        "Application ou tableur : question d'outil qui ne change pas la méthode."
+      ]
+    },
+    "self_review": {
+      "intro_under_15_percent": true,
+      "callout_present": true,
+      "counts_consistent": true,
+      "facts_checked": true,
+      "faq_non_redundant": true,
+      "notes": "Introduction d'environ 140 mots pour un article d'environ 2 000 mots. La liste annonce quatre étapes et en contient quatre ; le tableau présente trois profils. Le montant du Smic est daté parce qu'il est revalorisé ; le plafond du LEP est indiqué pour une ouverture en 2026. Le taux du LEP n'est pas chiffré car il change régulièrement. Les sources se contredisent sur le classement des crédits (charges fixes ou part épargne) : la contradiction est expliquée et tranchée en séparant mensualité obligatoire et remboursement en plus. La page DREES sur les dépenses pré-engagées n'a pas pu être lue et n'est pas utilisée. Les répartitions du tableau sont des exemples calculés sur 1 478 €, présentés comme tels et non comme des normes. Aucune alerte de similarité n'a été signalée."
+    }
+  },
+  "seo": {
+    "title": "Règle 50/30/20 : comment l'adapter en France avec un petit salaire",
+    "meta_title": "Règle 50/30/20 : l'adapter avec un petit salaire",
+    "meta_description": "La règle 50/30/20 coince quand on gagne autour du Smic. Voici comment calculer vos propres pourcentages, classer vos dépenses et épargner malgré tout.",
+    "slug": "regle-50-30-20-petit-salaire-france"
+  },
+  "output": {
+    "report_json": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/run/ui/f7f03041353d40969b2c90976f86fac4/report.json",
+    "article_html": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/run/ui/f7f03041353d40969b2c90976f86fac4/article.html"
+  }
+}

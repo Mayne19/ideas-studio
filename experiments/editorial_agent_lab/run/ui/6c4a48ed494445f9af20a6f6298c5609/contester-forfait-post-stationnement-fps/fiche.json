@@ -1,0 +1,123 @@
+{
+  "meta_title": "Contester un forfait post-stationnement : étapes et délais",
+  "meta_description": "Motifs recevables, RAPO dans le mois, recours au tribunal du stationnement payant, majoration : comment contester un FPS sans payer plus que nécessaire.",
+  "slug": "contester-forfait-post-stationnement-fps",
+  "mot_cle_principal": "contester un forfait post-stationnement",
+  "sources": [
+    {
+      "titre": "Service-Public : forfait de post-stationnement (FPS) en cas de stationnement impayé",
+      "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F34440"
+    },
+    {
+      "titre": "Collectivités locales (DGCL) : le stationnement payant",
+      "url": "https://www.collectivites-locales.gouv.fr/gerer-les-finances-publiques-locales/execution-des-recettes-et-des-depenses-locales/recettes-locales/stationnement-payant"
+    },
+    {
+      "titre": "Sénat : rapport d'information n° 661 (2025-2026), Le tribunal du stationnement payant",
+      "url": "https://www.senat.fr/rap/r25-661/r25-661_mono.html"
+    },
+    {
+      "titre": "Tribunal du stationnement payant : site officiel",
+      "url": "https://tribunal-stationnement-payant.fr/"
+    },
+    {
+      "titre": "Tribunal du stationnement payant : pièces obligatoires à fournir",
+      "url": "https://tribunal-stationnement-payant.fr/vos-demarches/je-suis-un-particulier/pieces-obligatoires-a-fournir"
+    },
+    {
+      "titre": "Tribunal du stationnement payant : jurisprudence sur la contestation de l'avis de paiement",
+      "url": "https://tribunal-stationnement-payant.fr/decisions-de-justice/la-jurisprudence/la-contestation-de-l-avis-de-paiement-du-forfait-de-post-stationnement-fps"
+    },
+    {
+      "titre": "Tribunal du stationnement payant : jurisprudence sur la contestation du FPS majoré",
+      "url": "https://tribunal-stationnement-payant.fr/decisions-de-justice/la-jurisprudence/la-contestation-du-titre-executoire-forfait-de-post-stationnement-majore-avertissement"
+    },
+    {
+      "titre": "Tribunal du stationnement payant : ce qui ne peut pas être demandé au TSP",
+      "url": "https://tribunal-stationnement-payant.fr/decisions-de-justice/la-jurisprudence/ce-qui-ne-peut-pas-etre-demande-au-tsp"
+    },
+    {
+      "titre": "Service-Public : les FPS établis par géolocalisation peuvent être contestés (Conseil d'État, n° 472912)",
+      "url": "https://www.service-public.gouv.fr/particuliers/actualites/A17951"
+    },
+    {
+      "titre": "Conseil constitutionnel : décision n° 2020-855 QPC",
+      "url": "https://www.conseil-constitutionnel.fr/decision/2020/2020855QPC.htm"
+    },
+    {
+      "titre": "Assemblée nationale : dossier législatif Contentieux du stationnement payant",
+      "url": "https://www.assemblee-nationale.fr/dyn/16/dossiers/contentieux_stationnement_payant2"
+    },
+    {
+      "titre": "Institut national de la consommation : contester un avis de paiement de FPS",
+      "url": "https://www.inc-conso.fr/node/13312"
+    }
+  ],
+  "images": [
+    {
+      "apres_le_titre": "Les motifs qui permettent réellement de faire annuler un FPS",
+      "montre": "Un justificatif de paiement sur une application de stationnement, placé à côté de la plaque réelle du véhicule, avec la différence d'un caractère entourée",
+      "texte_alternatif": "Capture d'un justificatif de stationnement payé dont la plaque saisie diffère d'un caractère de la plaque réelle du véhicule",
+      "legende": "Une plaque mal saisie dans l'application suffit à déclencher un FPS : vérifiez-la avant tout recours."
+    },
+    {
+      "apres_le_titre": "Les pièces à joindre",
+      "montre": "Un avis de paiement de FPS fictif et annoté qui signale la date de notification, l'organisme destinataire du RAPO et le mode d'envoi accepté",
+      "texte_alternatif": "Avis de paiement de forfait post-stationnement annoté indiquant la date de notification, l'adresse du recours et le mode d'envoi",
+      "legende": "Sur l'avis, ces trois zones disent quand, à qui et comment envoyer votre RAPO."
+    },
+    {
+      "apres_le_titre": "Payer ou attendre la décision : ce que chaque choix vous coûte",
+      "montre": "Une frise chronologique avec deux lignes parallèles : en haut, notification, un mois pour le RAPO, un mois de réponse, un mois pour saisir le tribunal ; en bas, les trois mois de paiement puis la majoration",
+      "texte_alternatif": "Frise comparant les délais de contestation d'un FPS et le délai de paiement de trois mois avant majoration",
+      "legende": "Les délais de contestation et le délai de paiement courent en même temps : la frise montre où la majoration tombe."
+    },
+    {
+      "apres_le_titre": "Vous avez reçu directement un FPS majoré : contester devant le tribunal sans RAPO",
+      "montre": "Un avertissement de FPS majoré fictif et annoté qui signale la date de notification, le montant majoré et la référence du titre exécutoire",
+      "texte_alternatif": "Avertissement de forfait post-stationnement majoré annoté indiquant la date de notification et le montant de la majoration",
+      "legende": "La date de notification de cet avertissement fait partir votre délai d'un mois pour saisir le tribunal."
+    }
+  ],
+  "integrations": [],
+  "experience_a_ajouter": [
+    {
+      "apres_le_titre": "Les pièces à joindre",
+      "suggestion": "Un vrai RAPO envoyé par un membre de l'équipe, anonymisé, avec les pièces jointes et la réponse obtenue."
+    },
+    {
+      "apres_le_titre": "Étape 2 : saisir le tribunal du stationnement payant",
+      "suggestion": "Des captures du dépôt sur le portail du tribunal faites lors d'une vraie saisine, avec le temps nécessaire pour remplir le formulaire."
+    },
+    {
+      "apres_le_titre": "Payer ou attendre la décision : ce que chaque choix vous coûte",
+      "suggestion": "Le calendrier réel d'un dossier suivi par l'équipe : date de l'avis, du RAPO, de la saisine, de la majoration éventuelle et du jugement ou du remboursement."
+    }
+  ],
+  "liens_internes_places": [],
+  "liens_internes_suggeres": [
+    "Contester une amende pour stationnement gênant ou dangereux auprès de l'ANTAI",
+    "Changer l'adresse de sa carte grise après un déménagement",
+    "Déclarer la vente d'un véhicule pour ne plus recevoir ses amendes",
+    "Stationner avec une carte mobilité inclusion : droits et gratuité",
+    "Usurpation de plaque d'immatriculation : que faire"
+  ],
+  "faq": [
+    {
+      "question": "Un FPS peut-il arriver par courrier sans papillon sur le pare-brise ?",
+      "reponse": "Oui. La loi autorise la commune à notifier l'avis par courrier au titulaire de la carte grise, à la place du papillon ou en plus de lui. C'est fréquent avec les véhicules qui lisent les plaques automatiquement, et le délai d'un mois pour le RAPO court alors à partir de cette notification."
+    },
+    {
+      "question": "Faut-il un avocat pour saisir le tribunal du stationnement payant ?",
+      "reponse": "Non. Vous pouvez saisir le tribunal seul, et la saisine en ligne est gratuite. Un avocat reste possible, mais il doit alors obligatoirement déposer le dossier par voie électronique."
+    },
+    {
+      "question": "Le tribunal peut-il m'accorder un délai de paiement ou un échelonnement ?",
+      "reponse": "Non. Le tribunal juge seulement si le FPS ou sa majoration sont dus. Une demande de délai ou d'échelonnement s'adresse au comptable public, dont les coordonnées figurent sur l'avertissement."
+    },
+    {
+      "question": "Que se passe-t-il si je ne paie ni le FPS ni la majoration ?",
+      "reponse": "Le comptable public peut engager des mesures de recouvrement forcé, comme des saisies. Le tribunal du stationnement payant n'est pas compétent pour juger la régularité de ces saisies : elles se contestent selon d'autres voies, indiquées sur les actes que vous recevez."
+    }
+  ]
+}

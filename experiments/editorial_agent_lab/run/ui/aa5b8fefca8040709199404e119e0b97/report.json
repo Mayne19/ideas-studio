@@ -1,0 +1,472 @@
+{
+  "algorithm": "editorial-agent-lab/live-claude-style",
+  "keyword": "Pourquoi votre basilic meurt et comment le sauver",
+  "model": "anthropic/claude-opus-5.5",
+  "route": "openrouter",
+  "duration_s": 133.7,
+  "cost_usd": 0.7724,
+  "agent": {
+    "fetch_log": [
+      {
+        "url": "https://www.elle.fr/Deco/Exterieur/Jardin/Plantes/Cette-astuce-vous-permettra-de-sauver-un-plant-de-basilic-4230478",
+        "chars": 5269,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 181396,
+        "text_chars": 5269,
+        "failed": false
+      },
+      {
+        "url": "https://maison.20minutes.fr/mm56367-fini-le-basilic-qui-meurt-en-5-jours-apres-lachat-ce-geste-tout-simple-le-garde-vert-pendant-des-mois/",
+        "chars": 5951,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 129019,
+        "text_chars": 5951,
+        "failed": false
+      },
+      {
+        "url": "https://gardenstack.be/fr/blog/basilic-meurt-problemes",
+        "chars": 6867,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 26692,
+        "text_chars": 6867,
+        "failed": false
+      },
+      {
+        "url": "https://www.canr.msu.edu/news/symptoms-and-consequences-of-chilling-or-freezing-injury-on-greenhouse-crops",
+        "chars": 0,
+        "method": "secours",
+        "status": 200,
+        "html_chars": 962,
+        "text_chars": 0,
+        "failed": true
+      },
+      {
+        "url": "https://www.reussir.fr/articles/le-basilic-risque-gros-face-au-mildiou",
+        "chars": 7314,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 403494,
+        "text_chars": 7314,
+        "failed": false
+      },
+      {
+        "url": "https://e-gro.org/pdf/E306.pdf",
+        "chars": 7583,
+        "method": "secours",
+        "status": 200,
+        "html_chars": 0,
+        "text_chars": 7583,
+        "failed": false
+      },
+      {
+        "url": "https://www.rhs.org.uk/herbs/basil/grow-your-own",
+        "chars": 0,
+        "failed": true,
+        "method": "refusée",
+        "note": "URL absente des résultats de recherche"
+      },
+      {
+        "url": "https://www.rhs.org.uk/herbs/basil/grow-your-own",
+        "chars": 9171,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 258582,
+        "text_chars": 9171,
+        "failed": false
+      }
+    ],
+    "search_log": [
+      "pourquoi mon basilic meurt comment le sauver",
+      "mildiou du basilic Peronospora belbahrii symptômes ephytia",
+      "basil chilling injury temperature below 10°C extension",
+      "RHS basil grow your own watering sunny windowsill"
+    ],
+    "model": "anthropic/claude-opus-5.5",
+    "route": "openrouter",
+    "reasoning": "low",
+    "real_cost_usd": 0.7324,
+    "duration_s": 133.1,
+    "calls": 1,
+    "input_tokens": 140560,
+    "output_tokens": 8506,
+    "cache_read_input_tokens": 0,
+    "web_searches": 4,
+    "web_fetches": 6,
+    "cost_usd": 0.7724
+  },
+  "structure": {
+    "status": "fail",
+    "hard_failures": 1,
+    "warning_count": 1,
+    "failed_hard_rules": [
+      "h2_lead_paragraph"
+    ],
+    "failed_warning_rules": [
+      "section_balance"
+    ],
+    "passed_count": 17,
+    "rule_count": 19,
+    "recommended_format": "",
+    "stats": {
+      "words": 1567,
+      "sections": 8,
+      "intro_words": 75
+    },
+    "rules": [
+      {
+        "rule": "single_h1",
+        "label": "Un seul H1 (le titre), jamais dans le corps",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": false
+      },
+      {
+        "rule": "heading_hierarchy",
+        "label": "Hiérarchie H2/H3 sans saut de niveau",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": false
+      },
+      {
+        "rule": "isolated_h3",
+        "label": "Pas de H3 isolé",
+        "severity": "warning",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "h2_lead_paragraph",
+        "label": "Un paragraphe entre chaque H2 et son premier H3",
+        "severity": "hard",
+        "passed": false,
+        "violations": [
+          {
+            "unit": "section:3",
+            "section": "Lire les symptômes de votre basilic",
+            "detail": "H2 suivi directement d'un H3 : ajouter sous le H2 un court paragraphe qui répond à la question de la section avec les informations déjà présentes",
+            "excerpt": ""
+          },
+          {
+            "unit": "section:5",
+            "section": "Les conditions qui le gardent en vie",
+            "detail": "H2 suivi directement d'un H3 : ajouter sous le H2 un court paragraphe qui répond à la question de la section avec les informations déjà présentes",
+            "excerpt": ""
+          },
+          {
+            "unit": "section:8",
+            "section": "FAQ",
+            "detail": "H2 suivi directement d'un H3 : ajouter sous le H2 un court paragraphe qui répond à la question de la section avec les informations déjà présentes",
+            "excerpt": ""
+          }
+        ],
+        "section_fixable": true
+      },
+      {
+        "rule": "verbal_tics",
+        "label": "Tics de langage une fois au plus",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "paragraph_length",
+        "label": "Paragraphes courts",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "sentence_length",
+        "label": "Aucune phrase de plus de 45 mots",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "long_sentence_share",
+        "label": "Peu de phrases longues",
+        "severity": "warning",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "paragraph_variation",
+        "label": "Longueur des paragraphes variée",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "intro_length",
+        "label": "Introduction de 10 % du texte au plus",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "intro_generic_opening",
+        "label": "Introduction sans ouverture générique",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "no_em_dash",
+        "label": "Aucun tiret cadratin",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "banned_vocabulary",
+        "label": "Ni superlatif vide ni expression usée",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "vous_saturation",
+        "label": "Pas trois « vous » d'affilée",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "conclusion_opening",
+        "label": "Fin sans « En conclusion » ni résumé",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "list_format",
+        "label": "Listes de 2 à 10 éléments courts",
+        "severity": "warning",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "table_format",
+        "label": "Tableaux avec en-tête et colonnes régulières",
+        "severity": "warning",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "section_balance",
+        "label": "Sections équilibrées",
+        "severity": "warning",
+        "passed": false,
+        "violations": [
+          {
+            "unit": "section:1",
+            "section": "En résumé",
+            "detail": "Section de 57 mots (min 60)",
+            "excerpt": ""
+          }
+        ],
+        "section_fixable": false
+      },
+      {
+        "rule": "required_elements",
+        "label": "Composant attendu du format : Composants du format",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": false
+      }
+    ]
+  },
+  "plagiarism": {
+    "status": "clean",
+    "backend": "serp",
+    "sentences": [
+      "Le basilic n'est pas une plante difficile, mais il réagit vite et ses symptômes se ressemblent : un manque d'eau et un excès d'eau peuvent tous deux faire tomber les feuilles.",
+      "La Royal Horticultural Society (RHS) indique qu'un basilic en pleine terre n'en a généralement pas besoin.",
+      "Laissez ensuite sécher le haut de la terre avant d'arroser de nouveau.",
+      "Une fiche technique de l'université du Michigan (e-GRO) situe le seuil des dégâts dus au froid sous 12 °C.",
+      "Elle progresse d'autant plus que les nuits sont longues et la lumière faible.",
+      "Pour diviser, sortez la motte et séparez-la doucement en petits paquets de quelques tiges, en gardant leurs racines.",
+      "Retenez donc ceci : en dessous d'environ 12 °C, rentrez la plante.",
+      "Les nuits plus fraîches et les jours plus courts réunissent justement les conditions qui affaiblissent la plante et favorisent le mildiou.",
+      "La plupart des basilics de magasin meurent d'un pot surpeuplé, d'un rebord trop sombre ou d'une nuit trop froide, plus que d'un manque de soins."
+    ],
+    "matches": []
+  },
+  "blocking_issues": [
+    {
+      "code": "h2_lead_paragraph",
+      "message": "Un paragraphe entre chaque H2 et son premier H3"
+    }
+  ],
+  "warnings": [],
+  "correction_rounds": 0,
+  "selected_version": 1,
+  "article": {
+    "title": "Pourquoi votre basilic meurt et comment le sauver : le diagnostic par les symptômes",
+    "meta_title": "Basilic qui meurt : causes et gestes pour le sauver",
+    "meta_description": "Feuilles molles, jaunes ou noires : comment trouver la vraie cause de la mort de votre basilic, le sauver si c'est possible, et savoir quand recommencer.",
+    "slug": "pourquoi-basilic-meurt-comment-sauver",
+    "content_html": "<p>Vous achetez un pot de basilic au supermarché. Une semaine plus tard, il pend, jaunit ou noircit. Le basilic n'est pas une plante difficile, mais il réagit vite et ses symptômes se ressemblent : un manque d'eau et un excès d'eau peuvent tous deux faire tomber les feuilles. Cet article vous aide à lire ce que montre votre plante, à appliquer le bon geste et à reconnaître le moment où il vaut mieux repartir de zéro.</p>\n\n<aside><h2>En résumé</h2><p>Un basilic meurt presque toujours pour l'une de quatre raisons : un arrosage mal dosé, le manque de lumière, le froid ou un pot trop serré. Il faut d'abord toucher la terre et regarder le dessous des feuilles, ensuite seulement agir. Mi-octobre, n'oubliez pas un cinquième facteur : la saison, car le basilic est cultivé comme une plante annuelle.</p></aside>\n\n<h2>Le piège : soigner le symptôme au lieu de la cause</h2>\n<p>Face à une plante qui pend, le premier réflexe est d'arroser. C'est souvent la pire réponse. Un basilic aux racines noyées flétrit lui aussi, parce que des racines privées d'air n'absorbent plus l'eau. Si vous ajoutez de l'eau, vous accélérez la pourriture.</p>\n<p>Le deuxième réflexe, c'est l'engrais. La Royal Horticultural Society (RHS) indique qu'un basilic en pleine terre n'en a généralement pas besoin. Elle conseille d'éviter les engrais riches en potassium, car ils poussent la plante à fleurir. Un engrais ne répare ni un manque de lumière ni des racines abîmées.</p>\n<p>Avant toute chose, faites donc trois vérifications. Enfoncez un doigt dans la terre sur deux centimètres. Retournez quelques feuilles pour voir leur face inférieure. Soulevez le pot pour sentir son poids et regardez si de l'eau stagne dans la soucoupe.</p>\n\n<h2>Lire les symptômes de votre basilic</h2>\n\n<h3>Les feuilles pendent : manque d'eau ou excès d'eau ?</h3>\n<p>Si les feuilles sont molles et la terre sèche au toucher, la plante a soif. Arrosez abondamment, jusqu'à ce que l'eau sorte par les trous du pot, puis videz la soucoupe. Le basilic se redresse souvent en quelques heures.</p>\n<p>Si la plante pend alors que la terre est humide, avec des feuilles qui jaunissent et parfois une odeur désagréable, c'est un excès d'eau. Arrêtez d'arroser et vérifiez que le pot est bien percé. Laissez ensuite sécher le haut de la terre avant d'arroser de nouveau. La RHS recommande d'arroser le matin et d'éviter de mouiller les feuilles, car le basilic supporte mal d'avoir les racines mouillées pendant la nuit.</p>\n<p>Il existe un troisième cas, sans gravité : la plante pend en plein après-midi de chaleur et se redresse le soir. C'est un coup de chaud passager. Gardez la terre humide et c'est suffisant.</p>\n\n<h3>Les feuilles jaunissent</h3>\n<p>Quand ce sont surtout les feuilles du bas qui jaunissent et que les tiges s'allongent en devenant fines, le basilic manque de lumière. Il s'étire pour aller la chercher. La solution est de le mettre au soleil, et non de l'arroser davantage.</p>\n<p>Un jaunissement général sur une terre détrempée renvoie à l'excès d'eau décrit plus haut. Si le jaunissement touche le dessus des feuilles et s'accompagne d'un duvet gris en dessous, il s'agit d'une maladie, traitée plus bas.</p>\n\n<h3>Des taches noires ou brunes apparaissent</h3>\n<p>Des taches brunes entre les nervures, apparues après une nuit fraîche, signent un coup de froid. Le basilic est d'origine tropicale. Une fiche technique de l'université du Michigan (e-GRO) situe le seuil des dégâts dus au froid sous 12 °C. Les vieilles feuilles tombent quelques jours après, même une fois la plante revenue au chaud.</p>\n<p>Les feuilles touchées ne reverdiront pas. Si les tiges restent fermes et vertes, coupez les parties abîmées et gardez la plante au chaud. Ce symptôme est très fréquent sur les pots vendus en magasin, parce qu'ils ont parfois été stockés trop au frais.</p>\n\n<h4>Le duvet gris sous les feuilles : le mildiou</h4>\n<p>Si vous voyez sous les feuilles un feutrage poudreux gris-violet, avec un jaunissement sur le dessus puis des taches brunes, c'est probablement le mildiou du basilic. Il est causé par <em>Peronospora belbahrii</em>. D'après les spécialistes cités par Réussir, la maladie se développe quand l'humidité de l'air dépasse 85 % et que la température est comprise entre 12 et 27 °C. Un film d'eau sur les feuilles pendant 3 à 5 heures suffit à déclencher l'infection. Elle progresse d'autant plus que les nuits sont longues et la lumière faible.</p>\n<p>Une plante atteinte se sauve rarement. Retirez-la pour éviter qu'elle contamine les autres, et nettoyez vos ciseaux. Pour les prochaines plantations, aérez, arrosez au pied le matin et ne serrez pas les pots.</p>\n\n<h2>Le vrai coupable des pots de supermarché : la surpopulation</h2>\n<p>Un pot de basilic acheté en magasin contient en réalité des dizaines de petites plantes semées serrées. La RHS précise que ces pots sont conçus pour une récolte à court terme. Les tiges fines et serrées attrapent facilement des maladies dues aux champignons ou fleurissent vite. Elles peuvent survivre si on les divise et qu'on les rempote rapidement.</p>\n<p>Faites le calcul avec les repères de la RHS. Elle conseille un contenant d'au moins 20 cm de large et un espacement d'au moins 10 cm entre les plants. Sur 20 cm de largeur, cela fait deux plants par rangée, donc environ quatre plants dans un pot carré de 20 cm. On est très loin de la touffe vendue en magasin.</p>\n<p>Pour diviser, sortez la motte et séparez-la doucement en petits paquets de quelques tiges, en gardant leurs racines. Installez chaque paquet dans un pot percé rempli de terreau, puis arrosez une fois. Placez ensuite les pots au chaud et à la lumière.</p>\n\n<h2>Les conditions qui le gardent en vie</h2>\n\n<h3>Combien de lumière, et faut-il du soleil direct ?</h3>\n<p>Les conseils se contredisent sur ce point. Certains articles recommandent une lumière indirecte, d'autres six à huit heures de soleil direct. La RHS tranche en faveur du soleil : le basilic a besoin de beaucoup de chaleur et de lumière, sur un rebord de fenêtre bien éclairé ou dans un endroit ensoleillé et abrité. En pratique, mettez-le derrière votre fenêtre la plus lumineuse. Ne gardez l'ombre que pour les après-midi de canicule, quand la terre sèche en quelques heures.</p>\n\n<h3>Quelle température viser ?</h3>\n<p>Les fourchettes « idéales » varient d'une source à l'autre. Le repère utile, c'est le seuil bas. La RHS conseille d'attendre que les nuits restent au-dessus de 10 °C avant de sortir ou de semer le basilic dehors, et la fiche e-GRO signale des dégâts sous 12 °C. Retenez donc ceci : en dessous d'environ 12 °C, rentrez la plante. Évitez aussi le rebord d'une fenêtre froide la nuit ou la proximité d'un radiateur.</p>\n\n<h3>Quand arroser ?</h3>\n<p>Le bon rythme se règle sur la terre et pas sur le calendrier. Arrosez quand le premier ou les deux premiers centimètres sont secs. Videz la soucoupe à chaque fois. En plein été, un petit pot peut demander de l'eau presque tous les jours, alors qu'en automne l'intervalle s'allonge nettement.</p>\n\n<h3>Pourquoi tailler aide à le garder en vie</h3>\n<p>Un basilic que l'on ne coupe jamais se dégarnit par le bas et finit par fleurir. Coupez les tiges juste au-dessus d'une paire de feuilles : deux nouvelles pousses partiront à cet endroit. Pincez les boutons floraux dès qu'ils apparaissent. La RHS rappelle que la floraison altère le goût des feuilles, et qu'un manque d'eau peut l'accélérer.</p>\n\n<h2>Mi-octobre : sauver la plante ou garder des boutures</h2>\n<p>À cette période de l'année, un basilic qui décline n'a parfois rien de malade. La RHS explique que la plupart des basilics sont traités en annuelles, faute de chaleur et de lumière, et qu'on les jette en automne. Les nuits plus fraîches et les jours plus courts réunissent justement les conditions qui affaiblissent la plante et favorisent le mildiou.</p>\n<p>Si vous tenez à garder votre basilic, prélevez des boutures. Choisissez une tige sans fleurs et coupez-la juste sous une feuille. Retirez les feuilles du bas et la pointe, puis mettez la tige dans un verre d'eau. Selon la RHS, des racines se forment vite et la bouture peut être mise en pot au bout de quelques semaines. Une petite bouture au chaud, près d'une fenêtre lumineuse, passe l'hiver plus facilement qu'une grosse touffe épuisée.</p>\n<p>Il vaut mieux recommencer quand les tiges sont noires et molles à la base, quand les racines sont brunes et sentent mauvais, ou quand le duvet du mildiou couvre la plante.</p>\n\n<h2>Conclusion</h2>\n<p>Pour sauver un basilic, il faut d'abord établir un diagnostic. Commencez par toucher la terre, puis regardez le dessous des feuilles et l'endroit où se trouve le pot. La plupart des basilics de magasin meurent d'un pot surpeuplé, d'un rebord trop sombre ou d'une nuit trop froide, plus que d'un manque de soins. Divisez la touffe, donnez-lui le maximum de lumière, gardez-la au-dessus de 12 °C et arrosez selon l'état de la terre. En automne, quelques boutures restent l'assurance la plus simple.</p>\n\n<h2>FAQ</h2>\n<h3>Peut-on manger un basilic qui a des taches noires ?</h3>\n<p>Les feuilles abîmées par le froid ont perdu leur aspect et leur arôme. Mieux vaut les retirer et ne consommer que les feuilles saines. Les feuilles atteintes de mildiou sont jugées impropres à la consommation.</p>\n<h3>Le basilic peut-il pousser toute l'année en intérieur ?</h3>\n<p>Oui, s'il reçoit assez de chaleur et de lumière. En hiver, la lumière d'une fenêtre est souvent trop faible. La plante s'étire alors et produit peu.</p>\n<h3>Faut-il couper les fleurs du basilic ?</h3>\n<p>Oui, si vous voulez des feuilles savoureuses le plus longtemps possible. En fin de saison, vous pouvez laisser fleurir une plante : ses fleurs sont comestibles et nourrissent les abeilles.</p>",
+    "faq": [
+      {
+        "question": "Peut-on manger un basilic qui a des taches noires ?",
+        "answer": "Les feuilles abîmées par le froid ont perdu leur aspect et leur arôme. Mieux vaut les retirer et ne consommer que les feuilles saines. Les feuilles atteintes de mildiou sont jugées impropres à la consommation."
+      },
+      {
+        "question": "Le basilic peut-il pousser toute l'année en intérieur ?",
+        "answer": "Oui, s'il reçoit assez de chaleur et de lumière. En hiver, la lumière d'une fenêtre est souvent trop faible. La plante s'étire alors et produit peu."
+      },
+      {
+        "question": "Faut-il couper les fleurs du basilic ?",
+        "answer": "Oui, si vous voulez des feuilles savoureuses le plus longtemps possible. En fin de saison, vous pouvez laisser fleurir une plante : ses fleurs sont comestibles et nourrissent les abeilles."
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.rhs.org.uk/herbs/basil/grow-your-own",
+        "title": "How to grow Basil | RHS Guide",
+        "used_for": "Pots de supermarché surpeuplés, espacement, taille du contenant, arrosage du matin, engrais, floraison, boutures, culture en annuelle, seuil de 10 °C"
+      },
+      {
+        "url": "https://e-gro.org/pdf/E306.pdf",
+        "title": "Preventing Chilling Injury of Greenhouse and Vertical Farm Grown Basil (e-GRO, Michigan State University)",
+        "used_for": "Seuil de 12 °C pour les dégâts dus au froid, symptômes et chute des feuilles"
+      },
+      {
+        "url": "https://www.reussir.fr/articles/le-basilic-risque-gros-face-au-mildiou",
+        "title": "Le basilic risque gros face au mildiou - Réussir",
+        "used_for": "Symptômes du mildiou, conditions de développement (plus de 85 % d'humidité, 12 à 27 °C, 3 à 5 h d'humectation), rôle des nuits longues, mesures préventives"
+      }
+    ],
+    "facts": [
+      {
+        "value": "Dégâts dus au froid sur le basilic sous 12 °C (54 °F)",
+        "source_url": "https://e-gro.org/pdf/E306.pdf"
+      },
+      {
+        "value": "Semer ou sortir le basilic dehors quand les nuits restent au-dessus de 10 °C",
+        "source_url": "https://www.rhs.org.uk/herbs/basil/grow-your-own"
+      },
+      {
+        "value": "Contenant d'au moins 20 cm de large et de profondeur, plants espacés d'au moins 10 cm",
+        "source_url": "https://www.rhs.org.uk/herbs/basil/grow-your-own"
+      },
+      {
+        "value": "Mildiou favorisé par plus de 85 % d'humidité et des températures de 12 à 27 °C ; 3 à 5 h de film d'eau sur les feuilles suffisent",
+        "source_url": "https://www.reussir.fr/articles/le-basilic-risque-gros-face-au-mildiou"
+      },
+      {
+        "value": "Mildiou du basilic causé par Peronospora belbahrii, feutrage gris-violet sous les feuilles",
+        "source_url": "https://www.reussir.fr/articles/le-basilic-risque-gros-face-au-mildiou"
+      },
+      {
+        "value": "Pots de supermarché conçus pour une récolte à court terme, à diviser et rempoter vite",
+        "source_url": "https://www.rhs.org.uk/herbs/basil/grow-your-own"
+      }
+    ],
+    "competitors": [
+      {
+        "url": "https://www.elle.fr/Deco/Exterieur/Jardin/Plantes/Cette-astuce-vous-permettra-de-sauver-un-plant-de-basilic-4230478",
+        "strengths": [
+          "Explique bien la surpopulation du pot et la division",
+          "Signes concrets d'excès d'eau"
+        ],
+        "weaknesses": [
+          "Recommande d'éviter le soleil direct, ce qui contredit les autres sources",
+          "Aucun seuil de température",
+          "Ne parle pas des maladies"
+        ]
+      },
+      {
+        "url": "https://maison.20minutes.fr/mm56367-fini-le-basilic-qui-meurt-en-5-jours-apres-lachat-ce-geste-tout-simple-le-garde-vert-pendant-des-mois/",
+        "strengths": [
+          "Erreurs courantes claires, dont l'excès d'engrais",
+          "Repère d'arrosage entre 1 et 2 cm"
+        ],
+        "weaknesses": [
+          "Fourchette de 18 à 25 °C non sourcée",
+          "Rien sur le froid ni le mildiou",
+          "Pas de diagnostic par symptôme"
+        ]
+      },
+      {
+        "url": "https://gardenstack.be/fr/blog/basilic-meurt-problemes",
+        "strengths": [
+          "Organisé par symptômes",
+          "Mentionne le mildiou et le froid",
+          "Dit quand recommencer"
+        ],
+        "weaknesses": [
+          "Contenu promotionnel",
+          "Contradictions (arroser à 1 cm puis à 2 ou 3 cm, engrais toutes les 2 à 4 semaines)",
+          "Seuil de 10 °C plus bas que celui de la littérature technique"
+        ]
+      }
+    ],
+    "sub_questions": [
+      "Comment distinguer manque d'eau et excès d'eau ?",
+      "Que signifient des feuilles jaunes ?",
+      "Que signifient des taches noires ou brunes ?",
+      "Comment reconnaître le mildiou ?",
+      "Pourquoi les pots de supermarché meurent-ils vite et comment les diviser ?",
+      "Soleil direct ou indirect ?",
+      "Quelle température minimale ?",
+      "Quand arroser ?",
+      "Pourquoi tailler ?",
+      "Que faire en octobre : sauver la plante ou bouturer ?"
+    ],
+    "editorial_plan": {
+      "intro": "Le pot de supermarché qui dépérit, des symptômes trompeurs, l'objectif de poser un diagnostic avant d'agir.",
+      "summary_callout": "Quatre causes principales, deux vérifications, et la saison en octobre.",
+      "sections": [
+        "Le piège : soigner le symptôme au lieu de la cause",
+        "Lire les symptômes (feuilles qui pendent, feuilles jaunes, taches noires, mildiou en H4)",
+        "Surpopulation des pots de supermarché et calcul de l'espacement",
+        "Conditions de vie (lumière, température, arrosage, taille)",
+        "Mi-octobre : sauver ou bouturer",
+        "Conclusion"
+      ],
+      "faq_questions": [
+        "Peut-on manger un basilic qui a des taches noires ?",
+        "Le basilic peut-il pousser toute l'année en intérieur ?",
+        "Faut-il couper les fleurs du basilic ?"
+      ]
+    },
+    "self_review": {
+      "intro_under_10_percent": true,
+      "callout_present": true,
+      "calculations_checked": true,
+      "notes": "Calcul : 20 cm de largeur divisés par 10 cm d'espacement donnent 2 plants par rangée, soit environ 4 plants dans un pot carré, en estimation. Contradictions résolues : soleil direct ou indirect (la RHS tranche pour le soleil), seuil de froid (10 °C pour la RHS, 12 °C pour e-GRO : on retient 12 °C par prudence). La FAQ ne reprend pas le corps de l'article. Aucune phrase reprise des concurrents n'a été détectée."
+    }
+  },
+  "seo": {
+    "title": "Pourquoi votre basilic meurt et comment le sauver : le diagnostic par les symptômes",
+    "meta_title": "Basilic qui meurt : causes et gestes pour le sauver",
+    "meta_description": "Feuilles molles, jaunes ou noires : comment trouver la vraie cause de la mort de votre basilic, le sauver si c'est possible, et savoir quand recommencer.",
+    "slug": "pourquoi-basilic-meurt-comment-sauver"
+  },
+  "output": {
+    "report_json": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/run/ui/aa5b8fefca8040709199404e119e0b97/report.json",
+    "article_html": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/run/ui/aa5b8fefca8040709199404e119e0b97/article.html"
+  }
+}

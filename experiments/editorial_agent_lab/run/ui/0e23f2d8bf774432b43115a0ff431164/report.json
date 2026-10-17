@@ -1,0 +1,570 @@
+{
+  "algorithm": "editorial-agent-lab/live-claude-style",
+  "keyword": "Comment choisir une chaise de bureau ergonomique pour travailler chez soi",
+  "model": "anthropic/claude-opus-5.5",
+  "route": "openrouter",
+  "duration_s": 269.99,
+  "cost_usd": 1.8658,
+  "agent": {
+    "fetch_log": [
+      {
+        "url": "https://www.inrs.fr/risques/travail-ecran/prevention-risques.html",
+        "chars": 29454,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 152122,
+        "text_chars": 29454,
+        "failed": false
+      },
+      {
+        "url": "https://www.bruneau.fr/mag/teletravail-quelle-chaise-de-bureau-choisir",
+        "chars": 3850,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 297707,
+        "text_chars": 3850,
+        "failed": false
+      },
+      {
+        "url": "https://www.ergofrance.com/comment-choisir-meilleur-fauteuil-bureau-teletravail/",
+        "chars": 4922,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 101249,
+        "text_chars": 4922,
+        "failed": false
+      },
+      {
+        "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F13851",
+        "chars": 11134,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 139828,
+        "text_chars": 11134,
+        "failed": false
+      },
+      {
+        "url": "https://www.matelpro.com/suivez-le-guide/articles/quelles-caracteristiques-doit-avoir-une-chaise-de-bureau-",
+        "chars": 7901,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 490637,
+        "text_chars": 7901,
+        "failed": false
+      },
+      {
+        "url": "https://catas.com/en/news/what-are-the-most-tested-types-of-office-chairs/",
+        "chars": 2315,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 71907,
+        "text_chars": 2315,
+        "failed": false
+      },
+      {
+        "url": "https://www.sizemarker.com/blog/office-chair-seat-height-standard",
+        "chars": 10320,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 106909,
+        "text_chars": 10320,
+        "failed": false
+      },
+      {
+        "url": "https://www.boutique.afnor.org/fr-fr/norme/nf-en-13352/mobilier-de-bureau-sieges-de-travail-de-bureau-partie-2-exigences-de-securi/fa186844/82539",
+        "chars": 3419,
+        "method": "directe",
+        "status": 200,
+        "html_chars": 41463,
+        "text_chars": 3419,
+        "failed": false
+      },
+      {
+        "url": "https://www.inrs.fr/dam/inrs/CataloguePapier/ED/TI-ED-131.pdf",
+        "chars": 16504,
+        "method": "secours",
+        "status": 200,
+        "html_chars": 0,
+        "text_chars": 16504,
+        "failed": false
+      }
+    ],
+    "search_log": [
+      "comment choisir une chaise de bureau ergonomique télétravail",
+      "INRS travail sur écran réglage siège hauteur assise",
+      "norme EN 1335-1 siège de bureau type A hauteur assise 400-510 mm profondeur dimensions",
+      "télétravail employeur obligation fournir équipement siège ANI 2020 frais télétravail",
+      "EN 1335-1 type A seat height range 400 510 mm seat depth 380 lumbar support 170 220 mm",
+      "EN 1335-2 siège bureau 110 kg 8 heures par jour exigences sécurité",
+      "INRS hauteur plan de travail fixe 72 cm 74 cm NF EN 527-1 repose-pieds"
+    ],
+    "model": "anthropic/claude-opus-5.5",
+    "route": "openrouter",
+    "reasoning": "high",
+    "real_cost_usd": 1.7958,
+    "duration_s": 269.9,
+    "calls": 1,
+    "input_tokens": 350589,
+    "output_tokens": 19674,
+    "cache_read_input_tokens": 0,
+    "web_searches": 7,
+    "web_fetches": 9,
+    "cost_usd": 1.8658
+  },
+  "structure": {
+    "status": "fail",
+    "hard_failures": 4,
+    "warning_count": 0,
+    "failed_hard_rules": [
+      "h2_lead_paragraph",
+      "paragraph_length",
+      "paragraph_variation",
+      "intro_length"
+    ],
+    "failed_warning_rules": [],
+    "passed_count": 15,
+    "rule_count": 19,
+    "recommended_format": "",
+    "stats": {
+      "words": 2219,
+      "sections": 8,
+      "intro_words": 232
+    },
+    "rules": [
+      {
+        "rule": "single_h1",
+        "label": "Un seul H1 (le titre), jamais dans le corps",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": false
+      },
+      {
+        "rule": "heading_hierarchy",
+        "label": "Hiérarchie H2/H3 sans saut de niveau",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": false
+      },
+      {
+        "rule": "isolated_h3",
+        "label": "Pas de H3 isolé",
+        "severity": "warning",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "h2_lead_paragraph",
+        "label": "Un paragraphe entre chaque H2 et son premier H3",
+        "severity": "hard",
+        "passed": false,
+        "violations": [
+          {
+            "unit": "section:8",
+            "section": "Questions fréquentes",
+            "detail": "H2 suivi directement d'un H3 : ajouter sous le H2 un court paragraphe qui répond à la question de la section avec les informations déjà présentes",
+            "excerpt": ""
+          }
+        ],
+        "section_fixable": true
+      },
+      {
+        "rule": "verbal_tics",
+        "label": "Tics de langage une fois au plus",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "paragraph_length",
+        "label": "Paragraphes courts",
+        "severity": "hard",
+        "passed": false,
+        "violations": [
+          {
+            "unit": "section:1",
+            "section": "Ce que la chaise doit vous permettre une fois assis",
+            "detail": "6 phrases, 115 mots (max 5 phrases / 120 mots)",
+            "excerpt": "Il n'existe pas de posture idéale à tenir toute la journée. L'INRS décrit plutôt une post…"
+          },
+          {
+            "unit": "section:1",
+            "section": "Ce que la chaise doit vous permettre une fois assis",
+            "detail": "6 phrases, 106 mots (max 5 phrases / 120 mots)",
+            "excerpt": "Ces repères posent un piège que l'on découvre souvent trop tard. Un bureau fixe impose un…"
+          },
+          {
+            "unit": "section:2",
+            "section": "Les cinq réglages à vérifier avant d'acheter",
+            "detail": "6 phrases, 101 mots (max 5 phrases / 120 mots)",
+            "excerpt": "Tous les sièges de bureau ont un vérin, mais les plages varient. Selon un distributeur sp…"
+          },
+          {
+            "unit": "section:2",
+            "section": "Les cinq réglages à vérifier avant d'acheter",
+            "detail": "7 phrases, 108 mots (max 5 phrases / 120 mots)",
+            "excerpt": "Des accoudoirs mal placés font plus de dégâts que pas d'accoudoirs du tout. Trop hauts, i…"
+          }
+        ],
+        "section_fixable": true
+      },
+      {
+        "rule": "sentence_length",
+        "label": "Aucune phrase de plus de 45 mots",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "long_sentence_share",
+        "label": "Peu de phrases longues",
+        "severity": "warning",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "paragraph_variation",
+        "label": "Longueur des paragraphes variée",
+        "severity": "hard",
+        "passed": false,
+        "violations": [
+          {
+            "unit": "section:2",
+            "section": "Les cinq réglages à vérifier avant d'acheter",
+            "detail": "4 paragraphes consécutifs de longueur proche ([101, 109, 80, 108] mots)",
+            "excerpt": ""
+          }
+        ],
+        "section_fixable": true
+      },
+      {
+        "rule": "intro_length",
+        "label": "Introduction de 10 % du texte au plus",
+        "severity": "hard",
+        "passed": false,
+        "violations": [
+          {
+            "unit": "intro",
+            "section": "Introduction",
+            "detail": "232 mots, soit plus de 10 % de l'article (2219 mots)",
+            "excerpt": ""
+          }
+        ],
+        "section_fixable": true
+      },
+      {
+        "rule": "intro_generic_opening",
+        "label": "Introduction sans ouverture générique",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "no_em_dash",
+        "label": "Aucun tiret cadratin",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "banned_vocabulary",
+        "label": "Ni superlatif vide ni expression usée",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "vous_saturation",
+        "label": "Pas trois « vous » d'affilée",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "conclusion_opening",
+        "label": "Fin sans « En conclusion » ni résumé",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "list_format",
+        "label": "Listes de 2 à 10 éléments courts",
+        "severity": "warning",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "table_format",
+        "label": "Tableaux avec en-tête et colonnes régulières",
+        "severity": "warning",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "section_balance",
+        "label": "Sections équilibrées",
+        "severity": "warning",
+        "passed": true,
+        "violations": [],
+        "section_fixable": false
+      },
+      {
+        "rule": "required_elements",
+        "label": "Composant attendu du format : Composants du format",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": false
+      }
+    ]
+  },
+  "plagiarism": {
+    "status": "clean",
+    "backend": "serp",
+    "sentences": [
+      "Une chaise de bureau se règle d'abord par rapport à la hauteur de votre table, puis par rapport à votre corps.",
+      "Choisissez une chaise qui vous permet de poser les pieds à plat, de vous adosser sans que l'assise appuie derrière les genoux et d'avoir le bas du dos soutenu.",
+      "Vos avant-bras reposent sur les accoudoirs ou sur le plan de travail, les épaules relâchées et les coudes ouverts entre 90 et 135 degrés.",
+      "Tous les sièges de bureau ont un vérin, mais les plages varient.",
+      "Un test simple consiste à garder un espace d'environ trois doigts entre l'arrière du genou et le bord de l'assise.",
+      "Les préconisations de prévention les veulent amovibles, réglables en hauteur, en écartement et en profondeur, et idéalement orientables.",
+      "Le seul repère objectif dont vous disposez à distance est la norme européenne des sièges de travail de bureau, publiée en France sous la référence NF EN 1335.",
+      "Un spécialiste de l'ergonomie rappelle que certains produits n'ont rien d'ergonomique malgré leur appellation.",
+      "Inspirés des sièges baquets de voiture, ils misent sur un dossier très inclinable, parfois jusqu'à 180 degrés, utile pour jouer ou se détendre mais sans intérêt pour travailler sur écran.",
+      "S'ils ne reposent pas à plat, ajoutez un repose-pieds inclinable, réglable en hauteur et antidérapant plutôt que de redescendre l'assise.",
+      "Il faut donc le rehausser et lui ajouter un clavier et une souris externes.",
+      "En cas de douleurs, le médecin du travail peut recommander un aménagement de votre poste."
+    ],
+    "matches": []
+  },
+  "blocking_issues": [
+    {
+      "code": "h2_lead_paragraph",
+      "message": "Un paragraphe entre chaque H2 et son premier H3"
+    },
+    {
+      "code": "paragraph_length",
+      "message": "Paragraphes courts"
+    },
+    {
+      "code": "paragraph_variation",
+      "message": "Longueur des paragraphes variée"
+    },
+    {
+      "code": "intro_length",
+      "message": "Introduction de 10 % du texte au plus"
+    }
+  ],
+  "warnings": [],
+  "correction_rounds": 0,
+  "selected_version": 1,
+  "article": {
+    "title": "Comment choisir une chaise de bureau ergonomique pour travailler chez soi",
+    "meta_title": "Choisir une chaise de bureau ergonomique pour le télétravail",
+    "meta_description": "Les réglages à exiger, la norme EN 1335, le mécanisme selon vos heures assis et la bonne façon de régler une chaise de bureau à la maison.",
+    "slug": "choisir-chaise-bureau-ergonomique-teletravail",
+    "content_html": "<p>Une chaise de bureau se règle d'abord par rapport à la hauteur de votre table, puis par rapport à votre corps. Beaucoup de sièges présentés comme « ergonomiques » finissent pourtant par faire mal au dos à la maison, parce qu'ils ont été choisis sur photo. Personne n'a vérifié si l'assise descendait assez bas, si elle était trop profonde pour vos cuisses ou si les accoudoirs allaient buter contre le plateau.</p><p>Chez soi, la difficulté est double. Le poste de travail est souvent improvisé, avec une table de salle à manger ou un ordinateur portable, et aucun service de santé au travail ne vient contrôler vos réglages. Le mot « ergonomique » n'est pas non plus un label protégé : on le trouve aussi bien sur des fauteuils très réglables que sur des sièges qui ne proposent qu'un vérin de hauteur.</p><p>Les critères utiles sont pourtant peu nombreux, à condition de savoir ce que chacun doit vous permettre une fois assis et comment le vérifier sur une fiche produit.</p><aside class=\"summary\"><p class=\"summary-title\">En résumé</p><p>Choisissez une chaise qui vous permet de poser les pieds à plat, de vous adosser sans que l'assise appuie derrière les genoux et d'avoir le bas du dos soutenu. Ses accoudoirs doivent être réglables et vous laisser approcher du bureau. Prenez ensuite un mécanisme de dossier adapté au nombre d'heures que vous passez assis et vérifiez que le modèle est conforme à la norme EN 1335.</p></aside><h2>Ce que la chaise doit vous permettre une fois assis</h2><p>Il n'existe pas de posture idéale à tenir toute la journée. L'INRS décrit plutôt une <a href=\"https://www.inrs.fr/risques/travail-ecran/prevention-risques.html\">posture assise « de moindre inconfort » pour le travail sur écran</a>, qui sert de cahier des charges pour choisir un siège. Une fois la chaise réglée, vos pieds reposent à plat sur le sol. Vos cuisses sont horizontales, ou vos hanches légèrement plus hautes que vos genoux, et vos genoux forment un angle droit ou un peu plus ouvert, sans que l'arrière soit comprimé par l'assise. Le bas du dossier soutient la courbure naturelle de votre dos. Vos avant-bras reposent sur les accoudoirs ou sur le plan de travail, les épaules relâchées et les coudes ouverts entre 90 et 135 degrés.</p><p>Ces repères posent un piège que l'on découvre souvent trop tard. Un bureau fixe impose une hauteur de travail, donc c'est la hauteur de vos coudes par rapport au plateau qui fixe la hauteur de l'assise. Si vous êtes petit, la chaise réglée pour vos coudes peut vous laisser les pieds dans le vide. Si vous êtes grand, elle peut ne pas monter assez. Avant de comparer des modèles, mesurez donc la hauteur de votre plateau, puis vérifiez que la plage de réglage annoncée pour le siège vous permet d'atteindre la bonne position. Si vos pieds ne touchent plus le sol, il vous faudra un repose-pieds.</p><h2>Les cinq réglages à vérifier avant d'acheter</h2><p>Une chaise est ergonomique dans la mesure où elle se règle sur vous. Ces cinq points font la différence entre un siège qui s'adapte à votre corps et un siège auquel vous devez vous adapter.</p><h3>Une hauteur d'assise dont la plage correspond à votre taille</h3><p>Tous les sièges de bureau ont un vérin, mais les plages varient. Selon un distributeur spécialisé, <a href=\"https://www.matelpro.com/suivez-le-guide/articles/quelles-caracteristiques-doit-avoir-une-chaise-de-bureau-\">la plupart des fauteuils du commerce ne descendent pas sous 42 cm</a>. Cette hauteur convient en général aux personnes de plus de 1,60 m. En dessous, il faut viser un modèle qui descend plus bas ou prévoir un repose-pieds. Pour un siège de bureau classique, la <a href=\"https://www.inrs.fr/dam/inrs/CataloguePapier/ED/TI-ED-131.pdf\">fiche technique de l'INRS sur les sièges de travail</a> retient une hauteur comprise entre 370 et 535 mm. Regardez donc les deux bornes de la plage, et pas seulement la hauteur maximale mise en avant dans la description.</p><h3>Une profondeur d'assise adaptée à la longueur de vos cuisses</h3><p>Une assise trop profonde vous oblige à choisir. Soit vous vous asseyez au bord et vous perdez l'appui du dossier, soit vous vous adossez et le bord du siège appuie derrière vos genoux. Les recommandations de prévention demandent une profondeur qui laisse le bas du dos contre le dossier sans compression derrière les genoux, avec un bord avant arrondi vers le bas. Un test simple consiste à garder un espace d'environ trois doigts entre l'arrière du genou et le bord de l'assise. Une assise coulissante, parfois appelée « translation d'assise », devient presque indispensable si vous êtes très petit ou très grand, ou si plusieurs personnes du foyer partagent la chaise.</p><h3>Un dossier inclinable avec un soutien lombaire réglable en hauteur</h3><p>Assis, le bassin bascule vers l'arrière et le creux du bas du dos a tendance à disparaître. Le dossier doit compenser ce mouvement. Il doit donc être inclinable et réglable en hauteur, pour que le renfort lombaire se place réellement dans le creux de votre dos et non au niveau de la ceinture ou des omoplates. Un renfort lombaire fixe convient seulement s'il tombe au bon endroit pour votre morphologie, ce que vous ne pouvez vérifier qu'en essayant le siège.</p><h3>Des accoudoirs réglables ou escamotables</h3><p>Des accoudoirs mal placés font plus de dégâts que pas d'accoudoirs du tout. Trop hauts, ils font remonter les épaules. Trop longs ou fixes, ils butent contre le bureau et vous éloignent du clavier. Les préconisations de prévention les veulent amovibles, réglables en hauteur, en écartement et en profondeur, et idéalement orientables. Sur les fiches produits, ces possibilités sont résumées par les mentions 1D, 2D, 3D ou 4D. La mention 1D correspond au seul réglage en hauteur, et la 4D ajoute l'orientation de la manchette. Le minimum utile pour travailler sur écran est un réglage en hauteur avec des manchettes qui passent sous le plateau ou qui s'escamotent.</p><h3>Un mécanisme de bascule choisi selon vos heures assis</h3><p>Le mécanisme détermine la façon dont l'assise et le dossier accompagnent vos mouvements quand vous vous penchez en arrière. Il permet aussi de régler la tension du dossier selon votre poids. Un distributeur de mobilier de bureau propose les <a href=\"https://www.bruneau.fr/mag/teletravail-quelle-chaise-de-bureau-choisir\">repères de durée suivants par type de mécanisme</a>. Il s'agit d'usages conseillés par un vendeur, pas d'exigences d'une norme.</p><table><thead><tr><th>Mécanisme</th><th>Fonctionnement</th><th>Durée d'assise conseillée</th></tr></thead><tbody><tr><td>Synchrone</td><td>Assise et dossier basculent ensemble, avec des angles différents ; tension réglable</td><td>Plus de 7 h par jour</td></tr><tr><td>Basculant à axe décalé (asynchrone)</td><td>L'ensemble bascule d'un bloc autour d'un axe avancé, pour garder les pieds au sol</td><td>Jusqu'à 7 h par jour</td></tr><tr><td>Contact permanent</td><td>Seul le dossier suit le dos, l'assise reste fixe ; dossier blocable</td><td>Jusqu'à 7 h par jour</td></tr><tr><td>Basculant centré</td><td>L'ensemble bascule d'un bloc autour d'un axe central</td><td>Jusqu'à 4 h par jour</td></tr></tbody></table><p>Si vous travaillez à domicile des journées entières, un mécanisme synchrone est le choix le plus cohérent. Pour quelques heures par jour ou des jours de télétravail ponctuels, un mécanisme plus simple suffit, à condition que les quatre réglages précédents soient présents.</p><h2>Comment lire la fiche produit et la mention EN 1335</h2><p>Le seul repère objectif dont vous disposez à distance est la norme européenne des sièges de travail de bureau, publiée en France sous la référence NF EN 1335. Sa partie 1 fixe des dimensions. Sa partie 2 définit des exigences de sécurité, de résistance et de durabilité, <a href=\"https://www.boutique.afnor.org/fr-fr/norme/nf-en-13352/mobilier-de-bureau-sieges-de-travail-de-bureau-partie-2-exigences-de-securi/fa186844/82539\">basées sur un usage de 8 heures par jour par une personne pesant jusqu'à 110 kg</a>. Si vous dépassez ce poids, cherchez un modèle annoncé et testé pour une charge supérieure. Une conformité à la norme ne suffit pas à le garantir.</p><p>La version actuelle de la partie 1 distingue plusieurs types de sièges selon leur niveau de réglage. Le <a href=\"https://www.sizemarker.com/blog/office-chair-seat-height-standard\">tableau des dimensions de la norme EN 1335-1</a> montre l'écart entre les deux types les plus courants.</p><table><thead><tr><th>Critère</th><th>Type A</th><th>Type B</th></tr></thead><tbody><tr><td>Hauteur d'assise</td><td>Autour de 400 à 520 mm, avec au moins 130 mm de course</td><td>Autour de 420 à 510 mm, avec au moins 100 mm de course</td></tr><tr><td>Profondeur d'assise</td><td>Obligatoirement réglable</td><td>Peut être fixe</td></tr><tr><td>Accoudoirs (s'il y en a)</td><td>Réglables en hauteur, sur au moins 100 mm</td><td>Peuvent être fixes</td></tr></tbody></table><p>Un siège de type A offre donc davantage de garanties si votre morphologie s'éloigne de la moyenne. Quand une fiche indique simplement « conforme EN 1335 », demandez le type et, si possible, le rapport d'essai. Un spécialiste de l'ergonomie rappelle que <a href=\"https://www.ergofrance.com/comment-choisir-meilleur-fauteuil-bureau-teletravail/\">certains produits n'ont rien d'ergonomique malgré leur appellation</a>. Vérifiez aussi la charge maximale admise et la qualité des matériaux.</p><h2>Revêtement, rembourrage et roulettes : les critères liés à votre logement</h2><p>Le confort sur la durée dépend aussi de la matière. Un rembourrage ferme soutient mieux qu'une mousse moelleuse, qui s'affaisse au bout de quelques heures. Un revêtement poreux laisse circuler l'air. Les dossiers en maille, souvent appelés « mesh » ou « résille », sont les plus respirants, ce qui compte dans une pièce mal ventilée ou sous les toits.</p><p>Le sol de votre logement compte autant. Un siège de bureau doit reposer sur un piètement à cinq branches, et ses roulettes doivent être adaptées au revêtement : sol dur pour le parquet ou le carrelage, sol souple pour la moquette. Des roulettes inadaptées roulent trop sur un sol lisse ou accrochent sur un tapis, et peuvent rayer un parquet. Prévoyez enfin assez de place autour du bureau pour reculer, pivoter et étendre les jambes, ce qui est souvent le point faible des coins bureau aménagés dans un salon.</p><h2>Fauteuil gaming, ballon ou tabouret : des alternatives à manier avec prudence</h2><p>Les fauteuils gaming forment une famille à part. Inspirés des sièges baquets de voiture, ils misent sur un dossier très inclinable, parfois jusqu'à 180 degrés, utile pour jouer ou se détendre mais sans intérêt pour travailler sur écran. Certains sont sérieux, d'autres non. Appliquez-leur les mêmes critères qu'à un fauteuil de bureau : profondeur d'assise, soutien lombaire réglable, accoudoirs qui passent sous le plateau et conformité EN 1335.</p><p>Le ballon d'assise, le tabouret dynamique ou le coussin d'équilibre ont un autre rôle. Les préventeurs les considèrent comme des compléments qui aident à varier les postures, et non comme des remplaçants du siège de bureau. Ils peuvent servir une partie de la journée, à côté d'une vraie chaise de travail.</p><h2>Régler votre chaise en arrivant, dans le bon ordre</h2><p>Une bonne chaise mal réglée ne vaut pas mieux qu'une chaise ordinaire. L'ordre des réglages compte, parce que chacun dépend du précédent.</p><ol><li>Asseyez-vous face au bureau et montez ou descendez l'assise jusqu'à ce que vos coudes arrivent à hauteur du plateau, épaules relâchées.</li><li>Vérifiez vos pieds. S'ils ne reposent pas à plat, ajoutez un repose-pieds inclinable, réglable en hauteur et antidérapant plutôt que de redescendre l'assise.</li><li>Réglez la profondeur d'assise pour que le bas de votre dos touche le dossier, en gardant un espace entre le bord du siège et l'arrière de vos genoux.</li><li>Placez le renfort lombaire dans le creux du bas de votre dos.</li><li>Ajustez les accoudoirs à la hauteur de vos avant-bras, sans hausser les épaules, et vérifiez qu'ils vous laissent approcher du bureau.</li><li>Réglez la tension du dossier selon votre poids : il doit vous suivre quand vous vous penchez en arrière sans vous renvoyer brutalement vers l'avant.</li></ol><p>La chaise ne règle pas tout. Le haut de l'écran doit se trouver au niveau des yeux, ou plus bas si vous portez des verres progressifs, à une distance d'environ 50 à 70 cm. Avec un ordinateur portable posé à plat, vous baisserez la tête quel que soit votre siège. Il faut donc le rehausser et lui ajouter un clavier et une souris externes. Enfin, levez-vous régulièrement : même bien réglée, une posture tenue sans bouger finit par devenir inconfortable.</p><h2>Une chaise qui se règle sur vous vaut mieux qu'une chaise qui promet l'ergonomie</h2><p>Une chaise de bureau adaptée au travail à domicile se reconnaît à ce qu'elle vous permet de faire : poser les pieds à plat, vous adosser sans compression derrière les genoux, avoir les lombaires soutenues et les avant-bras posés près du bureau. Ces résultats dépendent de cinq réglages, du mécanisme choisi selon votre temps assis et de la hauteur de votre table. La mention EN 1335, avec son type, reste le repère le plus fiable sur une fiche produit. L'étiquette « ergonomique », elle, ne garantit rien à elle seule.</p><h2>Questions fréquentes</h2><h3>Mon employeur doit-il me fournir une chaise de bureau pour le télétravail ?</h3><p>Pour le télétravail à domicile, <a href=\"https://www.service-public.gouv.fr/particuliers/vosdroits/F13851\">l'employeur doit fournir, installer et entretenir les équipements nécessaires au télétravail</a> et prendre en charge les frais qu'il occasionne, au réel ou par une indemnité forfaitaire. La liste des équipements concernés n'est pas détaillée. Consultez donc l'accord collectif ou la charte télétravail de votre entreprise. En cas de douleurs, le médecin du travail peut recommander un aménagement de votre poste.</p><h3>Quel budget prévoir pour une chaise ergonomique ?</h3><p>Un spécialiste du secteur situe la plupart des fauteuils ergonomiques entre 300 et 1 000 euros, les modèles renforcés ou conçus pour un usage intensif coûtant davantage. Dans tous les cas, payez pour des réglages et une conformité EN 1335 vérifiable plutôt que pour un revêtement ou des options de confort.</p><h3>Un appui-tête est-il utile ?</h3><p>Pour du travail sur écran classique, non. Il devient utile si vous surveillez plusieurs écrans placés à des hauteurs différentes ou si vous souffrez de douleurs cervicales.</p><h3>Une chaise de cuisine peut-elle suffire pour quelques jours de télétravail ?</h3><p>Pour dépanner, oui, mais elle n'offre aucun réglage. Les sièges à quatre pieds ou à quatre branches sont réservés aux usages visiteurs et réunion. Si vous télétravaillez régulièrement, un siège de travail pivotant sur cinq branches et réglable est plus adapté.</p>",
+    "faq": [
+      {
+        "question": "Mon employeur doit-il me fournir une chaise de bureau pour le télétravail ?",
+        "answer": "Pour le télétravail à domicile, l'employeur doit fournir, installer et entretenir les équipements nécessaires au télétravail et prendre en charge les frais qu'il occasionne, au réel ou par une indemnité forfaitaire. La liste des équipements concernés n'est pas détaillée : consultez l'accord collectif ou la charte télétravail. En cas de douleurs, le médecin du travail peut recommander un aménagement de votre poste."
+      },
+      {
+        "question": "Quel budget prévoir pour une chaise ergonomique ?",
+        "answer": "Un spécialiste du secteur situe la plupart des fauteuils ergonomiques entre 300 et 1 000 euros, les modèles renforcés ou conçus pour un usage intensif coûtant davantage. Payez pour des réglages et une conformité EN 1335 vérifiable plutôt que pour un revêtement ou des options."
+      },
+      {
+        "question": "Un appui-tête est-il utile ?",
+        "answer": "Pour du travail sur écran classique, non. Il devient utile si vous surveillez plusieurs écrans placés à des hauteurs différentes ou si vous souffrez de douleurs cervicales."
+      },
+      {
+        "question": "Une chaise de cuisine peut-elle suffire pour quelques jours de télétravail ?",
+        "answer": "Pour dépanner, oui, mais elle n'offre aucun réglage. Les sièges à quatre pieds ou à quatre branches sont réservés aux usages visiteurs et réunion. En télétravail régulier, un siège de travail pivotant sur cinq branches et réglable est plus adapté."
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.inrs.fr/risques/travail-ecran/prevention-risques.html",
+        "title": "INRS - Travail sur écran. Prévention des risques",
+        "used_for": "Posture de moindre inconfort, caractéristiques du siège, repose-pieds, appui-tête, écran, ordinateur portable, assises dynamiques"
+      },
+      {
+        "url": "https://www.inrs.fr/dam/inrs/CataloguePapier/ED/TI-ED-131.pdf",
+        "title": "INRS ED 131 - Postures de travail statiques et repères techniques sur les sièges de travail",
+        "used_for": "Plage de hauteur d'un siège assis (370 à 535 mm), piètement à cinq branches, quatre branches réservé aux sièges visiteurs"
+      },
+      {
+        "url": "https://www.matelpro.com/suivez-le-guide/articles/quelles-caracteristiques-doit-avoir-une-chaise-de-bureau-",
+        "title": "Matelpro - Quelles caractéristiques doit avoir une chaise de bureau",
+        "used_for": "Hauteur basse fréquente de 42 cm, test des trois doigts, accoudoirs 1D à 4D, dossier en maille"
+      },
+      {
+        "url": "https://www.bruneau.fr/mag/teletravail-quelle-chaise-de-bureau-choisir",
+        "title": "Bruneau - Télétravail : quelle chaise de bureau choisir ?",
+        "used_for": "Types de mécanismes et durées d'assise conseillées"
+      },
+      {
+        "url": "https://www.ergofrance.com/comment-choisir-meilleur-fauteuil-bureau-teletravail/",
+        "title": "Ergofrance - Télétravail : comment choisir le meilleur fauteuil de bureau",
+        "used_for": "Fauteuils gaming, produits faussement ergonomiques, fourchette de prix, recommandation du médecin du travail"
+      },
+      {
+        "url": "https://www.boutique.afnor.org/fr-fr/norme/nf-en-13352/mobilier-de-bureau-sieges-de-travail-de-bureau-partie-2-exigences-de-securi/fa186844/82539",
+        "title": "AFNOR - NF EN 1335-2",
+        "used_for": "Exigences basées sur 8 h par jour et 110 kg"
+      },
+      {
+        "url": "https://www.sizemarker.com/blog/office-chair-seat-height-standard",
+        "title": "Sizemarker - Office Chair Seat Height Standard: EN 1335 vs BIFMA",
+        "used_for": "Dimensions des types A et B de la norme EN 1335-1:2020"
+      },
+      {
+        "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F13851",
+        "title": "Service-Public.fr - Télétravail du salarié dans le secteur privé",
+        "used_for": "Obligations de l'employeur sur les équipements et les frais de télétravail"
+      }
+    ],
+    "facts": [
+      {
+        "value": "Posture de moindre inconfort : pieds à plat, genoux à 90° ou plus sans compression, coudes entre 90 et 135°",
+        "source_url": "https://www.inrs.fr/risques/travail-ecran/prevention-risques.html"
+      },
+      {
+        "value": "Accoudoirs amovibles, réglables en hauteur, écartement et profondeur ; cinq roulettes adaptées au sol ; rembourrage ferme et tissu poreux",
+        "source_url": "https://www.inrs.fr/risques/travail-ecran/prevention-risques.html"
+      },
+      {
+        "value": "Appui-nuque nécessaire en cas d'écrans sur plusieurs niveaux ou de douleurs cervicales",
+        "source_url": "https://www.inrs.fr/risques/travail-ecran/prevention-risques.html"
+      },
+      {
+        "value": "Distance œil-écran généralement de 50 à 70 cm ; haut de l'écran au niveau des yeux",
+        "source_url": "https://www.inrs.fr/risques/travail-ecran/prevention-risques.html"
+      },
+      {
+        "value": "Siège assis : 370 ≤ H ≤ 535 mm ; piètement à 5 branches ; 4 branches réservé aux sièges de réunion ou visiteurs",
+        "source_url": "https://www.inrs.fr/dam/inrs/CataloguePapier/ED/TI-ED-131.pdf"
+      },
+      {
+        "value": "La plupart des fauteuils ne descendent pas sous 42 cm, ce qui convient au-dessus de 1,60 m (affirmation de distributeur)",
+        "source_url": "https://www.matelpro.com/suivez-le-guide/articles/quelles-caracteristiques-doit-avoir-une-chaise-de-bureau-"
+      },
+      {
+        "value": "Synchrone : plus de 7 h/jour ; axe décalé et contact permanent : jusqu'à 7 h ; basculant centré : jusqu'à 4 h (repères de distributeur)",
+        "source_url": "https://www.bruneau.fr/mag/teletravail-quelle-chaise-de-bureau-choisir"
+      },
+      {
+        "value": "NF EN 1335-2 : exigences basées sur 8 h par jour par une personne jusqu'à 110 kg",
+        "source_url": "https://www.boutique.afnor.org/fr-fr/norme/nf-en-13352/mobilier-de-bureau-sieges-de-travail-de-bureau-partie-2-exigences-de-securi/fa186844/82539"
+      },
+      {
+        "value": "EN 1335-1:2020 type A : hauteur 400-520 mm, course min. 130 mm, profondeur réglable ; type B : 420-510 mm, course min. 100 mm, profondeur fixe admise",
+        "source_url": "https://www.sizemarker.com/blog/office-chair-seat-height-standard"
+      },
+      {
+        "value": "Fauteuils ergonomiques entre 300 et 1 000 euros selon un spécialiste",
+        "source_url": "https://www.ergofrance.com/comment-choisir-meilleur-fauteuil-bureau-teletravail/"
+      },
+      {
+        "value": "À domicile, l'employeur fournit, installe et entretient les équipements nécessaires au télétravail et prend en charge les frais",
+        "source_url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F13851"
+      }
+    ],
+    "competitors": [
+      {
+        "url": "https://www.ergofrance.com/comment-choisir-meilleur-fauteuil-bureau-teletravail/",
+        "strengths": [
+          "Distingue fauteuil gaming et siège ergonomique",
+          "Mentionne la norme EN 1335-1 et la piste du médecin du travail"
+        ],
+        "weaknesses": [
+          "Liste de critères annoncée mais peu développée",
+          "Informations datées sur les aides liées à la pandémie",
+          "Orientation commerciale"
+        ]
+      },
+      {
+        "url": "https://www.bruneau.fr/mag/teletravail-quelle-chaise-de-bureau-choisir",
+        "strengths": [
+          "Explication claire des mécanismes de bascule avec durées d'usage"
+        ],
+        "weaknesses": [
+          "Large place au design",
+          "Durées présentées sans source normative",
+          "Pas de méthode de réglage détaillée"
+        ]
+      },
+      {
+        "url": "https://www.matelpro.com/suivez-le-guide/articles/quelles-caracteristiques-doit-avoir-une-chaise-de-bureau-",
+        "strengths": [
+          "Repères concrets : 42 cm, trois doigts, accoudoirs 1D à 4D"
+        ],
+        "weaknesses": [
+          "Confusion entre repose-pieds et critère de chaise",
+          "Conseils de style peu utiles",
+          "Ne relie pas le réglage à la hauteur du bureau"
+        ]
+      }
+    ],
+    "sub_questions": [
+      "Quelle position la chaise doit-elle permettre une fois assis ?",
+      "Pourquoi la hauteur du bureau conditionne-t-elle le choix de la chaise ?",
+      "Quels réglages exiger : hauteur, profondeur, dossier, accoudoirs, mécanisme ?",
+      "Quel mécanisme selon le nombre d'heures assis ?",
+      "Que garantit la norme EN 1335 et que signifient les types A et B ?",
+      "Quel revêtement et quelles roulettes selon le logement ?",
+      "Un fauteuil gaming ou un ballon peuvent-ils remplacer une chaise de bureau ?",
+      "Dans quel ordre régler sa chaise ?"
+    ],
+    "editorial_plan": {
+      "intro": "Partir du fait que la chaise se règle d'abord par rapport au bureau, montrer les pièges de l'achat sur photo et du mot ergonomique non protégé, puis annoncer qu'il existe des critères vérifiables.",
+      "summary_callout": "Pieds à plat, assise sans compression derrière les genoux, lombaires soutenues, accoudoirs réglables ; mécanisme selon les heures assis ; conformité EN 1335. Pas de nombre annoncé.",
+      "sections": [
+        "H2 Ce que la chaise doit vous permettre une fois assis : posture de moindre inconfort et piège de la hauteur du bureau (ne pas détailler les réglages un par un)",
+        "H2 Les cinq réglages à vérifier avant d'acheter : 5 H3 (hauteur, profondeur, dossier et lombaires, accoudoirs, mécanisme avec tableau)",
+        "H2 Comment lire la fiche produit et la mention EN 1335 : parties 1 et 2, limite des 110 kg, tableau type A ou B, demander le type",
+        "H2 Revêtement, rembourrage et roulettes : matière, roulettes selon le sol, piètement, espace",
+        "H2 Fauteuil gaming, ballon ou tabouret : critères identiques, assises dynamiques en complément",
+        "H2 Régler votre chaise en arrivant : liste numérotée en 6 étapes, plus écran et portable"
+      ],
+      "conclusion": "Une chaise qui se règle sur vous vaut mieux qu'une chaise qui promet l'ergonomie : rappel des résultats attendus, des cinq réglages, du mécanisme et du repère EN 1335, sans fait nouveau.",
+      "faq_questions": [
+        "Employeur et chaise de télétravail : question juridique hors du sujet du choix, appuyée sur Service-Public",
+        "Budget : non traité dans le corps, fourchette donnée avec prudence (source vendeur)",
+        "Appui-tête : option non abordée dans le corps, repère de prévention",
+        "Chaise de cuisine en dépannage : cas d'usage distinct, repère sur le piètement à quatre branches"
+      ]
+    },
+    "self_review": {
+      "intro_under_15_percent": true,
+      "callout_present": true,
+      "counts_consistent": true,
+      "facts_checked": true,
+      "faq_non_redundant": true,
+      "notes": "Introduction d'environ 150 mots pour un article d'environ 2 000 mots. Le résumé n'annonce aucun nombre ; le H2 annonce cinq réglages et contient cinq H3. Les durées par mécanisme, la hauteur de 42 cm et la fourchette de prix viennent de vendeurs et sont présentées comme des repères. Les dimensions EN 1335-1 proviennent d'un site spécialisé reprenant le tableau de la norme (la norme elle-même est payante) et sont formulées avec prudence. Les informations d'Ergofrance sur l'aide AGEFIPH liée à la pandémie, jugées périmées, ont été écartées. La contradiction sur la prise en charge par l'employeur (Service-Public : équipements nécessaires ; Ergofrance : pas d'obligation pour le fauteuil) est traitée en FAQ en renvoyant à l'accord ou à la charte. Chaque source est liée une seule fois et l'INRS est nommé deux fois. Aucune alerte de similarité n'a été reçue."
+    }
+  },
+  "seo": {
+    "title": "Comment choisir une chaise de bureau ergonomique pour travailler chez soi",
+    "meta_title": "Choisir une chaise de bureau ergonomique pour le télétravail",
+    "meta_description": "Les réglages à exiger, la norme EN 1335, le mécanisme selon vos heures assis et la bonne façon de régler une chaise de bureau à la maison.",
+    "slug": "choisir-chaise-bureau-ergonomique-teletravail"
+  },
+  "output": {
+    "report_json": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/run/ui/0e23f2d8bf774432b43115a0ff431164/report.json",
+    "article_html": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/run/ui/0e23f2d8bf774432b43115a0ff431164/article.html"
+  }
+}

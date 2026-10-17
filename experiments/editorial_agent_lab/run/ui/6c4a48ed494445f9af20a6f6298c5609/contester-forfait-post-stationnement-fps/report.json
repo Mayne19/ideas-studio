@@ -1,0 +1,77 @@
+{
+  "subject": "Comment contester un avis de stationnement impayé (forfait post-stationnement)",
+  "started_at": "2026-10-17T17:00:05.418413+00:00",
+  "writer": {
+    "agent": "claude code, skill redaction-article",
+    "cost_usd": 2.354542,
+    "tokens": {
+      "input": 56,
+      "output": 29998,
+      "cache_creation": 65355,
+      "cache_read": 1802350
+    },
+    "duration_s": 450.9,
+    "turns": 47,
+    "web_search_requests": 0,
+    "model_usage": {
+      "claude-opus-5-5": {
+        "inputTokens": 56,
+        "outputTokens": 29998,
+        "cacheReadInputTokens": 1802350,
+        "cacheCreationInputTokens": 65355,
+        "webSearchRequests": 0,
+        "costUSD": 1.4834939999999999,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 13193,
+        "canonicalModel": "claude-opus-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      },
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 695478,
+        "outputTokens": 13114,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 11,
+        "costUSD": 0.8710479999999999,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    }
+  },
+  "blocking_checks": [
+    {
+      "name": "encadré « En résumé »",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "aucun tiret cadratin",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "fiche json valide",
+      "passed": true,
+      "detail": ""
+    }
+  ],
+  "passed": true,
+  "plagiarism": {
+    "name": "plagiat (alerte)",
+    "blocking": false,
+    "findings": [],
+    "unreadable_sources": []
+  },
+  "output": {
+    "article_md": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/run/ui/6c4a48ed494445f9af20a6f6298c5609/contester-forfait-post-stationnement-fps/article.md",
+    "raw_output_md": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/run/ui/6c4a48ed494445f9af20a6f6298c5609/contester-forfait-post-stationnement-fps/raw_output.md",
+    "fiche_json": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/run/ui/6c4a48ed494445f9af20a6f6298c5609/contester-forfait-post-stationnement-fps/fiche.json",
+    "report_json": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/run/ui/6c4a48ed494445f9af20a6f6298c5609/contester-forfait-post-stationnement-fps/report.json"
+  }
+}

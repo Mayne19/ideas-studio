@@ -1,0 +1,77 @@
+{
+  "subject": "Comment enlever une tache de gras sur un vêtement",
+  "started_at": "2026-10-17T16:00:23.401759+00:00",
+  "writer": {
+    "agent": "claude code, skill redaction-article",
+    "cost_usd": 1.7675370000000004,
+    "tokens": {
+      "input": 34,
+      "output": 23955,
+      "cache_creation": 55711,
+      "cache_read": 965325
+    },
+    "duration_s": 387.4,
+    "turns": 40,
+    "web_search_requests": 0,
+    "model_usage": {
+      "claude-opus-5-5": {
+        "inputTokens": 34,
+        "outputTokens": 23955,
+        "cacheReadInputTokens": 965325,
+        "cacheCreationInputTokens": 55711,
+        "webSearchRequests": 0,
+        "costUSD": 1.1179889999999997,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 11956,
+        "canonicalModel": "claude-opus-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      },
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 446773,
+        "outputTokens": 10555,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 15,
+        "costUSD": 0.6495480000000002,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    }
+  },
+  "blocking_checks": [
+    {
+      "name": "encadré « En résumé »",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "aucun tiret cadratin",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "fiche json valide",
+      "passed": true,
+      "detail": ""
+    }
+  ],
+  "passed": true,
+  "plagiarism": {
+    "name": "plagiat (alerte)",
+    "blocking": false,
+    "findings": [],
+    "unreadable_sources": []
+  },
+  "output": {
+    "article_md": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/run/ui/153504741086416d9996a748c2c79ec5/enlever-tache-de-gras-vetement/article.md",
+    "raw_output_md": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/run/ui/153504741086416d9996a748c2c79ec5/enlever-tache-de-gras-vetement/raw_output.md",
+    "fiche_json": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/run/ui/153504741086416d9996a748c2c79ec5/enlever-tache-de-gras-vetement/fiche.json",
+    "report_json": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/run/ui/153504741086416d9996a748c2c79ec5/enlever-tache-de-gras-vetement/report.json"
+  }
+}

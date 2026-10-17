@@ -1,0 +1,423 @@
+{
+  "algorithm": "editorial-agent-lab/live-claude-style",
+  "keyword": "Créer un questionnaire en ligne : 8 outils comparés sur leurs vraies limites gratuites (2026)",
+  "model": "opus",
+  "route": "claude_cli",
+  "duration_s": 318.28,
+  "cost_usd": 0.0,
+  "agent": {
+    "fetch_log": [],
+    "search_log": [],
+    "model": "opus",
+    "route": "anthropic",
+    "reasoning": "low",
+    "real_cost_usd": null,
+    "duration_s": 318.1,
+    "calls": 1,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "web_searches": 0,
+    "web_fetches": 0,
+    "cost_usd": 0.0
+  },
+  "pipeline": {
+    "draft_format": "markdown",
+    "extraction": "separate_json_low_reasoning",
+    "style_review": "separate_markdown_replacement"
+  },
+  "structure": {
+    "status": "fail",
+    "hard_failures": 2,
+    "warning_count": 0,
+    "failed_hard_rules": [
+      "h2_lead_paragraph",
+      "verbal_tics"
+    ],
+    "failed_warning_rules": [],
+    "passed_count": 15,
+    "rule_count": 17,
+    "recommended_format": "",
+    "stats": {
+      "words": 2229,
+      "sections": 9,
+      "intro_words": 213
+    },
+    "rules": [
+      {
+        "rule": "single_h1",
+        "label": "Un seul H1 (le titre), jamais dans le corps",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": false
+      },
+      {
+        "rule": "heading_hierarchy",
+        "label": "Hiérarchie H2/H3 sans saut de niveau",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": false
+      },
+      {
+        "rule": "isolated_h3",
+        "label": "Pas de H3 isolé",
+        "severity": "warning",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "h2_lead_paragraph",
+        "label": "Un paragraphe entre chaque H2 et son premier H3",
+        "severity": "hard",
+        "passed": false,
+        "violations": [
+          {
+            "unit": "section:3",
+            "section": "Google Forms, Tally et Framaforms : les plus généreux",
+            "detail": "H2 suivi directement d'un H3 : ajouter sous le H2 un court paragraphe qui répond à la question de la section avec les informations déjà présentes",
+            "excerpt": ""
+          },
+          {
+            "unit": "section:4",
+            "section": "Microsoft Forms, Jotform : suffisants pour une enquête modeste",
+            "detail": "H2 suivi directement d'un H3 : ajouter sous le H2 un court paragraphe qui répond à la question de la section avec les informations déjà présentes",
+            "excerpt": ""
+          },
+          {
+            "unit": "section:5",
+            "section": "Typeform, SurveyMonkey et LimeSurvey : des offres gratuites pour tester",
+            "detail": "H2 suivi directement d'un H3 : ajouter sous le H2 un court paragraphe qui répond à la question de la section avec les informations déjà présentes",
+            "excerpt": ""
+          },
+          {
+            "unit": "section:9",
+            "section": "FAQ",
+            "detail": "H2 suivi directement d'un H3 : ajouter sous le H2 un court paragraphe qui répond à la question de la section avec les informations déjà présentes",
+            "excerpt": ""
+          }
+        ],
+        "section_fixable": true
+      },
+      {
+        "rule": "verbal_tics",
+        "label": "Tics de langage une fois au plus",
+        "severity": "hard",
+        "passed": false,
+        "violations": [
+          {
+            "unit": "section:4",
+            "section": "Microsoft Forms, Jotform : suffisants pour une enquête modeste",
+            "detail": "Tic de langage répété « toutefois » : le remplacer par une vraie liaison logique (cause, conséquence, exemple) ou le supprimer",
+            "excerpt": "toutefois"
+          }
+        ],
+        "section_fixable": true
+      },
+      {
+        "rule": "sentence_length",
+        "label": "Aucune phrase de plus de 45 mots",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "long_sentence_share",
+        "label": "Peu de phrases longues",
+        "severity": "warning",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "intro_length",
+        "label": "Introduction de 10 % du texte au plus",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "intro_generic_opening",
+        "label": "Introduction sans ouverture générique",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "no_em_dash",
+        "label": "Aucun tiret cadratin",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "banned_vocabulary",
+        "label": "Ni superlatif vide ni expression usée",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "vous_saturation",
+        "label": "Pas trois « vous » d'affilée",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "conclusion_opening",
+        "label": "Fin sans « En conclusion » ni résumé",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "list_format",
+        "label": "Listes de 2 à 10 éléments courts",
+        "severity": "warning",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "table_format",
+        "label": "Tableaux avec en-tête et colonnes régulières",
+        "severity": "warning",
+        "passed": true,
+        "violations": [],
+        "section_fixable": true
+      },
+      {
+        "rule": "section_balance",
+        "label": "Sections équilibrées",
+        "severity": "warning",
+        "passed": true,
+        "violations": [],
+        "section_fixable": false
+      },
+      {
+        "rule": "required_elements",
+        "label": "Composant attendu du format : Composants du format",
+        "severity": "hard",
+        "passed": true,
+        "violations": [],
+        "section_fixable": false
+      }
+    ]
+  },
+  "plagiarism": {
+    "status": "skipped",
+    "reason": "adaptateur SERP absent ; la recherche native du modèle a été utilisée"
+  },
+  "blocking_issues": [
+    {
+      "code": "h2_lead_paragraph",
+      "message": "Un paragraphe entre chaque H2 et son premier H3"
+    },
+    {
+      "code": "verbal_tics",
+      "message": "Tics de langage une fois au plus"
+    }
+  ],
+  "warnings": [],
+  "correction_rounds": 0,
+  "selected_version": 1,
+  "article": {
+    "title": "Créer un questionnaire en ligne gratuitement : 8 outils comparés sur leurs vraies limites",
+    "meta_title": "Questionnaire en ligne gratuit : 8 outils comparés (2026)",
+    "meta_description": "Réponses, durée de vie, fichiers, prix : comparez les vraies limites de 8 outils gratuits (Google Forms, Tally, Typeform…) pour créer un questionnaire.",
+    "slug": "creer-questionnaire-en-ligne-gratuit-outils-compares",
+    "faq": [
+      {
+        "question": "Faut-il informer les répondants si le questionnaire collecte des données personnelles ?",
+        "answer": "Oui. Dès que vous recueillez des noms, des adresses e-mail ou toute autre donnée permettant d'identifier une personne, vous devez indiquer qui collecte les données, dans quel but et quels sont les droits des répondants. La CNIL détaille ces informations à fournir et propose des exemples de mentions d'information. Ajoutez ce texte au début du questionnaire, quel que soit l'outil."
+      },
+      {
+        "question": "Peut-on encaisser un paiement avec un formulaire gratuit ?",
+        "answer": "Tally inclut la collecte de paiements dans son offre gratuite, ce qui est utile pour une inscription payante ou une cotisation d'association. Google Forms ne propose pas de paiement intégré. Pour les autres outils, cette fonction relève généralement des offres payantes."
+      },
+      {
+        "question": "Peut-on récupérer les réponses dans un tableur ?",
+        "answer": "Oui, pour la plupart des outils. Google Forms envoie directement les réponses dans une feuille Google Sheets, et Tally propose gratuitement une intégration avec Google Sheets, Notion et Airtable. Les autres outils permettent au minimum de télécharger les réponses pour les ouvrir dans un tableur, ce qui est aussi le moyen le plus simple d'en garder une copie avant l'expiration d'un formulaire ou le passage à une autre offre."
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://qualtir.com/fr/blog/google-forms-alternatives",
+        "title": "Comparatif des alternatives à Google Forms (Qualtir)",
+        "used_for": "Limites de Google Forms : design réduit, logique conditionnelle basique, pas de réponses partielles ni de paiement intégré"
+      },
+      {
+        "url": "https://support.google.com/docs/answer/7322334?hl=fr",
+        "title": "Aide Google – Questions d'import de fichiers dans Google Forms",
+        "used_for": "Connexion à un compte Google obligatoire pour les répondants, fichiers stockés dans le Google Drive du créateur"
+      },
+      {
+        "url": "https://support.google.com/googleone/answer/9312312?hl=fr",
+        "title": "Aide Google One – Espace de stockage",
+        "used_for": "15 Go partagés entre Gmail, Google Drive et Google Photos"
+      },
+      {
+        "url": "https://tally.so/pricing",
+        "title": "Tally – Grille tarifaire",
+        "used_for": "Formulaires et réponses illimités en gratuit, logique conditionnelle, fichiers, signatures, intégrations Google Sheets/Notion/Airtable"
+      },
+      {
+        "url": "https://tally.so/help/fair-use-policy",
+        "title": "Tally – Politique d'usage raisonnable",
+        "used_for": "Seuil de 50 000 réponses par mois de façon régulière"
+      },
+      {
+        "url": "https://tally.so/help/gdpr",
+        "title": "Tally – RGPD",
+        "used_for": "Entreprise belge, données des formulaires stockées en Europe"
+      },
+      {
+        "url": "https://framaforms.org/",
+        "title": "Framaforms (Framasoft)",
+        "used_for": "Association financée par les dons, 5 000 réponses par formulaire, 200 formulaires par compte, durée de vie de 6 mois par défaut"
+      },
+      {
+        "url": "https://support.microsoft.com/en-US/Forms/form-question-response-and-character-limits-in-microsoft-Forms",
+        "title": "Microsoft – Limites de formulaires, questions, réponses et caractères dans Microsoft Forms",
+        "used_for": "200 réponses par formulaire (compte personnel), 1 000 (Microsoft 365 personnel), 5 000 000 (compte professionnel ou scolaire)"
+      },
+      {
+        "url": "https://www.jotform.com/pricing/",
+        "title": "Jotform – Tarifs",
+        "used_for": "Offre Starter : 100 réponses par mois, 5 formulaires, 100 Mo, marque Jotform"
+      },
+      {
+        "url": "https://community.typeform.com/manage-your-typeform-account-48/i-m-using-the-free-plan-do-i-get-100-responses-per-typeform-or-just-an-overall-total-of-100-responses-per-month-1835",
+        "title": "Communauté Typeform – Quota de réponses de l'offre gratuite",
+        "used_for": "Quota mensuel de réponses de l'offre gratuite partagé entre tous les formulaires du compte"
+      },
+      {
+        "url": "https://hackceleration.com/fr/labs/alternatives/typeform-alternatives",
+        "title": "Comparatif des alternatives à Typeform (Hackceleration)",
+        "used_for": "Badge Typeform visible tant que l'offre Plus n'est pas souscrite"
+      },
+      {
+        "url": "https://www.surveymonkey.com/pricing/individual/",
+        "title": "SurveyMonkey – Tarifs individuels",
+        "used_for": "Offre Basic limitée à 10 questions par questionnaire"
+      },
+      {
+        "url": "https://help.limesurvey.org/portal/en/kb/articles/free-plan-type",
+        "title": "LimeSurvey – Offre gratuite",
+        "used_for": "Offre gratuite sans limite de durée, 25 réponses par mois, 10 Mo de stockage"
+      },
+      {
+        "url": "https://extendedforms.io/blog/best-free-online-survey-tools-in-2026-8-options-compared",
+        "title": "Best free online survey tools in 2026 (ExtendedForms)",
+        "used_for": "LimeSurvey auto-hébergé en logiciel libre, sans quota de réponses"
+      },
+      {
+        "url": "https://www.cnil.fr/fr/les-bases-legales/consentement",
+        "title": "CNIL – Le consentement",
+        "used_for": "Informations à fournir aux répondants lors d'une collecte de données personnelles (FAQ)"
+      }
+    ],
+    "facts": [
+      {
+        "value": "Les fichiers reçus via Google Forms exigent que le répondant se connecte à un compte Google et sont stockés dans le Google Drive du créateur",
+        "source_url": "https://support.google.com/docs/answer/7322334?hl=fr"
+      },
+      {
+        "value": "Le stockage gratuit Google est de 15 Go partagés entre Gmail, Google Drive et Google Photos",
+        "source_url": "https://support.google.com/googleone/answer/9312312?hl=fr"
+      },
+      {
+        "value": "Tally propose des formulaires et des réponses illimités dans son offre gratuite",
+        "source_url": "https://tally.so/pricing"
+      },
+      {
+        "value": "Tally contacte l'utilisateur s'il reçoit régulièrement plus de 50 000 réponses par mois pendant plusieurs mois",
+        "source_url": "https://tally.so/help/fair-use-policy"
+      },
+      {
+        "value": "Tally est une entreprise belge qui stocke les données des formulaires en Europe",
+        "source_url": "https://tally.so/help/gdpr"
+      },
+      {
+        "value": "Framaforms : jusqu'à 5 000 réponses par formulaire, 200 formulaires par compte, durée de vie de 6 mois par défaut",
+        "source_url": "https://framaforms.org/"
+      },
+      {
+        "value": "Microsoft Forms : 200 réponses par formulaire avec un compte personnel gratuit",
+        "source_url": "https://support.microsoft.com/en-US/Forms/form-question-response-and-character-limits-in-microsoft-Forms"
+      },
+      {
+        "value": "Microsoft Forms : 1 000 réponses avec Microsoft 365 personnel, jusqu'à 5 000 000 avec un compte professionnel ou scolaire",
+        "source_url": "https://support.microsoft.com/en-US/Forms/form-question-response-and-character-limits-in-microsoft-Forms"
+      },
+      {
+        "value": "Jotform Starter : 100 réponses par mois, 5 formulaires actifs, 100 Mo d'espace pour les fichiers",
+        "source_url": "https://www.jotform.com/pricing/"
+      },
+      {
+        "value": "Typeform gratuit : 10 réponses par mois pour l'ensemble du compte",
+        "source_url": "https://community.typeform.com/manage-your-typeform-account-48/i-m-using-the-free-plan-do-i-get-100-responses-per-typeform-or-just-an-overall-total-of-100-responses-per-month-1835"
+      },
+      {
+        "value": "Le badge Typeform reste visible tant que l'offre Plus n'est pas souscrite",
+        "source_url": "https://hackceleration.com/fr/labs/alternatives/typeform-alternatives"
+      },
+      {
+        "value": "SurveyMonkey Basic : 10 questions au maximum par questionnaire",
+        "source_url": "https://www.surveymonkey.com/pricing/individual/"
+      },
+      {
+        "value": "LimeSurvey en ligne gratuit : 25 réponses par mois et 10 Mo de stockage, sans limite de durée",
+        "source_url": "https://help.limesurvey.org/portal/en/kb/articles/free-plan-type"
+      },
+      {
+        "value": "LimeSurvey peut être auto-hébergé en logiciel libre, sans quota de réponses",
+        "source_url": "https://extendedforms.io/blog/best-free-online-survey-tools-in-2026-8-options-compared"
+      }
+    ],
+    "self_review": {
+      "internal_links": "Aucun lien interne ajouté, conformément à la consigne (aucun article publié fourni).",
+      "keyword_alignment": "Le titre H1 reprend « Créer un questionnaire en ligne » et « 8 outils comparés sur leurs vraies limites ». L'année « 2026 » du mot-clé n'apparaît pas dans l'article ; elle est seulement ajoutée au meta_title. À valider éditorialement.",
+      "meta_lengths": "meta_title : 57 caractères. meta_description : environ 150 caractères.",
+      "unsourced_claims": [
+        "Jotform : la limite de 500 réponses conservées au total n'est pas rattachée explicitement à une source (la page de tarifs Jotform est probablement la bonne source, mais à vérifier).",
+        "Tally : le plafond de 10 Mo par fichier et le retrait du logo réservé à l'offre Pro ne sont pas rattachés explicitement à une source.",
+        "Microsoft Forms : la limite de 400 formulaires figure dans le tableau, mais le texte ne l'attribue à aucune source.",
+        "Tableau des prix (Tally Pro 20 €/mois, LimeSurvey Basic 34 €/mois, Typeform Basic 29 $/mois et 100 réponses, Jotform Bronze 39 $/mois ou 408 $/an) : aucune source citée en ligne. À vérifier sur les pages tarifaires officielles avant publication.",
+        "Les réductions en cas de paiement annuel chez Typeform et Tally ne sont pas sourcées.",
+        "La collecte de paiements incluse dans l'offre gratuite de Tally (FAQ) n'est pas sourcée explicitement.",
+        "L'hébergement en Europe des données Framaforms n'est pas sourcé, alors que l'article l'avance comme une garantie."
+      ],
+      "source_quality_flags": [
+        "Les informations sur Google Forms (Qualtir), le badge Typeform (Hackceleration) et LimeSurvey auto-hébergé (ExtendedForms) viennent de sites tiers : mieux vaut les sources officielles des éditeurs.",
+        "L'URL du fil d'entraide Typeform mentionne « 100 responses », alors que l'article annonce 10 réponses par mois. Il faut vérifier que le fil confirme bien le quota actuel.",
+        "Le lien CNIL renvoie à la page sur le consentement, et non à une page dédiée à l'information des personnes ou aux mentions d'information. Le lien ne correspond pas exactement à l'affirmation : à revoir.",
+        "Le lien Microsoft pointe vers la version en-US alors que l'article est en français."
+      ],
+      "freshness": "Les quotas et les prix des offres gratuites changent souvent. Revérifiez les chiffres à la date de publication (2026-10-17).",
+      "consistency": "Les chiffres du tableau comparatif, des sections détaillées, de la conclusion et de la FAQ concordent entre eux.",
+      "no_invented_data": "Toutes les valeurs extraites viennent de l'article. Aucune source ni donnée externe n'a été ajoutée."
+    },
+    "content_html": "<p>Vous préparez une enquête de satisfaction, un sondage pour une association ou un formulaire d'inscription. L'outil choisi semble gratuit, l'interface est agréable, et vous diffusez le lien. Quelques jours plus tard, pourtant, un participant vous écrit qu'il tombe sur une page indiquant que le formulaire n'accepte plus de réponses. Beaucoup de personnes ont vécu cette situation, d'un côté ou de l'autre de l'écran.</p>\n<p>C'est que le mot « gratuit » recouvre des réalités très différentes. Certains outils bloquent après une dizaine de réponses par mois, d'autres limitent le nombre de questions, d'autres encore suppriment le formulaire au bout de quelques mois. Et comme ces plafonds sont rarement mis en avant sur la page d'accueil, comment savoir à l'avance lequel tiendra jusqu'au bout de votre collecte ?</p>\n<p>Le plus sûr est de comparer les huit offres gratuites les plus utilisées sur ce qui compte vraiment : le nombre de réponses, la durée de vie du formulaire, les fichiers et le coût du passage à l'offre payante.</p>\n<aside class=\"summary\"><p class=\"summary-title\">En résumé</p><p>Pour la plupart des questionnaires, Google Forms et Tally sont les deux offres gratuites qui ne vous bloqueront pas sur le nombre de réponses. Microsoft Forms, Jotform et Framaforms conviennent à une enquête de taille modeste. Typeform, SurveyMonkey et la version en ligne de LimeSurvey servent surtout à tester l'outil.</p></aside>\n\n<h2>Le plafond de réponses, première limite à vérifier</h2>\n<p>Une offre gratuite peut vous arrêter de plusieurs façons, mais c'est presque toujours le nombre de réponses qui coince en premier. Or ce plafond ne se calcule pas de la même manière d'un outil à l'autre, et cette différence change tout pour votre projet.</p>\n<p>Certains outils comptent les réponses <strong>par mois et pour l'ensemble du compte</strong> : si vous avez trois questionnaires ouverts, ils puisent tous dans la même réserve. D'autres comptent <strong>par formulaire</strong>, si bien que chaque questionnaire dispose de son propre quota, sans remise à zéro mensuelle.</p>\n<p>Concrètement, un quota de 100 réponses par mois convient à un formulaire de contact qui reçoit quelques messages par semaine, mais pas à une enquête envoyée d'un coup à 300 personnes.</p>\n<p>Les autres limites viennent ensuite : nombre de questions, nombre de formulaires actifs, taille des fichiers envoyés, durée de vie du questionnaire et logo de l'éditeur affiché sur la page. Avant de choisir, estimez donc deux choses : combien de personnes vont répondre au total, et sur quelle durée.</p>\n<h2>Les 8 offres gratuites comparées</h2>\n<p>Ce tableau rassemble les limites publiées par chaque éditeur pour son offre gratuite. Les sections suivantes expliquent ensuite ce qu'elles signifient en pratique.</p>\n<table>\n<thead>\n<tr>\n<th>Outil</th>\n<th>Réponses incluses gratuitement</th>\n<th>Autre limite qui peut bloquer</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>Google Forms</td>\n<td>Aucun plafond annoncé</td>\n<td>Fichiers reçus stockés sur votre propre espace Google</td>\n</tr>\n<tr>\n<td>Tally</td>\n<td>Illimitées, sous réserve d'usage raisonnable</td>\n<td>10 Mo par fichier envoyé, logo Tally affiché</td>\n</tr>\n<tr>\n<td>Framaforms</td>\n<td>5 000 par formulaire</td>\n<td>Durée de vie de 6 mois par défaut</td>\n</tr>\n<tr>\n<td>Microsoft Forms (compte personnel)</td>\n<td>200 par formulaire</td>\n<td>400 formulaires au maximum</td>\n</tr>\n<tr>\n<td>Jotform</td>\n<td>100 par mois</td>\n<td>5 formulaires actifs, 500 réponses conservées</td>\n</tr>\n<tr>\n<td>Typeform</td>\n<td>10 par mois pour tout le compte</td>\n<td>Logo Typeform affiché</td>\n</tr>\n<tr>\n<td>SurveyMonkey</td>\n<td>Nombre limité, précisé après inscription</td>\n<td>10 questions par questionnaire</td>\n</tr>\n<tr>\n<td>LimeSurvey (version en ligne)</td>\n<td>25 par mois</td>\n<td>10 Mo de stockage</td>\n</tr>\n</tbody>\n</table>\n<h2>Google Forms, Tally et Framaforms : les plus généreux</h2>\n<h3>Google Forms, sans plafond de réponses annoncé</h3>\n<p>Google Forms n'annonce aucune limite de réponses et ne propose pas d'offre payante séparée, ce qui en fait le choix le plus simple quand vous voulez seulement poser des questions et lire les résultats. <a href=\"https://qualtir.com/fr/blog/google-forms-alternatives\">Ce comparatif des alternatives à Google Forms</a> rappelle cependant ses limites : un contrôle du design très réduit, une logique conditionnelle basique, pas d'enregistrement des réponses partielles et pas de paiement intégré.</p>\n<p>La vraie contrainte apparaît toutefois si vous demandez aux participants d'envoyer un fichier. D'après <a href=\"https://support.google.com/docs/answer/7322334?hl=fr\">l'aide de Google sur les questions d'import de fichiers</a>, les répondants doivent alors se connecter à un compte Google, et les fichiers sont rangés dans un dossier de votre Google Drive.</p>\n<p>Ces fichiers consomment donc votre espace personnel, qui est de <a href=\"https://support.google.com/googleone/answer/9312312?hl=fr\">15 Go partagés entre Gmail, Google Drive et Google Photos</a>. Pour une enquête qui collecte des CV ou des photos, regardez combien d'espace libre il vous reste avant de lancer le questionnaire.</p>\n<h3>Tally, l'offre gratuite la plus complète</h3>\n<p>Tally autorise un nombre illimité de formulaires et de réponses dans son offre gratuite, avec la logique conditionnelle, l'envoi de fichiers, les signatures et les intégrations vers Google Sheets, Notion ou Airtable, comme l'indique <a href=\"https://tally.so/pricing\">sa grille tarifaire</a>. Vous obtenez ainsi gratuitement des fonctions que d'autres outils réservent à leurs offres payantes.</p>\n<p>Cet illimité reste néanmoins encadré par une <a href=\"https://tally.so/help/fair-use-policy\">politique d'usage raisonnable</a> : Tally ne contacte l'utilisateur que s'il reçoit de façon régulière plus de 50 000 réponses par mois pendant plusieurs mois. Un questionnaire classique n'approche jamais ce seuil.</p>\n<p>Deux limites concrètes demeurent malgré tout. Chaque fichier envoyé par un répondant est plafonné à 10 Mo, ce qui suffit pour un document PDF mais pas pour une vidéo. Le logo Tally reste par ailleurs visible sur vos formulaires, et seule l'offre Pro permet de le retirer.</p>\n<p>Quant à l'hébergement de vos données, si ce critère compte pour vous, Tally est une entreprise belge qui <a href=\"https://tally.so/help/gdpr\">stocke les données des formulaires en Europe</a>.</p>\n<h3>Framaforms, gratuit mais limité dans le temps</h3>\n<p><a href=\"https://framaforms.org/\">Framaforms</a> est géré par Framasoft, une association française financée par les dons, sans publicité ni revente de données. Côté volume, chaque formulaire peut recevoir jusqu'à 5 000 réponses, et un compte peut en créer 200.</p>\n<p>Sa particularité se situe ailleurs : un formulaire a une durée de vie de six mois par défaut. Pour une inscription à un événement ou un sondage ponctuel, cela ne pose aucun problème. Pour un formulaire de contact permanent, en revanche, mieux vaut choisir un autre outil et, dans tous les cas, exporter vos réponses avant l'échéance.</p>\n<h2>Microsoft Forms, Jotform : suffisants pour une enquête modeste</h2>\n<h3>Microsoft Forms, un quota qui dépend de votre compte</h3>\n<p>Avec un compte Microsoft personnel gratuit (Outlook.com, Hotmail ou Live), chaque formulaire peut recevoir jusqu'à 200 réponses, selon <a href=\"https://support.microsoft.com/en-US/Forms/form-question-response-and-character-limits-in-microsoft-Forms\">les limites publiées par Microsoft</a>. Comme le quota se compte par formulaire et non par mois, une enquête envoyée à 150 personnes passe sans difficulté.</p>\n<p>Ce chiffre change toutefois beaucoup selon le type de compte. Un abonnement Microsoft 365 personnel porte le plafond à 1 000 réponses, et un compte professionnel ou scolaire monte jusqu'à 5 000 000.</p>\n<p>Si votre employeur, votre université ou l'établissement de vos enfants vous fournit un compte Microsoft 365, connectez-vous donc avec celui-ci plutôt qu'avec votre adresse personnelle : vous disposerez de l'outil sans contrainte pratique de volume.</p>\n<h3>Jotform, 100 réponses par mois et un stock limité</h3>\n<p>L'offre gratuite de Jotform, appelée Starter, accepte 100 réponses par mois sur 5 formulaires actifs, d'après <a href=\"https://www.jotform.com/pricing/\">sa page de tarifs</a>. Elle comprend aussi 100 Mo d'espace pour les fichiers envoyés et affiche la marque Jotform sur vos formulaires.</p>\n<p>Une limite moins visible mérite cependant votre attention : le compte gratuit ne conserve que 500 réponses au total. Même si vous restez sous les 100 réponses mensuelles, vous atteindrez ce stock au bout de quelques mois, et il faudra alors exporter puis supprimer d'anciennes réponses pour continuer.</p>\n<p>Jotform reste intéressant pour les formulaires longs et à plusieurs pages, à condition de surveiller ce compteur.</p>\n<h2>Typeform, SurveyMonkey et LimeSurvey : des offres gratuites pour tester</h2>\n<h3>Typeform, 10 réponses par mois pour tout le compte</h3>\n<p>Typeform est apprécié pour son format conversationnel, qui affiche une question par écran. Son offre gratuite ne permet pourtant de recevoir que 10 réponses par mois, réparties sur l'ensemble de vos formulaires, comme l'explique <a href=\"https://community.typeform.com/manage-your-typeform-account-48/i-m-using-the-free-plan-do-i-get-100-responses-per-typeform-or-just-an-overall-total-of-100-responses-per-month-1835\">l'équipe de Typeform sur son espace d'entraide</a>. Une fois ce plafond atteint, vos formulaires cessent d'accepter des réponses jusqu'au mois suivant.</p>\n<p>À cela s'ajoute le badge Typeform, qui reste visible tant que vous n'avez pas souscrit au moins l'offre Plus, d'après <a href=\"https://hackceleration.com/fr/labs/alternatives/typeform-alternatives\">ce comparatif des alternatives à Typeform</a>. L'offre gratuite sert donc à découvrir l'outil, pas à mener une vraie collecte.</p>\n<h3>SurveyMonkey, 10 questions au maximum</h3>\n<p>SurveyMonkey limite son offre gratuite, nommée Basic, à 10 questions par questionnaire, selon <a href=\"https://www.surveymonkey.com/pricing/individual/\">sa grille tarifaire</a>. Le nombre de réponses consultables est lui aussi restreint, mais l'éditeur ne l'affiche qu'après la création d'un compte : pensez à le vérifier avant de diffuser votre lien.</p>\n<p>Ces 10 questions suffisent pour un sondage rapide, mais pas pour une enquête de satisfaction détaillée. Quant aux outils d'analyse avancés qui font la particularité de SurveyMonkey, ils restent réservés aux offres payantes.</p>\n<h3>LimeSurvey, 25 réponses en ligne ou une installation sur votre serveur</h3>\n<p>La version en ligne de LimeSurvey propose une <a href=\"https://help.limesurvey.org/portal/en/kb/articles/free-plan-type\">offre gratuite sans limite de durée</a>, avec des questionnaires et des questions illimités, mais seulement 25 réponses par mois et 10 Mo de stockage. De quoi tester tout juste un questionnaire auprès de quelques collègues.</p>\n<p>LimeSurvey existe aussi sous forme de logiciel libre que vous pouvez installer sur votre propre serveur, sans quota de réponses, comme le souligne <a href=\"https://extendedforms.io/blog/best-free-online-survey-tools-in-2026-8-options-compared\">ce comparatif d'outils de sondage gratuits</a>. Puisqu'il faut alors installer et maintenir le serveur vous-même, cette solution s'adresse plutôt aux laboratoires de recherche ou aux structures qui disposent de compétences techniques.</p>\n<h2>Quel outil choisir selon votre situation</h2>\n<p>Une fois les limites connues, le choix découle surtout du nombre de réponses attendu et de la durée de la collecte.</p>\n<p>Pour un sondage ponctuel auprès de quelques dizaines ou centaines de personnes, Google Forms ou Tally conviennent sans risque de blocage. Si vous travaillez déjà dans un environnement Microsoft 365, Microsoft Forms a l'avantage de s'intégrer directement à vos outils habituels.</p>\n<p>Pour un formulaire qui reste en ligne pendant des mois, comme un formulaire de contact ou d'adhésion, la situation est différente. Écartez alors Framaforms à cause de sa durée de vie, ainsi que Jotform si le volume risque de dépasser son stock de 500 réponses. Tally et Google Forms restent dans ce cas les options les plus sûres.</p>\n<p>Pour collecter des fichiers, la question devient surtout pratique. Tally accepte les envois sans compte mais plafonne chaque fichier à 10 Mo, tandis que Google Forms impose un compte Google aux répondants et utilise votre propre espace de stockage. Et si vous voulez que vos données restent hébergées en Europe, Tally et Framaforms offrent cette garantie.</p>\n<p>Enfin, pour un questionnaire au rendu soigné, où l'expérience du répondant compte beaucoup, Tally offre déjà une mise en page agréable gratuitement. Typeform ne devient pertinent que si vous êtes prêt à payer.</p>\n<h2>Ce que coûte le passage à une offre payante</h2>\n<p>Si votre projet dépasse malgré tout les limites gratuites, le budget varie fortement d'un outil à l'autre. Les prix ci-dessous sont ceux des offres d'entrée de gamme, dans la devise affichée par chaque éditeur.</p>\n<table>\n<thead>\n<tr>\n<th>Outil</th>\n<th>Offre d'entrée</th>\n<th>Prix affiché</th>\n<th>Ce qu'elle débloque</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>Tally</td>\n<td>Pro</td>\n<td>20 € par mois</td>\n<td>Retrait du logo, fichiers sans limite de taille, collaboration</td>\n</tr>\n<tr>\n<td>LimeSurvey</td>\n<td>Basic</td>\n<td>34 € par mois</td>\n<td>1 000 réponses par mois</td>\n</tr>\n<tr>\n<td>Typeform</td>\n<td>Basic</td>\n<td>29 $ par mois</td>\n<td>100 réponses par mois</td>\n</tr>\n<tr>\n<td>Jotform</td>\n<td>Bronze</td>\n<td>39 $ par mois, ou 408 $ par an</td>\n<td>Plus de formulaires et de réponses</td>\n</tr>\n</tbody>\n</table>\n<p>Typeform et Tally accordent une réduction en cas de paiement annuel. Pour Microsoft Forms, le passage à l'offre payante se fait par un abonnement Microsoft 365, qui donne aussi accès à Word, Excel et au stockage en ligne ; le plafond augmente alors comme indiqué dans la section consacrée à Microsoft Forms.</p>\n<p>Le rapport entre le prix et le volume mérite aussi attention. Chez Typeform, l'offre Basic ne donne accès qu'à 100 réponses par mois, alors que l'offre gratuite de Tally n'a pas de plafond pratique. Avant de payer, demandez-vous donc si vous cherchez vraiment plus de réponses, ou seulement un logo en moins et une mise en page plus libre.</p>\n<h2>Le bon outil gratuit est celui dont le plafond dépasse votre collecte</h2>\n<p>Une offre gratuite ne vaut que si ses limites restent au-dessus de vos besoins réels. Le plus souvent, c'est le nombre de réponses qui décide du choix, et surtout la façon dont il est compté : par mois, par compte ou par formulaire.</p>\n<p>Dans cette logique, Google Forms et Tally couvrent la grande majorité des usages sans blocage. Microsoft Forms, Jotform et Framaforms conviennent à des enquêtes de taille raisonnable, à condition de connaître leur quota, leur stock de réponses ou leur durée de vie. Typeform, SurveyMonkey et la version en ligne de LimeSurvey se testent gratuitement, mais une véritable collecte avec ces outils suppose un abonnement.</p>\n<h2>FAQ</h2>\n<h3>Faut-il informer les répondants si le questionnaire collecte des données personnelles ?</h3>\n<p>Oui. Dès que vous recueillez des noms, des adresses e-mail ou toute autre donnée permettant d'identifier une personne, vous devez indiquer qui collecte les données, dans quel but et quels sont les droits des répondants. La <a href=\"https://www.cnil.fr/fr/les-bases-legales/consentement\">CNIL détaille ces informations à fournir</a> et propose des exemples de mentions d'information. Quel que soit l'outil, ajoutez ce texte au début du questionnaire.</p>\n<h3>Peut-on encaisser un paiement avec un formulaire gratuit ?</h3>\n<p>Tally inclut la collecte de paiements dans son offre gratuite, ce qui est utile pour une inscription payante ou une cotisation d'association. Google Forms, en revanche, ne propose pas de paiement intégré. Pour les autres outils, cette fonction relève généralement des offres payantes.</p>\n<h3>Peut-on récupérer les réponses dans un tableur ?</h3>\n<p>Oui, pour la plupart des outils. Google Forms envoie directement les réponses dans une feuille Google Sheets, et Tally propose gratuitement une intégration avec Google Sheets, Notion et Airtable. Les autres outils permettent au minimum de télécharger les réponses pour les ouvrir dans un tableur, ce qui est d'ailleurs le moyen le plus simple d'en garder une copie avant l'expiration d'un formulaire ou le passage à une autre offre.</p>"
+  },
+  "seo": {
+    "title": "Créer un questionnaire en ligne gratuitement : 8 outils comparés sur leurs vraies limites",
+    "meta_title": "Questionnaire en ligne gratuit : 8 outils comparés (2026)",
+    "meta_description": "Réponses, durée de vie, fichiers, prix : comparez les vraies limites de 8 outils gratuits (Google Forms, Tally, Typeform…) pour créer un questionnaire.",
+    "slug": "creer-questionnaire-en-ligne-gratuit-outils-compares"
+  },
+  "output": {
+    "report_json": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/run/ui/8cef7ea40036406581ad2cfbef218660/report.json",
+    "article_html": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/run/ui/8cef7ea40036406581ad2cfbef218660/article.html"
+  }
+}
