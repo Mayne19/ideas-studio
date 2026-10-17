@@ -11,7 +11,7 @@ Les concurrents servent uniquement à l'analyse. Ne les nomme jamais, ne les cit
 Pour chaque concurrent, note : ce qu'il répond, ce qu'il oublie, ses erreurs, ses chiffres périmés, ses promesses non tenues. Note surtout les contradictions entre eux : elles font souvent la meilleure problématique.
 
 ÉTAPE 3. Le lecteur
-Écris pour toi : la vraie question du lecteur (un débutant), la réponse directe en deux phrases, le piège qu'il ne voit pas, ce que l'article va concrètement lui donner.
+Écris pour toi, en une ligne chacun : la situation exacte du lecteur (un débutant) au moment où il fait sa recherche, la réponse directe, le doute ou le piège qui l'empêche de l'appliquer, le gain concret que l'article lui promet. L'angle de l'article est la réponse à ce doute.
 Avant d'écrire, liste toutes les sous-questions que posent les 3 concurrents et les « Autres questions posées » de Google. Toute sous-question utile au lecteur doit être traitée dans le corps. La longueur découle de cette liste, sans viser un plancher arbitraire.
 
 ÉTAPE 4. Les faits
@@ -23,7 +23,7 @@ Chaque chiffre, prix, date, seuil ou définition doit venir d'une source primair
 - Un seul lien par source, au premier endroit où elle sert.
 
 ÉTAPE 5. Le gain d'information
-Choisis ce qui sert vraiment CE lecteur, sans liste fixe : un outil de décision (tableau de diagnostic ou de choix), un exemple chiffré calculé, un fait surprenant sourcé, les erreurs fréquentes. Avant chaque calcul, vérifie la définition officielle de chaque notion utilisée. Vérifie les unités (par personne ou par foyer, mensuel ou annuel, HT ou TTC). Refais chaque calcul une deuxième fois.
+Choisis au moins deux éléments qu'aucun concurrent ne donne et qui servent vraiment CE lecteur : un outil de décision (tableau selon le cas du lecteur), un calcul vérifié, un fait sourcé contre-intuitif, une erreur courante expliquée par sa cause. Avant chaque calcul, vérifie la définition officielle de chaque notion utilisée. Vérifie les unités (par personne ou par foyer, mensuel ou annuel, HT ou TTC). Refais chaque calcul une deuxième fois.
 
 ÉTAPE 6. Le plan
 - Construis un plan propre à ce sujet. Ne réutilise jamais un plan type.
@@ -35,10 +35,12 @@ Choisis ce qui sert vraiment CE lecteur, sans liste fixe : un outil de décision
 - Tout nombre annoncé (« trois erreurs », « cinq questions ») correspond exactement au nombre d'éléments présents.
 
 ÉTAPE 7. La rédaction, d'un seul tenant
-Introduction, en trois paragraphes et moins de 10 % de l'article :
-1. L'idée générale : la réponse directe à la question du lecteur.
-2. La problématique : le piège ou le problème qu'il ne voit pas, appuyé sur un fait. Si deux conseils opposés circulent, présente-les tous les deux (« Faut-il de l'eau chaude ou de l'eau froide ? »), sans jamais les attribuer à des sites ni parler de « conseils en ligne ».
-3. Une seule phrase qui annonce concrètement ce que le lecteur va obtenir, sans reprendre le titre ni écrire « vous découvrirez ».
+Introduction, en trois paragraphes reliés et 150 mots au plus :
+1. L'idée générale part du moment exact où le lecteur fait sa recherche (« Si vous venez de… », « Si votre… ») et lui donne tout de suite quoi faire, ou l'erreur qu'il est en train de commettre, en moins de 60 mots. Jamais une définition ni une explication technique en première phrase.
+2. La problématique découle logiquement de l'idée générale (« Encore faut-il… ») et décrit le doute concret du lecteur, sous forme de questions s'il le faut (« Faut-il de l'eau chaude ou de l'eau froide ? »). Chaque phrase décrit un fait observable : ce que le lecteur voit, ce qu'il fait, ce qui arrive.
+3. Une seule phrase qui promet de répondre à ces questions et nomme le gain concret pour le lecteur. Jamais une liste neutre de sujets, jamais « Voici le plan » ni « vous découvrirez », sans reprendre le titre.
+
+Ne critique jamais les autres guides, les autres sites ou « les conseils en ligne » : la problématique vient de ce que vit le lecteur, pas de ce que disent les autres.
 
 Écriture :
 - Chaque phrase découle de la précédente. Aucune phrase jetée, aucune liste de phrases sans lien.
@@ -47,12 +49,15 @@ Introduction, en trois paragraphes et moins de 10 % de l'article :
 - N'écris jamais une évidence que tout lecteur connaît déjà.
 - Paragraphes de 2 à 5 phrases, de longueurs variées. Pas de série de paragraphes d'une seule phrase.
 - N'ouvre jamais une section par une annonce (« Voyons », « Passons à », « Reste la question », « Une fois X posé », « Comparons »). La liaison passe par le contenu.
-- Ouvertures interdites aussi : « Le principe est simple », « Tout se joue », « Voici » en début de paragraphe, « Le vrai danger ».
+- Ouvertures interdites aussi : « Le principe est simple », « Tout se joue », « Voici » en début de paragraphe, « Le vrai danger », « Le piège consiste à ».
 - N'écris jamais une phrase qui nie puis restreint la même affirmation (« X n'est pas l'ennemi. Il ne l'est que si… ») : dis directement dans quel cas c'est vrai.
 - Chaque phrase de conséquence dit ce qui arrive concrètement (« la tache devient permanente »), jamais une formule floue comme « vous perdez l'avantage ».
 - Une idée apparaît au plus deux fois : une fois dans l'introduction, une fois dans sa section. La conclusion n'ajoute aucun conseil nouveau et ne répète aucune consigne : elle referme la promesse du titre.
 - Une scène concrète du quotidien liée au sujet, dans le corps, en une ou deux phrases (par exemple la chemise tachée juste avant un rendez-vous), sans formule toute faite.
-- Ton légèrement vif. Une ou deux touches d'humour ou d'émotion au maximum, tirées d'une situation que le lecteur a vécue.
+- Ton calme, clair et bienveillant : le texte guide le lecteur, il ne le gronde pas et ne dramatise pas. Une ou deux touches d'humour ou d'émotion au maximum, tirées d'une situation que le lecteur a vécue.
+- Au plus un modalisateur (« souvent », « plutôt », « généralement », « parfois ») par section.
+- Pas de personnification ni d'image floue : un objet ne « trompe », ne « ment » et ne « se venge » pas. Chaque phrase décrit un fait, une action ou une conséquence vérifiable.
+- Les titres H2 annoncent exactement le contenu de leur section.
 - Interdits : le tiret cadratin ; « Franchement », « Curieusement », « Imaginez », « Concrètement », « En réalité » plus d'une fois ; « En conclusion », « En résumé », « Pour résumer » ; « De plus », « En outre », « Par ailleurs », « Toutefois », « Néanmoins », « Notamment » ; « essentiel », « incontournable », « complet », « puissant », « booster », « joue un rôle clé », « fait la différence » ; « La réalité est plus nuancée ».
 - Aucun faux témoignage, aucun « j'ai testé », aucune anecdote inventée.
 - Un chiffre sans source n'est permis que s'il est calculé à partir de faits sourcés (le calcul est montré) ou présenté comme un exemple (« Prenons un loyer de 600 € »).
@@ -62,7 +67,9 @@ Introduction, en trois paragraphes et moins de 10 % de l'article :
 
 ÉTAPE 8. La relecture critique
 Avant de rendre l'article, relis-le comme un lecteur débutant et corrige tout ce qui ne passe pas :
-- La réponse arrive dans les 100 premiers mots.
+- La première phrase part du moment que vit le lecteur, et la réponse arrive dans les 60 premiers mots.
+- L'annonce promet un gain concret.
+- Aucune phrase ne critique d'autres guides ; aucune phrase ne personnifie un objet ou ne repose sur une image sans sens précis.
 - Chaque titre tient sa promesse.
 - Aucun chiffre sans source, sauf calcul montré ou exemple annoncé.
 - Chaque calcul est juste, avec la bonne définition et les bonnes unités.
