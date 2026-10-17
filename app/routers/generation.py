@@ -9,8 +9,7 @@ from app.core.database import get_db
 from app.dependencies.auth import get_current_user, require_project_role
 from app.models.core import Project
 from app.models.content import Article
-from app.models.reference import ArticleStatus
-from app.services.article_service import primary_keyword, to_public
+from app.services.article_service import primary_keyword
 from app.services.idea_engine import generate_idea
 from app.services.generation_job_service import (
     create_generation_job,
@@ -19,7 +18,7 @@ from app.services.generation_job_service import (
     list_generation_jobs,
     submit_generation_job,
 )
-from app.services.seo.seo_generation_orchestrator import generate_full_article
+from app.services.editorial_workflow_service import create_workflow_idea, request_writing
 from app.services.seo.artifacts import get_latest_artifact, get_all_latest_artifacts
 from app.services.providers.llm_provider import (
     GenerationFailedError,
@@ -174,41 +173,19 @@ def get_generation_job_route(
 
 
 def _generate_article_sync(project_id: str, body: GenerateArticleRequest, db: Session) -> GenerateArticleResponse:
-    project = _get_project_or_404(project_id, db)
-    profile = project.active_editorial_profile
-
-    try:
-        llm = get_llm_provider()
-        search = get_search_provider(project_id)
-    except ProviderUnavailableError as exc:
-        raise _generation_http_error(exc) from exc
-
-    logger.info(
-        "generation_start provider=%s model=%s is_mock=%s project=%s",
-        llm.provider_name, llm.model_name, llm.is_mock, project_id,
+    _get_project_or_404(project_id, db)
+    article = create_workflow_idea(
+        db=db,
+        project_id=project_id,
+        title=body.preferred_title or body.keyword or "Nouvelle idée",
+        keyword=body.keyword,
+        category_id=body.category_id,
+        audience=body.audience,
+        angle=body.angle,
+        search_intent=body.search_intent,
+        context_hint=body.context_hint,
     )
-
-    try:
-        from app.services.agents.agent_router import get_agent_router
-        article = generate_full_article(
-            db=db,
-            project_id=project_id,
-            llm=llm,
-            search=search,
-            agent_router=get_agent_router(db=db),
-            preferred_title=body.preferred_title,
-            keyword=body.keyword,
-            category_id=body.category_id,
-            audience=body.audience or (profile.audience if profile else None),
-            angle=body.angle,
-            search_intent=body.search_intent,
-            context_hint=body.context_hint,
-            include_faq=body.include_faq,
-            include_callouts=body.include_callouts,
-        )
-    except (ProviderUnavailableError, GenerationFailedError) as exc:
-        raise _generation_http_error(exc) from exc
-
+    request_writing(db, article)
     db.commit()
     db.refresh(article)
 
@@ -219,8 +196,6 @@ def _generate_article_sync(project_id: str, body: GenerateArticleRequest, db: Se
         keyword=primary_keyword(db, article.id),
         status=article.status_reason_id,
         word_count=revision.word_count if revision else 0,
-        provider_name=llm.provider_name,
-        model_name=llm.model_name,
         has_generation_report=get_latest_artifact(db, article.id, "generation_report") is not None,
     )
 
