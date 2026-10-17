@@ -7,6 +7,7 @@ reste donc utilisable pendant les phases 1 et 2.
 from __future__ import annotations
 
 import re
+import uuid
 from datetime import datetime, timezone
 from enum import StrEnum
 
@@ -17,6 +18,8 @@ from sqlalchemy.orm import Session
 from app.models.ai import Artifact
 from app.models.content import Article, ArticleRevision, ArticleSeo
 from app.models.reference import ArticleStatus, RevisionSource, set_article_status
+from app.core.utils import generate_unique_slug, slugify
+from app.services.article_service import set_primary_keyword
 from app.services.seo.artifacts import get_latest_artifact, save_artifact
 
 
@@ -86,6 +89,76 @@ def _next_revision_no(db: Session, article_id: str) -> int:
 
 def _markdown_to_html(source: str) -> str:
     return markdown.markdown(source, extensions=["tables", "sane_lists"])
+
+
+def _unique_slug(db: Session, project_id: str, title: str) -> str:
+    base = slugify(title) or f"idee-{uuid.uuid4().hex[:8]}"
+    existing = set(
+        db.execute(
+            select(Article.slug).where(
+                Article.project_id == project_id,
+                Article.slug.like(f"{base}%"),
+            )
+        ).scalars().all()
+    )
+    return generate_unique_slug(base, existing)
+
+
+def create_workflow_idea(
+    db: Session,
+    project_id: str,
+    title: str,
+    *,
+    keyword: str | None = None,
+    category_id: str | None = None,
+    search_intent: str | None = None,
+    context_hint: str | None = None,
+    audience: str | None = None,
+    angle: str | None = None,
+) -> Article:
+    """Create a subject for the local writer without calling an AI provider."""
+    clean_title = title.strip()
+    if not clean_title:
+        raise ValueError("Le sujet ou le titre est obligatoire.")
+
+    article = Article(
+        id=str(uuid.uuid4()),
+        project_id=project_id,
+        category_id=category_id,
+        slug=_unique_slug(db, project_id, clean_title),
+        search_intent=search_intent,
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+    )
+    set_article_status(article, ArticleStatus.IDEA_PROPOSED)
+    db.add(article)
+    db.flush()
+
+    revision = ArticleRevision(
+        article_id=article.id,
+        revision_no=1,
+        source=RevisionSource.AI,
+        title=clean_title,
+        word_count=0,
+    )
+    db.add(revision)
+    db.flush()
+    article.current_revision_id = revision.id
+    set_primary_keyword(db, project_id, article.id, keyword)
+    save_artifact(
+        db,
+        article.id,
+        "editorial_request",
+        {
+            "keyword": keyword,
+            "context_hint": context_hint,
+            "audience": audience,
+            "angle": angle,
+            "source": "editorial_workflow",
+        },
+    )
+    _record_workflow_state(db, article, EditorialStatus.IDEA)
+    return article
 
 
 def technical_checks(article: str, fiche: dict | None, fiche_error: str = "") -> list[dict]:
