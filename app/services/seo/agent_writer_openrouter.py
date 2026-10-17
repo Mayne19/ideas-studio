@@ -124,7 +124,9 @@ class OpenRouterAgentClient:
             url = str(args.get("url") or "")
             if _url_key(url) not in self.seen_urls:
                 # URL devinée par le modèle (souvent une 404) : refusée sans
-                # consommer le budget de lectures (consigne du 2026-10-17).
+                # téléchargement ; elle compte dans le plafond d'échecs, pas
+                # dans le budget de lectures (consigne du 2026-10-17).
+                self.failed_fetches += 1
                 self.fetch_log.append({"url": url, "chars": 0, "failed": True, "method": "refusée",
                                        "note": "URL absente des résultats de recherche"})
                 return "URL inventée : choisis une URL issue d'une recherche."
