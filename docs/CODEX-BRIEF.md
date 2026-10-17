@@ -2,7 +2,7 @@
 
 Rédigé par Claude (rédacteur en chef) le 17 octobre 2026, ajouté au dépôt par Claude Code. À lire en entier avant toute tâche.
 
-> Les trois articles de référence validés (questionnaire-90.md, basilic-90.md, budget-50-30-20-90.md), collés par Claude dans sa conversation, sont disponibles sur le Mac dans `/Users/mayne/Perso/Projects/ideas-studio-shared/calibration/` : copie-les tels quels dans `tests/data/judge_calibration/` sur ta branche.
+> Les trois articles de référence validés (questionnaire-90.md, basilic-90.md, budget-50-30-20-90.md) sont dans le dépôt, dans `tests/data/judge_calibration/` (versions finales du rédacteur en chef, utilisées par l'étalonnage du juge).
 
 **DOSSIER CODEX : à lire en entier avant toute tâche**
 
