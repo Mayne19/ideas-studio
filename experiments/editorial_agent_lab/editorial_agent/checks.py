@@ -12,6 +12,18 @@ FICHE_FIELDS: dict[str, type] = {
 OPTIONAL_FICHE_FIELDS: dict[str, type] = {"integrations": list, "experience_a_ajouter": list}
 
 
+def _caption_problems(fiche: dict) -> list[str]:
+    problems: list[str] = []
+    for collection in ("images", "integrations"):
+        items = fiche.get(collection)
+        if not isinstance(items, list):
+            continue
+        for index, item in enumerate(items):
+            if isinstance(item, dict) and "legende" in item and not isinstance(item["legende"], str):
+                problems.append(f"{collection}[{index}].legende doit être str")
+    return problems
+
+
 def summary_box(article: str) -> dict:
     ok = '<aside class="summary">' in article
     return {"name": "encadré « En résumé »", "passed": ok,
@@ -30,6 +42,7 @@ def fiche_valid(fiche: dict | None, error: str) -> dict:
     problems = [f"{key} manquant" for key in FICHE_FIELDS if key not in fiche]
     problems += [f"{key} doit être {kind.__name__}" for key, kind in (FICHE_FIELDS | OPTIONAL_FICHE_FIELDS).items()
                  if key in fiche and not isinstance(fiche[key], kind)]
+    problems += _caption_problems(fiche)
     return {"name": "fiche json valide", "passed": not problems, "detail": " ; ".join(problems)}
 
 
