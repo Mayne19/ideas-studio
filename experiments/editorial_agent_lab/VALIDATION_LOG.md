@@ -27,6 +27,16 @@ pas encore une validation de production avec de vraies clés et de vraies pages.
 - A9 : les contrats de sections et de FAQ sont contrôlés avant rédaction.
 - A10 : le recouvrement entre une question FAQ et une section du corps est
   détecté avant rédaction.
+- A6 : le registre exige une citation exacte, une source lue, un statut vérifié
+  et interdit les concurrents comme sources de faits.
+- A8 : un angle doit avoir un gain d'information, une différence par rapport
+  aux concurrents et des faits de soutien présents dans le registre.
+- A11 : le rédacteur unique compose le contexte complet et n'effectue qu'un
+  seul appel ; un JSON invalide est bloquant et ne déclenche pas de correction
+  cachée.
+- A12 : le validateur central regroupe les contrôles du dossier, du plan, des
+  faits et du brouillon. Une similarité est une alerte non bloquante ; elle ne
+  déclenche aucune réécriture.
 
 ### Preuve exécutée
 

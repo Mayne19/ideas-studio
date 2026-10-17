@@ -4,6 +4,7 @@ from typing import Any
 
 from experiments.editorial_agent_lab.editorial_agent.models import (
     ArticleDraft,
+    EditorialAngle,
     ArticlePlan,
     ArticleRequest,
     FactRecord,
@@ -14,6 +15,15 @@ from experiments.editorial_agent_lab.editorial_agent.models import (
 from experiments.editorial_agent_lab.editorial_agent.existing_pipeline_adapter import (
     ExistingPipelineWebAdapter,
 )
+from experiments.editorial_agent_lab.editorial_agent.angle import propose_angle, validate_angle
+from experiments.editorial_agent_lab.editorial_agent.fact_ledger import assign_fact_ids, validate_fact_ledger
+from experiments.editorial_agent_lab.editorial_agent.prompting import build_writer_context
+from experiments.editorial_agent_lab.editorial_agent.writer import (
+    SinglePassWriter,
+    WriterOutputError,
+    load_lab_prompt,
+)
+from experiments.editorial_agent_lab.editorial_agent.validation_pipeline import validate_article
 from experiments.editorial_agent_lab.editorial_agent.similarity import scan_exact_phrases
 from experiments.editorial_agent_lab.editorial_agent.planning import (
     build_reader_intent,
@@ -220,3 +230,142 @@ def test_reader_intent_uses_a_missing_competitor_topic() -> None:
         missing_topics=["le coût réel"],
     )])
     assert reader.likely_trap == "le coût réel"
+
+
+def test_fact_ledger_requires_exact_quote_and_loaded_source() -> None:
+    facts = assign_fact_ids([FactRecord(
+        value="12",
+        definition="Un seuil.",
+        source_url="https://official.example/fact",
+        source_kind="official",
+        verified=True,
+    )])
+    issues = validate_fact_ledger(facts, {"https://official.example/fact"})
+    assert any(issue.code == "missing_fact_quote" for issue in issues)
+
+
+def test_angle_must_be_distinct_and_supported() -> None:
+    from experiments.editorial_agent_lab.editorial_agent.models import CompetitorPage
+
+    reader = build_reader_intent("choisir un outil", [CompetitorPage(
+        url="https://example.com",
+        title="Concurrent",
+        content="texte",
+        missing_topics=["un calcul réel"],
+    )])
+    angle = propose_angle(reader, [], ["fact-1"])
+    assert validate_angle(angle, {"fact-1"}) == []
+
+
+def test_writer_context_contains_plan_and_callout_rule() -> None:
+    context = build_writer_context(
+        ArticleRequest(keyword="choisir un outil"),
+        SiteContext(site_name="Test", domain="example.com"),
+        [],
+        build_reader_intent("choisir un outil", []),
+        EditorialAngle(
+            title="Un angle",
+            reader_problem="Un problème",
+            information_gain="Un gain",
+            distinct_from_competitors=["Une différence"],
+        ),
+        [],
+        make_plan(),
+    )
+    assert '"summary_callout"' in context
+    assert "call out En résumé" in context
+
+
+def test_single_pass_writer_calls_model_once_and_validates_json() -> None:
+    calls: list[tuple[str, str]] = []
+
+    def fake_call(system: str, user: str) -> str:
+        calls.append((system, user))
+        return make_draft().model_dump_json()
+
+    writer = SinglePassWriter(fake_call, load_lab_prompt())
+    draft = writer.write(
+        ArticleRequest(keyword="choisir un outil"),
+        SiteContext(site_name="Test", domain="example.com"),
+        [],
+        build_reader_intent("choisir un outil", []),
+        EditorialAngle(
+            title="Un angle",
+            reader_problem="Un problème",
+            information_gain="Un gain",
+            distinct_from_competitors=["Une différence"],
+        ),
+        [],
+        make_plan(),
+    )
+    assert draft.title == "Un article utile"
+    assert len(calls) == 1
+    assert "summary_callout" in calls[0][1]
+
+
+def test_single_pass_writer_does_not_hide_a_correction_round() -> None:
+    calls = 0
+
+    def fake_call(system: str, user: str) -> str:
+        nonlocal calls
+        calls += 1
+        return "ceci n'est pas du JSON"
+
+    writer = SinglePassWriter(fake_call, load_lab_prompt())
+    try:
+        writer.write(
+            ArticleRequest(keyword="choisir un outil"),
+            SiteContext(site_name="Test", domain="example.com"),
+            [],
+            build_reader_intent("choisir un outil", []),
+            EditorialAngle(
+                title="Un angle",
+                reader_problem="Un problème",
+                information_gain="Un gain",
+                distinct_from_competitors=["Une différence"],
+            ),
+            [],
+            make_plan(),
+        )
+    except WriterOutputError:
+        pass
+    else:
+        raise AssertionError("un JSON invalide doit être bloquant")
+    assert calls == 1
+
+
+def test_validation_pipeline_keeps_similarity_as_non_blocking_warning() -> None:
+    from experiments.editorial_agent_lab.editorial_agent.models import CompetitorPage, SimilarityFinding
+
+    competitors = [CompetitorPage(
+        url=f"https://competitor-{index}.example",
+        title=f"Concurrent {index}",
+        content="Contenu lisible.",
+        strengths=["Une force"],
+        weaknesses=["Une lacune"],
+    ) for index in range(3)]
+    facts = [FactRecord(
+        fact_id="fact-1",
+        value="12",
+        definition="Un seuil.",
+        quote="Le seuil est de 12.",
+        source_url="https://official.example/fact",
+        source_kind="official",
+        verified=True,
+    )]
+    report = validate_article(
+        plan=make_plan(),
+        draft=make_draft(),
+        facts=facts,
+        competitors=competitors,
+        source_urls={"https://official.example/fact"},
+        similarity_findings=[SimilarityFinding(
+            sentence="Une phrase reprise suffisamment longue pour être signalée.",
+            source_url="https://source.example/page",
+            matched_text="Une phrase reprise suffisamment longue pour être signalée.",
+            similarity=1.0,
+        )],
+    )
+    assert report.passed is False
+    assert report.blocking_count > 0
+    assert any(issue.code == "similarity_warning" and not issue.blocking for issue in report.issues)

@@ -35,13 +35,13 @@ preuve locale avant de passer à la suivante.
 | A3 | Brancher la vraie lecture | Adaptateur vers `PageCache` et extraction de contenu | Contrat de lecture et gestion d'échec validés ; factory CMS bloquée par l'environnement incomplet | `validated` |
 | A4 | Construire le dossier concurrentiel | Forces, faiblesses, oublis et contradictions par page | Contrats et conditions bloquantes validés ; analyse sémantique réelle encore à brancher | `validated` |
 | A5 | Comprendre le lecteur | Question réelle, niveau, piège et gain concret | Construction déterministe minimale validée ; analyse sémantique du modèle encore à brancher | `validated` |
-| A6 | Construire le registre des faits | Faits, définitions, unités, sources, citations et statut | Fait confirmé, fait contradictoire et fait non vérifié | `planned` |
+| A6 | Construire le registre des faits | Faits, définitions, unités, sources, citations et statut | Citation absente, source non lue, fait non vérifié et concurrent utilisé comme source détectés | `validated` |
 | A7 | Diversifier les sources | Au moins trois domaines admissibles, hors concurrents | Test de source dominante et test de sources suffisantes | `validated` |
-| A8 | Choisir l'angle | Angle original fondé sur le lecteur et les lacunes | L'angle doit différer des concurrents et rester traçable | `planned` |
+| A8 | Choisir l'angle | Angle original fondé sur le lecteur et les lacunes | Angle incomplet ou non traçable bloqué ; proposition minimale testée | `validated` |
 | A9 | Construire le plan complet | Introduction, call out, H2, H3, conclusion et FAQ | Contrats de sections et FAQ validés ; planification par le modèle encore à brancher | `validated` |
 | A10 | Vérifier les zones de répétition | Matrice article/FAQ et matrice section/fait | Recouvrement FAQ/corps et recouvrement de faits détectés | `validated` |
-| A11 | Brancher le rédacteur unique | Un appel de rédaction avec recherche, faits et plan complets | Faux client : un seul appel, JSON valide, contexte conservé | `planned` |
-| A12 | Valider le brouillon | Structure, chiffres, définitions, répétitions, call out et conclusion | Erreurs bloquantes détectées ; aucune réécriture automatique stylistique | `planned` |
+| A11 | Brancher le rédacteur unique | Un appel de rédaction avec recherche, faits et plan complets | Faux modèle : un seul appel, JSON valide, contexte et règles transmis | `validated` |
+| A12 | Valider le brouillon | Structure, chiffres, définitions, répétitions, call out et conclusion | Rapport centralisé ; erreurs bloquantes séparées des alertes de similarité | `validated` |
 | A13 | Analyser le plagiat | Phrase, source, passage commun, score et suggestion séparée | Le brouillon initial reste inchangé après détection | `validated` |
 | A14 | Conserver la meilleure version | Comparaison des versions sans dégrader un passage réussi | Égalité : conserver la version la plus ancienne | `validated` |
 | A15 | Produire le rapport | Recherches, pages, coûts, sources, faits, contrôles, alertes et versions | Rapport JSON complet et lisible | `planned` |

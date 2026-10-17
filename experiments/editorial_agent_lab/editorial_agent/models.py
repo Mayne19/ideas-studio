@@ -59,13 +59,25 @@ class ReaderIntent(BaseModel):
 class FactRecord(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    fact_id: str = ""
     value: str
     definition: str
+    quote: str = ""
     unit: str = ""
     source_url: HttpUrl
     source_title: str = ""
     source_kind: Literal["official", "institutional", "study", "specialist", "other"]
     verified: bool = False
+
+
+class EditorialAngle(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str
+    reader_problem: str
+    information_gain: str
+    distinct_from_competitors: list[str] = Field(default_factory=list)
+    supported_by_facts: list[str] = Field(default_factory=list)
 
 
 class SectionPlan(BaseModel):
@@ -129,6 +141,15 @@ class ValidationIssue(BaseModel):
     message: str
     blocking: bool
     location: str = ""
+
+
+class ValidationReport(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    issues: list[ValidationIssue] = Field(default_factory=list)
+    blocking_count: int = 0
+    warning_count: int = 0
+    passed: bool = True
 
 
 class SimilarityFinding(BaseModel):
