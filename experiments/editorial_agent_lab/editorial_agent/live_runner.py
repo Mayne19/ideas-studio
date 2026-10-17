@@ -21,7 +21,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 
-from .existing_pipeline_adapter import ExistingPipelineWebAdapter, from_environment
+from .existing_pipeline_adapter import ExistingPipelineWebAdapter, from_environment, from_ideas_studio
 from .prompting import load_system_prompt
 
 
@@ -180,7 +180,13 @@ def _env_value(*names: str) -> str | None:
 
 
 def resolve_model_route(project_id: str | None = None) -> tuple[str, str, str]:
-    """Résout la route du laboratoire sans consulter le CMS."""
+    """Résout la route du laboratoire sans modifier le CMS.
+
+    Les variables d'environnement restent prioritaires. Quand elles ne sont
+    pas présentes, le laboratoire peut relire les credentials déjà configurés
+    dans le runtime du projet, comme l'ancienne interface le faisait. Cette
+    lecture ne récupère aucun contenu et n'écrit rien dans le CMS.
+    """
 
     anthropic_key = _env_value("ANTHROPIC_API_KEY")
     if anthropic_key:
@@ -193,23 +199,40 @@ def resolve_model_route(project_id: str | None = None) -> tuple[str, str, str]:
             or "anthropic/claude-opus-5.5"
         )
 
+    try:
+        from app.core.database import SessionLocal
+        from app.services.seo.agent_writer import resolve_agent_route
+
+        with SessionLocal() as db:
+            provider, api_key, model = resolve_agent_route(db, project_id)
+        if provider and api_key:
+            return provider, api_key, model
+    except Exception:
+        # Le message final reste uniforme : le laboratoire n'expose jamais la
+        # cause ni la valeur d'un secret dans l'interface.
+        pass
+
     raise LiveRunError(
-        "Aucune clé Anthropic/OpenRouter accessible pour le test autonome. "
-        "Configure ANTHROPIC_API_KEY ou OPENROUTER_API_KEY dans l'environnement "
-        "du laboratoire ; aucune clé n'est écrite dans le dépôt."
+        "Aucune clé Anthropic/OpenRouter accessible pour le test. Le laboratoire "
+        "cherche d'abord les variables d'environnement, puis les credentials "
+        "déjà configurés dans le runtime du projet ; aucune clé n'est écrite "
+        "dans le dépôt."
     )
 
 
 def build_search_adapter(project_id: str | None = None) -> ExistingPipelineWebAdapter:
-    """Construit l'adaptateur de recherche autonome du laboratoire."""
+    """Construit l'adaptateur de recherche sans modifier le CMS."""
 
     try:
         adapter = from_environment()
     except Exception as exc:
-        raise LiveRunError(
-            "La recherche web du test autonome ne peut pas être initialisée. "
-            "Configure une clé de recherche dans l'environnement du laboratoire."
-        ) from exc
+        try:
+            adapter = from_ideas_studio(project_id)
+        except Exception as runtime_exc:
+            raise LiveRunError(
+                "La recherche web du test ne peut pas être initialisée. "
+                "Aucune configuration de recherche accessible."
+            ) from runtime_exc
     if not getattr(adapter, "search_fn", None):
         raise LiveRunError("L'adaptateur de recherche réel est absent.")
     return adapter

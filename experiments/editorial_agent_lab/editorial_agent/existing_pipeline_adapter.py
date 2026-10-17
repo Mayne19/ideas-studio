@@ -110,3 +110,24 @@ def from_environment() -> ExistingPipelineWebAdapter:
         search_fn=serp.search,
         fetch_fn=page_fetcher(),
     )
+
+
+def from_ideas_studio(project_id: str | None = None) -> ExistingPipelineWebAdapter:
+    """Relit l'adaptateur de recherche déjà configuré dans le projet.
+
+    Cette passerelle est en lecture seule : elle ne publie rien et ne modifie
+    aucune donnée du CMS. Elle conserve le comportement de l'ancien laboratoire
+    quand la recherche était configurée dans le runtime du projet plutôt que
+    dans l'environnement du processus local.
+    """
+
+    from app.services.seo.adapters.serp_adapter import get_serp_adapter
+    from app.services.seo.agent_writer_openrouter import page_fetcher
+
+    serp = get_serp_adapter(project_id)
+    if not getattr(serp, "configured", False):
+        raise RuntimeError("Aucune configuration de recherche accessible.")
+    return ExistingPipelineWebAdapter(
+        search_fn=serp.search,
+        fetch_fn=page_fetcher(),
+    )
