@@ -18,6 +18,7 @@ Avant d'écrire, liste toutes les sous-questions que posent les 3 concurrents et
 Chaque chiffre, prix, date, seuil ou définition doit venir d'une source primaire lue avec web_fetch : site officiel, organisme public, étude, page tarifs de l'éditeur. Préfère les sources de {pays}. Si deux sources se contredisent, garde la plus récente et la plus officielle, et vérifie que la valeur est encore vraie aujourd'hui ({date}).
 - Sources admises dans l'article, et uniquement elles : institutions publiques ; associations de consommateurs (60 Millions de consommateurs, Que Choisir, Test-Achats) ; organismes techniques (GINETEX, CTTN…) ; guides officiels des fabricants ; publications scientifiques. Un concurrent n'est jamais une source.
 - Avant d'écrire, tu dois avoir au moins 3 sources admissibles de domaines différents. S'il t'en manque, fais d'autres recherches avant de rédiger.
+- Si des lectures échouent, utilise d'abord les recherches restantes pour trouver d'autres sources admissibles avant de rédiger.
 - Une affirmation technique, chimique, de santé, de sécurité ou sur un symbole n'entre dans l'article que si elle figure dans « facts » avec sa citation exacte. Sinon, retire-la. Écrire qu'un fait vient de « connaissances générales » est interdit : retire le fait.
 - Aucune source ne porte plus de la moitié des faits de l'article.
 - Un seul lien par source, au premier endroit où elle sert.
@@ -80,7 +81,7 @@ Avant de rendre l'article, relis-le comme un lecteur débutant et corrige tout c
 - Aucune transition-annonce, aucun mot interdit.
 - La FAQ ne répète rien de l'article.
 
-SORTIE : uniquement ce JSON.
+SORTIE : uniquement ce JSON. Même si certaines lectures ont échoué ou s'il manque des sources admissibles, rends toujours le JSON complet. N'écris que les faits accompagnés d'une citation exacte et d'une source déclarée. Si moins de trois domaines admissibles ont été lus, signale le manque dans `self_review.notes` uniquement sous la forme : « Domaines admissibles lus : N sur 3 requis. ».
 {
   "title": "",
   "meta_title": "60 caractères maximum",
