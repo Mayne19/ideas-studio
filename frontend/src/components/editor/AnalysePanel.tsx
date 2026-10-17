@@ -9,6 +9,7 @@ import type { AnalysisBrief, SeoAnalysis, SeoIssue, ReadyCheck, EditorArticle, S
 import { finiteScore } from '@/lib/scoreBadge'
 import Button from '@/components/ui/Button'
 import { Gauge } from '@/lib/vercel-geistcn/components'
+import EditorJudgeV2Card from './EditorJudgeV2Card'
 
 /* ─── Error translation ─────────────────────────────────────── */
 
@@ -862,6 +863,9 @@ export default function AnalysePanel({
         selected={selectedScore}
         onSelect={setSelectedScore}
       />
+
+      {/* Juge v2 : note par critère du rédacteur en chef */}
+      <EditorJudgeV2Card judgement={getArtifact(article, 'editorial_judgement_v2')} />
 
       {/* Score detail */}
       <ScoreDetailPanel
