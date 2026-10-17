@@ -16,10 +16,10 @@ from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from app.models.ai import Artifact, Pipeline
-from app.models.content import Article, ArticleRevision, ArticleSeo
+from app.models.content import Article, ArticleRevision, ArticleSeo, Category
 from app.models.reference import ArticleStatus, RevisionSource, set_article_status
 from app.core.utils import generate_unique_slug, slugify
-from app.services.article_service import set_primary_keyword
+from app.services.article_service import primary_keyword, set_primary_keyword
 from app.services.seo.artifacts import get_latest_artifact, save_artifact
 from app.services.editorial_score_service import compute_editorial_score, store_editorial_score
 from app.services.pipeline_service import resolve_min_publish_score
@@ -37,6 +37,7 @@ class EditorialStatus(StrEnum):
     SCHEDULED = "scheduled"
     PUBLISHED = "published"
     UPDATE = "update"
+    ERROR = "error"
 
 
 ARTICLE_STATUS_BY_WORKFLOW_STATUS: dict[EditorialStatus, ArticleStatus] = {
@@ -67,6 +68,8 @@ WORKFLOW_STATUS_BY_ARTICLE_STATUS: dict[ArticleStatus, EditorialStatus] = {
     ArticleStatus.IMPROVEMENT_PROPOSED: EditorialStatus.UPDATE,
     ArticleStatus.IMPROVEMENT_IN_PROGRESS: EditorialStatus.UPDATE,
     ArticleStatus.IMPROVEMENT_READY: EditorialStatus.UPDATE,
+    ArticleStatus.FAILED: EditorialStatus.ERROR,
+    ArticleStatus.BLOCKED_COST_LIMIT: EditorialStatus.ERROR,
 }
 
 
@@ -184,10 +187,61 @@ def _record_workflow_state(db: Session, article: Article, status: EditorialStatu
     )
 
 
-def request_writing(db: Session, article: Article, *, commit: bool = True) -> Article:
+def _normalise_topic(value: str | None) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9àâäéèêëîïôöùûüçñ]+", " ", (value or "").lower())).strip()
+
+
+def _has_cannibalization(db: Session, article: Article) -> bool:
+    title = _normalise_topic(article.current_revision.title if article.current_revision else "")
+    keyword = _normalise_topic(primary_keyword(db, article.id))
+    if not title and not keyword:
+        return False
+    candidates = db.execute(
+        select(Article).where(
+            Article.project_id == article.project_id,
+            Article.category_id == article.category_id,
+            Article.id != article.id,
+            Article.status_reason_id != ArticleStatus.IDEA_REJECTED,
+        )
+    ).scalars().all()
+    for candidate in candidates:
+        other_title = _normalise_topic(candidate.current_revision.title if candidate.current_revision else "")
+        other_keyword = _normalise_topic(primary_keyword(db, candidate.id))
+        if (keyword and keyword == other_keyword) or (title and title == other_title):
+            return True
+    return False
+
+
+def workflow_article_details(db: Session, article: Article) -> dict:
+    """Return the compact data displayed by the Production screen."""
+    from app.services.editorial_score_service import compute_editorial_score
+
+    fiche = get_latest_artifact(db, article.id, FICHE_ARTIFACT_KEY)
+    workflow = get_latest_artifact(db, article.id, WORKFLOW_ARTIFACT_KEY) or {}
+    writer_report = get_latest_artifact(db, article.id, "editorial_writer_report") or {}
+    score = compute_editorial_score(db, article, fiche, workflow.get("fiche_error", ""))
+    category = db.get(Category, article.category_id) if article.category_id else None
+    return {
+        "category_id": article.category_id,
+        "category_name": category.name if category else None,
+        "keyword": primary_keyword(db, article.id),
+        "duplicate": _has_cannibalization(db, article),
+        "score": score["global_score"],
+        "checks": score["blocking_checks"],
+        "alerts": (["plagiat"] if score["plagiarism_alert"] else []) + (["doublon"] if _has_cannibalization(db, article) else []),
+        "fiche": fiche,
+        "planned_write_at": (get_latest_artifact(db, article.id, "planning_schedule") or {}).get("target_write_at"),
+        "cost_usd": writer_report.get("cost_usd"),
+        "error": writer_report.get("error"),
+    }
+
+
+def request_writing(db: Session, article: Article, *, commit: bool = True, comment: str | None = None) -> Article:
     set_article_status(article, ArticleStatus.WRITING_REQUESTED)
+    if comment:
+        article.rejection_note = comment
     article.updated_at = datetime.now(timezone.utc)
-    _record_workflow_state(db, article, EditorialStatus.WRITING)
+    _record_workflow_state(db, article, EditorialStatus.WRITING, comment=comment)
     if commit:
         db.commit()
         db.refresh(article)
