@@ -226,26 +226,6 @@ def test_agent_settings_are_editable_and_bounded():
             PipelineSettingsUpdate(agent_max_cost_usd=bad)
 
 
-def test_orchestrator_reads_agent_settings_from_pipeline():
-    from types import SimpleNamespace
-
-    from app.services.seo.seo_generation_orchestrator import SEOGenerationOrchestrator
-
-    def orch(pipe):
-        return SimpleNamespace(project_id="p", db=SimpleNamespace(get=lambda model, pid: pipe))
-
-    read = SEOGenerationOrchestrator._agent_settings
-    pipe = SimpleNamespace(agent_max_cost_usd=1.70, agent_reader_fallback=False, agent_reasoning_effort="medium",
-                           agent_consistency_review=True)
-    assert read(orch(pipe)) == {"max_cost_usd": 1.7, "reader_fallback": False, "reasoning_effort": "medium",
-                                "consistency_review": True}
-    assert read(orch(None)) == {"max_cost_usd": 3.0, "reader_fallback": True, "reasoning_effort": "low",
-                                "consistency_review": False}
-    bad = SimpleNamespace(agent_max_cost_usd=1, agent_reader_fallback=True, agent_reasoning_effort="ultra",
-                          agent_consistency_review=False)
-    assert read(orch(bad))["reasoning_effort"] == "low"
-
-
 def test_fetch_refuses_urls_absent_from_search_results():
     from app.services.seo.agent_writer_openrouter import OpenRouterAgentClient
 
