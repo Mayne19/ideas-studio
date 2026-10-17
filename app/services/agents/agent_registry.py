@@ -415,20 +415,6 @@ AGENTS: list[AgentDef] = [
         status=AgentStatus.active,
         output_json_field="external_links_json",
     ),
-    # ═══════════════════════════════════════════════════════════════════════
-    # Phase 6 — SEO/GEO Optimization
-    # ═══════════════════════════════════════════════════════════════════════
-    AgentDef(
-        agent_id="seo_optimizer",
-        name="Optimisation SEO",
-        description="Contrôle et optimise le SEO avancé de l'article",
-        category=AgentCategory.review,
-        phase="seo",
-        icon="search",
-        implementation_ref="seo_review_service",
-        status=AgentStatus.active,
-        output_json_field="seo_review_json",
-    ),
     AgentDef(
         agent_id="geo_answer_optimizer",
         name="Optimisation GEO",
