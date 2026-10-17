@@ -29,10 +29,6 @@ from app.services.article_lifecycle_service import (
     unschedule_article,
     rollback_article,
 )
-from app.services.seo.seo_review_service import (
-    build_review_error_report,
-    run_and_store_seo_review,
-)
 from app.services.publication_revalidation_service import trigger_project_revalidation
 from app.services.validation_service import PublishBlockedError
 
@@ -115,34 +111,6 @@ def patch_article_route(
     if member.role == "viewer":
         raise HTTPException(status_code=403, detail="Viewers cannot edit articles")
     return to_public(db, update_article(db, article, data))
-
-
-@router.post("/projects/{project_id}/articles/{article_id}/seo-expert-review")
-def seo_expert_review_route(
-    project_id: str,
-    article_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    article = get_article_by_id(db, article_id)
-    if not article or article.project_id != project_id:
-        raise HTTPException(status_code=404, detail="Article not found")
-    member = get_member_for_project(db, current_user.id, article.project_id)
-    if not member:
-        raise HTTPException(status_code=403, detail="Access denied")
-    if member.role == "viewer":
-        raise HTTPException(status_code=403, detail="Viewers cannot run SEO expert review")
-
-    try:
-        review = run_and_store_seo_review(db, article)
-    except Exception as exc:
-        review = build_review_error_report(f"L'audit SEO Expert a echoue: {exc}")
-        from app.services.seo.artifacts import save_artifact
-        save_artifact(db, article.id, "seo_review", review)
-        logger.warning("SEO expert review failed for article %s: %s", article.id, exc)
-
-    db.commit()
-    return review
 
 
 @router.post("/articles/{article_id}/promote", response_model=PromoteResponse)
