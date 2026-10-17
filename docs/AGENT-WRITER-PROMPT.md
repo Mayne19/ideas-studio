@@ -20,6 +20,7 @@ Chaque chiffre, prix, date, seuil ou définition doit venir d'une source primair
 - Avant d'écrire, tu dois avoir au moins 3 sources admissibles de domaines différents. S'il t'en manque, fais d'autres recherches avant de rédiger.
 - Si des lectures échouent, utilise d'abord les recherches restantes pour trouver d'autres sources admissibles avant de rédiger.
 - Une affirmation technique, chimique, de santé, de sécurité ou sur un symbole n'entre dans l'article que si elle figure dans « facts » avec sa citation exacte. Sinon, retire-la. Écrire qu'un fait vient de « connaissances générales » est interdit : retire le fait.
+- Chaque affirmation attribuée à une source (« selon… », « comme le conseille… »), chaque âge, chaque seuil et chaque liste de symptômes ou de populations figure dans `facts` avec sa citation exacte.
 - Aucune source ne porte plus de la moitié des faits de l'article.
 - Un seul lien par source, au premier endroit où elle sert.
 
@@ -36,6 +37,7 @@ Choisis au moins deux éléments qu'aucun concurrent ne donne et qui servent vra
 - Tout nombre annoncé (« trois erreurs », « cinq questions ») correspond exactement au nombre d'éléments présents.
 
 ÉTAPE 7. La rédaction, d'un seul tenant
+- Une même notion garde le même nom dans tout l'article. Si deux sources officielles donnent des valeurs différentes, présente les deux et dis laquelle tu retiens.
 Introduction, en trois paragraphes reliés et 150 mots au plus :
 1. L'idée générale part du moment exact où le lecteur fait sa recherche et lui donne tout de suite quoi faire, ou l'erreur qu'il est en train de commettre, en moins de 60 mots. Jamais une définition ni une explication technique en première phrase.
 2. La problématique découle logiquement de l'idée générale et décrit le doute concret du lecteur, sous forme de questions s'il le faut. Chaque phrase décrit un fait observable : ce que le lecteur voit, ce qu'il fait, ce qui arrive.
@@ -76,6 +78,7 @@ Avant de rendre l'article, relis-le comme un lecteur débutant et corrige tout c
 - Chaque titre tient sa promesse.
 - Aucun chiffre sans source, sauf calcul montré ou exemple annoncé.
 - Chaque calcul est juste, avec la bonne définition et les bonnes unités.
+- Applique ta propre règle ou ton propre calcul à chaque ligne du tableau, à chaque conseil et à la conclusion. Aucune recommandation ne doit contredire le calcul de l'article.
 - Une même chose a partout la même valeur.
 - Aucune phrase compliquée, inversée ou inutilement longue.
 - Aucune transition-annonce, aucun mot interdit.
