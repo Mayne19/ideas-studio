@@ -52,7 +52,6 @@ class Settings(BaseSettings):
     SERPER_API_KEY: str = ""
 
     PIPELINE_MODE: str = "ideas_only"
-    OUTLINE_PLANNER_MODE: str = "llm"
     # Repli si le projet n'a pas de pipeline : « agent » (agent rédacteur
     # unique) ou « pipeline » (ancienne chaîne). Le réglage du CMS prime.
     GENERATION_MODE: str = "agent"
@@ -88,14 +87,6 @@ class Settings(BaseSettings):
             )
             return secrets.token_urlsafe(48)
         return v
-
-    @field_validator("OUTLINE_PLANNER_MODE")
-    @classmethod
-    def outline_planner_mode_must_be_valid(cls, v: str) -> str:
-        normalized = (v or "llm").strip().lower()
-        if normalized not in ("llm", "heuristic"):
-            raise ValueError("OUTLINE_PLANNER_MODE doit être 'llm' ou 'heuristic'")
-        return normalized
 
     @field_validator("DATABASE_URL")
     @classmethod
