@@ -162,6 +162,75 @@ def consistency_errors(content: str, call_fn) -> list[str]:
     ][:5]
 
 
+def _host(url: str) -> str:
+    from urllib.parse import urlparse
+    try:
+        return (urlparse(url).hostname or "").lower().removeprefix("www.")
+    except ValueError:
+        return ""
+
+
+def competitor_hosts(candidate: dict) -> set[str]:
+    return {h for h in (_host(c.get("url", "")) for c in candidate.get("competitors") or [] if isinstance(c, dict)) if h}
+
+
+def _brand_variants(host: str) -> set[str]:
+    """« linge-net.com » -> {« linge-net », « linge net », « lingenet »}."""
+    label = host.split(".")[-2] if host.count(".") >= 1 else host
+    return {v for v in (label, label.replace("-", " "), label.replace("-", "")) if len(v) >= 4}
+
+
+def competitor_errors(candidate: dict) -> list[str]:
+    """Concurrents : jamais liés, jamais nommés, jamais sources ; au moins 3
+    domaines de sources admissibles (consigne du 2026-10-17)."""
+    from app.services.seo.html_text_ops import html_to_text
+
+    content = candidate.get("content_html") or ""
+    hosts = competitor_hosts(candidate)
+    errors = []
+    for url in re.findall(r"""<a\b[^>]*href\s*=\s*["']([^"']+)["']""", content, re.IGNORECASE):
+        if _host(url) in hosts:
+            errors.append(f"Lien vers un concurrent ({_host(url)}) : supprime ce lien, un concurrent n'est jamais une source.")
+    text = html_to_text(content).lower()
+    for host in hosts:
+        for name in _brand_variants(host):
+            if re.search(r"(?<![\w-])" + re.escape(name) + r"(?![\w-])", text):
+                errors.append(f"Le texte nomme le concurrent « {name} » : retire toute mention des concurrents.")
+                break
+    if re.search(r"\b(sites concurrents|certains sites|conseils (trouvés )?en ligne)\b", text):
+        errors.append("Le texte parle de « sites concurrents », « certains sites » ou de « conseils en ligne » : formulation interdite.")
+    source_domains = {_host(s.get("url", "")) for s in candidate.get("sources") or [] if isinstance(s, dict)} - hosts - {""}
+    if len(source_domains) < 3:
+        errors.append(f"Seulement {len(source_domains)} domaine(s) de sources admissibles hors concurrents : il en faut au "
+                      "moins 3 (institutions, associations de consommateurs, organismes techniques, fabricants, études).")
+    return errors
+
+
+_PROSE_COUNT_RE = re.compile(
+    r"\b(deux|trois|quatre|cinq|six|sept|huit|neuf|dix)\s+(?:[a-zéèêàâîïôûç]+\s+)?"
+    r"(gestes|étapes|erreurs|règles|conseils|questions|critères|astuces|raisons|signes|solutions|méthodes|points|choses)\b",
+    re.IGNORECASE)
+
+
+def prose_count_errors(content: str) -> list[str]:
+    """« deux gestes à faire dans l'ordre » suivi d'une liste de trois
+    éléments : faute dure."""
+    errors = []
+    for m in _PROSE_COUNT_RE.finditer(content or ""):
+        if re.search(r"<h[23]\b[^>]*>[^<]*$", content[:m.start()], re.IGNORECASE):
+            continue  # dans un titre : vérifié par announced_count_errors
+        after = content[m.end():m.end() + 4000]
+        nxt = re.search(r"<(ol|ul)\b.*?</\1>", after, re.IGNORECASE | re.DOTALL)
+        between = after[:nxt.start()] if nxt else ""
+        if not nxt or re.search(r"<h[23]\b", between, re.IGNORECASE) or len(between) > 600:
+            continue
+        announced = _COUNT_WORDS[m.group(1).lower()]
+        items = len(re.findall(r"<li\b", nxt.group(0), re.IGNORECASE))
+        if items != announced:
+            errors.append(f"Le texte annonce « {m.group(0)} » mais la liste qui suit contient {items} éléments.")
+    return errors
+
+
 def heading_mismatch_errors(orch, article, candidate: dict) -> list[str]:
     """Titre qui ne tient pas sa promesse : verdict du juge éditorial
     (blocage heading_mismatch), seule faute « de sens » corrigée."""
@@ -258,7 +327,7 @@ def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, 
     if provider == "openrouter":
         from app.services.seo.agent_writer_openrouter import OpenRouterAgentClient, page_fetcher
         client = OpenRouterAgentClient(api_key, model=model, search_fn=orch.serp_adapter.search,
-                                       fetch_fn=page_fetcher(orch.page_cache), max_searches=4, max_fetches=6)
+                                       fetch_fn=page_fetcher(orch.page_cache), max_searches=6, max_fetches=6)
     else:
         client = anthropic_client(api_key)
     writer = AgentWriter(client, model=model, system=system)
@@ -277,7 +346,7 @@ def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, 
         content = candidate.get("content_html") or ""
         errors = structure_errors(content, candidate.get("title") or final_title)
         errors += assembly_errors(candidate) + link_errors(content) + html_render_errors(content)
-        errors += announced_count_errors(content)
+        errors += announced_count_errors(content) + prose_count_errors(content) + competitor_errors(candidate)
         errors += heading_mismatch_errors(orch, article, candidate)
         plag_errors, plag_report = plagiarism_errors(orch, content)
         plag_report["consistency_info"] = consistency_errors(content, orch._polish_call_fn(article))
@@ -378,11 +447,12 @@ def _finish_seo(orch, article: Article, draft, category_name: str, best: dict) -
         def judge_call(prompt: str, step: str, temperature: float) -> str:
             return orch._write_pass(prompt, "quality_gate", article, temperature, step)
 
-        facts = [f"{f.get('value', '')} (source : {f.get('source_url', '')})" for f in best.get("facts") or []
-                 if isinstance(f, dict)]
+        facts = [f"{f.get('value', '')} — « {f.get('quote', '')} » (source : {f.get('source_url', '')})"
+                 for f in best.get("facts") or [] if isinstance(f, dict)]
         judgement = judge_article(draft.content, judge_call, title=draft.title, keyword=draft.keyword or "",
                                   brief={}, facts=facts, reference_figures=[],
-                                  structure_report=validate_structure(draft.content, draft.title))
+                                  structure_report=validate_structure(draft.content, draft.title),
+                                  competitors=sorted(competitor_hosts(best)), strict_facts=True)
         if not judgement.get("error"):
             orch.context["editorial_judgement"] = {"final": judgement, "rounds": [judgement]}
             orch._save(article.id, "editorial_judgement", {"final": judgement, "rounds": [judgement]})
