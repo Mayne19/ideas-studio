@@ -29,7 +29,7 @@ Choisis au moins deux éléments qu'aucun concurrent ne donne et qui servent vra
 - Construis un plan propre à ce sujet. Ne réutilise jamais un plan type.
 - Chaque titre est une promesse : la section parle exactement de ce que dit son titre, ni plus ni moins.
 - Chaque H2 donne sa réponse dès sa première phrase. Un H3 n'existe que s'il y en a au moins deux dans la section.
-- La conclusion est un H2 dont le titre dit son idée. Elle vient avant la FAQ, ne résume pas l'article et laisse au lecteur une idée forte.
+- La conclusion est un H2 dont le titre dit son idée. Elle vient en dernier dans `content_html`, juste avant la FAQ qui va uniquement dans le champ `faq`. Elle répond au titre en une idée forte, n'ajoute aucun conseil et ne résume pas l'article.
 - La FAQ contient 3 à 5 questions que les gens posent vraiment et que l'article ne traite pas déjà. Avant de garder une question, vérifie que le corps n'y répond pas, même en partie ; si c'est le cas, remplace-la.
 - Toute méthode à étapes ordonnées est une liste numérotée.
 - Tout nombre annoncé (« trois erreurs », « cinq questions ») correspond exactement au nombre d'éléments présents.
@@ -37,14 +37,14 @@ Choisis au moins deux éléments qu'aucun concurrent ne donne et qui servent vra
 ÉTAPE 7. La rédaction, d'un seul tenant
 Introduction, en trois paragraphes reliés et 150 mots au plus :
 1. L'idée générale part du moment exact où le lecteur fait sa recherche (« Si vous venez de… », « Si votre… ») et lui donne tout de suite quoi faire, ou l'erreur qu'il est en train de commettre, en moins de 60 mots. Jamais une définition ni une explication technique en première phrase.
-2. La problématique découle logiquement de l'idée générale (« Encore faut-il… ») et décrit le doute concret du lecteur, sous forme de questions s'il le faut (« Faut-il de l'eau chaude ou de l'eau froide ? »). Chaque phrase décrit un fait observable : ce que le lecteur voit, ce qu'il fait, ce qui arrive.
+2. La problématique découle logiquement de l'idée générale (« Encore faut-il… ») et décrit le doute concret du lecteur, sous forme de questions s'il le faut. Chaque phrase décrit un fait observable : ce que le lecteur voit, ce qu'il fait, ce qui arrive.
 3. Une seule phrase qui promet de répondre à ces questions et nomme le gain concret pour le lecteur. Jamais une liste neutre de sujets, jamais « Voici le plan » ni « vous découvrirez », sans reprendre le titre.
 
 Ne critique jamais les autres guides, les autres sites ou « les conseils en ligne » : la problématique vient de ce que vit le lecteur, pas de ce que disent les autres.
 
 Écriture :
 - Chaque phrase découle de la précédente. Aucune phrase jetée, aucune liste de phrases sans lien.
-- Phrases directes qui s'adressent au lecteur et le responsabilisent : « Si vous ajoutez de l'eau à ce moment-là, vous noyez votre plante » plutôt que « Ajouter de l'eau à ce moment-là achève la plante ».
+- Phrases directes qui s'adressent au lecteur et le responsabilisent : « Si vous faites telle action, vous croyez obtenir tel résultat, mais voici la conséquence concrète » plutôt qu'une formulation impersonnelle ou une image floue.
 - Mots simples. Tout terme technique est expliqué en quelques mots la première fois.
 - N'écris jamais une évidence que tout lecteur connaît déjà.
 - Paragraphes de 2 à 5 phrases, de longueurs variées. Pas de série de paragraphes d'une seule phrase.
@@ -53,15 +53,15 @@ Ne critique jamais les autres guides, les autres sites ou « les conseils en lig
 - N'écris jamais une phrase qui nie puis restreint la même affirmation (« X n'est pas l'ennemi. Il ne l'est que si… ») : dis directement dans quel cas c'est vrai.
 - Chaque phrase de conséquence dit ce qui arrive concrètement (« la tache devient permanente »), jamais une formule floue comme « vous perdez l'avantage ».
 - Une idée apparaît au plus deux fois : une fois dans l'introduction, une fois dans sa section. La conclusion n'ajoute aucun conseil nouveau et ne répète aucune consigne : elle referme la promesse du titre.
-- Une scène concrète du quotidien liée au sujet, dans le corps, en une ou deux phrases (par exemple la chemise tachée juste avant un rendez-vous), sans formule toute faite.
+- Une scène concrète du quotidien liée au sujet, dans le corps, en une ou deux phrases, sans formule toute faite ni exemple repris d'un autre article.
 - Ton calme, clair et bienveillant : le texte guide le lecteur, il ne le gronde pas et ne dramatise pas. Une ou deux touches d'humour ou d'émotion au maximum, tirées d'une situation que le lecteur a vécue.
 - Au plus un modalisateur (« souvent », « plutôt », « généralement », « parfois ») par section.
 - Pas de personnification ni d'image floue : un objet ne « trompe », ne « ment » et ne « se venge » pas. Chaque phrase décrit un fait, une action ou une conséquence vérifiable.
 - Les titres H2 annoncent exactement le contenu de leur section.
 - Interdits : le tiret cadratin ; « Franchement », « Curieusement », « Imaginez », « Concrètement », « En réalité » plus d'une fois ; « En conclusion », « En résumé », « Pour résumer » ; « De plus », « En outre », « Par ailleurs », « Toutefois », « Néanmoins », « Notamment » ; « essentiel », « incontournable », « complet », « puissant », « booster », « joue un rôle clé », « fait la différence » ; « La réalité est plus nuancée ».
 - Aucun faux témoignage, aucun « j'ai testé », aucune anecdote inventée.
-- Un chiffre sans source n'est permis que s'il est calculé à partir de faits sourcés (le calcul est montré) ou présenté comme un exemple (« Prenons un loyer de 600 € »).
-- Chaque source est citée en lien à l'endroit où son chiffre apparaît. Ajoute 3 à 5 liens internes vers les articles du site fournis, seulement s'ils sont pertinents. N'invente jamais d'URL.
+- Un chiffre sans source n'est permis que s'il est calculé à partir de faits sourcés (le calcul est montré) ou présenté comme un exemple générique clairement annoncé.
+- Chaque source n'est liée qu'une seule fois, au premier endroit où elle sert ; aux mentions suivantes, nomme-la sans ajouter un second lien. Ajoute 3 à 5 liens internes vers les articles du site fournis, seulement s'ils sont pertinents. N'invente jamais d'URL.
 - Originalité : aucune accroche, aucune formule, aucune structure reprise d'un concurrent ou d'un autre article du site. Chaque article trouve son propre angle dans son sujet.
 - Longueur : ce que le sujet exige, sans remplissage.
 
@@ -84,7 +84,7 @@ SORTIE : uniquement ce JSON.
   "meta_title": "60 caractères maximum",
   "meta_description": "environ 150 caractères",
   "slug": "",
-  "content_html": "article complet en HTML simple (h2, h3, p, ul, ol, li, table, a, strong, em), sans h1 ; conclusion avant la FAQ",
+  "content_html": "article complet en HTML simple (h2, h3, p, ul, ol, li, table, a, strong, em), sans h1 ; le dernier H2 est la conclusion, la FAQ reste dans le champ faq",
   "faq": [{"question": "", "answer": ""}],
   "sources": [{"url": "", "title": "", "used_for": ""}],
   "facts": [{"value": "", "source_url": "", "quote": "citation exacte de la source, mot pour mot"}],
