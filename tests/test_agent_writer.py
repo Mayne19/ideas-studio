@@ -108,7 +108,7 @@ def test_openrouter_bridge_runs_tools_and_keeps_transcript():
         return replies.pop(0)
 
     client = OpenRouterAgentClient("k", search_fn=lambda q, n: [{"title": "A", "link": "https://a.fr", "snippet": "s"}],
-                                   fetch_fn=lambda url: "Texte de la page", post=post)
+                                   fetch_fn=lambda url: "Texte de la page. " * 100, post=post)
     writer = AgentWriter(client, model="anthropic/claude-opus-5.5", system="sys")
     data = writer.write("Mot-clé : tache")
     assert data["slug"] == "enlever-tache-de-gras"
@@ -135,15 +135,15 @@ def test_openrouter_bridge_hard_stop_and_explicit_fetch_error():
 def test_failed_fetches_do_not_consume_page_budget_and_are_reported():
     from app.services.seo.agent_writer_openrouter import OpenRouterAgentClient
 
-    pages = {"https://ok.fr": "Texte lu"}
+    pages = {"https://ok.fr": "Texte lu. " * 200, "https://court.fr": "Trop court"}
     client = OpenRouterAgentClient("k", search_fn=lambda q, n: [], fetch_fn=lambda url: pages.get(url, ""),
                                    max_fetches=1, max_failed_fetches=2)
     assert "ÉCHEC DE LECTURE" in client._run_tool("web_fetch", {"url": "https://bloque.fr"})
-    assert client._run_tool("web_fetch", {"url": "https://ok.fr"}) == "Texte lu"
+    assert client._run_tool("web_fetch", {"url": "https://ok.fr"}).startswith("Texte lu")
     assert client.fetches == 1 and client.failed_fetches == 1
     assert "Limite de pages lues" in client._run_tool("web_fetch", {"url": "https://ok.fr"})
     client.fetches = 0
-    client._run_tool("web_fetch", {"url": "https://vide.fr"})
+    assert "ÉCHEC DE LECTURE (10 caractères)" in client._run_tool("web_fetch", {"url": "https://court.fr"})
     assert "Limite d'échecs" in client._run_tool("web_fetch", {"url": "https://vide2.fr"})
     assert [e["failed"] for e in client.fetch_log] == [True, False, True]
 
@@ -166,6 +166,8 @@ def test_page_fetcher_uses_reader_fallback_but_respects_robots():
     from app.services.seo.agent_writer_openrouter import page_fetcher
 
     class Cache:
+        timeout = 8
+
         def __init__(self, allowed):
             self._allowed = allowed
 
@@ -175,7 +177,59 @@ def test_page_fetcher_uses_reader_fallback_but_respects_robots():
         def allowed(self, url):
             return self._allowed
 
-    fallback = lambda url: "Texte rendu par le lecteur de secours"
-    assert page_fetcher(Cache(True), fallback=fallback)("https://x.fr").startswith("Texte rendu")
+    fallback = lambda url: ("Texte rendu par le lecteur de secours. " * 50, 200)
+    fetch = page_fetcher(Cache(True), fallback=fallback)
+    assert fetch("https://x.fr").startswith("Texte rendu")
+    assert fetch.last["method"] == "secours" and fetch.last["status"] == 200 and fetch.last["html_chars"] == 0
+    limited = page_fetcher(Cache(True), fallback=lambda url: ("", 429))
+    assert limited("https://x.fr") == "" and "limite de débit" in limited.last["note"]
     assert page_fetcher(Cache(False), fallback=fallback)("https://x.fr") == ""
     assert page_fetcher(Cache(True), fallback=None)("https://x.fr") == ""
+
+
+def test_short_extracted_page_fails_without_using_the_budget():
+    from app.services.seo.agent_writer_openrouter import OpenRouterAgentClient
+
+    pages = {"https://court.fr": "a" * 300, "https://long.fr": "a" * 2000}
+    client = OpenRouterAgentClient("k", search_fn=lambda q, n: [], fetch_fn=lambda url: pages[url], max_fetches=1)
+    assert "ÉCHEC DE LECTURE (300 caractères)" in client._run_tool("web_fetch", {"url": "https://court.fr"})
+    assert client.fetches == 0 and client.failed_fetches == 1
+    assert client._run_tool("web_fetch", {"url": "https://long.fr"}) == "a" * 2000
+    assert client.fetches == 1 and client.fetch_log[-1]["chars"] == 2000
+
+
+def test_page_fetcher_raises_timeout_for_the_agent_only():
+    from app.services.seo.agent_writer_openrouter import AGENT_FETCH_TIMEOUT_SECONDS, page_fetcher
+    from app.services.seo.page_cache import DEFAULT_TIMEOUT_SECONDS, PageCache
+
+    shared = PageCache(fetcher=lambda url, timeout: None)
+    assert shared.timeout == DEFAULT_TIMEOUT_SECONDS
+    page_fetcher(shared, fallback=None)
+    assert shared.timeout == AGENT_FETCH_TIMEOUT_SECONDS == 15.0
+    assert PageCache().timeout == DEFAULT_TIMEOUT_SECONDS
+
+
+def test_agent_settings_are_editable_and_bounded():
+    from pydantic import ValidationError
+
+    from app.schemas.pipeline import PipelineSettingsUpdate
+
+    update = PipelineSettingsUpdate(agent_max_cost_usd=1.7, agent_reader_fallback=False)
+    assert update.agent_max_cost_usd == 1.7 and update.agent_reader_fallback is False
+    for bad in (0, -1, 25):
+        with pytest.raises(ValidationError):
+            PipelineSettingsUpdate(agent_max_cost_usd=bad)
+
+
+def test_orchestrator_reads_agent_settings_from_pipeline():
+    from types import SimpleNamespace
+
+    from app.services.seo.seo_generation_orchestrator import SEOGenerationOrchestrator
+
+    def orch(pipe):
+        return SimpleNamespace(project_id="p", db=SimpleNamespace(get=lambda model, pid: pipe))
+
+    read = SEOGenerationOrchestrator._agent_settings
+    pipe = SimpleNamespace(agent_max_cost_usd=1.70, agent_reader_fallback=False)
+    assert read(orch(pipe)) == {"max_cost_usd": 1.7, "reader_fallback": False}
+    assert read(orch(None)) == {"max_cost_usd": 3.0, "reader_fallback": True}
