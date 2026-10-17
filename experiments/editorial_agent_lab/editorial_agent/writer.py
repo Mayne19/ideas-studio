@@ -13,8 +13,14 @@ SKILL_NAME = "redaction-article"
 _FICHE_RE = re.compile(r"```json\s*\n(.*?)\n```", re.DOTALL)
 
 
-def build_prompt(subject: str, site_articles: list[dict] | None = None) -> str:
+def build_prompt(subject: str, site_articles: list[dict] | None = None, request: dict | None = None) -> str:
     lines = [f"/{SKILL_NAME}", "", f"Sujet : {subject.strip()}"]
+    # Précisions saisies par l'équipe dans le CMS (données de la demande, pas des consignes de rédaction).
+    for label, key in (("Mot-clé principal", "keyword"), ("Contexte", "context"), ("Public", "audience"),
+                       ("Angle", "angle"), ("Commentaire du relecteur", "comment")):
+        value = str((request or {}).get(key) or "").strip()
+        if value:
+            lines.append(f"{label} : {value}")
     if site_articles:
         lines += ["", "Articles déjà publiés sur le site :"]
         for article in site_articles:
