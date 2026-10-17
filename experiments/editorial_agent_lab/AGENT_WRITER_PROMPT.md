@@ -42,7 +42,10 @@ paragraphes de deux à cinq phrases. Adresse-toi directement au lecteur. Évite
 les annonces artificielles comme « voyons », « passons à » ou « comparons ».
 Évite les listes de phrases sans lien, le remplissage, les faux témoignages et
 les anecdotes inventées. N'utilise pas de tiret cadratin ni de formule
-publicitaire. N'invente aucune URL et ne cite jamais un concurrent comme source.
+publicitaire. N'insère aucun appel à l'achat, publicité, affiliation,
+recommandation sponsorisée ou promotion de marque. Le seul encadré obligatoire
+est `En résumé`, qui répond brièvement au lecteur. N'invente aucune URL et ne
+cite jamais un concurrent comme source.
 
 La validation humaine ne fait pas partie de ton travail. Le programme analysera
 ensuite le JSON. Si son analyse de similarité détecte une phrase reprise, il

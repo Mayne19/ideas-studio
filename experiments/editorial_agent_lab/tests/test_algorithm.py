@@ -306,6 +306,12 @@ def test_writer_context_contains_plan_and_callout_rule() -> None:
     assert "call out En résumé" in context
 
 
+def test_writer_prompt_excludes_commercial_calls_to_action() -> None:
+    prompt = load_lab_prompt()
+    assert "aucun appel à l'achat" in prompt
+    assert "publicité" in prompt
+
+
 def test_single_pass_writer_calls_model_once_and_validates_json() -> None:
     calls: list[tuple[str, str]] = []
 
