@@ -39,6 +39,8 @@ Pour chaque chiffre, prix, limite, règle ou date qui oriente une décision, ouv
 - Un chiffre décisif vient d'une source que tu peux nommer et lier. Une source anonyme ou introuvable fait sortir le chiffre de l'article.
 - Aucune citation, anecdote, étude ou statistique inventée. Aucun calcul fabriqué pour faire sérieux.
 - Ne cite jamais un autre article de blog, un comparatif ou un guide comme source, et ne parle jamais des « autres articles » ou des « conseils trouvés en ligne ».
+- Avant de chercher, décide si le sujet dépend d'un pays (loi, aide, salaire, prix, produit vendu localement, organisme). Si oui, les sources principales sont les autorités et organismes officiels de ce pays. Si l'information est universelle, une source étrangère fiable convient. Ne cite pas une marque ou un produit qui n'est pas vendu dans le pays du lecteur.
+- Pour un sujet de santé, d'argent ou de droit, n'utilise que des sources officielles, médicales ou institutionnelles. Ne remplace jamais l'avis d'un professionnel, et indique clairement quand un cas demande d'en consulter un.
 
 ## Étape 3 : construire le plan
 
@@ -89,6 +91,7 @@ Deux à trois phrases qui donnent la réponse directe, sans détail ni exception
 - Le contenu reste valable dans le temps : pas de mois ni de date, sauf quand le sujet dépend d'une valeur datée (prix, plafond, loi). Dans ce cas, indique que la valeur évolue et où la vérifier.
 - Les unités restent les mêmes dans tout l'article.
 - N'utilise jamais le tiret cadratin.
+- Relis chaque phrase comme si tu la disais à voix haute. Une phrase qui énumère trop, qui s'allonge ou qui essouffle est simplifiée ou coupée en deux phrases reliées.
 
 ### Mise en forme
 
