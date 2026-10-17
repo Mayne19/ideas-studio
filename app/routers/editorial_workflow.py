@@ -22,6 +22,7 @@ from app.services.editorial_workflow_service import (
     workflow_article_details,
     workflow_status,
 )
+from app.services.seo.artifacts import get_latest_artifact
 
 
 router = APIRouter(
@@ -231,9 +232,23 @@ def validate_article(
     pipeline = db.get(Pipeline, project_id)
     schedule = pipeline.schedule if pipeline else {}
     start_hour = int(schedule.get("publish_hour_start", 8))
-    scheduled_for = article.scheduled_for or (datetime.now(timezone.utc) + timedelta(days=1)).replace(
-        hour=start_hour, minute=0, second=0, microsecond=0,
-    )
+    planned_publish = (get_latest_artifact(db, article.id, "planning_schedule") or {}).get("target_publish_at")
+    scheduled_for = article.scheduled_for
+    if scheduled_for is None and planned_publish:
+        try:
+            scheduled_for = datetime.fromisoformat(planned_publish)
+        except (TypeError, ValueError):
+            scheduled_for = None
+    if scheduled_for is None or scheduled_for <= datetime.now(timezone.utc):
+        scheduled_for = (datetime.now(timezone.utc) + timedelta(days=1)).replace(
+            hour=start_hour, minute=0, second=0, microsecond=0,
+        )
+    else:
+        if scheduled_for.tzinfo is None:
+            scheduled_for = scheduled_for.replace(tzinfo=timezone.utc)
+        scheduled_for = scheduled_for.astimezone(timezone.utc).replace(
+            hour=start_hour, minute=0, second=0, microsecond=0,
+        )
     report = schedule_for_publication(db, article, scheduled_for)
     return ValidationResponse(article=_article_response(db, article), **report)
 
