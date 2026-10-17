@@ -14,6 +14,8 @@ export type PipelineSettings = {
   publish_hour_start: number
   publish_hour_end: number
   articles_per_week: number
+  articles_per_day: number
+  writing_days: number[]
   category_priorities: Record<string, number>
   cost_limit_per_article_eur: number | null
   // Plafond dur d'idées créées par lancement (1 à 3).
@@ -49,6 +51,8 @@ export type PipelineSettingsUpdate = {
   publish_hour_start?: number
   publish_hour_end?: number
   articles_per_week?: number
+  articles_per_day?: number
+  writing_days?: number[]
   category_priorities?: Record<string, number>
   cost_limit_per_article_eur?: number | null
   ideas_per_run?: number

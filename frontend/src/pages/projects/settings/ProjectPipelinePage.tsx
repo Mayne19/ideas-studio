@@ -69,6 +69,8 @@ export default function ProjectPipelinePage() {
   const [launchDay, setLaunchDay] = useState(25)
   const [publishHourStart, setPublishHourStart] = useState(8)
   const [publishHourEnd, setPublishHourEnd] = useState(10)
+  const [articlesPerDay, setArticlesPerDay] = useState(2)
+  const [writingDays, setWritingDays] = useState<number[]>([0, 1, 2, 3, 4])
   const [costLimitPerArticle, setCostLimitPerArticle] = useState('')
   const [maxParallelWriting, setMaxParallelWriting] = useState('3')
   const [ideasPerRun, setIdeasPerRun] = useState(2)
@@ -92,6 +94,8 @@ export default function ProjectPipelinePage() {
         setLaunchDay(s.launch_day ?? s.ideas_day_of_month ?? 25)
         setPublishHourStart(s.publish_hour_start ?? 8)
         setPublishHourEnd(s.publish_hour_end ?? 10)
+        setArticlesPerDay(s.articles_per_day ?? 2)
+        setWritingDays(s.writing_days ?? [0, 1, 2, 3, 4])
         setCostLimitPerArticle(s.cost_limit_per_article_eur == null ? '' : String(s.cost_limit_per_article_eur))
         setMaxParallelWriting(s.max_parallel_writing_jobs == null ? '3' : String(s.max_parallel_writing_jobs))
         setIdeasPerRun(s.ideas_per_run ?? 2)
@@ -129,6 +133,8 @@ export default function ProjectPipelinePage() {
         ideas_day_of_month: ideasFrequency === 'monthly' || ideasFrequency === 'quarterly' ? launchDay : null,
         publish_hour_start: publishHourStart,
         publish_hour_end: publishHourEnd,
+        articles_per_day: Math.max(1, Math.min(24, Number(articlesPerDay) || 2)),
+        writing_days: writingDays,
         cost_limit_per_article_eur: costLimitPerArticle.trim() === '' ? null : Number(costLimitPerArticle),
         max_parallel_writing_jobs: Math.max(1, Math.min(10, Number(maxParallelWriting) || 3)),
         ideas_per_run: ideasPerRun,
@@ -331,6 +337,40 @@ export default function ProjectPipelinePage() {
       {enabled && (
         <Card padding="sm">
           <p className="mb-4 text-[14px] font-medium text-primary">Planification</p>
+
+          <div className="mb-4">
+            <p className="mb-1.5 text-[12px] font-medium text-secondary">Rythme de rédaction</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                max="24"
+                step="1"
+                value={articlesPerDay}
+                onChange={(e) => { setArticlesPerDay(Number(e.target.value)); setDirty(true) }}
+                className="h-9 w-20 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
+              />
+              <span className="text-[12px] text-tertiary">article(s) rédigé(s) par jour, les jours suivants :</span>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {WEEKDAYS.map((day) => {
+                const checked = writingDays.includes(day.value)
+                return (
+                  <label key={day.value} className="flex items-center gap-1.5 text-[12px] text-secondary">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => {
+                        setWritingDays((current) => checked ? current.filter((value) => value !== day.value) : [...current, day.value].sort())
+                        setDirty(true)
+                      }}
+                    />
+                    {day.label}
+                  </label>
+                )
+              })}
+            </div>
+          </div>
 
           {/* Génération des idées */}
           <div className="mb-4">
