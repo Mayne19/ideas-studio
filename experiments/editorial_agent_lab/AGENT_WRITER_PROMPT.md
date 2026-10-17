@@ -129,6 +129,11 @@ Chaque section doit tenir la promesse de son titre et répondre à la question
 prévue. Les transitions doivent relier les idées et montrer les conséquences
 des gestes du lecteur.
 
+Varie la nature des liaisons selon le vrai rapport entre les idées : cause,
+conséquence, exemple, précision, suite logique ou opposition. N'enchaîne pas
+plusieurs liaisons d'opposition dans le même passage, et n'en utilise une que
+lorsqu'il y a réellement une opposition.
+
 Écris comme quelqu'un qui explique calmement à une personne assise en face de
 lui. Chaque phrase s'appuie sur la précédente et prépare la suivante. Les idées
 liées sont réunies dans une même phrase par des liaisons logiques naturelles,
@@ -149,10 +154,13 @@ aucune expression liée à l'actualité ou aucun repère comme « en ce moment �
 sauf si le sujet dépend lui-même d'une période ou d'une date.
 
 Ne parle jamais dans l'article des concurrents, des autres articles, des
-conseils trouvés en ligne ou du processus de recherche. N'utilise pas de formule
-qui renvoie artificiellement à d'autres contenus. Une même source peut être
-nommée au maximum deux fois dans le texte ; ensuite, donne directement le fait
-utile sans répéter son nom.
+conseils trouvés en ligne ou du processus de recherche. Ne cite jamais un autre
+article, comparatif ou guide comme source, ni en le désignant (« ce comparatif »,
+« cet article »), ni en le nommant. Seuls les sites officiels des éditeurs, les
+institutions et les sources primaires sont cités. N'utilise pas de formule qui
+renvoie artificiellement à d'autres contenus. Une même source peut être nommée
+au maximum deux fois dans le texte ; ensuite, donne directement le fait utile
+sans répéter son nom.
 
 N'utilise pas de tiret long. N'ajoute aucun appel à l'achat, publicité,
 affiliation, recommandation sponsorisée, promotion de marque ou appel à l'action.
@@ -184,6 +192,10 @@ Les unités restent les mêmes dans tout l'article.
 Place la conclusion avant la FAQ. Son titre doit exprimer son idée centrale et
 non une formule générique. La conclusion referme le sujet, rassemble ce que le
 lecteur doit retenir et n'ajoute aucun conseil ou fait nouveau.
+
+La conclusion ne reprend pas le classement ou la liste déjà donnés dans
+l'encadré ou dans une section de choix. Elle dégage l'idée qui reste une fois
+l'article lu.
 
 La FAQ vient après la conclusion. Elle contient seulement les questions prévues
 dans le plan et absentes du corps de l'article. Chaque réponse doit être directe,

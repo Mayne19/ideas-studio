@@ -41,7 +41,7 @@ liste d'objets url, title et used_for. Le champ facts est une liste d'objets val
 et source_url. Le champ self_review contient les contrôles éditoriaux nécessaires.
 """
 
-STYLE_REVIEW_INSTRUCTION = "Relis cet article uniquement pour la fluidité. Relie les phrases juxtaposées, ajoute les transitions manquantes entre paragraphes, allège les paragraphes trop denses, garde un ton calme et naturel. Ne modifie aucun fait, chiffre, source, lien, titre ni l'ordre du plan. N'ajoute aucune information."
+STYLE_REVIEW_INSTRUCTION = "Relis cet article uniquement pour la fluidité. Relie les phrases juxtaposées, ajoute les transitions manquantes entre paragraphes, allège les paragraphes trop denses, garde un ton calme et naturel. Ne modifie aucun fait, chiffre, source, lien, titre ni l'ordre du plan. N'ajoute aucune information. N'ajoute aucune mention d'article, de comparatif ou de guide. N'empile pas les liaisons d'opposition."
 
 
 def _content_text(value: Any) -> str:
@@ -370,6 +370,8 @@ def _write_html(path: Path, data: dict[str, Any], report: dict[str, Any]) -> Non
     content = data.get("content_html") or "<p>Article vide.</p>"
     title = html.escape(str(data.get("title") or "Article généré"))
     meta = html.escape(str(data.get("meta_description") or ""))
+    cost = report.get("cost_usd")
+    cost_display = "non disponible" if cost is None else f"{cost} $"
     warnings = "".join(
         f"<li><strong>{html.escape(str(item.get('code', '')))}</strong> — "
         f"{html.escape(str(item.get('message', '')))}</li>"
@@ -386,7 +388,7 @@ def _write_html(path: Path, data: dict[str, Any], report: dict[str, Any]) -> Non
         "font-size:14px;color:#555}</style></head><body>"
         f"<h1>{title}</h1>{content}<section class='report'><h2>Rapport de contrôle</h2>"
         f"<p>Modèle : {html.escape(str(report.get('model', '')))} · "
-        f"Coût estimé : {html.escape(str(report.get('cost_usd', 0)))} $</p>"
+        f"Coût estimé : {html.escape(cost_display)}</p>"
         f"<ul>{warnings}</ul></section></body></html>",
         encoding="utf-8",
     )
@@ -480,6 +482,9 @@ def run_live(config: LiveRunConfig, *, published_articles: list[dict[str, str]] 
         key=lambda item: _live_score(item[3], item[4]) + (item[0] - 1,),
     )
     agent_report = writer.report()
+    usage_summary = getattr(client, "usage_summary", None)
+    if callable(usage_summary):
+        agent_report.update(usage_summary())
     blocking = []
     for rule in structure.get("rules", []) if isinstance(structure, dict) else []:
         if rule.get("severity") == "hard" and not rule.get("passed", True):
@@ -490,7 +495,11 @@ def run_live(config: LiveRunConfig, *, published_articles: list[dict[str, str]] 
         "model": model,
         "route": route,
         "duration_s": round(perf_counter() - started, 2),
-        "cost_usd": agent_report.get("cost_usd") or agent_report.get("real_cost_usd") or 0.0,
+        "cost_usd": (
+            agent_report.get("cost_usd")
+            if agent_report.get("cost_usd") is not None
+            else agent_report.get("real_cost_usd")
+        ),
         "agent": agent_report,
         "pipeline": {
             "draft_format": "markdown",
