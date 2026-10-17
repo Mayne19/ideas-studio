@@ -10,6 +10,7 @@ import {
 import {
   Calendar03Icon,
   File01Icon,
+  Folder01Icon,
   Logout01Icon,
   Setting06Icon,
   WorkflowCircle03Icon,
