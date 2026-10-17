@@ -155,7 +155,7 @@ def pairwise_ranking_identical(rows: list[dict]) -> bool:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", type=Path, default=MANIFEST_DEFAULT)
-    parser.add_argument("--judge", default="app.services.seo.editorial_judge:judge_v2")
+    parser.add_argument("--judge", default="app.services.seo.editorial_judge_v2:judge_v2")
     parser.add_argument("--call-fn", required=True, help="module:fonction(prompt, step, temperature)")
     parser.add_argument("--mean-limit", type=float, default=3)
     parser.add_argument("--max-limit", type=float, default=6)
