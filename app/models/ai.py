@@ -199,6 +199,7 @@ class Pipeline(Base):
     )
     is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     articles_per_week: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=5)
+    articles_per_day: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=2, server_default=text("2"))
     ideas_per_week: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=5)
     min_publish_score: Mapped[int] = mapped_column(
         SmallInteger, nullable=False, default=90, server_default=text("90")

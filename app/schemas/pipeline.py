@@ -9,6 +9,8 @@ DEFAULT_IDEAS_PER_RUN = 2
 MIN_PUBLISH_SCORE_MIN = 85
 MIN_PUBLISH_SCORE_MAX = 100
 DEFAULT_MIN_PUBLISH_SCORE = 90
+DEFAULT_ARTICLES_PER_DAY = 2
+DEFAULT_WRITING_DAYS = [0, 1, 2, 3, 4]
 
 
 class PipelineSettingsUpdate(BaseModel):
@@ -26,6 +28,8 @@ class PipelineSettingsUpdate(BaseModel):
     publish_hour_start: Optional[int] = None
     publish_hour_end: Optional[int] = None
     articles_per_week: Optional[int] = None
+    articles_per_day: Optional[int] = Field(default=None, ge=1, le=24)
+    writing_days: Optional[list[int]] = None
     category_priorities: Optional[dict[str, int]] = None
     ideas_per_week: Optional[int] = None
     # Plafond dur d'idées créées par lancement (économie de crédits LLM).
@@ -63,6 +67,8 @@ class PipelineSettingsPublic(BaseModel):
     ideas_frequency: str = "monthly"
     launch_day: Optional[int] = None
     articles_per_week: int
+    articles_per_day: int = DEFAULT_ARTICLES_PER_DAY
+    writing_days: list[int] = DEFAULT_WRITING_DAYS
     category_priorities: dict[str, int] = {}
     ideas_per_week: Optional[int] = None
     ideas_per_run: int = DEFAULT_IDEAS_PER_RUN

@@ -11,6 +11,8 @@ from app.models.content import Article, Category
 from app.models.reference import ArticleStatus, RunStatus, set_run_status
 from app.schemas.pipeline import (
     DEFAULT_IDEAS_PER_RUN,
+    DEFAULT_ARTICLES_PER_DAY,
+    DEFAULT_WRITING_DAYS,
     DEFAULT_MIN_PUBLISH_SCORE,
     IDEAS_PER_RUN_MAX,
     IDEAS_PER_RUN_MIN,
@@ -283,6 +285,8 @@ def _model_to_settings(pipe: Pipeline, db: Session | None = None) -> PipelineSet
         publish_hour_start=schedule.get("publish_hour_start", 8),
         publish_hour_end=schedule.get("publish_hour_end", 10),
         articles_per_week=pipe.articles_per_week,
+        articles_per_day=pipe.articles_per_day,
+        writing_days=schedule.get("writing_days", DEFAULT_WRITING_DAYS),
         category_priorities=schedule.get("category_priorities", {}),
         ideas_per_week=pipe.ideas_per_week,
         ideas_per_run=_clamp_ideas_per_run(pipe.ideas_per_run),
@@ -329,6 +333,8 @@ def get_pipeline(db: Session, project_id: str) -> PipelineSettingsPublic | None:
             publish_hour_start=8,
             publish_hour_end=10,
             articles_per_week=5,
+            articles_per_day=DEFAULT_ARTICLES_PER_DAY,
+            writing_days=DEFAULT_WRITING_DAYS,
             category_priorities={},
             ideas_per_week=5,
             ideas_per_run=DEFAULT_IDEAS_PER_RUN,
@@ -349,12 +355,13 @@ def get_pipeline(db: Session, project_id: str) -> PipelineSettingsPublic | None:
 
 _SCHEDULE_FIELDS = {
     "active_days", "launch_hour", "ideas_frequency", "launch_day", "ideas_day_of_month",
-    "publish_hour_start", "publish_hour_end", "category_priorities", "launch_hours",
+    "publish_hour_start", "publish_hour_end", "category_priorities", "launch_hours", "writing_days",
     "paused_indefinitely",
 }
 _PIPELINE_FIELD_MAP = {
     "enabled": "is_enabled",
     "articles_per_week": "articles_per_week",
+    "articles_per_day": "articles_per_day",
     "ideas_per_week": "ideas_per_week",
     "ideas_per_run": "ideas_per_run",
     "min_publish_score": "min_publish_score",
