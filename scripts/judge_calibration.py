@@ -56,8 +56,11 @@ def _faq_from_markdown(content: str) -> tuple[str, list[dict]]:
                   if re.match(r"^##\s+.*(?:FAQ|questions fréquentes)", line, re.I)), None)
     if start is None:
         return content, []
-    body = "\n".join(lines[:start]).rstrip()
-    faq_lines = lines[start + 1:]
+    # La FAQ s'arrête au prochain titre « ## » : ce qui suit (une conclusion
+    # placée après la FAQ) reste dans le corps de l'article.
+    end = next((i for i in range(start + 1, len(lines)) if re.match(r"^##\s", lines[i])), len(lines))
+    body = "\n".join(lines[:start] + lines[end:]).rstrip()
+    faq_lines = lines[start + 1:end]
     entries: list[dict] = []
     question = None
     answer: list[str] = []

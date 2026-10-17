@@ -2,7 +2,7 @@
   "articles": [
     {
       "name": "questionnaire en ligne",
-      "reference_score": 90,
+      "reference_score": 87,
       "path": "questionnaire-90.md"
     },
     {
@@ -43,7 +43,7 @@
     {
       "name": "reste à vivre, ancien système",
       "reference_score": 45,
-      "article_id": "e089f2ef-0c91-4a9a-8e18-a87ee6f2be7a"
+      "article_id": "e089f2ef-0c91-4a9a-8e18-a87ee6b2be7a"
     }
   ]
 }
