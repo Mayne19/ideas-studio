@@ -29,6 +29,7 @@ WEB_SEARCH_TOOL = {"type": "web_search_20250305", "name": "web_search", "max_use
 WEB_FETCH_TOOL = {"type": "web_fetch_20260318", "name": "web_fetch", "max_uses": 15}
 MAX_OUTPUT_TOKENS = 32000
 MAX_PAUSE_CONTINUATIONS = 8
+RAW_TEXT_HEAD_CHARS = 3000
 MAX_CORRECTION_ROUNDS = 2
 REQUIRED_KEYS = ("title", "meta_title", "meta_description", "slug", "content_html", "faq")
 PROMPT_PATH = Path(__file__).resolve().parents[3] / "docs" / "AGENT-WRITER-PROMPT.md"
@@ -134,6 +135,8 @@ class AgentWriter:
         self.tools = tools if tools is not None else [WEB_SEARCH_TOOL, WEB_FETCH_TOOL]
         self.max_tokens = max_tokens
         self.messages: list[dict] = []
+        self.last_text = ""
+        self.failed = False
         self.usage = {"input_tokens": 0, "output_tokens": 0, "cache_read_input_tokens": 0,
                       "web_searches": 0, "web_fetches": 0, "calls": 0}
         self.started = perf_counter()
@@ -161,7 +164,8 @@ class AgentWriter:
             if getattr(response, "stop_reason", "") != "pause_turn":
                 if getattr(response, "stop_reason", "") == "max_tokens":
                     raise AgentWriterError("réponse tronquée (limite de jetons atteinte)")
-                return _text_of(response.content)
+                self.last_text = _text_of(response.content)
+                return self.last_text
         raise AgentWriterError("trop de reprises de tour (pause_turn)")
 
     def _parse(self, text: str) -> tuple[dict | None, list[str]]:
@@ -179,6 +183,7 @@ class AgentWriter:
                 + "). Renvoie uniquement le JSON complet.")})
             data, problems = self._parse(self._run_turn())
         if problems:
+            self.failed = True
             raise AgentWriterError("JSON invalide : " + "; ".join(problems))
         return data
 
@@ -195,7 +200,13 @@ class AgentWriter:
         fetches = self.usage["web_fetches"] or self.usage.get("_counted_fetches", 0)
         from app.services.cost_estimator import estimate_agent_writer_cost
         client_cost = getattr(self.client, "cost_usd", None)
-        return {
+        # Diagnostic : pages lues (ou ratées), requêtes, et début de la réponse
+        # brute quand le JSON est inexploitable.
+        diagnostics = {key: list(getattr(self.client, key)) for key in ("fetch_log", "search_log")
+                       if isinstance(getattr(self.client, key, None), list)}
+        if self.failed:
+            diagnostics["raw_text_head"] = self.last_text[:RAW_TEXT_HEAD_CHARS]
+        return diagnostics | {
             "model": self.model,
             "route": "openrouter" if client_cost is not None else "anthropic",
             "reasoning": getattr(self.client, "reasoning_effort", None) or "défaut du modèle",
