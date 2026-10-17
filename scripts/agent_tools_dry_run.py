@@ -8,7 +8,7 @@ Le coût se limite aux requêtes de recherche (Serper). Aucune liste de sources
 n'est transmise à l'agent : ce script sert seulement à vérifier le lecteur.
 
 Usage : DATABASE_URL=… SECRET_KEY=… python scripts/agent_tools_dry_run.py <project_id> "<mot-clé>"
-        [--query "<requête de source>"]… [--max-urls 12] [--no-fallback]
+        [--query "<requête de source>"]… [--max-urls 12] [--per-query 4] [--no-fallback]
 """
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ def admissible(url: str) -> bool:
     return host in ADMISSIBLE_HOSTS or any(host.endswith(s) for s in ADMISSIBLE_SUFFIXES)
 
 
-def run(project_id: str, keyword: str, queries: list[str], max_urls: int, fallback: bool) -> str:
+def run(project_id: str, keyword: str, queries: list[str], max_urls: int, fallback: bool, per_query: int = 4) -> str:
     from app.services.seo.adapters.serp_adapter import get_serp_adapter
     from app.services.seo.agent_writer_openrouter import MIN_PAGE_CHARS, page_fetcher, reader_get
     from app.services.seo.page_cache import PageCache
@@ -44,10 +44,12 @@ def run(project_id: str, keyword: str, queries: list[str], max_urls: int, fallba
         raise SystemExit("Recherche non configurée pour ce projet.")
     urls: list[str] = []
     for query in [keyword, *queries]:
+        taken = 0
         for result in serp.search(query, 10) or []:
             url = result.get("url") or result.get("link") or ""
-            if url and url not in urls and not any(s in host_of(url) for s in SKIPPED_HOSTS):
+            if taken < per_query and url and url not in urls and not any(s in host_of(url) for s in SKIPPED_HOSTS):
                 urls.append(url)
+                taken += 1
     urls = urls[:max_urls]
 
     fetch = page_fetcher(PageCache(), fallback=reader_get if fallback else None)
@@ -75,9 +77,10 @@ def main() -> int:
     parser.add_argument("keyword")
     parser.add_argument("--query", action="append", default=[])
     parser.add_argument("--max-urls", type=int, default=12)
+    parser.add_argument("--per-query", type=int, default=4)
     parser.add_argument("--no-fallback", action="store_true")
     args = parser.parse_args()
-    print(run(args.project_id, args.keyword, args.query, args.max_urls, not args.no_fallback))
+    print(run(args.project_id, args.keyword, args.query, args.max_urls, not args.no_fallback, args.per_query))
     return 0
 
 
