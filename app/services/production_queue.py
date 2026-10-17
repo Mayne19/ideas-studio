@@ -239,33 +239,26 @@ def resolve_max_parallel(db: Session, project_id: str) -> int:
 
 
 def process_writing_queue(db: Session, project_id: str, max_parallel: int | None = None) -> dict:
-    """Draine la file de rédaction : claim + rédactions en parallèle (bornées)."""
-    from app.core.database import engine
+    """Expose la file au rédacteur local sans appeler l'ancien orchestrateur.
 
-    if max_parallel is None:
-        max_parallel = resolve_max_parallel(db, project_id)
-    # SQLite ne supporte pas les écritures concurrentes : on sérialise en dev
-    if engine.dialect.name == "sqlite":
-        max_parallel = 1
-
-    requeued = requeue_stale_writing(db, project_id)
-    claimed = claim_for_writing(db, project_id, max_parallel)
-
-    results: list[dict] = []
-    if claimed:
-        log_step(
-            db, project_id,
-            f"File de rédaction : {len(claimed)} rédaction(s) lancée(s) (max parallèle : {max_parallel})",
-            level="info", step="writing_queue",
+    Les sujets restent en ``WRITING_REQUESTED`` jusqu'au dépôt Markdown par le
+    rédacteur. Les anciennes fonctions de claim et de rédaction sont conservées
+    pour la compatibilité du code historique, mais ne sont plus appelées ici.
+    """
+    pending_ids = db.execute(
+        select(Article.id)
+        .where(
+            Article.project_id == project_id,
+            Article.status_reason_id == ArticleStatus.WRITING_REQUESTED,
         )
-        db.commit()
-        if len(claimed) == 1:
-            results.append(write_queued_article(claimed[0], project_id))
-        else:
-            from concurrent.futures import ThreadPoolExecutor
-            with ThreadPoolExecutor(max_workers=max_parallel) as pool:
-                results = list(pool.map(lambda aid: write_queued_article(aid, project_id), claimed))
-    return {"requeued_stale": requeued, "claimed": len(claimed), "results": results}
+        .order_by(Article.priority.desc().nullslast(), Article.created_at.asc())
+    ).scalars().all()
+    return {
+        "requeued_stale": 0,
+        "claimed": 0,
+        "pending_local_writer": len(pending_ids),
+        "results": [],
+    }
 
 
 def process_queue(db: Session, project_id: str, max_articles: int = 1) -> list[Article]:
