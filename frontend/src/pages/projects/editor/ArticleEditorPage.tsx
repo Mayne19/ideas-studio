@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams, useBlocker } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams, useBlocker } from 'react-router-dom'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { Mark, mergeAttributes } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
@@ -50,6 +50,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/Popover
 import Button from '@/components/ui/Button'
 import { useAuth } from '@/context/AuthContext'
 import { formatDate } from '@/utils/format'
+import { getProductionArticle, type ProductionArticle } from '@/api/production'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -66,7 +67,7 @@ export type MetaFields = {
 
 type FaqItem = { question: string; answer: string }
 type ViewMode = 'read' | 'edit' | 'comment'
-type RightTab = 'publish' | 'analyse' | 'versions'
+type RightTab = 'publish' | 'analyse' | 'versions' | 'fiche'
 type CommentAnchor = { text: string; top: number; left: number; from: number; to: number }
 type ArticleSchedule = { scheduled_for: string | null; published_at: string | null }
 
@@ -76,6 +77,7 @@ const RIGHT_TABS: { key: RightTab; label: string; icon: React.ReactNode }[] = [
   { key: 'publish',  label: 'Publication', icon: <Settings size={13} /> },
   { key: 'analyse',  label: 'Analyse',     icon: <BarChart2 size={13} /> },
   { key: 'versions', label: 'Versions',    icon: <History size={13} /> },
+  { key: 'fiche',    label: 'Fiche',       icon: <BookOpen size={13} /> },
 ]
 
 type AutosaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -171,6 +173,7 @@ function isEffectivelyEmptyHtml(value: string | null | undefined): boolean {
 export default function ArticleEditorPage() {
   const { projectId, articleId } = useParams<{ projectId: string; articleId: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user } = useAuth()
 
   // Load state
@@ -185,6 +188,7 @@ export default function ArticleEditorPage() {
   const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>('idle')
   const [latestSeoAnalysis, setLatestSeoAnalysis] = useState<SeoAnalysis | null>(null)
   const [latestReadyCheck, setLatestReadyCheck] = useState<ReadyCheck | null>(null)
+  const [workflowArticle, setWorkflowArticle] = useState<ProductionArticle | null>(null)
 
   // Content fields
   const [metaFields, setMetaFields] = useState<MetaFields>(EMPTY_META)
@@ -477,13 +481,15 @@ export default function ArticleEditorPage() {
       listCategories(projectId),
       listCalloutTemplates(projectId).catch(() => [] as CalloutTemplate[]),
       listMembers(projectId).catch(() => [] as ProjectMember[]),
+      searchParams.get('from') === 'production' ? getProductionArticle(projectId, articleId).catch(() => null) : Promise.resolve(null),
     ])
-      .then(([art, cats, callouts, mems]) => {
+      .then(([art, cats, callouts, mems, productionArticle]) => {
         setCategories(cats)
         setCalloutTemplates(callouts)
         setMembers(mems)
         setLatestSeoAnalysis(null)
         setLatestReadyCheck(null)
+        setWorkflowArticle(productionArticle)
         setArticleSchedule({ scheduled_for: null, published_at: null })
         hydrateFromArticle(art)
         slugManuallyEditedRef.current = false
@@ -491,7 +497,7 @@ export default function ArticleEditorPage() {
         setLoadStatus('success')
       })
       .catch(() => setLoadStatus('error'))
-  }, [projectId, articleId, user?.id, hydrateFromArticle])
+  }, [projectId, articleId, user?.id, hydrateFromArticle, searchParams])
 
   useEffect(() => {
     if (!editor || !article) return
@@ -923,6 +929,7 @@ export default function ArticleEditorPage() {
   const isEditable = viewMode === 'edit'
   const busy = actionLoading !== null
   const selectedComment = comments.find((comment) => comment.id === selectedCommentId) ?? null
+  const workflowFiche = workflowArticle?.fiche ?? {}
 
   // ─── Loading / error ─────────────────────────────────────────────────────────
 
@@ -1543,6 +1550,33 @@ export default function ArticleEditorPage() {
                       setRightTab('publish')
                     }}
                   />
+                </div>
+              )}
+
+              {/* ── Editorial sheet tab ── */}
+              {activeRightTab === 'fiche' && (
+                <div className="flex flex-col gap-4 p-3 text-[12px]">
+                  <div>
+                    <p className="font-medium text-secondary">Meta title</p>
+                    <p className="mt-1 text-primary">{String(workflowFiche.meta_title || '—')}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-secondary">Meta description</p>
+                    <p className="mt-1 leading-relaxed text-primary">{String(workflowFiche.meta_description || '—')}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-secondary">Slug</p>
+                    <p className="mt-1 text-primary">{String(workflowFiche.slug || metaFields.slug || '—')}</p>
+                  </div>
+                  {(['sources', 'images', 'integrations', 'experience_a_ajouter', 'a_mettre_a_jour'] as const).map((key) => {
+                    const values = Array.isArray(workflowFiche[key]) ? workflowFiche[key] as Array<Record<string, unknown>> : []
+                    return (
+                      <div key={key}>
+                        <p className="font-medium capitalize text-secondary">{key.replaceAll('_', ' ')}</p>
+                        {values.length === 0 ? <p className="mt-1 text-tertiary">—</p> : <div className="mt-1 flex flex-col gap-2">{values.map((value, index) => { const url = value.url ? String(value.url) : ''; const auxiliary = value.alt || value.legende || value.source ? String(value.alt || value.legende || value.source) : ''; return <div key={index} className="rounded-[8px] bg-surface-soft px-2.5 py-2 text-primary"><p>{String(value.titre || value.information || value.description || value.url || 'Élément')}</p>{url && <p className="mt-0.5 truncate text-[11px] text-tertiary">{url}</p>}{auxiliary && <p className="mt-0.5 text-[11px] text-tertiary">{auxiliary}</p>}</div> })}</div>}
+                      </div>
+                    )
+                  })}
                 </div>
               )}
 

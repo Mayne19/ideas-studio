@@ -45,6 +45,11 @@ export function listProductionArticles(projectId: string, status?: WorkflowStatu
   return api.get<ProductionArticle[]>(`/projects/${projectId}/editorial-workflow/articles${query}`)
 }
 
+export async function getProductionArticle(projectId: string, articleId: string): Promise<ProductionArticle | null> {
+  const items = await listProductionArticles(projectId, 'review')
+  return items.find((item) => item.id === articleId) ?? null
+}
+
 export function listProductionWritingQueue(projectId: string): Promise<ProductionArticle[]> {
   return api.get<ProductionArticle[]>(`/projects/${projectId}/editorial-workflow/writing-queue`)
 }
