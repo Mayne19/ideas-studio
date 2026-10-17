@@ -252,7 +252,7 @@ def _write_html(path: Path, data: dict[str, Any], report: dict[str, Any]) -> Non
         f"<meta name='description' content='{meta}'><title>{title}</title>"
         "<style>body{max-width:820px;margin:40px auto;padding:0 24px;"
         "font:18px/1.65 system-ui,sans-serif;color:#202124}h1{font-size:2.2rem;"
-        "line-height:1.15}h2{margin-top:2.4em}h3{margin-top:1.8em}.summary,.summary-callout{"
+        "line-height:1.15}h2{margin-top:2.4em}h3{margin-top:1.8em}.summary-callout{"
         "padding:16px 20px;background:#f0f4f8;border-left:4px solid #526b82;"
         "border-radius:4px}.report{margin-top:60px;padding-top:24px;border-top:1px solid #ddd;"
         "font-size:14px;color:#555}</style></head><body>"
