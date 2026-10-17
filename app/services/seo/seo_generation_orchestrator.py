@@ -2397,6 +2397,18 @@ class SEOGenerationOrchestrator:
         mode = getattr(pipe, "generation_mode", None) or app_settings.GENERATION_MODE
         return mode if mode in ("agent", "pipeline") else "agent"
 
+    def _agent_settings(self) -> dict:
+        """Réglages de l'agent (Paramètres → Pipeline) : arrêt dur du coût en
+        dollars et lecture de secours des pages."""
+        from app.models.ai import Pipeline
+        try:
+            pipe = self.db.get(Pipeline, self.project_id)
+        except Exception:
+            pipe = None
+        cost = getattr(pipe, "agent_max_cost_usd", None)
+        fallback = getattr(pipe, "agent_reader_fallback", None)
+        return {"max_cost_usd": float(cost) if cost else 3.0, "reader_fallback": True if fallback is None else bool(fallback)}
+
     def _min_publish_score(self) -> float:
         from app.models.ai import Pipeline
         from app.services.pipeline_service import resolve_min_publish_score
