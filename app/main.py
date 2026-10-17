@@ -10,7 +10,7 @@ from sqlalchemy.engine.url import make_url
 from alembic.config import Config
 from alembic import command
 from app.core.config import settings
-from app.routers import auth, projects, health, categories, articles, public_api, tracking, ideas, seo, performance, recommendations, notifications, members, editor, versions, media, invitations, editorial_setup, callouts, pipeline, generation, comments, search, search_console, profile, ai_providers, activity, webhooks, kanban_columns, ai_agents, monitoring, analytics, external_services, illustrations, editorial_workflow
+from app.routers import auth, projects, health, categories, articles, public_api, tracking, ideas, seo, performance, recommendations, notifications, members, editor, versions, media, invitations, editorial_setup, callouts, pipeline, generation, comments, search, search_console, profile, ai_providers, activity, webhooks, kanban_columns, ai_agents, monitoring, analytics, external_services, illustrations, editorial_workflow, local_writer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -33,6 +33,7 @@ OPENAPI_TAGS = [
     {"name": "callouts", "description": "Templates de callouts réutilisables dans l'éditeur."},
     {"name": "ideas", "description": "Idées, opportunités SEO, passage en production et file de production."},
     {"name": "editorial_workflow", "description": "Nouveau parcours éditorial, dépôt local, contrôles techniques, calendrier et mises à jour."},
+    {"name": "local_writer", "description": "Rédacteur local : sujets à rédiger, articles du site pour le maillage, rapport du rédacteur."},
     {"name": "generation", "description": "Génération IA, rapports de génération, découverte d'idées et planning."},
     {"name": "pipeline", "description": "Configuration, exécution et logs du pipeline éditorial."},
     {"name": "seo", "description": "Analyse SEO, readiness checks et scores éditoriaux."},
@@ -282,6 +283,7 @@ app.include_router(public_api.router)
 app.include_router(tracking.router)
 app.include_router(ideas.router)
 app.include_router(editorial_workflow.router)
+app.include_router(local_writer.router)
 app.include_router(seo.router)
 app.include_router(performance.router)
 app.include_router(recommendations.router)
