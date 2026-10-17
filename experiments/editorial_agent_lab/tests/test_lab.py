@@ -64,6 +64,8 @@ def test_split_output_separates_article_and_fiche():
     _, bad, error = split_output(ARTICLE + "\n```json\n{pas du json}\n```")
     assert bad is None and error.startswith("JSON invalide")
     assert article_slug("Quelle application ?", {"slug": "Pas Un Slug"}) == "quelle-application"
+    preamble, _, _ = split_output("I have what I need. Here is the article:\n\n" + output())
+    assert preamble.startswith("# Quelle application") and "Here is the article" not in preamble
 
 
 def test_three_blocking_checks():
@@ -96,4 +98,5 @@ def test_generate_writes_article_fiche_and_report(tmp_path):
     assert (out / "article.md").read_text(encoding="utf-8").startswith("# Quelle application")
     assert json.loads((out / "fiche.json").read_text(encoding="utf-8"))["slug"] == "application-gratuite-langue"
     assert json.loads((out / "report.json").read_text(encoding="utf-8"))["passed"] is True
+    assert (out / "raw_output.md").read_text(encoding="utf-8").startswith("# Quelle application")
     assert report["writer"]["tokens"] == {"input": 1, "output": 2} and seen[0].startswith("/redaction-article")

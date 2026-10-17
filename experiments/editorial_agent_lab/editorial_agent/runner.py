@@ -28,6 +28,7 @@ def generate(subject: str, *, site_articles: list[dict] | None = None, output_ro
     out_dir = Path(output_root) / slug
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "article.md").write_text(article + "\n", encoding="utf-8")
+    (out_dir / "raw_output.md").write_text(result["text"] + "\n", encoding="utf-8")
     fiche_path = out_dir / "fiche.json"
     if fiche is not None:
         fiche_path.write_text(json.dumps(fiche, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -43,7 +44,7 @@ def generate(subject: str, *, site_articles: list[dict] | None = None, output_ro
         "blocking_checks": checks,
         "passed": all(c["passed"] for c in checks),
         "plagiarism": plagiarism_alert(article, sources, fetch),
-        "output": {"article_md": str(out_dir / "article.md"),
+        "output": {"article_md": str(out_dir / "article.md"), "raw_output_md": str(out_dir / "raw_output.md"),
                    "fiche_json": str(fiche_path) if fiche is not None else None,
                    "report_json": str(out_dir / "report.json")},
     }

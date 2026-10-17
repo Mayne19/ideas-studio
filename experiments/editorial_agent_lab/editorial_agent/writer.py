@@ -29,10 +29,11 @@ def split_output(text: str) -> tuple[str, dict | None, str]:
 
     matches = list(_FICHE_RE.finditer(text or ""))
     if not matches:
-        return (text or "").strip(), None, "aucun bloc ```json trouvé après l'article"
+        return strip_preamble(text or ""), None, "aucun bloc ```json trouvé après l'article"
     last = matches[-1]
     article = (text[:last.start()]).strip()
     article = re.sub(r"^```(?:markdown|md)?\s*\n(.*)\n```$", r"\1", article, flags=re.DOTALL).strip()
+    article = strip_preamble(article)
     try:
         fiche = json.loads(last.group(1))
     except json.JSONDecodeError as exc:
@@ -40,6 +41,13 @@ def split_output(text: str) -> tuple[str, dict | None, str]:
     if not isinstance(fiche, dict):
         return article, None, "la fiche n'est pas un objet JSON"
     return article, fiche, ""
+
+
+def strip_preamble(article: str) -> str:
+    """L'article commence à son titre H1 : une phrase de l'agent avant le titre
+    (« Voici l'article : ») n'en fait pas partie."""
+    match = re.search(r"^# \S", article, re.MULTILINE)
+    return article[match.start():].strip() if match else article.strip()
 
 
 def slugify(value: str) -> str:
