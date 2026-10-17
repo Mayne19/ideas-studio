@@ -131,7 +131,9 @@ def measurements(content: str, *, title: str = "", facts: list[dict] | None = No
 def code_defects(measured: dict) -> dict[str, list[dict]]:
     """Défauts mesurés par le code, ajoutés à la déduction du modèle."""
     defects: dict[str, list[dict]] = {"accuracy_sources": [], "readability": []}
-    orphan = re.findall(r"« ([^»]+) »", " ".join(measured.get("quote_faults") or []))
+    # Seules les citations listées après « : » comptent (le message lui-même
+    # contient « facts » entre guillemets).
+    orphan = re.findall(r"« ([^»]+) »", " ".join(f.split(") : ", 1)[-1] for f in measured.get("quote_faults") or []))
     for quote in orphan[:3]:
         defects["accuracy_sources"].append({"severity": "mineur", "passage": quote[:200],
                                             "detail": "citation absente des faits vérifiés (mesure du code)"})
@@ -173,6 +175,15 @@ def code_scores(measured: dict) -> dict:
     }
 
 
+def today_label() -> str:
+    from datetime import date
+
+    months = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre",
+              "novembre", "décembre")
+    today = date.today()
+    return f"{today.day} {months[today.month - 1]} {today.year}"
+
+
 def build_prompt(content: str, *, title: str, keyword: str, measured: dict, facts: list[str],
                  competitors: list[str], faq: list[dict]) -> str:
     from app.services.seo.editorial_judge import article_digest
@@ -183,6 +194,8 @@ def build_prompt(content: str, *, title: str, keyword: str, measured: dict, fact
         "- aucune liste fournie : juge les sources d'après les liens et attributions présents dans l'article. "
         "N'exige aucune citation mot pour mot et ne retire aucun point pour l'absence de liste de faits.")
     return "\n".join([
+        f"Nous sommes le {today_label()}. Une date ou une revalorisation antérieure à aujourd'hui n'est pas dans le "
+        "futur : ne la signale pas comme impossible.",
         "Tu es le rédacteur en chef d'un site éditorial français. Tu relis un article de blog comme un correcteur "
         "exigeant, pour un lecteur débutant qui veut une réponse fiable et agréable à lire. Échelle : un bon article "
         "du web vaut environ 70 ; 80 est bon mais a des défauts visibles ; 90 ou plus exige zéro faute grave et au "

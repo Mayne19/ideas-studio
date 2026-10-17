@@ -126,3 +126,17 @@ def test_grave_faults_need_a_real_passage_and_ce_guide_is_not_meta_commentary():
     measured = judge_v2("<p>Ce guide vous montre quoi faire dès l'arrivée, sans détour.</p>",
                         lambda p, s, t: defects_reply({}), title="T")["measurements"]
     assert measured["meta_commentary"] == []
+
+
+def test_prompt_states_today_and_quote_header_is_not_an_orphan():
+    from datetime import date
+
+    from app.services.seo.editorial_judge_v2 import code_defects
+
+    seen = []
+    judge_v2(ARTICLE, lambda p, s, t: seen.append(p) or reply(full_scores()), title="T")
+    assert f"Nous sommes le {date.today().day} " in seen[0] and str(date.today().year) in seen[0]
+    measured = {"quote_faults": ["Citations absentes des citations de « facts » (ajoute chaque fait avec sa "
+                                 "citation exacte, ou reformule sans guillemets) : « toujours rincer à l'eau froide »"]}
+    orphans = [d["passage"] for d in code_defects(measured)["accuracy_sources"]]
+    assert orphans == ["toujours rincer à l'eau froide"]
