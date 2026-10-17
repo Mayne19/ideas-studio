@@ -29,6 +29,8 @@ Produire des articles publiables (au moins 90/100 selon le rédacteur en chef, a
 5. Ne jamais injecter les articles de référence du rédacteur en chef dans le prompt ou les données de l'agent : ils servent uniquement à l'évaluation.
 6. Tout réglage modifiable doit l'être depuis le CMS, pas dans le code.
 7. Pas d'action concurrente à la souris ou au clavier sur le Mac : si un agent pilote l'écran, les autres attendent.
+8. Tout le travail est commité et poussé sur `main` à chaque fois (demande de Mayne du 17 octobre 2026) : aucun fichier modifié ou non suivi ne reste en attente.
+9. Une branche terminée (fusionnée) est supprimée tout de suite, sur GitHub et en local, avec son worktree. On n'accumule pas les branches.
 
 ## Comment joindre Claude Code
 
