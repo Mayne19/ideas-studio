@@ -371,11 +371,11 @@ def source_balance_errors(candidate: dict) -> list[str]:
             "ou retire-les."]
 
 
-SOURCE_MENTION_MAX = 4
+SOURCE_MENTION_MAX = 5
 
 
 def source_mention_errors(candidate: dict) -> list[str]:
-    """Une même source nommée plus de 4 fois dans le texte : l'article compile
+    """Une même source nommée plus de 5 fois dans le texte : l'article compile
     ses sources au lieu de les reformuler (essai 5, « Vidal dit… »)."""
     raw_text = _block_text(candidate.get("content_html") or "")
     domains = {_registered_domain(_host(str(item.get("url") or item.get("source_url") or "")))
