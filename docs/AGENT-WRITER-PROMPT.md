@@ -46,6 +46,10 @@ Introduction, en trois paragraphes reliés et 150 mots au plus :
 Ne critique jamais les autres guides ni les autres sites : la problématique vient de ce que vit le lecteur, pas de ce que disent les autres.
 
 Écriture :
+- Dans tout l'article, limite les citations directes entre guillemets à trois au maximum ; reformule les faits avec tes propres mots.
+- Ne nomme une même source qu'une seule fois par paragraphe.
+- Toute comparaison (« autant que », « plus que » ou équivalent) doit exprimer exactement la comparaison formulée par la source ; ne transforme pas deux recommandations distinctes en équivalence.
+- Vérifie que les chiffres du corps tiennent la promesse chiffrée de l'introduction ; corrige l'annonce ou les chiffres si l'ensemble ne correspond pas.
 - Chaque phrase découle de la précédente. Aucune phrase jetée, aucune liste de phrases sans lien.
 - Phrases directes qui s'adressent au lecteur et le responsabilisent. Décris l'action, le résultat attendu et la conséquence concrète plutôt qu'une formulation impersonnelle ou une image floue.
 - Mots simples. Tout terme technique est expliqué en quelques mots la première fois.
