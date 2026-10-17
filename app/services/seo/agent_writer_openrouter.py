@@ -75,7 +75,7 @@ class OpenRouterAgentClient:
                  fetch_fn: Callable[[str], str], model: str = OPENROUTER_AGENT_MODEL,
                  max_searches: int = 10, max_fetches: int = 15, post: Callable | None = None,
                  timeout_seconds: float = 600.0, max_cost_usd: float = MAX_COST_USD,
-                 max_failed_fetches: int = 6):
+                 max_failed_fetches: int = 6, reasoning_effort: str = REASONING_EFFORT):
         self.api_key = api_key
         self.model = model
         self.search_fn = search_fn
@@ -91,7 +91,7 @@ class OpenRouterAgentClient:
         self._post = post
         self.max_cost_usd = max_cost_usd
         self.cost_usd = 0.0
-        self.reasoning_effort = REASONING_EFFORT
+        self.reasoning_effort = reasoning_effort if reasoning_effort in ("low", "medium", "high") else REASONING_EFFORT
         self.transcript: list[dict] = []
         self.searches = 0
         self.fetches = 0
@@ -149,6 +149,18 @@ class OpenRouterAgentClient:
         from app.services.cost_estimator import estimate_agent_writer_cost
         return estimate_agent_writer_cost(self.model, int(usage.get("prompt_tokens") or 0),
                                           int(usage.get("completion_tokens") or 0), 0)
+
+    def complete(self, system: str, user: str, max_tokens: int = 4000) -> str:
+        """Appel unique sans outils, dans une conversation neuve (relecture
+        indépendante) : même modèle, même budget et même arrêt dur."""
+        data = self._http({"model": self.model, "max_tokens": max_tokens,
+                           "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+                           "reasoning": {"effort": self.reasoning_effort}})
+        usage = data.get("usage") or {}
+        self.cost_usd += float(usage.get("cost") or 0.0) or self._estimate(usage)
+        if self.cost_usd > self.max_cost_usd:
+            raise AgentBudgetExceeded(f"arrêt dur : coût cumulé {self.cost_usd:.2f} $ > {self.max_cost_usd:.2f} $")
+        return data["choices"][0]["message"].get("content") or ""
 
     def create(self, *, model: str, max_tokens: int, system: str, messages: list[dict], tools=None, **_):
         if not self.transcript:

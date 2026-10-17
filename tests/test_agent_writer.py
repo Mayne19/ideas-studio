@@ -235,9 +235,15 @@ def test_orchestrator_reads_agent_settings_from_pipeline():
         return SimpleNamespace(project_id="p", db=SimpleNamespace(get=lambda model, pid: pipe))
 
     read = SEOGenerationOrchestrator._agent_settings
-    pipe = SimpleNamespace(agent_max_cost_usd=1.70, agent_reader_fallback=False)
-    assert read(orch(pipe)) == {"max_cost_usd": 1.7, "reader_fallback": False}
-    assert read(orch(None)) == {"max_cost_usd": 3.0, "reader_fallback": True}
+    pipe = SimpleNamespace(agent_max_cost_usd=1.70, agent_reader_fallback=False, agent_reasoning_effort="medium",
+                           agent_consistency_review=True)
+    assert read(orch(pipe)) == {"max_cost_usd": 1.7, "reader_fallback": False, "reasoning_effort": "medium",
+                                "consistency_review": True}
+    assert read(orch(None)) == {"max_cost_usd": 3.0, "reader_fallback": True, "reasoning_effort": "low",
+                                "consistency_review": False}
+    bad = SimpleNamespace(agent_max_cost_usd=1, agent_reader_fallback=True, agent_reasoning_effort="ultra",
+                          agent_consistency_review=False)
+    assert read(orch(bad))["reasoning_effort"] == "low"
 
 
 def test_fetch_refuses_urls_absent_from_search_results():
@@ -266,3 +272,23 @@ def test_invented_urls_count_in_the_failure_cap():
     assert client._run_tool("web_fetch", {"url": "https://invente7.fr"}) == (
         "Limite d'échecs de lecture atteinte : rédige avec ce que tu as déjà.")
     assert client.fetches == 0 and client.failed_fetches == 6
+
+
+def test_bridge_reasoning_effort_and_tool_free_review_call_share_the_budget():
+    from app.services.seo.agent_writer_openrouter import AgentBudgetExceeded, OpenRouterAgentClient
+
+    sent = []
+
+    def post(payload):
+        sent.append(payload)
+        return {"choices": [{"message": {"role": "assistant", "content": '{"contradictions": []}'}}],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 5, "cost": 0.6}}
+
+    client = OpenRouterAgentClient("k", search_fn=lambda q, n: [], fetch_fn=lambda url: "", post=post,
+                                   reasoning_effort="medium", max_cost_usd=1.0)
+    assert client.complete("sys", "article") == '{"contradictions": []}'
+    assert sent[0]["reasoning"] == {"effort": "medium"} and "tools" not in sent[0]
+    assert [m["role"] for m in sent[0]["messages"]] == ["system", "user"] and client.transcript == []
+    with pytest.raises(AgentBudgetExceeded):
+        client.complete("sys", "article")
+    assert OpenRouterAgentClient("k", search_fn=None, fetch_fn=None, reasoning_effort="ultra").reasoning_effort == "low"

@@ -242,7 +242,14 @@ _COMMON_WORD_BRANDS = _load_common_word_brands()
 
 def _mentions_competitor(raw_text: str, name: str) -> bool:
     """Match brands with accents, while avoiding common-word false positives."""
+    return _brand_mentions(raw_text, name) > 0
+
+
+def _brand_mentions(raw_text: str, name: str) -> int:
+    """Nombre de mentions d'une marque (accents repliés ; un mot courant ne
+    compte que s'il désigne visiblement le site)."""
     folded = _fold_accents(raw_text)
+    count = 0
     for match in re.finditer(r"(?<![\w-])" + re.escape(name) + r"(?![\w-])", folded, re.IGNORECASE):
         original = raw_text[match.start():match.end()]
         if name in _COMMON_WORD_BRANDS and original == original.lower():
@@ -257,25 +264,30 @@ def _mentions_competitor(raw_text: str, name: str) -> bool:
                 verbs = re.findall(r"[a-zà-ÿ]+", next_words)
                 if not any(word in _ATTRIBUTION_VERBS for word in verbs[:3]):
                     continue
-        return True
-    return False
+        count += 1
+    return count
+
+
+def _block_text(content: str) -> str:
+    """Texte brut avec un saut de ligne par bloc HTML (début de phrase fiable)."""
+    from html import unescape
+
+    block_end = re.compile(r"</(?:h[1-6]|p|li|blockquote|tr|td|th)\s*>", re.IGNORECASE)
+    raw_text = unescape(re.sub(r"<[^>]+>", " ", block_end.sub("\n", content or "")))
+    raw_text = re.sub(r"[ \t\r\f\v]+", " ", raw_text)
+    return re.sub(r" *\n *", "\n", raw_text).strip()
 
 
 def competitor_errors(candidate: dict) -> list[str]:
     """Concurrents : jamais liés, jamais nommés, jamais sources ; au moins 3
     domaines de sources admissibles (consigne du 2026-10-17)."""
-    from html import unescape
-
     content = candidate.get("content_html") or ""
     hosts = competitor_hosts(candidate)
     errors = []
     for url in re.findall(r"""<a\b[^>]*href\s*=\s*["']([^"']+)["']""", content, re.IGNORECASE):
         if _registered_domain(_host(url)) in hosts:
             errors.append(f"Lien vers un concurrent ({_host(url)}) : supprime ce lien, un concurrent n'est jamais une source.")
-    block_end = re.compile(r"</(?:h[1-6]|p|li|blockquote|tr|td|th)\s*>", re.IGNORECASE)
-    raw_text = unescape(re.sub(r"<[^>]+>", " ", block_end.sub("\n", content)))
-    raw_text = re.sub(r"[ \t\r\f\v]+", " ", raw_text)
-    raw_text = re.sub(r" *\n *", "\n", raw_text).strip()
+    raw_text = _block_text(content)
     text = raw_text.lower()
     for host in hosts:
         for name in _brand_variants(host):
@@ -302,6 +314,79 @@ _PROSE_COUNT_RE = re.compile(
     r"(?:[a-zéèêàâîïôûç]+\s+)?"
     r"(gestes?|étapes?|erreurs?|règles?|conseils?|questions?|critères?|astuces?|raisons?|signes?|solutions?|méthodes?|points?|choses?)\b",
     re.IGNORECASE)
+
+
+QUOTE_MIN_WORDS = 4
+_QUOTE_RE = re.compile(r"«\s*(.+?)\s*»|“(.+?)”", re.DOTALL)
+
+
+def _normalize_quote(text: str) -> str:
+    """Comparaison tolérante : casse, apostrophes et guillemets typographiques,
+    espaces (dont insécables), ponctuation, et accents ignorés."""
+    text = unicodedata.normalize("NFKD", text or "")
+    text = "".join(c for c in text if not unicodedata.combining(c)).lower()
+    text = re.sub(r"[’‘`´]", "'", text)
+    text = re.sub(r"[^\w']+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def quote_errors(candidate: dict) -> list[str]:
+    """Toute citation entre guillemets d'au moins 4 mots doit venir d'une
+    citation de « facts ». Une citation tronquée (morceaux séparés par « … »
+    ou « [...] ») est acceptée si chaque morceau s'y trouve."""
+    from app.services.seo.html_text_ops import html_to_text
+
+    quotes = [_normalize_quote(str(f.get("quote") or "")) for f in candidate.get("facts") or [] if isinstance(f, dict)]
+    haystack = [q for q in quotes if q]
+    missing = []
+    for m in _QUOTE_RE.finditer(html_to_text(candidate.get("content_html") or "")):
+        passage = (m.group(1) or m.group(2) or "").strip()
+        if len(passage.split()) < QUOTE_MIN_WORDS:
+            continue
+        pieces = [_normalize_quote(p) for p in re.split(r"…|\.\.\.|\[\s*\.*\s*\]", passage)]
+        pieces = [p for p in pieces if p]
+        if not all(any(piece in q for q in haystack) for piece in pieces):
+            missing.append(passage[:200])
+    if not missing:
+        return []
+    return ["Citations absentes des citations de « facts » (ajoute chaque fait avec sa citation exacte, "
+            "ou reformule sans guillemets) : " + " | ".join(f"« {q} »" for q in missing)]
+
+
+BALANCE_MIN_FACTS = 4
+
+
+def source_balance_errors(candidate: dict) -> list[str]:
+    """Aucun domaine ne porte plus de la moitié des faits (règle de l'étape 4)."""
+    domains = [_registered_domain(_host(str(f.get("source_url") or "")))
+               for f in candidate.get("facts") or [] if isinstance(f, dict)]
+    domains = [d for d in domains if d]
+    if len(domains) < BALANCE_MIN_FACTS:
+        return []
+    top = max(set(domains), key=domains.count)
+    if domains.count(top) * 2 <= len(domains):
+        return []
+    return [f"Le domaine {top} porte {domains.count(top)} faits sur {len(domains)} : aucune source ne doit porter "
+            "plus de la moitié des faits. Remplace une partie de ces faits par d'autres sources admissibles lues, "
+            "ou retire-les."]
+
+
+SOURCE_MENTION_MAX = 4
+
+
+def source_mention_errors(candidate: dict) -> list[str]:
+    """Une même source nommée plus de 4 fois dans le texte : l'article compile
+    ses sources au lieu de les reformuler (essai 5, « Vidal dit… »)."""
+    raw_text = _block_text(candidate.get("content_html") or "")
+    domains = {_registered_domain(_host(str(item.get("url") or item.get("source_url") or "")))
+               for key in ("sources", "facts") for item in candidate.get(key) or [] if isinstance(item, dict)}
+    errors = []
+    for domain in sorted(d for d in domains if d):
+        count = max((_brand_mentions(raw_text, name) for name in _brand_variants(domain)), default=0)
+        if count > SOURCE_MENTION_MAX:
+            errors.append(f"Source nommée {count} fois ({domain}) : reformule et regroupe, au plus "
+                          f"{SOURCE_MENTION_MAX} mentions d'une même source.")
+    return errors
 
 
 def fact_errors(candidate: dict) -> list[str]:
@@ -430,6 +515,74 @@ def correction_rounds(writer, check, data: dict, run_report: dict, step=lambda l
     return best, best_errors, plag_report
 
 
+REVIEW_SYSTEM = (
+    "Tu es un relecteur indépendant. Tu ne réécris rien : tu cherches uniquement les contradictions internes "
+    "d'un article.")
+REVIEW_INSTRUCTIONS = """Relis cet article.
+1. Repère chaque règle, seuil ou calcul que l'article pose lui-même (par exemple une formule, un rythme, une heure).
+2. Applique-les à chaque ligne de tableau, à chaque conseil, à la conclusion et à la FAQ.
+3. Compare aussi chaque affirmation chiffrée aux faits cités ci-dessous.
+Signale seulement une vraie contradiction : deux passages qui ne peuvent pas être vrais ensemble, ou un conseil
+qui contredit le calcul de l'article ou un fait cité. Ne signale ni le style, ni une simple reformulation, ni un
+arrondi (« 10 minutes » et « environ dix minutes » ne se contredisent pas).
+
+Réponds uniquement par ce JSON :
+{"contradictions": [{"passage": "texte exact de l'article", "probleme": "ce qui contredit quoi", "correction": "ce qu'il faut écrire"}]}
+Liste vide si l'article est cohérent.
+
+Faits cités :
+{facts}
+
+Article (HTML) :
+{content}"""
+
+
+def consistency_review(complete, candidate: dict) -> list[str]:
+    """Relecture indépendante (conversation neuve, sans outils) : les
+    contradictions trouvées deviennent des fautes dures à corriger."""
+    from app.services.seo.html_text_ops import extract_json_object
+
+    prompt = (REVIEW_INSTRUCTIONS.replace("{facts}", "\n".join(f"- {line}" for line in fact_lines(candidate)) or "- aucun")
+              .replace("{content}", candidate.get("content_html") or ""))
+    data = extract_json_object(complete(REVIEW_SYSTEM, prompt)) or {}
+    errors = []
+    for item in data.get("contradictions") or []:
+        if isinstance(item, dict) and str(item.get("passage") or "").strip():
+            errors.append(f"Contradiction interne : « {str(item['passage']).strip()[:300]} » : "
+                          f"{str(item.get('probleme') or '').strip()[:300]} Correction attendue : "
+                          f"{str(item.get('correction') or '').strip()[:300]}")
+    return errors
+
+
+def review_round(writer, check, complete, best: dict, best_errors: list, plag_report: dict,
+                 run_report: dict) -> tuple[dict, list, dict]:
+    """Relecture de cohérence puis, si elle trouve des contradictions, un tour
+    de correction. Le nouvel article n'est gardé que s'il n'ajoute aucune
+    faute dure ; une erreur (dont l'arrêt dur) garde l'article précédent."""
+    try:
+        review = consistency_review(complete, best)
+    except Exception as exc:
+        run_report["consistency_review"] = {"error": str(exc)[:300]}
+        return best, best_errors, plag_report
+    run_report["consistency_review"] = {"contradictions": review}
+    if not review:
+        return best, best_errors, plag_report
+    try:
+        corrected = writer.correct(best_errors + review)
+    except Exception as exc:
+        run_report["rounds"].append({"round": "relecture", "error": str(exc)[:300]})
+        return best, best_errors, plag_report
+    if corrected is None:
+        run_report["rounds"].append({"round": "relecture", "error": "JSON corrigé inexploitable"})
+        return best, best_errors, plag_report
+    errors, report = check(corrected)
+    run_report["rounds"].append({"round": "relecture", "errors": errors})
+    if len(errors) <= len(best_errors):
+        best, best_errors, plag_report = corrected, errors, report
+        run_report["remaining_errors"] = best_errors
+    return best, best_errors, plag_report
+
+
 def article_keyword(orch) -> str:
     return str((orch.context.get("idea_discovery") or {}).get("main_keyword") or "")
 
@@ -505,12 +658,13 @@ def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, 
     editor_notes = " ".join(x for x in (orch.context.get("expert_notes") or "", orch.context.get("context_hint") or "") if x)
     user_message = build_user_message(keyword=final_keyword, category=category_name, editor_notes=editor_notes or None,
                                       published_articles=published_articles(db, orch.project))
+    agent_settings = orch._agent_settings()
     if provider == "openrouter":
         from app.services.seo.agent_writer_openrouter import OpenRouterAgentClient, page_fetcher, reader_get
-        agent_settings = orch._agent_settings()
         fetch_fn = page_fetcher(orch.page_cache, fallback=reader_get if agent_settings["reader_fallback"] else None)
         client = OpenRouterAgentClient(api_key, model=model, search_fn=orch.serp_adapter.search, fetch_fn=fetch_fn,
-                                       max_searches=6, max_fetches=6, max_cost_usd=agent_settings["max_cost_usd"])
+                                       max_searches=6, max_fetches=6, max_cost_usd=agent_settings["max_cost_usd"],
+                                       reasoning_effort=agent_settings["reasoning_effort"])
     else:
         client = anthropic_client(api_key)
     writer = AgentWriter(client, model=model, system=system)
@@ -530,7 +684,8 @@ def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, 
         errors = structure_errors(content, candidate.get("title") or final_title)
         errors += assembly_errors(candidate) + link_errors(content) + html_render_errors(content)
         errors += announced_count_errors(content) + prose_count_errors(content) + competitor_errors(candidate)
-        errors += fact_errors(candidate)
+        errors += fact_errors(candidate) + quote_errors(candidate) + source_balance_errors(candidate)
+        errors += source_mention_errors(candidate)
         errors += self_review_errors(candidate)
         errors += judge_errors(orch, article, candidate)
         plag_errors, plag_report = plagiarism_errors(orch, content)
@@ -538,6 +693,10 @@ def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, 
         return errors + plag_errors, plag_report
 
     best, best_errors, plag_report = correction_rounds(writer, check, data, run_report, orch._step)
+    if agent_settings["consistency_review"] and callable(getattr(client, "complete", None)):
+        orch._step("AgentWriter relecture de cohérence")
+        best, best_errors, plag_report = review_round(writer, check, client.complete, best, best_errors,
+                                                      plag_report, run_report)
 
     content = best.get("content_html") or ""
     if orch._is_french():

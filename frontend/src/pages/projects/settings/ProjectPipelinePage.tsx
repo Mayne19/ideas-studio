@@ -76,6 +76,8 @@ export default function ProjectPipelinePage() {
   const [generationMode, setGenerationMode] = useState<'agent' | 'pipeline'>('agent')
   const [agentMaxCost, setAgentMaxCost] = useState('3')
   const [agentReaderFallback, setAgentReaderFallback] = useState(true)
+  const [agentReasoningEffort, setAgentReasoningEffort] = useState<'low' | 'medium' | 'high'>('low')
+  const [agentConsistencyReview, setAgentConsistencyReview] = useState(false)
 
   useEffect(() => {
     if (!projectId) return
@@ -100,6 +102,8 @@ export default function ProjectPipelinePage() {
         setGenerationMode(s.generation_mode ?? 'agent')
         setAgentMaxCost(String(s.agent_max_cost_usd ?? 3))
         setAgentReaderFallback(s.agent_reader_fallback ?? true)
+        setAgentReasoningEffort(s.agent_reasoning_effort ?? 'low')
+        setAgentConsistencyReview(s.agent_consistency_review ?? false)
         setLogs(l)
         setLoadStatus('success')
         setLoadError('')
@@ -138,6 +142,8 @@ export default function ProjectPipelinePage() {
         generation_mode: generationMode,
         agent_max_cost_usd: Math.max(0.1, Math.min(20, Number(agentMaxCost) || 3)),
         agent_reader_fallback: agentReaderFallback,
+        agent_reasoning_effort: agentReasoningEffort,
+        agent_consistency_review: agentConsistencyReview,
       })
       setSettings(updated)
       setDirty(false)
@@ -326,6 +332,38 @@ export default function ProjectPipelinePage() {
                 La rédaction s'arrête dès que le coût cumulé de l'agent dépasse ce montant ; le rapport garde ce qui a été produit.
               </p>
             </div>
+            <div>
+              <label htmlFor="agent-reasoning" className="mb-1.5 block text-[12px] font-medium text-secondary">
+                Effort de raisonnement de l'agent
+              </label>
+              <select
+                id="agent-reasoning"
+                value={agentReasoningEffort}
+                onChange={(e) => { setAgentReasoningEffort(e.target.value as 'low' | 'medium' | 'high'); setDirty(true) }}
+                className="h-9 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
+              >
+                <option value="low">Faible (le moins cher)</option>
+                <option value="medium">Moyen</option>
+                <option value="high">Élevé (le plus cher)</option>
+              </select>
+              <p className="mt-1.5 text-[11px] text-tertiary">
+                Plus l'effort est élevé, plus le modèle vérifie sa logique (calculs, tableau, conclusion), et plus l'article coûte cher.
+              </p>
+            </div>
+            <label className="flex items-start gap-2 text-[12px] text-secondary">
+              <input
+                type="checkbox"
+                checked={agentConsistencyReview}
+                onChange={(e) => { setAgentConsistencyReview(e.target.checked); setDirty(true) }}
+                className="mt-0.5"
+              />
+              <span>
+                Relecture de cohérence indépendante
+                <span className="mt-0.5 block text-[11px] text-tertiary">
+                  Un second appel, sans outils, cherche les contradictions entre le calcul de l'article et son tableau, ses conseils et sa conclusion ; l'agent corrige ce qu'il trouve. Environ 0,20 $ de plus par article, dans l'arrêt dur.
+                </span>
+              </span>
+            </label>
             <label className="flex items-start gap-2 text-[12px] text-secondary">
               <input
                 type="checkbox"

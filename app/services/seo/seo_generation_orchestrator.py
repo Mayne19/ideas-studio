@@ -2407,7 +2407,10 @@ class SEOGenerationOrchestrator:
             pipe = None
         cost = getattr(pipe, "agent_max_cost_usd", None)
         fallback = getattr(pipe, "agent_reader_fallback", None)
-        return {"max_cost_usd": float(cost) if cost else 3.0, "reader_fallback": True if fallback is None else bool(fallback)}
+        effort = getattr(pipe, "agent_reasoning_effort", None)
+        return {"max_cost_usd": float(cost) if cost else 3.0, "reader_fallback": True if fallback is None else bool(fallback),
+                "reasoning_effort": effort if effort in ("low", "medium", "high") else "low",
+                "consistency_review": bool(getattr(pipe, "agent_consistency_review", False))}
 
     def _min_publish_score(self) -> float:
         from app.models.ai import Pipeline

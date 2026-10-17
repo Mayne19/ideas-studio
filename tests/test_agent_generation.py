@@ -215,3 +215,91 @@ def test_hard_stop_during_a_correction_round_keeps_the_round_zero_article():
     assert best is first and errors == ["faute"] and plag == {"status": "clean"}
     assert report["rounds"][0] == {"round": 0, "errors": ["faute"]}
     assert "arrêt dur" in report["rounds"][1]["error"] and report["remaining_errors"] == ["faute"]
+
+
+def test_consistency_review_turns_contradictions_into_a_correction_round():
+    import json
+
+    from app.services.seo.agent_generation import consistency_review, review_round
+
+    reply = json.dumps({"contradictions": [{"passage": "Chaque matinée dehors vous rapproche de l'heure locale",
+                                            "probleme": "faux vers l'ouest selon la règle de l'article",
+                                            "correction": "distinguer l'est et l'ouest"}]})
+    prompts = []
+
+    def complete(system, user):
+        prompts.append(user)
+        return reply
+
+    candidate = {"content_html": "<p>article</p>",
+                 "facts": [{"value": "1 h par jour", "quote": "une heure par jour", "source_url": "https://cdc.gov/x"}]}
+    errors = consistency_review(complete, candidate)
+    assert len(errors) == 1 and "Chaque matinée dehors" in errors[0] and "distinguer l'est" in errors[0]
+    assert "une heure par jour" in prompts[0] and "<p>article</p>" in prompts[0]
+
+    class Writer:
+        def __init__(self):
+            self.sent = None
+
+        def correct(self, errs):
+            self.sent = errs
+            return {"content_html": "<p>corrigé</p>"}
+
+    writer, report = Writer(), {"rounds": []}
+    best, errs, _ = review_round(writer, lambda c: ([], {"status": "clean"}), complete, candidate, [], {}, report)
+    assert best["content_html"] == "<p>corrigé</p>" and writer.sent == errors
+    assert report["consistency_review"]["contradictions"] == errors and report["rounds"][-1]["round"] == "relecture"
+
+
+def test_consistency_review_keeps_article_when_clean_or_on_error():
+    from app.services.seo.agent_generation import review_round
+
+    article, report = {"content_html": "<p>a</p>"}, {"rounds": []}
+    best, _, _ = review_round(None, None, lambda s, u: '{"contradictions": []}', article, [], {}, report)
+    assert best is article and report["rounds"] == []
+
+    def boom(system, user):
+        raise RuntimeError("arrêt dur : coût cumulé 1.01 $ > 1.00 $")
+
+    best, _, _ = review_round(None, None, boom, article, [], {}, report)
+    assert best is article and "arrêt dur" in report["consistency_review"]["error"]
+
+
+def test_quotes_must_come_from_fact_quotes_with_tolerant_matching():
+    from app.services.seo.agent_generation import quote_errors
+
+    facts = [{"quote": "L’Anses déconseille la consommation de compléments alimentaires à base de mélatonine "
+                       "aux femmes enceintes ou allaitantes", "source_url": "https://anses.fr/a"}]
+    ok = ("<p>Selon l'Anses, elle « déconseille la consommation de compléments alimentaires » "
+          "et vise « l'anses deconseille la consommation … aux femmes enceintes ou allaitantes ». "
+          "Un « mot court » passe.</p>")
+    assert quote_errors({"facts": facts, "content_html": ok}) == []
+    bad = "<p>Vidal écrit « un temps d'adaptation au-delà de six fuseaux vers l'est ».</p>"
+    errors = quote_errors({"facts": facts, "content_html": bad})
+    assert len(errors) == 1 and "au-delà de six fuseaux" in errors[0]
+
+
+def test_source_balance_flags_a_domain_over_half_of_the_facts():
+    from app.services.seo.agent_generation import source_balance_errors
+
+    def facts(urls):
+        return {"facts": [{"source_url": u} for u in urls]}
+
+    vidal = ["https://www.vidal.fr/a"] * 10 + ["https://anses.fr/b"] * 4 + ["https://sante.fr/c"] * 3
+    errors = source_balance_errors(facts(vidal))
+    assert len(errors) == 1 and "vidal.fr porte 10 faits sur 17" in errors[0]
+    assert source_balance_errors(facts(["https://vidal.fr/a"] * 2 + ["https://anses.fr/b"] * 2)) == []
+    assert source_balance_errors(facts(["https://www.cdc.gov/a", "https://wwwnc.cdc.gov/b", "https://anses.fr/c",
+                                        "https://inserm.fr/d", "https://cdc.gov/e"])) != []
+    assert source_balance_errors(facts(["https://vidal.fr/a"] * 3)) == []
+
+
+def test_a_source_named_more_than_four_times_is_a_hard_fault():
+    from app.services.seo.agent_generation import source_mention_errors
+
+    sources = [{"url": "https://www.vidal.fr/sante/voyage/decalage-horaire.html"}, {"url": "https://www.anses.fr/x"}]
+    five = "".join(f"<p>Vidal conseille le geste {i}.</p>" for i in range(5))
+    four = "".join(f"<p>Selon Vidal, geste {i}.</p>" for i in range(4)) + "<p>L'Anses précise un point.</p>"
+    errors = source_mention_errors({"sources": sources, "content_html": five})
+    assert errors == ["Source nommée 5 fois (vidal.fr) : reformule et regroupe, au plus 4 mentions d'une même source."]
+    assert source_mention_errors({"sources": sources, "content_html": four}) == []
