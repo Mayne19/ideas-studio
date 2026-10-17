@@ -423,7 +423,6 @@ def run_pipeline(db: Session, project_id: str) -> dict:
     from app.services.providers.search_provider import get_search_provider
     from app.services.idea_engine import generate_idea
     from app.services.agents.agent_router import get_agent_router
-    from app.services.article_service import primary_keyword
     from app.models.core import Project
 
     logger.info("Pipeline run start project=%s mode=%s", project_id, settings.PIPELINE_MODE)
@@ -559,9 +558,9 @@ def run_pipeline(db: Session, project_id: str) -> dict:
                             errors.append(f"{category.name}: idée {slot}/{frequency} non générée.")
                     categories_processed.append(category_report)
 
-                # Phase 2: Generate briefs / full drafts based on pipeline mode
+                # Phase 2: Put subjects in the local writer queue.
                 if pipeline_mode in ("brief_only", "draft_generation") and ideas_generated > 0:
-                    from app.services.seo.seo_generation_orchestrator import generate_full_article
+                    from app.services.editorial_workflow_service import request_writing
 
                     pending_ideas = db.execute(
                         select(Article).where(
@@ -572,23 +571,11 @@ def run_pipeline(db: Session, project_id: str) -> dict:
                     ).scalars().all()
                     for idea in pending_ideas:
                         try:
-                            idea_title = idea.current_revision.title if idea.current_revision else ""
-                            article = generate_full_article(
-                                db=db,
-                                project_id=project_id,
-                                llm=llm,
-                                search=search,
-                                preferred_title=idea_title,
-                                keyword=primary_keyword(db, idea.id),
-                                category_id=idea.category_id,
-                                search_intent=idea.search_intent,
-                                agent_router=agent_router,
-                                existing_article_id=idea.id,
-                            )
+                            request_writing(db, idea, commit=False)
                             articles_created += 1
                         except Exception as exc:
-                            logger.exception("Pipeline article generation failed")
-                            errors.append(f"Article from idea {idea.id}: {exc}")
+                            logger.exception("Pipeline local writer queue failed")
+                            errors.append(f"Article from idea {idea.id} not queued: {exc}")
     except Exception as exc:
         logger.exception("Pipeline run failed for project %s", project_id)
         errors.append(str(exc))
