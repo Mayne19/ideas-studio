@@ -14,6 +14,7 @@ import re
 import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from app.core.utils import calculate_reading_time_minutes, calculate_word_count
 from app.models.content import Article
@@ -163,10 +164,26 @@ def consistency_errors(content: str, call_fn) -> list[str]:
 
 
 def _host(url: str) -> str:
-    from urllib.parse import urlparse
     try:
-        return (urlparse(url).hostname or "").lower().removeprefix("www.")
+        return (urlsplit(url).hostname or "").lower().removeprefix("www.")
     except ValueError:
+        return ""
+
+
+def _url_key(url: str) -> str:
+    """Normalise une URL pour comparer facts.source_url et sources.url."""
+    try:
+        parsed = urlsplit((url or "").strip())
+        if not parsed.scheme or not parsed.netloc:
+            return ""
+        host = (parsed.hostname or "").lower().removeprefix("www.")
+        port = parsed.port
+        netloc = host if not port or port in (80, 443) else f"{host}:{port}"
+        query = urlencode(sorted((key, value) for key, value in parse_qsl(parsed.query)
+                                 if not key.lower().startswith(("utm_", "fbclid", "gclid"))))
+        path = parsed.path.rstrip("/") or "/"
+        return urlunsplit((parsed.scheme.lower(), netloc, path, query, ""))
+    except (ValueError, UnicodeError):
         return ""
 
 
@@ -199,7 +216,12 @@ def competitor_errors(candidate: dict) -> list[str]:
                 break
     if re.search(r"\b(sites concurrents|certains sites|conseils (trouvés )?en ligne)\b", text):
         errors.append("Le texte parle de « sites concurrents », « certains sites » ou de « conseils en ligne » : formulation interdite.")
-    source_domains = {_host(s.get("url", "")) for s in candidate.get("sources") or [] if isinstance(s, dict)} - hosts - {""}
+    source_urls = {_url_key(s.get("url", "")) for s in candidate.get("sources") or [] if isinstance(s, dict)} - {""}
+    competitor_source_urls = {_url_key(s.get("url", "")) for s in candidate.get("sources") or []
+                              if isinstance(s, dict) and _host(s.get("url", "")) in hosts}
+    if competitor_source_urls:
+        errors.append("Un concurrent apparaît dans « sources » : un concurrent n'est jamais une source admissible.")
+    source_domains = {_host(url) for url in source_urls} - hosts - {""}
     if len(source_domains) < 3:
         errors.append(f"Seulement {len(source_domains)} domaine(s) de sources admissibles hors concurrents : il en faut au "
                       "moins 3 (institutions, associations de consommateurs, organismes techniques, fabricants, études).")
@@ -207,9 +229,28 @@ def competitor_errors(candidate: dict) -> list[str]:
 
 
 _PROSE_COUNT_RE = re.compile(
-    r"\b(deux|trois|quatre|cinq|six|sept|huit|neuf|dix)\s+(?:[a-zéèêàâîïôûç]+\s+)?"
+    r"\b(deux|trois|quatre|cinq|six|sept|huit|neuf|dix|\d{1,2})\s+(?:[a-zéèêàâîïôûç]+\s+)?"
     r"(gestes|étapes|erreurs|règles|conseils|questions|critères|astuces|raisons|signes|solutions|méthodes|points|choses)\b",
     re.IGNORECASE)
+
+
+def fact_errors(candidate: dict) -> list[str]:
+    """Chaque fait doit être traçable par une source et une citation."""
+    sources = {_url_key(item.get("url", "")) for item in candidate.get("sources") or []
+               if isinstance(item, dict)} - {""}
+    errors = []
+    for index, fact in enumerate(candidate.get("facts") or [], start=1):
+        if not isinstance(fact, dict):
+            errors.append(f"Le fait #{index} n'est pas un objet JSON.")
+            continue
+        if not str(fact.get("value") or "").strip():
+            errors.append(f"Le fait #{index} n'a pas de valeur.")
+        if not str(fact.get("quote") or "").strip():
+            errors.append(f"Le fait #{index} n'a pas de citation exacte dans « quote ».")
+        source_url = _url_key(str(fact.get("source_url") or ""))
+        if not source_url or source_url not in sources:
+            errors.append("La source du fait #{} n'apparaît pas dans « sources ».".format(index))
+    return errors
 
 
 def prose_count_errors(content: str) -> list[str]:
@@ -224,7 +265,7 @@ def prose_count_errors(content: str) -> list[str]:
         between = after[:nxt.start()] if nxt else ""
         if not nxt or re.search(r"<h[23]\b", between, re.IGNORECASE) or len(between) > 600:
             continue
-        announced = _COUNT_WORDS[m.group(1).lower()]
+        announced = int(m.group(1)) if m.group(1).isdigit() else _COUNT_WORDS[m.group(1).lower()]
         items = len(re.findall(r"<li\b", nxt.group(0), re.IGNORECASE))
         if items != announced:
             errors.append(f"Le texte annonce « {m.group(0)} » mais la liste qui suit contient {items} éléments.")
@@ -347,6 +388,7 @@ def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, 
         errors = structure_errors(content, candidate.get("title") or final_title)
         errors += assembly_errors(candidate) + link_errors(content) + html_render_errors(content)
         errors += announced_count_errors(content) + prose_count_errors(content) + competitor_errors(candidate)
+        errors += fact_errors(candidate)
         errors += heading_mismatch_errors(orch, article, candidate)
         plag_errors, plag_report = plagiarism_errors(orch, content)
         plag_report["consistency_info"] = consistency_errors(content, orch._polish_call_fn(article))
