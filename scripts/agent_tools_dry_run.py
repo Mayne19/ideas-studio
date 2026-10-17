@@ -18,8 +18,10 @@ from urllib.parse import urlsplit
 
 # Domaines admissibles (règle de l'étape 4 du prompt) : institutions
 # publiques, organismes techniques et scientifiques. Indicatif seulement.
-ADMISSIBLE_SUFFIXES = (".gouv.fr", ".gov", ".gc.ca", ".europa.eu", ".who.int", ".nhs.uk", ".admin.ch", ".be")
-ADMISSIBLE_HOSTS = {"ameli.fr", "anses.fr", "inserm.fr", "has-sante.fr", "santepubliquefrance.fr", "who.int",
+# Comparés au domaine enregistré, comme le validateur (_registered_domain) :
+# www.cdc.gov, wwwnc.cdc.gov et cdc.gov comptent pour un seul domaine.
+ADMISSIBLE_SUFFIXES = (".gouv.fr", ".gov", ".gc.ca", ".europa.eu", ".admin.ch", ".be")
+ADMISSIBLE_HOSTS = {"ameli.fr", "anses.fr", "inserm.fr", "has-sante.fr", "santepubliquefrance.fr", "who.int", "nhs.uk",
                     "cnrs.fr", "pasteur.fr", "quechoisir.org", "60millions-mag.com", "test-achats.be",
                     "ginetex.net", "pubmed.ncbi.nlm.nih.gov", "cochranelibrary.com", "vidal.fr"}
 SKIPPED_HOSTS = ("youtube.com", "facebook.com", "instagram.com", "tiktok.com", "reddit.com", "pinterest.")
@@ -29,9 +31,16 @@ def host_of(url: str) -> str:
     return (urlsplit(url).hostname or "").lower().removeprefix("www.")
 
 
+def domain_of(url: str) -> str:
+    """Domaine enregistré, avec la même normalisation que le validateur."""
+    from app.services.seo.agent_generation import _registered_domain
+
+    return _registered_domain(host_of(url))
+
+
 def admissible(url: str) -> bool:
-    host = host_of(url)
-    return host in ADMISSIBLE_HOSTS or any(host.endswith(s) for s in ADMISSIBLE_SUFFIXES)
+    domain = domain_of(url)
+    return domain in ADMISSIBLE_HOSTS or any(domain.endswith(s) for s in ADMISSIBLE_SUFFIXES)
 
 
 def run(project_id: str, keyword: str, queries: list[str], max_urls: int, fallback: bool, per_query: int = 4) -> str:
@@ -61,7 +70,7 @@ def run(project_id: str, keyword: str, queries: list[str], max_urls: int, fallba
         info = fetch.last
         ok = len(text.strip()) >= MIN_PAGE_CHARS
         if ok and admissible(url):
-            readable_admissible.add(host_of(url))
+            readable_admissible.add(domain_of(url))
         note = f" ({info['note']})" if info.get("note") else ""
         lines.append(f"| {url} | {info.get('status')} | {info.get('method')}{note} | {info.get('html_chars')} | "
                      f"{len(text.strip())} | {'oui' if ok else 'non'} | {'oui' if admissible(url) else 'non'} |")
