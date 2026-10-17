@@ -21,6 +21,8 @@ def test_assembly_flags_faq_count_body_faq_and_duplicates():
 
     six_questions = {**GOOD, "faq": [{"question": f"q{i}", "answer": "a"} for i in range(6)]}
     assert "3 à 5 questions" in " | ".join(assembly_errors(six_questions))
+    five_questions = {**GOOD, "faq": [{"question": f"q{i}", "answer": "a"} for i in range(5)]}
+    assert assembly_errors(five_questions) == []
 
 
 def test_only_hard_faults_trigger_corrections():

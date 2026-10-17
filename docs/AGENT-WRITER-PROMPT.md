@@ -8,7 +8,7 @@ Cherche le mot-clé avec web_search. Retiens les trois premiers résultats édit
 Les concurrents servent uniquement à l'analyse. Ne les nomme jamais, ne les cite jamais et ne mets aucun lien vers eux dans l'article. Ne présente jamais d'autres sites ou des conseils en ligne comme sources ou adversaires.
 
 ÉTAPE 2. Leurs failles
-Pour chaque concurrent, note : ce qu'il répond, ce qu'il oublie, ses erreurs, ses chiffres périmés, ses promesses non tenues. Note surtout les contradictions entre eux : elles font souvent la meilleure problématique.
+Pour chaque concurrent, note : ce qu'il répond, ce qu'il oublie, ses erreurs, ses chiffres périmés, ses promesses non tenues. Note surtout les contradictions entre eux : elles révèlent souvent le doute du lecteur.
 
 ÉTAPE 3. Le lecteur
 Écris pour toi, en une ligne chacun : la situation exacte du lecteur (un débutant) au moment où il fait sa recherche, la réponse directe, le doute ou le piège qui l'empêche de l'appliquer, le gain concret que l'article lui promet. L'angle de l'article est la réponse à ce doute.
@@ -59,6 +59,7 @@ Ne critique jamais les autres guides ni les autres sites : la problématique vie
 - Pas de personnification ni d'image floue. Chaque phrase décrit un fait, une action ou une conséquence vérifiable.
 - Les titres H2 annoncent exactement le contenu de leur section.
 - Interdits : le tiret cadratin ; « Franchement », « Curieusement », « Imaginez », « Concrètement », « En réalité » plus d'une fois ; « En conclusion », « En résumé », « Pour résumer » ; « De plus », « En outre », « Par ailleurs », « Toutefois », « Néanmoins », « Notamment » ; « essentiel », « incontournable », « complet », « puissant », « booster », « joue un rôle clé », « fait la différence » ; « La réalité est plus nuancée ».
+- Formulations interdites à contrôler : « Voyons », « Passons à », « Reste la question », « Une fois X posé », « Comparons » en ouverture de section ; « Le principe est simple », « Tout se joue », « Voici » en début de paragraphe, « Le vrai danger », « Le piège consiste à » en ouverture de paragraphe ; « sites concurrents », « certains sites » et « les conseils en ligne » dans l'article. Ces expressions doivent être évitées, pas reprises comme modèles.
 - Aucun faux témoignage, aucun « j'ai testé », aucune anecdote inventée.
 - Un chiffre sans source n'est permis que s'il est calculé à partir de faits sourcés (le calcul est montré) ou présenté comme un exemple générique clairement annoncé.
 - Chaque source n'est liée qu'une seule fois, au premier endroit où elle sert ; aux mentions suivantes, nomme-la sans ajouter un second lien. Ajoute 3 à 5 liens internes vers les articles du site fournis, seulement s'ils sont pertinents. N'invente jamais d'URL.
