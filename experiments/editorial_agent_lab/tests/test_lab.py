@@ -100,3 +100,12 @@ def test_generate_writes_article_fiche_and_report(tmp_path):
     assert json.loads((out / "report.json").read_text(encoding="utf-8"))["passed"] is True
     assert (out / "raw_output.md").read_text(encoding="utf-8").startswith("# Quelle application")
     assert report["writer"]["tokens"] == {"input": 1, "output": 2} and seen[0].startswith("/redaction-article")
+
+
+def test_fiche_accepts_integrations_and_experience_fields():
+    extended = FICHE | {"integrations": [{"apres_le_titre": "Choisir", "type": "youtube", "url": "https://youtu.be/x",
+                                          "pourquoi": "démonstration"}],
+                        "experience_a_ajouter": [{"apres_le_titre": "Choisir", "suggestion": "photo d'un essai"}]}
+    assert fiche_valid(extended, "")["passed"] and fiche_valid(FICHE, "")["passed"]
+    assert "integrations doit être list" in fiche_valid(FICHE | {"integrations": "x"}, "")["detail"]
+    assert "experience_a_ajouter doit être list" in fiche_valid(FICHE | {"experience_a_ajouter": {}}, "")["detail"]

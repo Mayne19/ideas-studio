@@ -7,6 +7,9 @@ FICHE_FIELDS: dict[str, type] = {
     "meta_title": str, "meta_description": str, "slug": str, "mot_cle_principal": str,
     "sources": list, "images": list, "liens_internes_places": list, "liens_internes_suggeres": list, "faq": list,
 }
+# Champs acceptés mais facultatifs (une fiche plus ancienne reste valide) :
+# s'ils sont présents, ce sont des listes.
+OPTIONAL_FICHE_FIELDS: dict[str, type] = {"integrations": list, "experience_a_ajouter": list}
 
 
 def summary_box(article: str) -> dict:
@@ -25,7 +28,7 @@ def fiche_valid(fiche: dict | None, error: str) -> dict:
     if fiche is None:
         return {"name": "fiche json valide", "passed": False, "detail": error or "fiche absente"}
     problems = [f"{key} manquant" for key in FICHE_FIELDS if key not in fiche]
-    problems += [f"{key} doit être {kind.__name__}" for key, kind in FICHE_FIELDS.items()
+    problems += [f"{key} doit être {kind.__name__}" for key, kind in (FICHE_FIELDS | OPTIONAL_FICHE_FIELDS).items()
                  if key in fiche and not isinstance(fiche[key], kind)]
     return {"name": "fiche json valide", "passed": not problems, "detail": " ; ".join(problems)}
 
