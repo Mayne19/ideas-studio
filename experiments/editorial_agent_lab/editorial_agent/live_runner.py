@@ -21,7 +21,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 
-from .existing_pipeline_adapter import ExistingPipelineWebAdapter, from_ideas_studio
+from .existing_pipeline_adapter import ExistingPipelineWebAdapter, from_environment
 from .prompting import load_system_prompt
 
 
@@ -180,11 +180,7 @@ def _env_value(*names: str) -> str | None:
 
 
 def resolve_model_route(project_id: str | None = None) -> tuple[str, str, str]:
-    """Résout la route sans afficher ni écrire de secret.
-
-    Priorité : variables d'environnement explicites, puis credentials déjà
-    configurées dans le CMS si le runtime de l'application est disponible.
-    """
+    """Résout la route du laboratoire sans consulter le CMS."""
 
     anthropic_key = _env_value("ANTHROPIC_API_KEY")
     if anthropic_key:
@@ -197,42 +193,22 @@ def resolve_model_route(project_id: str | None = None) -> tuple[str, str, str]:
             or "anthropic/claude-opus-5.5"
         )
 
-    try:
-        from app.core.database import SessionLocal
-        from app.services.seo.agent_writer import resolve_agent_route
-
-        with SessionLocal() as db:
-            provider, api_key, model = resolve_agent_route(db, project_id)
-        if provider and api_key:
-            return provider, api_key, model
-    except Exception as exc:
-        detail = str(exc)
-        if "DATABASE_URL doit pointer vers PostgreSQL" in detail:
-            raise LiveRunError(
-                "Le runtime du CMS n'est pas chargé : DATABASE_URL doit pointer "
-                "vers la base PostgreSQL du CMS. Lance le laboratoire depuis le "
-                "runtime configuré du CMS ou renseigne ce runtime dans .env."
-            ) from exc
-        raise LiveRunError(
-            "Impossible de lire les credentials du CMS. Vérifie DATABASE_URL, "
-            "SECRET_KEY et la connexion à PostgreSQL ; la clé n'est jamais "
-            "affichée ni copiée dans le laboratoire."
-        ) from exc
     raise LiveRunError(
-        "Aucune clé Anthropic/OpenRouter accessible. La clé n'est jamais demandée "
-        "dans le code et ne doit pas être écrite dans le dépôt."
+        "Aucune clé Anthropic/OpenRouter accessible pour le test autonome. "
+        "Configure ANTHROPIC_API_KEY ou OPENROUTER_API_KEY dans l'environnement "
+        "du laboratoire ; aucune clé n'est écrite dans le dépôt."
     )
 
 
 def build_search_adapter(project_id: str | None = None) -> ExistingPipelineWebAdapter:
-    """Construit l'adaptateur réel du pipeline existant."""
+    """Construit l'adaptateur de recherche autonome du laboratoire."""
 
     try:
-        adapter = from_ideas_studio(project_id)
+        adapter = from_environment()
     except Exception as exc:
         raise LiveRunError(
-            "La recherche réelle du pipeline ne peut pas être initialisée. "
-            "Vérifie la configuration du service de recherche et du runtime CMS."
+            "La recherche web du test autonome ne peut pas être initialisée. "
+            "Configure une clé de recherche dans l'environnement du laboratoire."
         ) from exc
     if not getattr(adapter, "search_fn", None):
         raise LiveRunError("L'adaptateur de recherche réel est absent.")
@@ -252,40 +228,6 @@ def _build_user_message(config: LiveRunConfig, published_articles: list[dict[str
     else:
         lines.append("Aucun article publié fourni : n'ajoute pas de lien interne.")
     return "\n".join(lines)
-
-
-def _load_published_articles(project_id: str | None) -> list[dict[str, str]]:
-    """Récupère les articles publiés du projet quand son contexte est disponible."""
-
-    if not project_id:
-        return []
-    try:
-        from sqlalchemy import select
-        from app.core.database import SessionLocal
-        from app.models.content import Article, ArticleRevision
-        from app.models.core import Project
-
-        with SessionLocal() as db:
-            project = db.get(Project, project_id)
-            if project is None or not project.domain:
-                return []
-            rows = db.execute(
-                select(Article.slug, ArticleRevision.title)
-                .join(ArticleRevision, ArticleRevision.id == Article.current_revision_id)
-                .where(Article.project_id == project_id, Article.published_at.is_not(None))
-                .order_by(Article.published_at.desc())
-                .limit(60)
-            ).all()
-            base = project.domain if project.domain.startswith("http") else f"https://{project.domain}"
-        return [
-            {"title": title, "url": f"{base.rstrip('/')}/blog/{slug}"}
-            for slug, title in rows
-            if slug and title
-        ]
-    except Exception:
-        # Le laboratoire reste utilisable sans CMS ; le prompt indiquera alors
-        # qu'aucun lien interne n'est disponible.
-        return []
 
 
 def _make_client(route: str, key: str, model: str, config: LiveRunConfig, adapter: ExistingPipelineWebAdapter):
@@ -444,7 +386,7 @@ def run_live(config: LiveRunConfig, *, published_articles: list[dict[str, str]] 
     if route == "openrouter" and adapter is None:
         raise LiveRunError("OpenRouter nécessite l'adaptateur de recherche réel du pipeline.")
     client = _make_client(route, key, model, config, adapter)
-    context_articles = published_articles if published_articles is not None else _load_published_articles(config.project_id)
+    context_articles = published_articles or []
 
     # 1. Rédaction : le modèle dispose des outils de recherche et ne renvoie
     # que l'article complet en Markdown.

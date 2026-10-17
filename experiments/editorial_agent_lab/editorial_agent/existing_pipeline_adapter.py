@@ -95,13 +95,17 @@ class ExistingPipelineWebAdapter:
         }
 
 
-def from_ideas_studio(project_id: str | None = None) -> ExistingPipelineWebAdapter:
-    """Construit l'adaptateur avec les services existants, sans les modifier."""
+def from_environment() -> ExistingPipelineWebAdapter:
+    """Construit l'adaptateur autonome avec une clé de recherche d'environnement."""
 
-    from app.services.seo.adapters.serp_adapter import get_serp_adapter
+    from app.services.seo.adapters.serp_adapter import SerpAdapter
     from app.services.seo.agent_writer_openrouter import page_fetcher
 
-    serp = get_serp_adapter(project_id)
+    serp = SerpAdapter()
+    if not serp.configured:
+        raise RuntimeError(
+            "Aucune clé de recherche web n'est configurée pour le laboratoire autonome."
+        )
     return ExistingPipelineWebAdapter(
         search_fn=serp.search,
         fetch_fn=page_fetcher(),
