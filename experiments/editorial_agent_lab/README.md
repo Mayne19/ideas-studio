@@ -47,6 +47,18 @@ Le résultat est écrit dans `run/article.html` et le rapport complet dans
 `run/report.json`. La clé est résolue depuis le runtime existant ou depuis les
 variables d'environnement, sans jamais être copiée dans le laboratoire.
 
+## Interface locale de test
+
+Pour tester sans terminal, lance l'interface isolée :
+
+```bash
+.venv/bin/python -m experiments.editorial_agent_lab.test_ui --port 8765
+```
+
+Ouvre ensuite `http://127.0.0.1:8765`. Le formulaire lance un seul run à la
+fois par clic, affiche son état, puis ouvre l'article HTML et le rapport JSON.
+L'interface n'écrit ni article ni configuration dans le CMS.
+
 L'analyse sémantique réelle est faite par le modèle dans son exécution contrôlée : il
 compare les concurrents, repère leurs lacunes et contradictions, formule la
 question réelle du lecteur, choisit l'angle, organise le plan et relie les
