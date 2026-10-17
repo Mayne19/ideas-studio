@@ -46,8 +46,8 @@ preuve locale avant de passer à la suivante.
 | A10 | Vérifier les zones de répétition | Matrice article/FAQ et matrice section/fait | Recouvrement FAQ/corps et recouvrement de faits détectés | `validated` |
 | A11 | Brancher le rédacteur unique | Une seule production de contenu avec recherche, faits et plan complets | Client réel relié ; JSON invalide bloquant, sans tour de correction éditoriale | `ready_for_live_run` |
 | A12 | Valider le brouillon | Structure, chiffres, définitions, répétitions, call out et conclusion | Rapport centralisé ; erreurs bloquantes séparées des alertes de similarité | `validated` |
-| A13 | Analyser le plagiat | Phrase, source, passage commun, score et suggestion séparée | Le brouillon initial reste inchangé après détection | `validated` |
-| A14 | Conserver la meilleure version | Comparaison des versions sans dégrader un passage réussi | Égalité : conserver la version la plus ancienne | `validated` |
+| A13 | Analyser le plagiat | Phrase, source, passage commun et score | La détection déclenche au plus une réécriture ciblée, jamais une réécriture générale | `ready_for_live_run` |
+| A14 | Conserver la meilleure version | Comparaison de la version initiale et de la version ciblée | Une version n'est gardée que si elle réduit le problème sans ajouter de faute structurelle ; égalité : garder l'initiale | `ready_for_live_run` |
 | A15 | Produire le rapport | Recherches, pages, coûts, sources, faits, contrôles, alertes et version produite | Rapport JSON et rendu HTML prêts ; essai réel encore nécessaire | `ready_for_live_run` |
 | A16 | Validation de l'éditeur | L'éditeur lit le résultat après l'exécution | Ne fait jamais partie de l'algorithme et ne déclenche aucune conversation automatique | `out_of_algorithm` |
 | A17 | Transformer les remarques en règles | Évolution future du prompt par décision éditoriale | Opération manuelle ultérieure, sans modifier l'article en cours | `post_run_only` |
@@ -59,6 +59,6 @@ preuve locale avant de passer à la suivante.
 2. Une étape ne passe à `validated` qu'avec une preuve locale enregistrée.
 3. Les appels payants restent interdits pendant les tests unitaires.
 4. Aucun résultat de laboratoire ne modifie un article existant.
-5. Aucune correction stylistique automatique ne remplace une version réussie.
+5. Aucune correction stylistique automatique ne remplace une version réussie ; seule une similarité détectée peut déclencher une réécriture ciblée.
 6. L'éditeur ne dialogue pas avec l'algorithme pendant un run ; il juge le résultat après coup.
 7. L'intégration dans Ideas Studio ne sera envisagée qu'après l'étape A18.

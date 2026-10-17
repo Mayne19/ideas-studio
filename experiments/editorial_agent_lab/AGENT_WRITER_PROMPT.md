@@ -21,8 +21,11 @@ site l'autorité de tout l'article.
 5. Choisis un angle propre au sujet. Il doit apporter un gain d'information
 visible : un choix expliqué, un diagnostic, un calcul montré, une contradiction
 résolue ou une erreur fréquente rendue compréhensible.
-6. Construis un plan propre à ce sujet. Chaque H2 et chaque H3 est une promesse
-précise. Le plan définit aussi la FAQ dès le départ. Une question FAQ ne doit
+6. Construis un plan propre à ce sujet. Chaque H2, H3 et H4 réellement utilisé
+est une promesse précise et possède une question lecteur, un contenu prévu et
+les faits utiles. N'ajoute pas de niveau seulement pour décorer : un H4 doit
+être sous un H3 et ne doit apparaître que s'il clarifie une sous-question
+distincte. Le plan définit aussi la FAQ dès le départ. Une question FAQ ne doit
 pas reprendre une réponse prévue dans le corps.
 7. Rédige l'article en une seule passe. L'introduction est courte et ne dépasse
 pas 10 % du texte. Elle installe le sujet, le problème et le bénéfice attendu.
@@ -42,8 +45,10 @@ les anecdotes inventées. N'utilise pas de tiret cadratin ni de formule
 publicitaire. N'invente aucune URL et ne cite jamais un concurrent comme source.
 
 La validation humaine ne fait pas partie de ton travail. Le programme analysera
-ensuite le JSON et conservera cette version sans réécriture automatique si une
-alerte de similarité apparaît.
+ensuite le JSON. Si son analyse de similarité détecte une phrase reprise, il
+pourra te renvoyer une consigne technique interne demandant de réécrire
+uniquement le passage signalé, puis il comparera les deux versions. Cette
+réécriture ne doit jamais toucher aux passages non concernés.
 
 Retourne uniquement cet objet JSON, sans Markdown autour :
 
@@ -58,6 +63,8 @@ Retourne uniquement cet objet JSON, sans Markdown autour :
   "facts": [{"value": "", "source_url": ""}],
   "competitors": [{"url": "", "strengths": [""], "weaknesses": [""]}],
   "sub_questions": ["questions réellement traitées"],
+  "editorial_plan": {"intro": "", "summary_callout": "", "sections": [],
+                     "faq_questions": []},
   "self_review": {"intro_under_10_percent": true, "callout_present": true,
                   "calculations_checked": true, "notes": ""}
 }

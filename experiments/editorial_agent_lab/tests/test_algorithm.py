@@ -107,6 +107,24 @@ def test_similarity_reports_without_modifying_the_text() -> None:
     assert findings[0].suggested_reformulation
 
 
+def test_plagiarism_correction_is_targeted_and_not_a_general_rewrite() -> None:
+    from experiments.editorial_agent_lab.editorial_agent.live_runner import _plagiarism_correction_errors
+
+    errors = _plagiarism_correction_errors({"matches": [{
+        "sentence": "Cette phrase est reprise telle quelle dans une autre page.",
+        "url": "https://source.example/page",
+    }]})
+    assert len(errors) == 1
+    assert "uniquement cette phrase" in errors[0]
+    assert "sans modifier le reste" in errors[0]
+
+
+def test_no_plagiarism_match_does_not_request_a_correction() -> None:
+    from experiments.editorial_agent_lab.editorial_agent.live_runner import _plagiarism_correction_errors
+
+    assert _plagiarism_correction_errors({"matches": []}) == []
+
+
 def test_best_version_keeps_the_oldest_equal_safe_version() -> None:
     draft = make_draft()
     selected = choose_best_version([(1, draft, []), (2, draft, [])])

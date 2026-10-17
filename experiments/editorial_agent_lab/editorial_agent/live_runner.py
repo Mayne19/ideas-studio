@@ -118,6 +118,40 @@ def _build_user_message(config: LiveRunConfig, published_articles: list[dict[str
     return "\n".join(lines)
 
 
+def _load_published_articles(project_id: str | None) -> list[dict[str, str]]:
+    """Récupère les articles publiés du projet quand son contexte est disponible."""
+
+    if not project_id:
+        return []
+    try:
+        from sqlalchemy import select
+        from app.core.database import SessionLocal
+        from app.models.content import Article, ArticleRevision
+        from app.models.core import Project
+
+        with SessionLocal() as db:
+            project = db.get(Project, project_id)
+            if project is None or not project.domain:
+                return []
+            rows = db.execute(
+                select(Article.slug, ArticleRevision.title)
+                .join(ArticleRevision, ArticleRevision.id == Article.current_revision_id)
+                .where(Article.project_id == project_id, Article.published_at.is_not(None))
+                .order_by(Article.published_at.desc())
+                .limit(60)
+            ).all()
+            base = project.domain if project.domain.startswith("http") else f"https://{project.domain}"
+        return [
+            {"title": title, "url": f"{base.rstrip('/')}/blog/{slug}"}
+            for slug, title in rows
+            if slug and title
+        ]
+    except Exception:
+        # Le laboratoire reste utilisable sans CMS ; le prompt indiquera alors
+        # qu'aucun lien interne n'est disponible.
+        return []
+
+
 def _make_client(route: str, key: str, model: str, config: LiveRunConfig, adapter: ExistingPipelineWebAdapter):
     model = config.model or model
     if route == "anthropic":
@@ -160,6 +194,27 @@ def _plagiarism_report(data: dict[str, Any], adapter: ExistingPipelineWebAdapter
         return check_plagiarism(data.get("content_html") or "", backend)
     except Exception as exc:
         return {"status": "unavailable", "error": str(exc)}
+
+
+def _live_score(structure: dict[str, Any], plagiarism: dict[str, Any]) -> tuple[int, int]:
+    """Classe une version sur les fautes structurelles puis le plagiat."""
+
+    hard = int(structure.get("hard_failures") or 0) if isinstance(structure, dict) else 999
+    matches = len(plagiarism.get("matches") or []) if isinstance(plagiarism, dict) else 999
+    return hard, matches
+
+
+def _plagiarism_correction_errors(plagiarism: dict[str, Any]) -> list[str]:
+    errors = []
+    for match in plagiarism.get("matches") or []:
+        sentence = str(match.get("sentence") or "").strip()
+        url = str(match.get("url") or "").strip()
+        if sentence:
+            errors.append(
+                "Réécris uniquement cette phrase ou le passage minimal qui la contient, "
+                f"sans modifier le reste : « {sentence} » (source détectée : {url})."
+            )
+    return errors
 
 
 def _write_html(path: Path, data: dict[str, Any], report: dict[str, Any]) -> None:
@@ -222,12 +277,27 @@ def run_live(config: LiveRunConfig, *, published_articles: list[dict[str, str]] 
         # Une seule production éditoriale. Une réponse JSON invalide est un
         # échec technique du run, pas une invitation à discuter ou à réécrire
         # le contenu dans un second tour.
-        data = writer.write(_build_user_message(config, published_articles), json_retries=0)
+        context_articles = published_articles if published_articles is not None else _load_published_articles(config.project_id)
+        data = writer.write(_build_user_message(config, context_articles), json_retries=0)
     except AgentWriterError as exc:
         raise LiveRunError(f"Le rédacteur réel n'a pas produit un JSON exploitable : {exc}") from exc
 
     structure = _structure_report(data)
     plagiarism = _plagiarism_report(data, adapter, config.domain)
+    versions = [(1, data, structure, plagiarism)]
+    correction_errors = _plagiarism_correction_errors(plagiarism)
+    if correction_errors:
+        corrected = writer.correct(correction_errors)
+        if corrected:
+            corrected_structure = _structure_report(corrected)
+            corrected_plagiarism = _plagiarism_report(corrected, adapter, config.domain)
+            candidate = (2, corrected, corrected_structure, corrected_plagiarism)
+            if _live_score(candidate[2], candidate[3]) < _live_score(structure, plagiarism):
+                versions.append(candidate)
+    selected_version, data, structure, plagiarism = min(
+        versions,
+        key=lambda item: _live_score(item[2], item[3]) + (item[0] - 1,),
+    )
     agent_report = writer.report()
     blocking = []
     for rule in structure.get("rules", []) if isinstance(structure, dict) else []:
@@ -245,8 +315,15 @@ def run_live(config: LiveRunConfig, *, published_articles: list[dict[str, str]] 
         "plagiarism": plagiarism,
         "blocking_issues": blocking,
         "warnings": [],
-        "selected_version": 1,
+        "correction_rounds": 1 if correction_errors else 0,
+        "selected_version": selected_version,
         "article": data,
+        "seo": {
+            "title": data.get("title", ""),
+            "meta_title": data.get("meta_title", ""),
+            "meta_description": data.get("meta_description", ""),
+            "slug": data.get("slug", ""),
+        },
     }
     config.output_dir.mkdir(parents=True, exist_ok=True)
     json_path = config.output_dir / "report.json"

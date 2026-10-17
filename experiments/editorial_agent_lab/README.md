@@ -56,6 +56,8 @@ le texte.
 
 ## Règle de correction
 
-Une alerte stylistique ou de similarité ne remplace jamais automatiquement le
-texte. La validation humaine et la publication viennent après ce laboratoire ;
-elles ne font pas partie de l'algorithme testé ici.
+Une alerte stylistique ne remplace jamais automatiquement le texte. Une alerte
+de similarité déclenche, elle, une seule réécriture ciblée du passage concerné.
+Le programme compare les deux versions et conserve la meilleure. La validation
+humaine et la publication viennent après ce laboratoire ; elles ne font pas
+partie de l'algorithme testé ici.

@@ -89,6 +89,7 @@ class SectionPlan(BaseModel):
     facts_to_use: list[str] = Field(default_factory=list)
     examples_to_use: list[str] = Field(default_factory=list)
     h3_sections: list[str] = Field(default_factory=list)
+    h4_sections: list[str] = Field(default_factory=list)
     information_not_to_repeat: list[str] = Field(default_factory=list)
 
 
@@ -99,6 +100,7 @@ class H3Plan(BaseModel):
     purpose: str
     reader_question: str
     facts_to_use: list[str] = Field(default_factory=list)
+    h4_sections: list[str] = Field(default_factory=list)
 
 
 class FaqPlanItem(BaseModel):
@@ -132,6 +134,7 @@ class ArticleDraft(BaseModel):
     facts: list[dict[str, str]] = Field(default_factory=list)
     competitors: list[dict[str, object]] = Field(default_factory=list)
     sub_questions: list[str] = Field(default_factory=list)
+    editorial_plan: dict[str, object] = Field(default_factory=dict)
     self_review: dict[str, object] = Field(default_factory=dict)
 
 

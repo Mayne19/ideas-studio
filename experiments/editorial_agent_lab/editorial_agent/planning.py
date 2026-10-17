@@ -113,6 +113,14 @@ def validate_plan_coverage(plan: ArticlePlan) -> list[ValidationIssue]:
                     blocking=True,
                     location=f"sections[{index}].h3_sections[{h3_index}]",
                 ))
+        for h4_index, heading in enumerate(section.h4_sections):
+            if not heading.strip():
+                issues.append(ValidationIssue(
+                    code="empty_h4_contract",
+                    message="Un H4 est présent dans le plan sans contenu défini.",
+                    blocking=True,
+                    location=f"sections[{index}].h4_sections[{h4_index}]",
+                ))
 
     for index, faq in enumerate(plan.faq):
         if not faq.question.strip() or not faq.reason_not_in_article.strip():
