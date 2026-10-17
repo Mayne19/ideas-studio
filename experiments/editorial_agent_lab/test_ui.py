@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import threading
 import uuid
 from datetime import datetime, timezone
@@ -140,10 +141,13 @@ def _start_job(payload: dict) -> dict:
     output_dir = RUN_ROOT / run_id
     config = LiveRunConfig(
         keyword=keyword,
-        site_name=str(payload.get("site_name") or "Ideas Studio").strip(),
-        domain=str(payload.get("domain") or "example.com").strip(),
+        site_name=str(payload.get("site_name") or os.getenv("EDITORIAL_LAB_SITE_NAME") or "Ideas Studio").strip(),
+        domain=str(payload.get("domain") or os.getenv("EDITORIAL_LAB_DOMAIN") or "example.com").strip(),
         category=str(payload.get("category") or "").strip(),
-        project_id=str(payload.get("project_id") or "").strip() or None,
+        project_id=(
+            str(payload.get("project_id") or os.getenv("EDITORIAL_LAB_PROJECT_ID") or "").strip()
+            or None
+        ),
         editor_notes=str(payload.get("editor_notes") or "").strip(),
         output_dir=output_dir,
     )
