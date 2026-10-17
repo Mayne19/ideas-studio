@@ -37,6 +37,8 @@ class PipelineSettingsUpdate(BaseModel):
     # Arrêt dur du coût d'un article de l'agent (dollars) et lecture de secours.
     agent_max_cost_usd: Optional[float] = Field(default=None, gt=0, le=20)
     agent_reader_fallback: Optional[bool] = None
+    agent_reasoning_effort: Optional[Literal["low", "medium", "high"]] = None
+    agent_consistency_review: Optional[bool] = None
     max_pending_drafts: Optional[int] = None
     max_parallel_writing_jobs: Optional[int] = None
     paused_until: Optional[datetime] = None
@@ -69,6 +71,8 @@ class PipelineSettingsPublic(BaseModel):
     generation_mode: str = "agent"
     agent_max_cost_usd: float = 3.0
     agent_reader_fallback: bool = True
+    agent_reasoning_effort: str = "low"
+    agent_consistency_review: bool = False
     max_pending_drafts: Optional[int] = None
     max_parallel_writing_jobs: Optional[int] = None
     paused_until: Optional[datetime] = None
