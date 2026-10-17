@@ -53,7 +53,11 @@ def test_competitor_and_prose_count_hard_faults():
     assert "concurrent apparaît dans" in errors
     assert prose_count_errors("<p>Retenez deux gestes à faire dans l'ordre :</p><ol><li>a</li><li>b</li><li>c</li></ol>")
     assert prose_count_errors("<p>Retenez 2 gestes :</p><ol><li>a</li><li>b</li><li>c</li></ol>")
+    assert prose_count_errors("<p>Retenez un seul geste :</p><ol><li>a</li><li>b</li></ol>")
     assert not prose_count_errors("<p>Retenez trois gestes :</p><ol><li>a</li><li>b</li><li>c</li></ol>")
+    assert not prose_count_errors("<p>Attendez deux heures avant de recommencer.</p>")
+    assert not prose_count_errors("<blockquote>Les deux gestes sont parfois confondus.</blockquote>")
+    assert not prose_count_errors("<p>Retenez deux gestes dans cette phrase, sans liste à suivre.</p>")
 
 
 def test_facts_require_exact_quote_and_declared_source():
@@ -75,3 +79,33 @@ def test_facts_require_exact_quote_and_declared_source():
     errors = " | ".join(fact_errors(invalid))
     assert "citation exacte" in errors and "n'apparaît pas" in errors
     assert self_review_errors({"self_review": {"notes": "Ce point vient de connaissances générales."}})
+
+
+def test_fact_url_matching_decodes_path_and_self_review_handles_negation_and_agreement():
+    from app.services.seo.agent_generation import fact_errors, self_review_errors
+
+    candidate = {
+        "sources": [{"url": "https://example.com/guide/été"}],
+        "facts": [{"value": "20 minutes", "source_url": "http://www.example.com/guide/%C3%A9t%C3%A9#details",
+                   "quote": "20 minutes"}],
+    }
+    assert fact_errors(candidate) == []
+
+    assert self_review_errors({"self_review": {"notes": "Aucun fait non sourcé. Rien n'est écrit de mémoire."}}) == []
+    assert self_review_errors({"self_review": {"notes": "Deux chiffres non vérifiés."}})
+    assert self_review_errors({"self_review": {"notes": "Une mise en garde non sourcée."}})
+    assert self_review_errors({"self_review": {"notes": "Les faits viennent de connaissances générales, pas d'une source lue."}})
+
+
+def test_competitor_matching_uses_registered_domain_without_suffix_false_positive():
+    from app.services.seo.agent_generation import competitor_errors
+
+    candidate = {
+        "content_html": '<p><a href="https://blog.ideal.fr/guide">guide</a></p>',
+        "competitors": [{"url": "https://www.ideal.fr/a"}],
+        "sources": [{"url": "https://notideal.fr/a"}, {"url": "https://one.example/a"},
+                    {"url": "https://two.example/a"}, {"url": "https://three.example/a"}],
+    }
+    errors = " | ".join(competitor_errors(candidate))
+    assert "Lien vers un concurrent" in errors
+    assert "Seulement" not in errors

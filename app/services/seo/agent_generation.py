@@ -14,7 +14,7 @@ import re
 import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
 
 from app.core.utils import calculate_reading_time_minutes, calculate_word_count
 from app.models.content import Article
@@ -181,7 +181,7 @@ def _url_key(url: str) -> str:
         netloc = host if not port or port in (80, 443) else f"{host}:{port}"
         query = urlencode(sorted((key, value) for key, value in parse_qsl(parsed.query)
                                  if not key.lower().startswith(("utm_", "fbclid", "gclid"))))
-        path = parsed.path.rstrip("/") or "/"
+        path = unquote(parsed.path).rstrip("/") or "/"
         # Le schéma n'identifie pas la ressource éditoriale : http et https
         # doivent correspondre, comme www et la barre finale.
         return urlunsplit(("", netloc, path, query, ""))
@@ -190,7 +190,23 @@ def _url_key(url: str) -> str:
 
 
 def competitor_hosts(candidate: dict) -> set[str]:
-    return {h for h in (_host(c.get("url", "")) for c in candidate.get("competitors") or [] if isinstance(c, dict)) if h}
+    return {_registered_domain(h) for h in (_host(c.get("url", ""))
+                                            for c in candidate.get("competitors") or [] if isinstance(c, dict)) if h}
+
+
+_COMMON_TWO_LEVEL_SUFFIXES = {
+    "co.uk", "org.uk", "ac.uk", "gov.uk", "com.au", "net.au", "org.au", "co.nz", "co.jp",
+    "co.in", "com.br", "com.cn", "com.mx", "com.sg", "com.tr", "co.za",
+}
+
+
+def _registered_domain(host: str) -> str:
+    """Return a registrable-looking domain, keeping subdomains equivalent."""
+    labels = [label for label in host.split(".") if label]
+    if len(labels) <= 2:
+        return host
+    suffix = ".".join(labels[-2:])
+    return ".".join(labels[-3:]) if suffix in _COMMON_TWO_LEVEL_SUFFIXES else suffix
 
 
 def _brand_variants(host: str) -> set[str]:
@@ -208,7 +224,7 @@ def competitor_errors(candidate: dict) -> list[str]:
     hosts = competitor_hosts(candidate)
     errors = []
     for url in re.findall(r"""<a\b[^>]*href\s*=\s*["']([^"']+)["']""", content, re.IGNORECASE):
-        if _host(url) in hosts:
+        if _registered_domain(_host(url)) in hosts:
             errors.append(f"Lien vers un concurrent ({_host(url)}) : supprime ce lien, un concurrent n'est jamais une source.")
     text = html_to_text(content).lower()
     for host in hosts:
@@ -220,10 +236,10 @@ def competitor_errors(candidate: dict) -> list[str]:
         errors.append("Le texte parle de « sites concurrents », « certains sites » ou de « conseils en ligne » : formulation interdite.")
     source_urls = {_url_key(s.get("url", "")) for s in candidate.get("sources") or [] if isinstance(s, dict)} - {""}
     competitor_source_urls = {_url_key(s.get("url", "")) for s in candidate.get("sources") or []
-                              if isinstance(s, dict) and _host(s.get("url", "")) in hosts}
+                              if isinstance(s, dict) and _registered_domain(_host(s.get("url", ""))) in hosts}
     if competitor_source_urls:
         errors.append("Un concurrent apparaît dans « sources » : un concurrent n'est jamais une source admissible.")
-    source_domains = {_host(url) for url in source_urls} - hosts - {""}
+    source_domains = {_registered_domain(_host(url)) for url in source_urls} - hosts - {""}
     if len(source_domains) < 3:
         errors.append(f"Seulement {len(source_domains)} domaine(s) de sources admissibles hors concurrents : il en faut au "
                       "moins 3 (institutions, associations de consommateurs, organismes techniques, fabricants, études).")
@@ -231,8 +247,10 @@ def competitor_errors(candidate: dict) -> list[str]:
 
 
 _PROSE_COUNT_RE = re.compile(
-    r"\b(deux|trois|quatre|cinq|six|sept|huit|neuf|dix|\d{1,2})\s+(?:[a-zéèêàâîïôûç]+\s+)?"
-    r"(gestes|étapes|erreurs|règles|conseils|questions|critères|astuces|raisons|signes|solutions|méthodes|points|choses)\b",
+    r"\b(?:(deux|trois|quatre|cinq|six|sept|huit|neuf|dix|\d{1,2})\s+|"
+    r"(un|une)\s+seul(?:e)?\s+)"
+    r"(?:[a-zéèêàâîïôûç]+\s+)?"
+    r"(gestes?|étapes?|erreurs?|règles?|conseils?|questions?|critères?|astuces?|raisons?|signes?|solutions?|méthodes?|points?|choses?)\b",
     re.IGNORECASE)
 
 
@@ -258,9 +276,18 @@ def fact_errors(candidate: dict) -> list[str]:
 def self_review_errors(candidate: dict) -> list[str]:
     """L'agent ne peut pas justifier un fait par sa mémoire."""
     notes = str((candidate.get("self_review") or {}).get("notes") or "")
-    if re.search(r"\b(connaissances générales|de mémoire|sans (?:source|citation)|non sourcé|non vérifié)\b",
-                 notes, re.IGNORECASE):
-        return ["L'auto-relecture reconnaît un fait non sourcé : supprime-le ou ajoute une citation exacte."]
+    suspicious = re.compile(
+        r"(?:connaissances générales|de mémoire|sans\s+(?:source|citation)|"
+        r"non\s+sourc(?:é|ée|és|ées)|non\s+vérifi(?:é|ée|és|ées)|"
+        r"pas\s+d['’]une\s+source(?:\s+lue)?|ne\s+vient\s+pas\s+d['’]une\s+source|"
+        r"faute\s+de\s+source)", re.IGNORECASE)
+    negated = re.compile(
+        r"\b(?:aucun|aucune|rien|jamais)\b.{0,40}"
+        r"(?:connaissances générales|de mémoire|sans\s+(?:source|citation)|"
+        r"non\s+sourc(?:é|ée|és|ées)|non\s+vérifi(?:é|ée|és|ées))\b", re.IGNORECASE)
+    for sentence in re.split(r"(?<=[.!?])\s+", notes):
+        if suspicious.search(sentence) and not negated.search(sentence):
+            return ["L'auto-relecture reconnaît un fait non sourcé : supprime-le ou ajoute une citation exacte."]
     return []
 
 
@@ -276,7 +303,9 @@ def prose_count_errors(content: str) -> list[str]:
         between = after[:nxt.start()] if nxt else ""
         if not nxt or re.search(r"<h[23]\b", between, re.IGNORECASE) or len(between) > 600:
             continue
-        announced = int(m.group(1)) if m.group(1).isdigit() else _COUNT_WORDS[m.group(1).lower()]
+        raw_count = m.group(1) or m.group(2)
+        announced = int(raw_count) if raw_count.isdigit() else (_COUNT_WORDS[raw_count.lower()]
+                                                                if raw_count.lower() in _COUNT_WORDS else 1)
         items = len(re.findall(r"<li\b", nxt.group(0), re.IGNORECASE))
         if items != announced:
             errors.append(f"Le texte annonce « {m.group(0)} » mais la liste qui suit contient {items} éléments.")
