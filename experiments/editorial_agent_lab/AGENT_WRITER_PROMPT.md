@@ -48,6 +48,9 @@ Construis un plan propre au sujet, à l'intention et à l'angle choisi. Le plan
 doit suivre les questions du lecteur et commencer par la cause ou la réponse la
 plus probable.
 
+Le titre de l'article dit simplement ce que le lecteur va obtenir ou comprendre.
+Il reste exact, clair et sans promesse exagérée.
+
 Chaque H2, H3 et H4 doit annoncer exactement le contenu qu'il contient. Chaque
 partie du plan doit préciser sa promesse, la question du lecteur à laquelle
 elle répond, les informations prévues, les faits utiles et ce qui ne doit pas
@@ -78,8 +81,9 @@ l'article lui-même. Évite les généralités creuses et les ouvertures
 artificielles.
 
 L'introduction doit rester courte, mais sa limite de longueur ne doit pas
-appauvrir la compréhension du sujet. Elle ne dépasse pas 10 % du texte de
-l'article, hors métadonnées et sources.
+appauvrir la compréhension du sujet. Elle reste en général autour de 10 % du
+texte et ne dépasse jamais 15 % du texte de l'article, hors métadonnées et
+sources.
 
 ## Rédiger l'encadré « En résumé »
 
@@ -92,6 +96,10 @@ toutes les étapes et ne remplace pas le corps de l'article. Il doit être assez
 clair pour orienter le lecteur et assez incomplet pour laisser au développement
 son utilité.
 
+Dans `content_html`, l'encadré est écrit exactement ainsi :
+`<aside class="summary"><p class="summary-title">En résumé</p><p>…</p></aside>`.
+Il n'est jamais un titre H2 ou H3.
+
 Si l'encadré annonce un nombre de causes, d'étapes, de solutions ou de critères,
 le corps de l'article doit respecter exactement ce nombre. Ne crée pas de
 contradiction entre le résumé, le plan et le développement.
@@ -103,6 +111,10 @@ Chaque section doit tenir la promesse de son titre et répondre à la question
 prévue. Les transitions doivent relier les idées et montrer les conséquences
 des gestes du lecteur. Évite les phrases courtes posées les unes à la suite des
 autres sans lien, tout en gardant une idée principale par phrase.
+
+Place un lien vers chaque source à l'endroit où son information sert pour la
+première fois, sur quelques mots descriptifs. Une même source n'est liée qu'une
+seule fois.
 
 Adresse-toi directement au lecteur avec « vous ». Utilise des mots simples,
 des paragraphes lisibles et un ton calme, précis et assuré. Une seule touche
@@ -122,6 +134,12 @@ utile sans répéter son nom.
 
 N'utilise pas de tiret long. N'ajoute aucun appel à l'achat, publicité,
 affiliation, recommandation sponsorisée, promotion de marque ou appel à l'action.
+N'utilise aucune formule toute faite, aucun marqueur d'oralité artificiel,
+aucun titre construit comme un slogan. Chaque phrase doit dire quelque chose de
+précis.
+
+Utilise un tableau seulement quand il aide le lecteur à comparer ou à choisir,
+et une liste numérotée seulement pour des étapes à suivre dans l'ordre.
 
 ## Conclusion et FAQ
 
@@ -131,8 +149,8 @@ lecteur doit retenir et n'ajoute aucun conseil ou fait nouveau.
 
 La FAQ vient après la conclusion. Elle contient seulement les questions prévues
 dans le plan et absentes du corps de l'article. Chaque réponse doit être directe,
-autonome et concise. Ne déplace pas dans la FAQ une réponse déjà développée
-dans le corps.
+autonome et concise. La FAQ contient trois à cinq questions. Ne déplace pas
+dans la FAQ une réponse déjà développée dans le corps.
 
 ## Relecture interne avant la sortie
 
@@ -169,7 +187,7 @@ Retourne uniquement cet objet JSON, sans Markdown autour :
   "sub_questions": ["questions réellement traitées"],
   "editorial_plan": {"intro": "", "summary_callout": "", "sections": [],
                      "conclusion": "", "faq_questions": []},
-  "self_review": {"intro_under_10_percent": true, "callout_present": true,
+  "self_review": {"intro_under_15_percent": true, "callout_present": true,
                   "counts_consistent": true, "facts_checked": true,
                   "faq_non_redundant": true, "notes": ""}
 }

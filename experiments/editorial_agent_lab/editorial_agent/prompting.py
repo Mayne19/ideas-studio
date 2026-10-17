@@ -62,7 +62,7 @@ def build_writer_context(
         "plan": plan.model_dump(mode="json"),
         "rules": [
             "Rédige tout l'article en une seule passe.",
-            "L'introduction reste inférieure ou égale à 10 %.",
+            "L'introduction reste courte et ne dépasse jamais 15 %.",
             "Le call out En résumé vient entre l'introduction et le premier H2.",
             "La FAQ est définie par le plan et ne répète pas le corps.",
             "Ne lance aucune réécriture automatique pour une alerte de similarité.",

@@ -67,10 +67,10 @@ def validate_draft(draft: ArticleDraft, plan: ArticlePlan) -> list[ValidationIss
     intro_html = html.split("<h2>", 1)[0]
     intro_words = word_count(plain_text(intro_html))
     total_words = word_count(body)
-    if total_words and intro_words / total_words > 0.10:
+    if total_words and intro_words / total_words > 0.15:
         issues.append(ValidationIssue(
             code="intro_over_limit",
-            message="L'introduction dépasse 10 % du contenu.",
+            message="L'introduction dépasse 15 % du contenu.",
             blocking=True,
             location="content_html",
         ))

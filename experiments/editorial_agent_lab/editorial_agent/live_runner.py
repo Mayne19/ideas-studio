@@ -187,7 +187,9 @@ def _make_client(route: str, key: str, model: str, config: LiveRunConfig, adapte
             max_searches=config.max_searches,
             max_fetches=config.max_fetches,
             max_cost_usd=config.max_cost_usd,
-            reasoning_effort="low",
+            # Le laboratoire doit mesurer la qualité de rédaction avec le
+            # niveau de raisonnement maximal demandé pour ce test.
+            reasoning_effort="high",
         )
     raise LiveRunError(f"Fournisseur non supporté pour le laboratoire : {route}")
 
@@ -250,7 +252,7 @@ def _write_html(path: Path, data: dict[str, Any], report: dict[str, Any]) -> Non
         f"<meta name='description' content='{meta}'><title>{title}</title>"
         "<style>body{max-width:820px;margin:40px auto;padding:0 24px;"
         "font:18px/1.65 system-ui,sans-serif;color:#202124}h1{font-size:2.2rem;"
-        "line-height:1.15}h2{margin-top:2.4em}h3{margin-top:1.8em}.summary-callout{"
+        "line-height:1.15}h2{margin-top:2.4em}h3{margin-top:1.8em}.summary,.summary-callout{"
         "padding:16px 20px;background:#f0f4f8;border-left:4px solid #526b82;"
         "border-radius:4px}.report{margin-top:60px;padding-top:24px;border-top:1px solid #ddd;"
         "font-size:14px;color:#555}</style></head><body>"
