@@ -341,6 +341,24 @@ def quote_errors(candidate: dict) -> list[str]:
             "ou reformule sans guillemets) : " + " | ".join(f"« {q} »" for q in missing)]
 
 
+BALANCE_MIN_FACTS = 4
+
+
+def source_balance_errors(candidate: dict) -> list[str]:
+    """Aucun domaine ne porte plus de la moitié des faits (règle de l'étape 4)."""
+    domains = [_registered_domain(_host(str(f.get("source_url") or "")))
+               for f in candidate.get("facts") or [] if isinstance(f, dict)]
+    domains = [d for d in domains if d]
+    if len(domains) < BALANCE_MIN_FACTS:
+        return []
+    top = max(set(domains), key=domains.count)
+    if domains.count(top) * 2 <= len(domains):
+        return []
+    return [f"Le domaine {top} porte {domains.count(top)} faits sur {len(domains)} : aucune source ne doit porter "
+            "plus de la moitié des faits. Remplace une partie de ces faits par d'autres sources admissibles lues, "
+            "ou retire-les."]
+
+
 def fact_errors(candidate: dict) -> list[str]:
     """Chaque fait doit être traçable par une source et une citation."""
     sources = {_url_key(item.get("url", "")) for item in candidate.get("sources") or []
@@ -636,7 +654,7 @@ def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, 
         errors = structure_errors(content, candidate.get("title") or final_title)
         errors += assembly_errors(candidate) + link_errors(content) + html_render_errors(content)
         errors += announced_count_errors(content) + prose_count_errors(content) + competitor_errors(candidate)
-        errors += fact_errors(candidate) + quote_errors(candidate)
+        errors += fact_errors(candidate) + quote_errors(candidate) + source_balance_errors(candidate)
         errors += self_review_errors(candidate)
         errors += judge_errors(orch, article, candidate)
         plag_errors, plag_report = plagiarism_errors(orch, content)

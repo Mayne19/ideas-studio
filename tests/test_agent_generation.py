@@ -278,3 +278,17 @@ def test_quotes_must_come_from_fact_quotes_with_tolerant_matching():
     errors = quote_errors({"facts": facts, "content_html": bad})
     assert len(errors) == 1 and "au-delà de six fuseaux" in errors[0]
 
+
+def test_source_balance_flags_a_domain_over_half_of_the_facts():
+    from app.services.seo.agent_generation import source_balance_errors
+
+    def facts(urls):
+        return {"facts": [{"source_url": u} for u in urls]}
+
+    vidal = ["https://www.vidal.fr/a"] * 10 + ["https://anses.fr/b"] * 4 + ["https://sante.fr/c"] * 3
+    errors = source_balance_errors(facts(vidal))
+    assert len(errors) == 1 and "vidal.fr porte 10 faits sur 17" in errors[0]
+    assert source_balance_errors(facts(["https://vidal.fr/a"] * 2 + ["https://anses.fr/b"] * 2)) == []
+    assert source_balance_errors(facts(["https://www.cdc.gov/a", "https://wwwnc.cdc.gov/b", "https://anses.fr/c",
+                                        "https://inserm.fr/d", "https://cdc.gov/e"])) != []
+    assert source_balance_errors(facts(["https://vidal.fr/a"] * 3)) == []
