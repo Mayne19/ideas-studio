@@ -1,75 +1,38 @@
-# Editorial Agent Lab
+# Laboratoire de rédaction
 
-Prototype isolé de l'algorithme éditorial décrit dans la conversation Claude.
+Le rédacteur est un seul agent Claude Code, lancé en mode non interactif avec la session déjà authentifiée
+(abonnement, sans OpenRouter). Il charge le skill `redaction-article`
+(`.claude/skills/redaction-article/SKILL.md`), seule source des consignes de rédaction, et n'a accès qu'aux
+outils WebSearch et WebFetch, avec un raisonnement élevé. Il ne peut lire aucun fichier du dépôt : les
+articles d'étalonnage du juge (`tests/data/judge_calibration`) ne lui sont jamais transmis.
 
-Ce dossier ne modifie pas le pipeline existant d'Ideas Studio. Il formalise
-uniquement le noyau de la nouvelle méthode :
+## Fichiers
 
-1. contexte du site et articles existants ;
-2. concurrents, forces, faiblesses et contradictions ;
-3. intention réelle du lecteur ;
-4. faits et sources ;
-5. plan détaillé avec call out, sections, H3 et FAQ ;
-6. rédaction complète en une passe via un port de modèle ;
-7. validations bloquantes ;
-8. analyse de similarité sans réécriture automatique ;
-9. conservation de la meilleure version.
+- `run_live.py` : génère un article en ligne de commande.
+- `test_ui.py` : interface locale qui lance le même rédacteur depuis un formulaire.
+- `editorial_agent/claude_cli_client.py` : lance Claude Code (outils autorisés, effort, coût et jetons réels).
+- `editorial_agent/writer.py` : transmet le sujet et la liste des articles du site, puis sépare l'article
+  Markdown de la fiche de publication JSON.
+- `editorial_agent/checks.py` : les trois contrôles bloquants (encadré « En résumé », aucun tiret cadratin,
+  fiche JSON valide).
+- `editorial_agent/similarity.py` : alerte de plagiat (phrases identiques à une source), sans blocage.
+- `editorial_agent/runner.py` : enchaîne rédaction, contrôles et fichiers de sortie.
+- `tests/test_lab.py` : tests du laboratoire.
 
-Le cœur de l'algorithme reste testable avec des faux fournisseurs. Le mode réel
-réutilise toutefois les adaptateurs de recherche et de lecture existants, puis
-le client Anthropic/OpenRouter déjà présent dans Ideas Studio. Il fait une seule
-production éditoriale : recherche, lecture, analyse sémantique, plan, rédaction
-et relecture interne du modèle. Il ne demande jamais à l'éditeur de répondre,
-ne lance pas de conversation de correction et ne publie rien dans le CMS.
-
-Le plan de construction et les preuves sont dans
-[`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) et
-[`VALIDATION_LOG.md`](VALIDATION_LOG.md).
-
-## Exécution des tests
+## Générer un article
 
 Depuis la racine du dépôt :
 
 ```bash
-python -m pytest experiments/editorial_agent_lab/tests -q
+python -m experiments.editorial_agent_lab.run_live "Quelle application gratuite choisir pour apprendre une langue"
 ```
 
-## Un essai réel
+Option : `--site-articles articles.json` (liste `{titre, url, resume}`) pour le maillage interne.
 
-Quand le runtime du CMS et ses credentials sont disponibles :
+Sortie dans `experiments/editorial_agent_lab/outputs/<slug>/` : `article.md`, `fiche.json` et `report.json`
+(coût réel, jetons, contrôles, alerte de plagiat).
 
-```bash
-.venv/bin/python -m experiments.editorial_agent_lab.run_live "mot-clé de test" \
-  --site-name "Nom du site" --domain "example.com"
-```
+Interface locale : `python -m experiments.editorial_agent_lab.test_ui --port 8765`, puis
+`http://127.0.0.1:8765`.
 
-Le résultat est écrit dans `run/article.html` et le rapport complet dans
-`run/report.json`. La clé est résolue depuis le runtime existant ou depuis les
-variables d'environnement, sans jamais être copiée dans le laboratoire.
-
-## Interface locale de test
-
-Pour tester sans terminal, lance l'interface isolée :
-
-```bash
-.venv/bin/python -m experiments.editorial_agent_lab.test_ui --port 8765
-```
-
-Ouvre ensuite `http://127.0.0.1:8765`. Le formulaire lance un seul run à la
-fois par clic, affiche son état, puis ouvre l'article HTML et le rapport JSON.
-L'interface n'écrit ni article ni configuration dans le CMS.
-
-L'analyse sémantique réelle est faite par le modèle dans son exécution contrôlée : il
-compare les concurrents, repère leurs lacunes et contradictions, formule la
-question réelle du lecteur, choisit l'angle, organise le plan et relie les
-faits aux sources. Le code ne prétend pas remplacer ce jugement par un score
-de mots-clés. Il contrôle ensuite la structure et la similarité sans réécrire
-le texte.
-
-## Règle de correction
-
-Une alerte stylistique ne remplace jamais automatiquement le texte. Une alerte
-de similarité déclenche, elle, une seule réécriture ciblée du passage concerné.
-Le programme compare les deux versions et conserve la meilleure. La validation
-humaine et la publication viennent après ce laboratoire ; elles ne font pas
-partie de l'algorithme testé ici.
+Tests : `python -m pytest experiments/editorial_agent_lab/tests -q`.
