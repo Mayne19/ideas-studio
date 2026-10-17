@@ -1,0 +1,116 @@
+{
+  "meta_title": "Détartrer une bouilloire : la méthode sans l'abîmer",
+  "meta_description": "Vinaigre blanc à 8 %, acide citrique ou détartrant : la méthode des fabricants pour détartrer une bouilloire, les erreurs à éviter et la bonne fréquence.",
+  "slug": "detartrer-bouilloire",
+  "mot_cle_principal": "détartrer une bouilloire",
+  "sources": [
+    {
+      "titre": "Philips : ma bouilloire met beaucoup de temps à porter l'eau à ébullition",
+      "url": "https://www.philips.fr/c-t/XC000003399/ma-bouilloire-philips-met-beaucoup-de-temps-%C3%A0-porter-l-eau-%C3%A0-%C3%A9bullition"
+    },
+    {
+      "titre": "Smeg : entretien de la bouilloire",
+      "url": "https://www.smeg.com/fr/bouilloire-entretien"
+    },
+    {
+      "titre": "De'Longhi : comment puis-je détartrer ma bouilloire ?",
+      "url": "https://www.delonghi.com/fr-fr/faqs/Comment-puis-je-d%C3%A9tartrer-ma-bouilloire-/a/6854"
+    },
+    {
+      "titre": "ARS Île-de-France : l'information sur la qualité de l'eau du robinet",
+      "url": "https://www.iledefrance.ars.sante.fr/alimentation-en-eau-potable-linformation-sur-la-qualite-de-leau-du-robinet"
+    },
+    {
+      "titre": "Santé.fr : qualité de l'eau potable",
+      "url": "https://www.sante.fr/node/6851993"
+    }
+  ],
+  "a_mettre_a_jour": [
+    {
+      "information": "Limite de 8 % d'acide acétique pour le vinaigre et procédure de détartrage Philips (eau aux trois quarts, vinaigre jusqu'au MAX, une nuit)",
+      "source": "https://www.philips.fr/c-t/XC000003399/ma-bouilloire-philips-met-beaucoup-de-temps-%C3%A0-porter-l-eau-%C3%A0-%C3%A9bullition",
+      "a_verifier": "autre"
+    },
+    {
+      "information": "Temps de pose de 8 à 10 heures et produits déconseillés par Smeg",
+      "source": "https://www.smeg.com/fr/bouilloire-entretien",
+      "a_verifier": "chaque année"
+    },
+    {
+      "information": "Fréquence De'Longhi : chaque mois en eau dure, tous les trois mois en eau douce",
+      "source": "https://www.delonghi.com/fr-fr/faqs/Comment-puis-je-d%C3%A9tartrer-ma-bouilloire-/a/6854",
+      "a_verifier": "chaque année"
+    },
+    {
+      "information": "Contenu de la fiche annuelle sur la qualité de l'eau jointe à la facture (dont la dureté) et outils de consultation par commune",
+      "source": "https://www.sante.fr/node/6851993",
+      "a_verifier": "à chaque changement de loi"
+    }
+  ],
+  "images": [
+    {
+      "apres_le_titre": "D'où vient le tartre et pourquoi il faut l'enlever",
+      "montre": "Gros plan sur le fond d'une bouilloire couvert d'une croûte blanche, avec quelques paillettes détachées",
+      "texte_alternatif": "Fond intérieur d'une bouilloire électrique couvert d'une couche de calcaire blanc avec des paillettes détachées",
+      "legende": "Le calcaire se dépose d'abord sur la plaque chauffante, puis se détache en paillettes."
+    },
+    {
+      "apres_le_titre": "La méthode au vinaigre blanc, étape par étape",
+      "montre": "Une main verse du vinaigre blanc dans une bouilloire déjà remplie d'eau chaude, jusqu'au repère MAX",
+      "texte_alternatif": "Vinaigre blanc versé dans une bouilloire contenant de l'eau chaude jusqu'au repère de capacité maximale",
+      "legende": "Le vinaigre s'ajoute après l'ébullition, dans l'eau chaude, jusqu'au repère MAX."
+    },
+    {
+      "apres_le_titre": "Les erreurs qui abîment la bouilloire",
+      "montre": "Deux bouteilles côte à côte, étiquettes visibles : vinaigre blanc alimentaire à 8 % et vinaigre ménager plus concentré",
+      "texte_alternatif": "Comparaison des étiquettes d'un vinaigre blanc à 8 % d'acide acétique et d'un vinaigre ménager plus concentré",
+      "legende": "Le pourcentage d'acide acétique sur l'étiquette indique si le vinaigre convient à la bouilloire."
+    },
+    {
+      "apres_le_titre": "La méthode au vinaigre blanc, étape par étape",
+      "montre": "Le filtre anticalcaire retiré du bec et rincé sous le robinet avec une brosse souple",
+      "texte_alternatif": "Filtre anticalcaire de bouilloire rincé sous l'eau du robinet avec une brosse à poils souples",
+      "legende": "Le filtre du bec retient les paillettes et se rince à part, avec une brosse souple."
+    }
+  ],
+  "integrations": [],
+  "experience_a_ajouter": [
+    {
+      "apres_le_titre": "La méthode au vinaigre blanc, étape par étape",
+      "suggestion": "Photos avant et après du fond d'une bouilloire de l'équipe détartrée selon cette méthode, en précisant le temps de pose utilisé."
+    },
+    {
+      "apres_le_titre": "D'où vient le tartre et pourquoi il faut l'enlever",
+      "suggestion": "Mesurer le temps d'ébullition d'un litre d'eau avant et après le détartrage d'une bouilloire très entartrée."
+    },
+    {
+      "apres_le_titre": "Vinaigre, acide citrique ou détartrant : lequel choisir",
+      "suggestion": "Comparer sur deux bouilloires le vinaigre blanc et l'acide citrique : résultat visible, odeur restante, nombre de rinçages nécessaires."
+    }
+  ],
+  "liens_internes_places": [],
+  "liens_internes_suggeres": [
+    "Comment détartrer une machine à café",
+    "Vinaigre blanc ménager ou alimentaire : lequel utiliser pour l'entretien",
+    "Comment connaître la dureté de l'eau de sa commune",
+    "Acide citrique : usages et précautions pour l'entretien de la maison"
+  ],
+  "faq": [
+    {
+      "question": "L'eau d'une bouilloire entartrée est-elle mauvaise pour la santé ?",
+      "reponse": "Non. D'après l'ARS Île-de-France, une eau calcaire n'a aucun effet sur la santé. Le tartre pose surtout un problème de goût et de confort, à cause des particules qui finissent dans la tasse."
+    },
+    {
+      "question": "Le bicarbonate de soude permet-il de détartrer une bouilloire ?",
+      "reponse": "Pas vraiment. Le calcaire se dissout dans un acide, alors que le bicarbonate est une base : il nettoie et désodorise, mais ne fait pas fondre le tartre. Gardez-le pour l'extérieur de la bouilloire, et utilisez un produit acide pour l'intérieur."
+    },
+    {
+      "question": "Comment faire disparaître l'odeur de vinaigre après le détartrage ?",
+      "reponse": "Faites bouillir de l'eau claire une ou deux fois de plus, en la jetant à chaque fois. Laissez ensuite la bouilloire sécher couvercle ouvert, pour que l'air chasse l'odeur qui reste."
+    },
+    {
+      "question": "Le jus de citron peut-il remplacer le vinaigre ?",
+      "reponse": "Oui pour un dépôt léger, puisque le citron contient de l'acide citrique, mais beaucoup moins que la poudre vendue pour l'entretien. Sur une couche épaisse, il faudra recommencer plusieurs fois. Le vinaigre blanc ou l'acide citrique en poudre sont alors plus efficaces."
+    }
+  ]
+}
