@@ -128,9 +128,17 @@ def cap_ideas_count(db: Session, project_id: str, requested: int | None) -> int:
     return max(0, min(requested, cap))
 
 
+def _clamp_min_publish_score(value) -> int:
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        return DEFAULT_MIN_PUBLISH_SCORE
+    return max(MIN_PUBLISH_SCORE_MIN, min(MIN_PUBLISH_SCORE_MAX, value))
+
+
 def resolve_min_publish_score(pipeline: Pipeline | None) -> int:
-    """Compatibilité pour les anciens articles : la publication n'est plus scorée."""
-    return DEFAULT_MIN_PUBLISH_SCORE
+    """Return the project's publication threshold, with safe legacy defaults."""
+    return _clamp_min_publish_score(pipeline.min_publish_score if pipeline else None)
 
 
 def _category_frequency_summary(db: Session, project_id: str) -> tuple[int, list[dict]]:
@@ -278,7 +286,7 @@ def _model_to_settings(pipe: Pipeline, db: Session | None = None) -> PipelineSet
         category_priorities=schedule.get("category_priorities", {}),
         ideas_per_week=pipe.ideas_per_week,
         ideas_per_run=_clamp_ideas_per_run(pipe.ideas_per_run),
-        min_publish_score=DEFAULT_MIN_PUBLISH_SCORE,
+        min_publish_score=resolve_min_publish_score(pipe),
         generation_mode=pipe.generation_mode or "agent",
         agent_max_cost_usd=float(pipe.agent_max_cost_usd) if pipe.agent_max_cost_usd is not None else 3.0,
         max_pending_drafts=pipe.max_pending_drafts,
@@ -349,6 +357,7 @@ _PIPELINE_FIELD_MAP = {
     "articles_per_week": "articles_per_week",
     "ideas_per_week": "ideas_per_week",
     "ideas_per_run": "ideas_per_run",
+    "min_publish_score": "min_publish_score",
     "generation_mode": "generation_mode",
     "agent_max_cost_usd": "agent_max_cost_usd",
     "max_pending_drafts": "max_pending_drafts",
