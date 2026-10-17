@@ -307,8 +307,47 @@ def validate_bulk_articles(db: Session, project_id: str, article_ids: list[str])
     blocked_count = 0
     blocked_articles: list[dict] = []
     to_schedule: list[Article] = []
+    from app.services.editorial_workflow_service import (
+        is_workflow_managed,
+        schedule_for_publication,
+        validate_for_publication,
+    )
+    workflow_articles = [article for article in articles if is_workflow_managed(db, article.id)]
+    workflow_ids = {article.id for article in workflow_articles}
+    legacy_articles = [article for article in articles if article.id not in workflow_ids]
+    workflow_scheduled_count = 0
 
-    for article in articles:
+    for article in workflow_articles:
+        report = validate_for_publication(db, article)
+        if not report["passed"]:
+            blocked_count += 1
+            blocked_articles.append({
+                "article_id": article.id,
+                "title": article.current_revision.title if article.current_revision_id else "",
+                "reasons": [check["detail"] for check in report["checks"] if not check["passed"]],
+            })
+            continue
+        validated_count += 1
+        if article.scheduled_for is None:
+            blocked_count += 1
+            validated_count -= 1
+            blocked_articles.append({
+                "article_id": article.id,
+                "reasons": ["Aucune date de publication prevue."],
+            })
+            continue
+        scheduled = schedule_for_publication(db, article, article.scheduled_for)
+        if not scheduled["passed"]:
+            blocked_count += 1
+            validated_count -= 1
+            blocked_articles.append({
+                "article_id": article.id,
+                "reasons": [check["detail"] for check in scheduled["checks"] if not check["passed"]],
+            })
+            continue
+        workflow_scheduled_count += 1
+
+    for article in legacy_articles:
         result = check_validation_thresholds(db, article)
         if result["valid"]:
             validated_count += 1
@@ -321,7 +360,7 @@ def validate_bulk_articles(db: Session, project_id: str, article_ids: list[str])
                 "reasons": result["reasons"],
             })
 
-    scheduled_count = 0
+    scheduled_count = workflow_scheduled_count
     for article in to_schedule:
         if article.scheduled_for is None:
             blocked_count += 1
