@@ -1,109 +1,53 @@
-"""Étapes de rédaction, d'extraction et de relecture du laboratoire."""
+"""Entrée et sortie du rédacteur. Les consignes de rédaction sont toutes dans
+le skill .claude/skills/redaction-article/SKILL.md : ce module n'en ajoute
+aucune. Il transmet le sujet (et la liste des articles du site si elle
+existe), puis sépare l'article Markdown de la fiche de publication JSON."""
 
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Protocol
+import re
+import unicodedata
 
-from .models import (
-    ArticlePlan,
-    ArticleRequest,
-    CompetitorPage,
-    EditorialAngle,
-    FactRecord,
-    ReaderIntent,
-    SiteContext,
-)
-from .prompting import build_writer_context
+SKILL_NAME = "redaction-article"
+_FICHE_RE = re.compile(r"```json\s*\n(.*?)\n```", re.DOTALL)
 
 
-class WriterCall(Protocol):
-    def __call__(self, system: str, user: str) -> str: ...
+def build_prompt(subject: str, site_articles: list[dict] | None = None) -> str:
+    lines = [f"/{SKILL_NAME}", "", f"Sujet : {subject.strip()}"]
+    if site_articles:
+        lines += ["", "Articles déjà publiés sur le site :"]
+        for article in site_articles:
+            lines.append(f"- {article.get('titre') or article.get('title', '')} | {article.get('url', '')} | "
+                         f"{article.get('resume') or article.get('summary', '')}")
+    return "\n".join(lines)
 
 
-class WriterOutputError(ValueError):
-    """Le modèle n'a pas rendu le format attendu par l'étape."""
+def split_output(text: str) -> tuple[str, dict | None, str]:
+    """(article Markdown, fiche ou None, erreur de fiche). La fiche est le
+    dernier bloc ```json de la réponse ; l'article est tout ce qui précède."""
 
-
-def _extract_json(text: str) -> dict:
-    cleaned = (text or "").strip()
-    if cleaned.startswith("```"):
-        cleaned = cleaned.strip("`").removeprefix("json").strip()
-    start, end = cleaned.find("{"), cleaned.rfind("}")
-    if start < 0 or end <= start:
-        raise WriterOutputError("réponse sans objet JSON")
+    matches = list(_FICHE_RE.finditer(text or ""))
+    if not matches:
+        return (text or "").strip(), None, "aucun bloc ```json trouvé après l'article"
+    last = matches[-1]
+    article = (text[:last.start()]).strip()
+    article = re.sub(r"^```(?:markdown|md)?\s*\n(.*)\n```$", r"\1", article, flags=re.DOTALL).strip()
     try:
-        data = json.loads(cleaned[start:end + 1])
+        fiche = json.loads(last.group(1))
     except json.JSONDecodeError as exc:
-        raise WriterOutputError(f"JSON invalide : {exc}") from exc
-    if not isinstance(data, dict):
-        raise WriterOutputError("le JSON doit être un objet")
-    return data
+        return article, None, f"JSON invalide : {exc}"
+    if not isinstance(fiche, dict):
+        return article, None, "la fiche n'est pas un objet JSON"
+    return article, fiche, ""
 
 
-@dataclass
-class MarkdownWriter:
-    """Produit uniquement l'article complet en Markdown."""
-
-    call: WriterCall
-    system_prompt: str
-
-    def write(
-        self,
-        request: ArticleRequest,
-        site: SiteContext,
-        competitors: list[CompetitorPage],
-        reader: ReaderIntent,
-        angle: EditorialAngle,
-        facts: list[FactRecord],
-        plan: ArticlePlan,
-    ) -> str:
-        user_context = build_writer_context(request, site, competitors, reader, angle, facts, plan)
-        raw = self.call(self.system_prompt, user_context)
-        markdown = (raw or "").strip()
-        if not markdown:
-            raise WriterOutputError("réponse Markdown vide")
-        return markdown
+def slugify(value: str) -> str:
+    value = unicodedata.normalize("NFKD", value or "")
+    value = "".join(c for c in value if not unicodedata.combining(c)).lower()
+    return re.sub(r"[^a-z0-9]+", "-", value).strip("-")[:80] or "article"
 
 
-@dataclass
-class StructuredExtractor:
-    """Transforme séparément le Markdown et la recherche en données JSON."""
-
-    call: WriterCall
-    system_prompt: str
-
-    def extract(self, article_markdown: str, research: str) -> dict:
-        raw = self.call(
-            self.system_prompt,
-            "Article Markdown :\n\n" + article_markdown + "\n\nRecherche :\n\n" + research,
-        )
-        data = _extract_json(raw)
-        required = ("title", "meta_title", "meta_description", "slug", "faq", "sources", "facts", "self_review")
-        missing = [key for key in required if key not in data]
-        if missing:
-            raise WriterOutputError("clés absentes : " + ", ".join(missing))
-        return data
-
-
-@dataclass
-class StyleReviewer:
-    """Relit séparément le Markdown uniquement pour sa fluidité."""
-
-    call: WriterCall
-    system_prompt: str
-    instruction: str
-
-    def review(self, article_markdown: str) -> str:
-        raw = self.call(self.system_prompt, self.instruction + "\n\nArticle Markdown :\n\n" + article_markdown)
-        reviewed = (raw or "").strip()
-        if not reviewed:
-            raise WriterOutputError("relecture Markdown vide")
-        return reviewed
-
-
-def load_lab_prompt() -> str:
-    path = Path(__file__).resolve().parents[1] / "AGENT_WRITER_PROMPT.md"
-    return path.read_text(encoding="utf-8")
+def article_slug(subject: str, fiche: dict | None) -> str:
+    slug = str((fiche or {}).get("slug") or "")
+    return slug if re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", slug) else slugify(subject)
