@@ -64,6 +64,7 @@ class WorkflowArticleResponse(BaseModel):
     checks: list[dict] = []
     alerts: list[str] = []
     fiche: dict | None = None
+    update_items: list[dict] = []
     planned_write_at: datetime | None = None
     cost_usd: float | None = None
     error: str | None = None

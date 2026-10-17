@@ -26,6 +26,7 @@ export type ProductionArticle = {
   checks: ProductionCheck[]
   alerts: string[]
   fiche: Record<string, unknown> | null
+  update_items: Array<Record<string, unknown>>
   planned_write_at: string | null
   cost_usd: number | null
   error: string | null

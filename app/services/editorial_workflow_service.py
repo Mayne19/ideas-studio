@@ -221,6 +221,14 @@ def workflow_article_details(db: Session, article: Article) -> dict:
     writer_report = get_latest_artifact(db, article.id, "editorial_writer_report") or {}
     score = compute_editorial_score(db, article, fiche, workflow.get("fiche_error", ""))
     category = db.get(Category, article.category_id) if article.category_id else None
+    update_items = []
+    for item in (fiche or {}).get("a_mettre_a_jour", []):
+        if not isinstance(item, dict):
+            continue
+        update_items.append({
+            **item,
+            "date_prevue": article.next_review_at.isoformat() if article.next_review_at else None,
+        })
     return {
         "category_id": article.category_id,
         "category_name": category.name if category else None,
@@ -230,6 +238,7 @@ def workflow_article_details(db: Session, article: Article) -> dict:
         "checks": score["blocking_checks"],
         "alerts": (["plagiat"] if score["plagiarism_alert"] else []) + (["doublon"] if _has_cannibalization(db, article) else []),
         "fiche": fiche,
+        "update_items": update_items,
         "planned_write_at": (get_latest_artifact(db, article.id, "planning_schedule") or {}).get("target_write_at"),
         "cost_usd": writer_report.get("cost_usd"),
         "error": writer_report.get("error"),
