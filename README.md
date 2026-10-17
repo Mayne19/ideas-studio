@@ -15,26 +15,34 @@ idée → en rédaction → à relire → validé → programmé → publié →
 ```
 
 La publication reste bloquée tant qu'une personne n'a pas validé l'article.
-Les contrôles techniques affichés dans l'écran de relecture sont ceux du
-parcours éditorial : encadré « En résumé », absence de tiret cadratin et fiche
-valide. Le plagiat et la cannibalisation sont des alertes, pas des scores de
-publication.
+La page Production regroupe les idées, la rédaction, la validation et les
+mises à jour. Elle affiche un score global déterministe sur 100 pour la
+validation en masse. L'encadré « En résumé », l'absence de tiret cadratin et la
+fiche valide restent des contrôles bloquants ; le plagiat et la cannibalisation
+sont affichés comme des alertes.
 
 ## Écrans
 
-Chaque projet expose un parcours réduit à cinq écrans :
+Chaque projet expose une page Production à quatre onglets :
 
-| Écran | Route | Rôle |
+| Onglet | Route | Rôle |
 |---|---|---|
-| Idées | `/projects/:projectId/editorial/ideas` | Ajouter des sujets et les envoyer en rédaction |
-| Rédaction | `/projects/:projectId/editorial/writing` | Suivre la file et l'état des rédactions |
-| Relecture | `/projects/:projectId/editorial/review` | Lire, modifier et valider un article |
-| Publication | `/projects/:projectId/editorial/publication` | Voir les articles validés et leurs dates |
-| Mises à jour | `/projects/:projectId/editorial/updates` | Revoir les informations devenues obsolètes |
+| Idées | `/projects/:projectId/pipeline` | Générer, regrouper, accepter, modifier ou supprimer les idées |
+| Rédaction | `/projects/:projectId/pipeline?tab=writing` | Suivre la file, la cadence, les erreurs et le coût discret |
+| Validation | `/projects/:projectId/pipeline?tab=review` | Relire la fiche, les contrôles, les alertes et valider ou renvoyer |
+| Mises à jour | `/projects/:projectId/pipeline?tab=updates` | Revoir les informations variables et relancer un article |
 
-Les réglages du projet restent accessibles séparément. Les anciennes routes
-restent présentes tant que la migration des intégrations qui les utilisent
-n'est pas terminée, mais elles ne font plus partie du parcours visible.
+La validation programme automatiquement l'article selon les dates et heures du
+pipeline. La route du rédacteur local ne renvoie aucun sujet lorsque le plafond
+quotidien est atteint ou que le jour n'est pas configuré comme jour de
+rédaction. Les paramètres du pipeline utilisent deux articles par jour et du
+lundi au vendredi par défaut.
+
+La sidebar conserve Tableau de bord, Articles et son Kanban, Catégories,
+Calendrier éditorial, Analytics, Médias, Optimisations, Notifications et
+Production. Les réglages Providers et Services externes restent disponibles ;
+les anciennes pages éditoriales et les réglages d'agents sont retirés du
+parcours visible.
 
 ## Architecture
 
