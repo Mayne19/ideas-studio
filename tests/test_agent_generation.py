@@ -215,3 +215,51 @@ def test_hard_stop_during_a_correction_round_keeps_the_round_zero_article():
     assert best is first and errors == ["faute"] and plag == {"status": "clean"}
     assert report["rounds"][0] == {"round": 0, "errors": ["faute"]}
     assert "arrêt dur" in report["rounds"][1]["error"] and report["remaining_errors"] == ["faute"]
+
+
+def test_consistency_review_turns_contradictions_into_a_correction_round():
+    import json
+
+    from app.services.seo.agent_generation import consistency_review, review_round
+
+    reply = json.dumps({"contradictions": [{"passage": "Chaque matinée dehors vous rapproche de l'heure locale",
+                                            "probleme": "faux vers l'ouest selon la règle de l'article",
+                                            "correction": "distinguer l'est et l'ouest"}]})
+    prompts = []
+
+    def complete(system, user):
+        prompts.append(user)
+        return reply
+
+    candidate = {"content_html": "<p>article</p>",
+                 "facts": [{"value": "1 h par jour", "quote": "une heure par jour", "source_url": "https://cdc.gov/x"}]}
+    errors = consistency_review(complete, candidate)
+    assert len(errors) == 1 and "Chaque matinée dehors" in errors[0] and "distinguer l'est" in errors[0]
+    assert "une heure par jour" in prompts[0] and "<p>article</p>" in prompts[0]
+
+    class Writer:
+        def __init__(self):
+            self.sent = None
+
+        def correct(self, errs):
+            self.sent = errs
+            return {"content_html": "<p>corrigé</p>"}
+
+    writer, report = Writer(), {"rounds": []}
+    best, errs, _ = review_round(writer, lambda c: ([], {"status": "clean"}), complete, candidate, [], {}, report)
+    assert best["content_html"] == "<p>corrigé</p>" and writer.sent == errors
+    assert report["consistency_review"]["contradictions"] == errors and report["rounds"][-1]["round"] == "relecture"
+
+
+def test_consistency_review_keeps_article_when_clean_or_on_error():
+    from app.services.seo.agent_generation import review_round
+
+    article, report = {"content_html": "<p>a</p>"}, {"rounds": []}
+    best, _, _ = review_round(None, None, lambda s, u: '{"contradictions": []}', article, [], {}, report)
+    assert best is article and report["rounds"] == []
+
+    def boom(system, user):
+        raise RuntimeError("arrêt dur : coût cumulé 1.01 $ > 1.00 $")
+
+    best, _, _ = review_round(None, None, boom, article, [], {}, report)
+    assert best is article and "arrêt dur" in report["consistency_review"]["error"]
