@@ -9,6 +9,7 @@ articles d'étalonnage du juge (`tests/data/judge_calibration`) ne lui sont jama
 ## Fichiers
 
 - `run_live.py` : génère un article en ligne de commande.
+- `local_worker.py` : rédacteur local branché sur le CMS (récupère les sujets, dépose les articles).
 - `test_ui.py` : interface locale qui lance le même rédacteur depuis un formulaire.
 - `editorial_agent/claude_cli_client.py` : lance Claude Code (outils autorisés, effort, coût et jetons réels).
 - `editorial_agent/writer.py` : transmet le sujet et la liste des articles du site, puis sépare l'article
@@ -17,7 +18,8 @@ articles d'étalonnage du juge (`tests/data/judge_calibration`) ne lui sont jama
   fiche JSON valide).
 - `editorial_agent/similarity.py` : alerte de plagiat (phrases identiques à une source), sans blocage.
 - `editorial_agent/runner.py` : enchaîne rédaction, contrôles et fichiers de sortie.
-- `tests/test_lab.py` : tests du laboratoire.
+- `editorial_agent/cms_client.py` : appels du rédacteur local au CMS (connexion, sujets, dépôt, rapport).
+- `tests/test_lab.py` et `tests/test_local_worker.py` : tests du laboratoire et du rédacteur local.
 
 ## Générer un article
 
@@ -31,6 +33,21 @@ Option : `--site-articles articles.json` (liste `{titre, url, resume}`) pour le 
 
 Sortie dans `experiments/editorial_agent_lab/outputs/<slug>/` : `article.md`, `fiche.json` et `report.json`
 (coût réel, jetons, contrôles, alerte de plagiat).
+
+## Rédacteur local branché sur le CMS
+
+Sur le Mac où Claude Code est connecté, depuis la racine du dépôt :
+
+```bash
+IDEAS_STUDIO_EMAIL=… IDEAS_STUDIO_PASSWORD=… \
+  python -m experiments.editorial_agent_lab.local_worker <project_id>
+```
+
+Toutes les 60 secondes, il récupère les sujets « en rédaction » (`/local-writer/jobs`), les rédige avec le skill
+(articles publiés du site transmis pour le maillage), dépose l'article et la fiche
+(`/editorial-workflow/articles/<id>/deposit`, l'article passe « à relire ») et envoie le rapport (coût réel,
+jetons, contrôles). Une erreur est rapportée au CMS et le sujet n'est pas retenté avant le redémarrage du
+worker. Options : `--once` (un seul passage), `--interval`, `--api` (autre backend que la production).
 
 Interface locale : `python -m experiments.editorial_agent_lab.test_ui --port 8765`, puis
 `http://127.0.0.1:8765`.
