@@ -18,12 +18,21 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any
 
+from dotenv import load_dotenv
+
 from .existing_pipeline_adapter import ExistingPipelineWebAdapter, from_ideas_studio
 from .prompting import load_system_prompt
 
 
 class LiveRunError(RuntimeError):
     """La configuration ou le fournisseur réel empêche l'essai."""
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+# L'interface locale est un processus séparé du backend FastAPI. Charger le
+# fichier du dépôt permet toutefois de réutiliser exactement les variables du
+# runtime quand il existe, sans jamais les recopier dans le laboratoire.
+load_dotenv(REPOSITORY_ROOT / ".env", override=False)
 
 
 @dataclass(frozen=True)
@@ -78,9 +87,17 @@ def resolve_model_route(project_id: str | None = None) -> tuple[str, str, str]:
         if provider and api_key:
             return provider, api_key, model
     except Exception as exc:
+        detail = str(exc)
+        if "DATABASE_URL doit pointer vers PostgreSQL" in detail:
+            raise LiveRunError(
+                "Le runtime du CMS n'est pas chargé : DATABASE_URL doit pointer "
+                "vers la base PostgreSQL du CMS. Lance le laboratoire depuis le "
+                "runtime configuré du CMS ou renseigne ce runtime dans .env."
+            ) from exc
         raise LiveRunError(
-            "Aucun credential de modèle n'est accessible. Configure la clé dans "
-            "le runtime du CMS ou exporte-la pour ce lancement."
+            "Impossible de lire les credentials du CMS. Vérifie DATABASE_URL, "
+            "SECRET_KEY et la connexion à PostgreSQL ; la clé n'est jamais "
+            "affichée ni copiée dans le laboratoire."
         ) from exc
     raise LiveRunError(
         "Aucune clé Anthropic/OpenRouter accessible. La clé n'est jamais demandée "
