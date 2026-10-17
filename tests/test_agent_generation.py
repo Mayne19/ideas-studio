@@ -263,3 +263,18 @@ def test_consistency_review_keeps_article_when_clean_or_on_error():
 
     best, _, _ = review_round(None, None, boom, article, [], {}, report)
     assert best is article and "arrêt dur" in report["consistency_review"]["error"]
+
+
+def test_quotes_must_come_from_fact_quotes_with_tolerant_matching():
+    from app.services.seo.agent_generation import quote_errors
+
+    facts = [{"quote": "L’Anses déconseille la consommation de compléments alimentaires à base de mélatonine "
+                       "aux femmes enceintes ou allaitantes", "source_url": "https://anses.fr/a"}]
+    ok = ("<p>Selon l'Anses, elle « déconseille la consommation de compléments alimentaires » "
+          "et vise « l'anses deconseille la consommation … aux femmes enceintes ou allaitantes ». "
+          "Un « mot court » passe.</p>")
+    assert quote_errors({"facts": facts, "content_html": ok}) == []
+    bad = "<p>Vidal écrit « un temps d'adaptation au-delà de six fuseaux vers l'est ».</p>"
+    errors = quote_errors({"facts": facts, "content_html": bad})
+    assert len(errors) == 1 and "au-delà de six fuseaux" in errors[0]
+

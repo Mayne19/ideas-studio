@@ -304,6 +304,43 @@ _PROSE_COUNT_RE = re.compile(
     re.IGNORECASE)
 
 
+QUOTE_MIN_WORDS = 4
+_QUOTE_RE = re.compile(r"«\s*(.+?)\s*»|“(.+?)”", re.DOTALL)
+
+
+def _normalize_quote(text: str) -> str:
+    """Comparaison tolérante : casse, apostrophes et guillemets typographiques,
+    espaces (dont insécables), ponctuation, et accents ignorés."""
+    text = unicodedata.normalize("NFKD", text or "")
+    text = "".join(c for c in text if not unicodedata.combining(c)).lower()
+    text = re.sub(r"[’‘`´]", "'", text)
+    text = re.sub(r"[^\w']+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def quote_errors(candidate: dict) -> list[str]:
+    """Toute citation entre guillemets d'au moins 4 mots doit venir d'une
+    citation de « facts ». Une citation tronquée (morceaux séparés par « … »
+    ou « [...] ») est acceptée si chaque morceau s'y trouve."""
+    from app.services.seo.html_text_ops import html_to_text
+
+    quotes = [_normalize_quote(str(f.get("quote") or "")) for f in candidate.get("facts") or [] if isinstance(f, dict)]
+    haystack = [q for q in quotes if q]
+    missing = []
+    for m in _QUOTE_RE.finditer(html_to_text(candidate.get("content_html") or "")):
+        passage = (m.group(1) or m.group(2) or "").strip()
+        if len(passage.split()) < QUOTE_MIN_WORDS:
+            continue
+        pieces = [_normalize_quote(p) for p in re.split(r"…|\.\.\.|\[\s*\.*\s*\]", passage)]
+        pieces = [p for p in pieces if p]
+        if not all(any(piece in q for q in haystack) for piece in pieces):
+            missing.append(passage[:200])
+    if not missing:
+        return []
+    return ["Citations absentes des citations de « facts » (ajoute chaque fait avec sa citation exacte, "
+            "ou reformule sans guillemets) : " + " | ".join(f"« {q} »" for q in missing)]
+
+
 def fact_errors(candidate: dict) -> list[str]:
     """Chaque fait doit être traçable par une source et une citation."""
     sources = {_url_key(item.get("url", "")) for item in candidate.get("sources") or []
@@ -599,7 +636,7 @@ def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, 
         errors = structure_errors(content, candidate.get("title") or final_title)
         errors += assembly_errors(candidate) + link_errors(content) + html_render_errors(content)
         errors += announced_count_errors(content) + prose_count_errors(content) + competitor_errors(candidate)
-        errors += fact_errors(candidate)
+        errors += fact_errors(candidate) + quote_errors(candidate)
         errors += self_review_errors(candidate)
         errors += judge_errors(orch, article, candidate)
         plag_errors, plag_report = plagiarism_errors(orch, content)
