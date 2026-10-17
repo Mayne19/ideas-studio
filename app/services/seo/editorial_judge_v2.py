@@ -49,6 +49,13 @@ CODE_CRITERIA: dict[str, tuple[int, str]] = {
     "seo": (5, "SEO technique : titre, meta, slug, un seul lien par source, liens internes"),
     "form": (5, "Forme : mots interdits, tiret long, typographie"),
 }
+# Notation par déduction : chaque défaut retire une part du maximum du
+# critère selon sa gravité ; le code recalcule la note (le modèle ne la donne
+# plus), et la note maximale exige zéro défaut.
+SEVERITY_WEIGHTS = {"majeur": 0.30, "moyen": 0.15, "mineur": 0.05}
+# « ce guide » n'est pas compté : c'est une façon normale de désigner l'article.
+META_COMMENTARY_RE = re.compile(r"\b(cet article|les sources consultées|nous retenons)\b", re.IGNORECASE)
+COMPARISON_RE = re.compile(r"[^.!?\n]*\b(autant que|plus que|moins que)\b[^.!?\n]*[.!?]?", re.IGNORECASE)
 GRAVE_FAULT_TYPES = ("false_fact", "central_contradiction", "competitor_named", "unsourced_health_figure")
 CAP_ONE_GRAVE = 85
 CAP_TWO_GRAVE = 75
@@ -80,7 +87,8 @@ def _sentences(text: str) -> list[str]:
 def measurements(content: str, *, title: str = "", facts: list[dict] | None = None, faq: list[dict] | None = None,
                  meta_title: str = "", meta_description: str = "", slug: str = "") -> dict:
     """Mesures déterministes, sans modèle."""
-    from app.services.seo.agent_generation import link_errors, quote_errors, source_balance_errors, structure_errors
+    from app.services.seo.agent_generation import (link_errors, quote_errors, source_balance_errors,
+                                                   source_mention_errors, structure_errors)
     from app.services.seo.html_text_ops import html_to_text
 
     html = ensure_html(content)
@@ -93,7 +101,8 @@ def measurements(content: str, *, title: str = "", facts: list[dict] | None = No
         run = run + 1 if n <= 6 else 0
         if run == 3:
             choppy_runs += 1
-    candidate = {"content_html": html, "facts": facts or []}
+    candidate = {"content_html": html, "facts": facts or [],
+                 "sources": [{"url": f.get("source_url", "")} for f in facts or [] if isinstance(f, dict)]}
     form_faults = structure_errors(html, title or "Article")
     seo_faults = list(link_errors(html))
     if meta_title and len(meta_title) > 60:
@@ -113,7 +122,45 @@ def measurements(content: str, *, title: str = "", facts: list[dict] | None = No
         "form_faults": form_faults,
         "seo_faults": seo_faults,
         "faq_count": len(faq or []),
+        "mention_faults": source_mention_errors(candidate) if facts else [],
+        "meta_commentary": [m.group(0) for m in META_COMMENTARY_RE.finditer(text)],
+        "comparisons": [m.group(0).strip()[:200] for m in COMPARISON_RE.finditer(text)][:8],
     }
+
+
+def code_defects(measured: dict) -> dict[str, list[dict]]:
+    """Défauts mesurés par le code, ajoutés à la déduction du modèle."""
+    defects: dict[str, list[dict]] = {"accuracy_sources": [], "readability": []}
+    orphan = re.findall(r"« ([^»]+) »", " ".join(measured.get("quote_faults") or []))
+    for quote in orphan[:3]:
+        defects["accuracy_sources"].append({"severity": "mineur", "passage": quote[:200],
+                                            "detail": "citation absente des faits vérifiés (mesure du code)"})
+    for fault in measured.get("balance_faults") or []:
+        defects["accuracy_sources"].append({"severity": "moyen", "passage": "", "detail": fault[:200]})
+    for fault in measured.get("mention_faults") or []:
+        defects["readability"].append({"severity": "moyen", "passage": "", "detail": fault[:200]})
+    if measured.get("meta_commentary"):
+        defects["readability"].append({"severity": "moyen", "passage": " | ".join(measured["meta_commentary"][:3]),
+                                       "detail": "l'article commente sa propre rédaction (mesure du code)"})
+    if measured.get("choppy_runs"):
+        defects["readability"].append({"severity": "mineur", "passage": "",
+                                       "detail": f"{measured['choppy_runs']} série(s) de phrases hachées (mesure du code)"})
+    return defects
+
+
+def _passage_in(passage: str, article_norm: str) -> bool:
+    """Passage présent dans l'article après normalisation ; une citation
+    tronquée (« … ») est acceptée si chaque morceau s'y trouve."""
+    from app.services.seo.agent_generation import _normalize_quote
+
+    pieces = [_normalize_quote(p) for p in re.split(r"…|\.\.\.|\[\s*\.*\s*\]", passage or "")]
+    pieces = [p for p in pieces if p]
+    return bool(pieces) and all(p in article_norm for p in pieces)
+
+
+def deduct(maximum: int, defects: list[dict]) -> float:
+    lost = sum(SEVERITY_WEIGHTS.get(str(d.get("severity")), 0.0) * maximum for d in defects)
+    return round(max(0.0, maximum - lost), 1)
 
 
 def code_scores(measured: dict) -> dict:
@@ -136,11 +183,21 @@ def build_prompt(content: str, *, title: str, keyword: str, measured: dict, fact
         "- aucune liste fournie : juge les sources d'après les liens et attributions présents dans l'article. "
         "N'exige aucune citation mot pour mot et ne retire aucun point pour l'absence de liste de faits.")
     return "\n".join([
-        "Tu es le rédacteur en chef d'un site éditorial français. Tu notes un article de blog avec une grille stricte, "
-        "pour un lecteur débutant qui veut une réponse fiable et agréable à lire. Un article noté 90 est publiable "
-        "tel quel ; 80 est bon mais a des défauts visibles ; 60 est un contenu moyen du web.",
+        "Tu es le rédacteur en chef d'un site éditorial français. Tu relis un article de blog comme un correcteur "
+        "exigeant, pour un lecteur débutant qui veut une réponse fiable et agréable à lire. Échelle : un bon article "
+        "du web vaut environ 70 ; 80 est bon mais a des défauts visibles ; 90 ou plus exige zéro faute grave et au "
+        "plus deux défauts mineurs. Un texte fluide n'est pas un texte sans défaut : cherche activement.",
+        "",
+        "Méthode obligatoire, dans cet ordre :",
+        "1. Cohérence : repère chaque règle, seuil ou calcul que l'article pose lui-même, puis applique-le à chaque "
+        "ligne du tableau, à chaque conseil et à la conclusion. Liste chaque contradiction dans « coherence ». Une "
+        "contradiction sur le conseil central est la faute grave central_contradiction.",
+        "2. Faits : compare chaque chiffre, âge, seuil, liste et comparaison (« autant que », « plus que ») aux faits "
+        "vérifiés. Une comparaison qui exagère la source est un défaut majeur d'exactitude.",
+        "3. Défauts : pour chaque critère, liste les défauts concrets avec le passage exact et une gravité "
+        "(majeur, moyen, mineur). Ne donne pas de note : le code la calcule à partir de tes défauts.",
         f"Mot-clé : {keyword}", f"Titre : {title}", "",
-        "Critères à noter (entiers, de 0 au maximum indiqué), avec une preuve courte tirée du texte :", criteria, "",
+        "Critères (le maximum n'est accordé qu'en l'absence de tout défaut) :", criteria, "",
         "Fautes graves à lister (chacune limite la note finale) : false_fact (fait faux), central_contradiction "
         "(contradiction sur le conseil central), competitor_named (site concurrent nommé ou lié), "
         "unsourced_health_figure (chiffre de santé sans source). Un nombre obtenu par un calcul montré ou présenté "
@@ -150,14 +207,19 @@ def build_prompt(content: str, *, title: str, keyword: str, measured: dict, fact
         f"phrase en moyenne, {measured['long_sentences']} phrases de plus de 30 mots, {measured['choppy_runs']} "
         "séries d'au moins trois phrases très courtes (effet haché)",
         f"- citations absentes des faits : {' | '.join(measured['quote_faults']) or 'aucune'}",
-        f"- équilibre des sources : {' | '.join(measured['balance_faults']) or 'correct'}", "",
+        f"- équilibre des sources : {' | '.join(measured['balance_faults']) or 'correct'}",
+        f"- mentions d'une même source : {' | '.join(measured['mention_faults']) or 'correct'}",
+        f"- commentaires de l'article sur lui-même : {' | '.join(measured['meta_commentary']) or 'aucun'}",
+        "- comparaisons à vérifier contre les faits : " + (" | ".join(measured["comparisons"]) or "aucune"), "",
         "Faits vérifiés de l'article (citation exacte et source) :", fact_block, "",
         f"Concurrents (ne doivent jamais être nommés ni liés) : {', '.join(competitors) or 'non fournis'}", "",
         "FAQ :", faq_lines, "",
         "Réponds uniquement par ce JSON :",
-        '{"criteria": {"accuracy_sources": {"score": 0, "evidence": "..."}, "information_gain": {...}, '
-        '"readability": {...}, "intent": {...}, "introduction": {...}, "structure": {...}, "tone": {...}, '
-        '"faq": {...}}, "grave_faults": [{"type": "false_fact", "passage": "texte exact", "detail": "..."}], '
+        '{"coherence": [{"rule": "règle ou calcul de l\'article", "passage": "texte exact qui la contredit", '
+        '"detail": "..."}], "criteria": {"accuracy_sources": {"defects": [{"severity": "majeur", "passage": '
+        '"texte exact", "detail": "..."}], "evidence": "une phrase"}, "information_gain": {...}, "readability": '
+        '{...}, "intent": {...}, "introduction": {...}, "structure": {...}, "tone": {...}, "faq": {...}}, '
+        '"grave_faults": [{"type": "false_fact", "passage": "texte exact", "detail": "..."}], '
         '"summary": "deux phrases"}', "",
         "Article :", article_digest(ensure_html(content)),
     ])
@@ -189,21 +251,34 @@ def judge_v2(content: str, call_fn: CallFn, *, title: str = "", keyword: str = "
     raw = data.get("criteria") if isinstance(data.get("criteria"), dict) else {}
     if not raw:
         return {"error": "JSON du juge inexploitable", "measurements": measured}
+    measured_defects = code_defects(measured)
+    from app.services.seo.agent_generation import _normalize_quote
+    from app.services.seo.html_text_ops import html_to_text
+
+    article_norm = _normalize_quote(html_to_text(ensure_html(content)) + " " + " ".join(
+        f"{f.get('question', '')} {f.get('answer', '')}" for f in faq or [] if isinstance(f, dict)))
     criteria: dict[str, dict] = {}
     for key, (pts, _desc) in MODEL_CRITERIA.items():
         item = raw.get(key) if isinstance(raw.get(key), dict) else {}
-        try:
-            score = float(item.get("score", 0))
-        except (TypeError, ValueError):
-            score = 0.0
-        criteria[key] = {"score": max(0.0, min(float(pts), score)), "max": pts,
+        defects = [{"severity": str(d.get("severity") or "").lower(), "passage": str(d.get("passage") or "")[:300],
+                    "detail": str(d.get("detail") or "")[:300]}
+                   for d in item.get("defects") or [] if isinstance(d, dict)]
+        # Garde : un défaut du modèle doit citer un passage réel de l'article
+        # (sinon il est inventé et ignoré) ; les défauts du code sont mesurés.
+        defects = [d for d in defects if d["severity"] in SEVERITY_WEIGHTS and _passage_in(d["passage"], article_norm)]
+        defects += measured_defects.get(key, [])
+        criteria[key] = {"score": deduct(pts, defects), "max": pts, "defects": defects,
                          "evidence": str(item.get("evidence") or "")[:400]}
     criteria |= code_scores(measured)
     grave = [{"type": str(g.get("type")), "passage": str(g.get("passage") or "")[:300],
               "detail": str(g.get("detail") or "")[:300]}
              for g in data.get("grave_faults") or [] if isinstance(g, dict) and g.get("type") in GRAVE_FAULT_TYPES]
+    # Même garde que les défauts : une faute grave sans passage réel est ignorée.
+    grave = [g for g in grave if _passage_in(g["passage"], article_norm)]
     raw_total = round(sum(c["score"] for c in criteria.values()), 1)
     total, caps = apply_caps(raw_total, grave)
+    coherence = [{"rule": str(c.get("rule") or "")[:300], "passage": str(c.get("passage") or "")[:300],
+                  "detail": str(c.get("detail") or "")[:300]} for c in data.get("coherence") or [] if isinstance(c, dict)]
     return {"total": round(total, 1), "raw_total": raw_total, "criteria": criteria, "caps": caps,
-            "grave_faults": grave, "measurements": measured, "summary": str(data.get("summary") or "")[:600],
-            "status": CALIBRATION_STATUS}
+            "grave_faults": grave, "coherence": coherence, "measurements": measured,
+            "summary": str(data.get("summary") or "")[:600], "status": CALIBRATION_STATUS}
