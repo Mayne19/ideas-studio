@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import threading
 import uuid
 from datetime import datetime, timezone
@@ -12,7 +11,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from .editorial_agent.live_runner import LiveRunConfig, LiveRunError, run_live
+from .editorial_agent.runner import generate
 
 
 ROOT = Path(__file__).resolve().parent
@@ -96,7 +95,7 @@ async function poll(id, node) {
     if (!response.ok) throw new Error('Réponse du serveur : ' + response.status);
     const job = await response.json();
     if (job.status === 'running') {
-      node.textContent = 'L’algorithme travaille : recherche, lecture, analyse, rédaction et contrôles…';
+      node.textContent = 'Le rédacteur travaille (skill redaction-article) : recherche, lecture, rédaction et contrôles…';
       setTimeout(() => poll(id, node), 2000);
       return;
     }
@@ -105,7 +104,8 @@ async function poll(id, node) {
       node.textContent = 'Article terminé. Le rapport et le rendu sont disponibles ci-dessous.';
       result.classList.remove('hidden');
       article.src = job.article_url;
-      links.innerHTML = '<a target="_blank" href="' + job.article_url + '">Ouvrir l’article</a> · '
+      links.innerHTML = '<a target="_blank" href="' + job.article_url + '">Ouvrir l’article (Markdown)</a> · '
+        + '<a target="_blank" href="' + job.fiche_url + '">Ouvrir la fiche JSON</a> · '
         + '<a target="_blank" href="' + job.report_url + '">Ouvrir le rapport JSON</a>';
     } else {
       node.textContent = job.status === 'blocked' ? 'Essai bloqué : ' + job.error : 'Échec : ' + job.error;
@@ -149,37 +149,28 @@ def _start_job(payload: dict) -> dict:
     if not keyword:
         raise ValueError("Le mot-clé est obligatoire.")
     run_id = uuid.uuid4().hex
-    output_dir = RUN_ROOT / run_id
-    config = LiveRunConfig(
-        keyword=keyword,
-        site_name=str(payload.get("site_name") or os.getenv("EDITORIAL_LAB_SITE_NAME") or "Ideas Studio").strip(),
-        domain=str(payload.get("domain") or os.getenv("EDITORIAL_LAB_DOMAIN") or "example.com").strip(),
-        category=str(payload.get("category") or "").strip(),
-        project_id=(
-            str(payload.get("project_id") or os.getenv("EDITORIAL_LAB_PROJECT_ID") or "").strip()
-            or None
-        ),
-        editor_notes=str(payload.get("editor_notes") or "").strip(),
-        output_dir=output_dir,
-    )
+    output_root = RUN_ROOT / run_id
     job = {"id": run_id, "status": "running", "keyword": keyword, "created_at": _now(), "error": ""}
     with JOBS_LOCK:
         JOBS[run_id] = job
 
     def worker() -> None:
         try:
-            report = run_live(config)
+            report = generate(keyword, output_root=output_root)
             with JOBS_LOCK:
                 job.update({"status": "succeeded", "finished_at": _now(), "report": report})
-        except LiveRunError as exc:
-            with JOBS_LOCK:
-                job.update({"status": "blocked", "finished_at": _now(), "error": str(exc)})
         except Exception as exc:  # noqa: BLE001 - l'interface doit exposer l'échec du run
             with JOBS_LOCK:
                 job.update({"status": "failed", "finished_at": _now(), "error": str(exc)})
 
     threading.Thread(target=worker, name=f"editorial-lab-{run_id[:8]}", daemon=True).start()
     return {"id": run_id, "status": "running"}
+
+
+def _run_file(run_id: str, name: str) -> Path | None:
+    """Fichier d'un essai : outputs écrits sous run/ui/<run_id>/<slug>/."""
+    matches = sorted((RUN_ROOT / run_id).glob(f"*/{name}"))
+    return matches[0] if matches else None
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -222,18 +213,23 @@ class Handler(BaseHTTPRequestHandler):
             if not job:
                 self._json({"error": "Essai introuvable."}, 404)
                 return
-            report = job.get("report") or {}
-            output = report.get("output") or {}
+            done = bool(job.get("report"))
             self._json({
                 "id": job["id"], "status": job["status"], "keyword": job["keyword"],
                 "error": job.get("error", ""),
-                "article_url": f"/runs/{parts[2]}/article.html" if output else "",
-                "report_url": f"/runs/{parts[2]}/report.json" if output else "",
+                "article_url": f"/runs/{parts[2]}/article.md" if done else "",
+                "fiche_url": f"/runs/{parts[2]}/fiche.json" if done else "",
+                "report_url": f"/runs/{parts[2]}/report.json" if done else "",
             })
             return
-        if len(parts) == 3 and parts[0] == "runs" and _safe_run_id(parts[1]) and parts[2] in {"article.html", "report.json"}:
-            content_type = "text/html; charset=utf-8" if parts[2].endswith(".html") else "application/json; charset=utf-8"
-            self._file(RUN_ROOT / parts[1] / parts[2], content_type)
+        if len(parts) == 3 and parts[0] == "runs" and _safe_run_id(parts[1]) and parts[2] in {
+                "article.md", "fiche.json", "report.json"}:
+            content_type = "text/plain; charset=utf-8" if parts[2].endswith(".md") else "application/json; charset=utf-8"
+            path = _run_file(parts[1], parts[2])
+            if path is None:
+                self.send_error(404)
+                return
+            self._file(path, content_type)
             return
         self.send_error(404)
 
