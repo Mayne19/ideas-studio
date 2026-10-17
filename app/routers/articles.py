@@ -255,6 +255,14 @@ def mark_ready_route(
     if member.role in ("viewer", "designer"):
         raise HTTPException(status_code=403, detail="Insufficient permissions to change article status")
 
+    from app.services.editorial_workflow_service import is_workflow_managed, validate_for_publication
+    if is_workflow_managed(db, article.id):
+        report = validate_for_publication(db, article)
+        if not report["passed"]:
+            reasons = [check["detail"] for check in report["checks"] if not check["passed"]]
+            raise HTTPException(status_code=400, detail=f"Validation bloquée : {'; '.join(reasons)}")
+        return to_public(db, article)
+
     from app.services.scoring_service import compute_global_score
     from app.models.content import ArticleScore
     scoring = compute_global_score(db, article.id, article=article)
