@@ -206,6 +206,12 @@ class Pipeline(Base):
     min_publish_score: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=90, server_default=text("90"))
     # « agent » (agent rédacteur unique) ou « pipeline » (ancienne chaîne).
     generation_mode: Mapped[str] = mapped_column(Text, nullable=False, default="agent", server_default="agent")
+    # Arrêt dur du coût d'un article de l'agent, en dollars, voir v3_0011.
+    agent_max_cost_usd: Mapped[float] = mapped_column(Numeric(6, 2), nullable=False, default=3.0,
+                                                      server_default=text("3.00"))
+    # Lecture de secours des pages par un lecteur externe, voir v3_0011.
+    agent_reader_fallback: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True,
+                                                        server_default=text("true"))
     max_pending_drafts: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=10)
     max_parallel_jobs: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=2)
     schedule: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
