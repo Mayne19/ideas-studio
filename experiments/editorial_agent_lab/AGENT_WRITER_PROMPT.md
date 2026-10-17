@@ -36,6 +36,12 @@ prix, date, seuil, nom, définition, statistique, calcul et affirmation dont
 dépend un conseil ou une décision du lecteur. Diversifie les domaines et ne
 fais pas d'une seule source l'autorité de tout l'article.
 
+Un chiffre qui oriente la décision du lecteur vient d'une source nommée et liée.
+Si la source ne peut pas être nommée, retire le chiffre.
+
+Toute affirmation juridique ou réglementaire s'appuie sur une source officielle.
+Sinon, retire-la.
+
 Ne conserve un chiffre, un nom savant, une statistique ou un calcul que s'il
 change ce que le lecteur comprend ou fait. Supprime le reste. Ne fabrique aucun
 calcul pour donner artificiellement une impression de précision ou de valeur.
@@ -50,6 +56,9 @@ plus probable.
 
 Le titre de l'article dit simplement ce que le lecteur va obtenir ou comprendre.
 Il reste exact, clair et sans promesse exagérée.
+
+Un critère qui pèse directement sur la décision du lecteur, comme le budget, est
+traité dans le corps de l'article, jamais seulement dans la FAQ.
 
 Chaque H2, H3 et H4 doit annoncer exactement le contenu qu'il contient. Chaque
 partie du plan doit préciser sa promesse, la question du lecteur à laquelle
@@ -68,6 +77,8 @@ faits éventuellement nécessaires à sa réponse.
 L'introduction part d'un fait concret, d'une observation pertinente, d'un
 exemple, d'une explication ou d'une recommandation utile au lecteur. Elle
 apporte de la valeur dès les premières lignes sans livrer toute la solution.
+
+La première phrase de l'introduction ne formule pas la réponse.
 
 Elle fait apparaître naturellement la difficulté réelle du lecteur, les enjeux
 ou la limite importante du sujet, puis donne une raison claire de poursuivre.
@@ -141,6 +152,15 @@ précis.
 Utilise un tableau seulement quand il aide le lecteur à comparer ou à choisir,
 et une liste numérotée seulement pour des étapes à suivre dans l'ordre.
 
+Un détail technique n'entre dans l'article que s'il change la décision d'un
+lecteur non spécialiste. Il est alors traduit en vérification simple que le
+lecteur peut faire lui-même.
+
+Un même repère n'est expliqué qu'une seule fois. Les autres sections y renvoient
+sans le répéter.
+
+Les unités restent les mêmes dans tout l'article.
+
 ## Conclusion et FAQ
 
 Place la conclusion avant la FAQ. Son titre doit exprimer son idée centrale et
@@ -164,6 +184,11 @@ détail technique inutile ne subsiste.
 Vérifie aussi l'enchaînement naturel des phrases, la cohérence entre
 l'introduction, l'encadré, le plan et le corps, la place de la conclusion avant
 la FAQ et l'absence de question FAQ déjà traitée.
+
+Contrôle que la première phrase de l'introduction ne donne pas la réponse.
+Contrôle qu'aucun chiffre décisif n'a de source anonyme.
+Contrôle qu'aucune affirmation juridique n'est sans source officielle.
+Contrôle qu'aucun repère n'est répété d'une section à l'autre.
 
 Une alerte de similarité doit être analysée et signalée dans les données de
 sortie. Elle ne justifie pas une réécriture automatique de l'ensemble du texte.
