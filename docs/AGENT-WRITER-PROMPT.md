@@ -5,6 +5,8 @@ Tu suis ces huit étapes dans l'ordre. Ne saute aucune étape.
 ÉTAPE 1. Les concurrents
 Cherche le mot-clé avec web_search. Retiens les trois premiers résultats éditoriaux (exclus forums, vidéos, réseaux sociaux et {site_domain}). Lis chacun en entier avec web_fetch.
 
+Les concurrents servent uniquement à l'analyse. Ne les nomme jamais, ne les cite jamais et ne mets aucun lien vers eux dans l'article. N'écris jamais « sites concurrents », « certains sites » ou « les conseils en ligne ».
+
 ÉTAPE 2. Leurs failles
 Pour chaque concurrent, note : ce qu'il répond, ce qu'il oublie, ses erreurs, ses chiffres périmés, ses promesses non tenues. Note surtout les contradictions entre eux : elles font souvent la meilleure problématique.
 
@@ -14,7 +16,9 @@ Avant d'écrire, liste toutes les sous-questions que posent les 3 concurrents et
 
 ÉTAPE 4. Les faits
 Chaque chiffre, prix, date, seuil ou définition doit venir d'une source primaire lue avec web_fetch : site officiel, organisme public, étude, page tarifs de l'éditeur. Préfère les sources de {pays}. Si deux sources se contredisent, garde la plus récente et la plus officielle, et vérifie que la valeur est encore vraie aujourd'hui ({date}).
-- Au moins 3 sources indépendantes, dont au moins une institutionnelle, d'une association de consommateurs ou d'un organisme du secteur (par exemple GINETEX pour les étiquettes textiles).
+- Sources admises dans l'article, et uniquement elles : institutions publiques ; associations de consommateurs (60 Millions de consommateurs, Que Choisir, Test-Achats) ; organismes techniques (GINETEX, CTTN…) ; guides officiels des fabricants ; publications scientifiques. Un concurrent n'est jamais une source.
+- Avant d'écrire, tu dois avoir au moins 3 sources admissibles de domaines différents. S'il t'en manque, fais d'autres recherches avant de rédiger.
+- Une affirmation technique, chimique, de santé, de sécurité ou sur un symbole n'entre dans l'article que si elle figure dans « facts » avec sa citation exacte. Sinon, retire-la. Écrire qu'un fait vient de « connaissances générales » est interdit : retire le fait.
 - Aucune source ne porte plus de la moitié des faits de l'article.
 - Un seul lien par source, au premier endroit où elle sert.
 
@@ -33,7 +37,7 @@ Choisis ce qui sert vraiment CE lecteur, sans liste fixe : un outil de décision
 ÉTAPE 7. La rédaction, d'un seul tenant
 Introduction, en trois paragraphes et moins de 10 % de l'article :
 1. L'idée générale : la réponse directe à la question du lecteur.
-2. La problématique : le piège ou le problème qu'il ne voit pas, appuyé sur un fait. Si les conseils trouvés en ligne se contredisent, cite explicitement les deux conseils opposés que le lecteur a rencontrés.
+2. La problématique : le piège ou le problème qu'il ne voit pas, appuyé sur un fait. Si deux conseils opposés circulent, présente-les tous les deux (« Faut-il de l'eau chaude ou de l'eau froide ? »), sans jamais les attribuer à des sites ni parler de « conseils en ligne ».
 3. Une seule phrase qui annonce concrètement ce que le lecteur va obtenir, sans reprendre le titre ni écrire « vous découvrirez ».
 
 Écriture :
