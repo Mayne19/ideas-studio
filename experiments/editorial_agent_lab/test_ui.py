@@ -91,22 +91,28 @@ function bubble(kind, text) {
 }
 function value(id) { return document.getElementById(id).value.trim(); }
 async function poll(id, node) {
-  const response = await fetch('/api/runs/' + id);
-  const job = await response.json();
-  if (job.status === 'running') {
-    node.textContent = 'L’algorithme travaille : recherche, lecture, analyse, rédaction et contrôles…';
-    setTimeout(() => poll(id, node), 2000);
-    return;
-  }
-  submit.disabled = false;
-  if (job.status === 'succeeded') {
-    node.textContent = 'Article terminé. Le rapport et le rendu sont disponibles ci-dessous.';
-    result.classList.remove('hidden');
-    article.src = job.article_url;
-    links.innerHTML = '<a target="_blank" href="' + job.article_url + '">Ouvrir l’article</a> · '
-      + '<a target="_blank" href="' + job.report_url + '">Ouvrir le rapport JSON</a>';
-  } else {
-    node.textContent = job.status === 'blocked' ? 'Essai bloqué : ' + job.error : 'Échec : ' + job.error;
+  try {
+    const response = await fetch('/api/runs/' + id);
+    if (!response.ok) throw new Error('Réponse du serveur : ' + response.status);
+    const job = await response.json();
+    if (job.status === 'running') {
+      node.textContent = 'L’algorithme travaille : recherche, lecture, analyse, rédaction et contrôles…';
+      setTimeout(() => poll(id, node), 2000);
+      return;
+    }
+    submit.disabled = false;
+    if (job.status === 'succeeded') {
+      node.textContent = 'Article terminé. Le rapport et le rendu sont disponibles ci-dessous.';
+      result.classList.remove('hidden');
+      article.src = job.article_url;
+      links.innerHTML = '<a target="_blank" href="' + job.article_url + '">Ouvrir l’article</a> · '
+        + '<a target="_blank" href="' + job.report_url + '">Ouvrir le rapport JSON</a>';
+    } else {
+      node.textContent = job.status === 'blocked' ? 'Essai bloqué : ' + job.error : 'Échec : ' + job.error;
+    }
+  } catch (error) {
+    submit.disabled = false;
+    node.textContent = 'Le serveur du laboratoire est indisponible. Rechargez la page avant de relancer un essai.';
   }
 }
 form.addEventListener('submit', async (event) => {
@@ -114,11 +120,16 @@ form.addEventListener('submit', async (event) => {
   submit.disabled = true;
   bubble('user', value('keyword'));
   const status = bubble('agent', 'Préparation de l’essai…');
-  const response = await fetch('/api/runs', {method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({keyword: value('keyword')})});
-  const job = await response.json();
-  if (!response.ok) { submit.disabled = false; status.textContent = job.error; return; }
-  poll(job.id, status);
+  try {
+    const response = await fetch('/api/runs', {method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({keyword: value('keyword')})});
+    const job = await response.json();
+    if (!response.ok) { submit.disabled = false; status.textContent = job.error; return; }
+    poll(job.id, status);
+  } catch (error) {
+    submit.disabled = false;
+    status.textContent = 'Le serveur du laboratoire est indisponible. Rechargez la page avant de relancer un essai.';
+  }
 });
 </script>
 </body>
