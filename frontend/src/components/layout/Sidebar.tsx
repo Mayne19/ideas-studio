@@ -9,9 +9,13 @@ import {
 } from '@/components/ui/hugeIcons'
 import {
   Calendar03Icon,
+  ChartBarLineIcon,
+  DashboardSquare01Icon,
   File01Icon,
   Folder01Icon,
+  Image01Icon,
   Logout01Icon,
+  MagicWand01Icon,
   Setting06Icon,
   WorkflowCircle03Icon,
 } from '@hugeicons/core-free-icons'
@@ -148,12 +152,26 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
         <nav className={cn('flex flex-1 flex-col gap-0.5 overflow-y-auto p-2', collapsed && 'items-center')}>
           {projectId ? (
             <>
+              <SidebarSection collapsed={collapsed}>
+                <SidebarLink
+                  to={`/projects/${projectId}/dashboard`}
+                  icon={<HugeIcon icon={DashboardSquare01Icon} size={15} />}
+                  label="Dashboard"
+                  collapsed={collapsed}
+                />
+              </SidebarSection>
+
               <SidebarSection title="Éditorial" collapsed={collapsed}>
-                <SidebarLink to={`/projects/${projectId}/editorial/ideas`} icon={<HugeIcon icon={File01Icon} size={15} />} label="Idées" collapsed={collapsed} />
-                <SidebarLink to={`/projects/${projectId}/editorial/writing`} icon={<HugeIcon icon={WorkflowCircle03Icon} size={15} />} label="Rédaction" collapsed={collapsed} />
-                <SidebarLink to={`/projects/${projectId}/editorial/review`} icon={<HugeIcon icon={File01Icon} size={15} />} label="Relecture" collapsed={collapsed} />
-                <SidebarLink to={`/projects/${projectId}/editorial/publication`} icon={<HugeIcon icon={Calendar03Icon} size={15} />} label="Publication" collapsed={collapsed} />
-                <SidebarLink to={`/projects/${projectId}/editorial/updates`} icon={<HugeIcon icon={WorkflowCircle03Icon} size={15} />} label="Mises à jour" collapsed={collapsed} />
+                <SidebarLink to={`/projects/${projectId}/production`} icon={<HugeIcon icon={WorkflowCircle03Icon} size={15} />} label="Production" collapsed={collapsed} />
+                <SidebarLink to={`/projects/${projectId}/articles`} icon={<HugeIcon icon={File01Icon} size={15} />} label="Articles" collapsed={collapsed} />
+                <SidebarLink to={`/projects/${projectId}/categories`} icon={<HugeIcon icon={Folder01Icon} size={15} />} label="Catégories" collapsed={collapsed} />
+                <SidebarLink to={`/projects/${projectId}/media`} icon={<HugeIcon icon={Image01Icon} size={15} />} label="Médias" collapsed={collapsed} />
+                <SidebarLink to={`/projects/${projectId}/calendar`} icon={<HugeIcon icon={Calendar03Icon} size={15} />} label="Calendrier" collapsed={collapsed} />
+              </SidebarSection>
+
+              <SidebarSection title="Analytics" collapsed={collapsed}>
+                <SidebarLink to={`/projects/${projectId}/analytics`} icon={<HugeIcon icon={ChartBarLineIcon} size={15} />} label="Analytics" collapsed={collapsed} />
+                <SidebarLink to={`/projects/${projectId}/recommendations`} icon={<HugeIcon icon={MagicWand01Icon} size={15} />} label="Optimisations" collapsed={collapsed} />
               </SidebarSection>
 
               <SidebarSection title="Projet" collapsed={collapsed}>
