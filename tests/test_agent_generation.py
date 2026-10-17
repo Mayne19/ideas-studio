@@ -215,3 +215,33 @@ def test_hard_stop_during_a_correction_round_keeps_the_round_zero_article():
     assert best is first and errors == ["faute"] and plag == {"status": "clean"}
     assert report["rounds"][0] == {"round": 0, "errors": ["faute"]}
     assert "arrêt dur" in report["rounds"][1]["error"] and report["remaining_errors"] == ["faute"]
+
+def _judge_errors_for_blockers(monkeypatch, blockers):
+    from types import SimpleNamespace
+
+    from app.services.seo import agent_generation
+    import app.services.seo.editorial_judge as judge_module
+
+    monkeypatch.setattr(judge_module, "judge_article", lambda *args, **kwargs: {"blockers": blockers})
+    orch = SimpleNamespace(context={}, _write_pass=lambda *args: "")
+    candidate = {"title": "Article", "content_html": "<p>Une réponse concise.</p>"}
+    return agent_generation.judge_errors(orch, None, candidate)
+
+
+def test_judge_invented_fact_becomes_a_hard_fault(monkeypatch):
+    errors = _judge_errors_for_blockers(monkeypatch, [{
+        "type": "invented_fact", "section": "Conseils",
+        "detail": "La source citée ne contient pas cette recommandation",
+    }])
+
+    assert len(errors) == 1
+    assert "Fait ou source inventé" in errors[0]
+    assert "citation exacte" in errors[0]
+
+
+def test_judge_reader_drop_does_not_become_a_hard_fault(monkeypatch):
+    errors = _judge_errors_for_blockers(monkeypatch, [{
+        "type": "reader_drop", "section": "Introduction", "detail": "Phrase trop longue",
+    }])
+
+    assert errors == []
