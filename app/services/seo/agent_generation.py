@@ -404,6 +404,32 @@ def judge_errors(orch, article, candidate: dict) -> list[str]:
     return errors
 
 
+def correction_rounds(writer, check, data: dict, run_report: dict, step=lambda label: None) -> tuple[dict, list, dict]:
+    """Au plus deux tours de correction sur les fautes dures. Une erreur
+    pendant un tour (dont l'arrêt dur du coût) termine la boucle : le
+    meilleur article déjà obtenu (au pire celui du tour 0) est gardé."""
+    best, (best_errors, plag_report) = data, check(data)
+    run_report["rounds"].append({"round": 0, "errors": best_errors})
+    for round_no in (1, 2):
+        if not best_errors:
+            break
+        try:
+            corrected = writer.correct(best_errors)
+        except Exception as exc:
+            run_report["rounds"].append({"round": round_no, "error": str(exc)[:300]})
+            break
+        if corrected is None:
+            run_report["rounds"].append({"round": round_no, "error": "JSON corrigé inexploitable"})
+            continue
+        errors, report = check(corrected)
+        run_report["rounds"].append({"round": round_no, "errors": errors})
+        if len(errors) <= len(best_errors):
+            best, best_errors, plag_report = corrected, errors, report
+        step(f"AgentWriter correction #{round_no} ({len(errors)} erreur(s) restante(s))")
+    run_report["remaining_errors"] = best_errors
+    return best, best_errors, plag_report
+
+
 def article_keyword(orch) -> str:
     return str((orch.context.get("idea_discovery") or {}).get("main_keyword") or "")
 
@@ -511,25 +537,7 @@ def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, 
         plag_report["consistency_info"] = consistency_errors(content, orch._polish_call_fn(article))
         return errors + plag_errors, plag_report
 
-    best, (best_errors, plag_report) = data, check(data)
-    run_report["rounds"].append({"round": 0, "errors": best_errors})
-    for round_no in (1, 2):
-        if not best_errors:
-            break
-        try:
-            corrected = writer.correct(best_errors)
-        except Exception as exc:
-            run_report["rounds"].append({"round": round_no, "error": str(exc)[:300]})
-            break
-        if corrected is None:
-            run_report["rounds"].append({"round": round_no, "error": "JSON corrigé inexploitable"})
-            continue
-        errors, report = check(corrected)
-        run_report["rounds"].append({"round": round_no, "errors": errors})
-        if len(errors) <= len(best_errors):
-            best, best_errors, plag_report = corrected, errors, report
-        orch._step(f"AgentWriter correction #{round_no} ({len(errors)} erreur(s) restante(s))")
-    run_report["remaining_errors"] = best_errors
+    best, best_errors, plag_report = correction_rounds(writer, check, data, run_report, orch._step)
 
     content = best.get("content_html") or ""
     if orch._is_french():
