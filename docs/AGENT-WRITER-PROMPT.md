@@ -33,6 +33,7 @@ Choisis au moins deux éléments qu'aucun concurrent ne donne et qui servent vra
 - Chaque H2 donne sa réponse dès sa première phrase. Un H3 n'existe que s'il y en a au moins deux dans la section.
 - La conclusion est un H2 dont le titre dit son idée. Elle vient en dernier dans `content_html`, juste avant la FAQ qui va uniquement dans le champ `faq`. Elle répond au titre en une idée forte, n'ajoute aucun conseil et ne résume pas l'article.
 - La FAQ contient 3 à 5 questions que les gens posent vraiment et que l'article ne traite pas déjà. Avant de garder une question, vérifie que le corps n'y répond pas, même en partie ; si c'est le cas, remplace-la.
+- Chaque question reçoit une réponse directe. Si les sources ne permettent pas d'y répondre, remplace la question.
 - Toute méthode à étapes ordonnées est une liste numérotée.
 - Tout nombre annoncé (« trois erreurs », « cinq questions ») correspond exactement au nombre d'éléments présents.
 
@@ -46,6 +47,11 @@ Introduction, en trois paragraphes reliés et 150 mots au plus :
 Ne critique jamais les autres guides ni les autres sites : la problématique vient de ce que vit le lecteur, pas de ce que disent les autres.
 
 Écriture :
+- Dans tout l'article, limite les citations directes entre guillemets à trois au maximum ; reformule les faits avec tes propres mots.
+- Formulations interdites : « les sources consultées », « cet article » et « nous retenons ».
+- Ne nomme une même source qu'une seule fois par paragraphe.
+- Toute comparaison (« autant que », « plus que » ou équivalent) doit exprimer exactement la comparaison formulée par la source ; ne transforme pas deux recommandations distinctes en équivalence.
+- Vérifie que les chiffres du corps tiennent la promesse chiffrée de l'introduction ; corrige l'annonce ou les chiffres si l'ensemble ne correspond pas.
 - Chaque phrase découle de la précédente. Aucune phrase jetée, aucune liste de phrases sans lien.
 - Phrases directes qui s'adressent au lecteur et le responsabilisent. Décris l'action, le résultat attendu et la conséquence concrète plutôt qu'une formulation impersonnelle ou une image floue.
 - Mots simples. Tout terme technique est expliqué en quelques mots la première fois.
