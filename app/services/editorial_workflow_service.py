@@ -1,0 +1,231 @@
+"""Parcours éditorial parallèle au pipeline historique.
+
+Ce module expose les états métier attendus par le nouveau parcours sans
+modifier les identifiants de statut déjà présents en base. L'ancien pipeline
+reste donc utilisable pendant les phases 1 et 2.
+"""
+from __future__ import annotations
+
+import re
+from datetime import datetime, timezone
+from enum import StrEnum
+
+import markdown
+from sqlalchemy import desc, select
+from sqlalchemy.orm import Session
+
+from app.models.ai import Artifact
+from app.models.content import Article, ArticleRevision, ArticleSeo
+from app.models.reference import ArticleStatus, RevisionSource, set_article_status
+from app.services.seo.artifacts import get_latest_artifact, save_artifact
+
+
+WORKFLOW_ARTIFACT_KEY = "editorial_workflow"
+FICHE_ARTIFACT_KEY = "editorial_fiche"
+
+
+class EditorialStatus(StrEnum):
+    IDEA = "idea"
+    WRITING = "writing"
+    REVIEW = "review"
+    VALIDATED = "validated"
+    SCHEDULED = "scheduled"
+    PUBLISHED = "published"
+    UPDATE = "update"
+
+
+ARTICLE_STATUS_BY_WORKFLOW_STATUS: dict[EditorialStatus, ArticleStatus] = {
+    EditorialStatus.IDEA: ArticleStatus.IDEA_PROPOSED,
+    EditorialStatus.WRITING: ArticleStatus.WRITING_IN_PROGRESS,
+    EditorialStatus.REVIEW: ArticleStatus.REVIEW_NEEDED,
+    EditorialStatus.VALIDATED: ArticleStatus.READY_TO_PUBLISH,
+    EditorialStatus.SCHEDULED: ArticleStatus.SCHEDULED,
+    EditorialStatus.PUBLISHED: ArticleStatus.PUBLISHED,
+    EditorialStatus.UPDATE: ArticleStatus.UPDATE_RECOMMENDED,
+}
+
+WORKFLOW_STATUS_BY_ARTICLE_STATUS: dict[ArticleStatus, EditorialStatus] = {
+    ArticleStatus.DRAFT: EditorialStatus.IDEA,
+    ArticleStatus.IDEA_PROPOSED: EditorialStatus.IDEA,
+    ArticleStatus.IDEA_PRIORITY: EditorialStatus.IDEA,
+    ArticleStatus.OUTLINE_READY: EditorialStatus.WRITING,
+    ArticleStatus.WRITING_REQUESTED: EditorialStatus.WRITING,
+    ArticleStatus.WRITING_IN_PROGRESS: EditorialStatus.WRITING,
+    ArticleStatus.DRAFT_READY: EditorialStatus.REVIEW,
+    ArticleStatus.REVIEW_NEEDED: EditorialStatus.REVIEW,
+    ArticleStatus.CORRECTION_NEEDED: EditorialStatus.REVIEW,
+    ArticleStatus.READY_TO_PUBLISH: EditorialStatus.VALIDATED,
+    ArticleStatus.SCHEDULED: EditorialStatus.SCHEDULED,
+    ArticleStatus.PUBLISHED: EditorialStatus.PUBLISHED,
+    ArticleStatus.UNPUBLISHED: EditorialStatus.UPDATE,
+    ArticleStatus.UPDATE_RECOMMENDED: EditorialStatus.UPDATE,
+    ArticleStatus.IMPROVEMENT_PROPOSED: EditorialStatus.UPDATE,
+    ArticleStatus.IMPROVEMENT_IN_PROGRESS: EditorialStatus.UPDATE,
+    ArticleStatus.IMPROVEMENT_READY: EditorialStatus.UPDATE,
+}
+
+
+def workflow_status(article: Article) -> EditorialStatus | None:
+    """Convert an existing database status to one of the seven public states."""
+    return WORKFLOW_STATUS_BY_ARTICLE_STATUS.get(ArticleStatus(article.status_reason_id))
+
+
+def _latest_revision(db: Session, article_id: str) -> ArticleRevision | None:
+    return db.execute(
+        select(ArticleRevision)
+        .where(ArticleRevision.article_id == article_id)
+        .order_by(desc(ArticleRevision.revision_no))
+        .limit(1)
+    ).scalar_one_or_none()
+
+
+def _next_revision_no(db: Session, article_id: str) -> int:
+    revision = _latest_revision(db, article_id)
+    return (revision.revision_no if revision else 0) + 1
+
+
+def _markdown_to_html(source: str) -> str:
+    return markdown.markdown(source, extensions=["tables", "sane_lists"])
+
+
+def technical_checks(article: str, fiche: dict | None, fiche_error: str = "") -> list[dict]:
+    """Run exactly the three blocking controls defined by the editorial lab."""
+    from experiments.editorial_agent_lab.editorial_agent.checks import blocking_checks
+
+    return blocking_checks(article, fiche, fiche_error)
+
+
+def validation_report(article: str, fiche: dict | None, fiche_error: str = "") -> dict:
+    checks = technical_checks(article, fiche, fiche_error)
+    return {"passed": all(check["passed"] for check in checks), "checks": checks}
+
+
+def _record_workflow_state(db: Session, article: Article, status: EditorialStatus, **extra) -> None:
+    save_artifact(
+        db,
+        article.id,
+        WORKFLOW_ARTIFACT_KEY,
+        {"managed_by": "editorial_workflow", "status": status.value, **extra},
+    )
+
+
+def request_writing(db: Session, article: Article) -> Article:
+    set_article_status(article, ArticleStatus.WRITING_REQUESTED)
+    article.updated_at = datetime.now(timezone.utc)
+    _record_workflow_state(db, article, EditorialStatus.WRITING)
+    db.commit()
+    db.refresh(article)
+    return article
+
+
+def deposit_markdown(
+    db: Session,
+    article: Article,
+    markdown_content: str,
+    fiche: dict | None,
+    title: str | None = None,
+    fiche_error: str = "",
+) -> Article:
+    """Store a local writer's Markdown as a new current revision."""
+    if not markdown_content.strip():
+        raise ValueError("Le contenu Markdown est vide.")
+
+    previous = _latest_revision(db, article.id)
+    extracted_title = re.search(r"^#\s+(.+?)\s*$", markdown_content, flags=re.MULTILINE)
+    revision = ArticleRevision(
+        article_id=article.id,
+        revision_no=_next_revision_no(db, article.id),
+        source=RevisionSource.AI,
+        title=(title or (extracted_title.group(1) if extracted_title else None) or (previous.title if previous else "Article")),
+        body=_markdown_to_html(markdown_content),
+        faq=(fiche or {}).get("faq", []) if isinstance((fiche or {}).get("faq", []), list) else [],
+        word_count=len(markdown_content.split()),
+        blocks={"source_format": "markdown"},
+    )
+    db.add(revision)
+    db.flush()
+    article.current_revision_id = revision.id
+    set_article_status(article, ArticleStatus.REVIEW_NEEDED)
+    article.updated_at = datetime.now(timezone.utc)
+
+    if fiche is not None:
+        save_artifact(db, article.id, FICHE_ARTIFACT_KEY, fiche)
+    _record_workflow_state(
+        db,
+        article,
+        EditorialStatus.REVIEW,
+        fiche_error=fiche_error,
+        deposited_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+    seo = db.get(ArticleSeo, article.id)
+    if seo is None:
+        seo = ArticleSeo(article_id=article.id)
+        db.add(seo)
+    if isinstance(fiche, dict):
+        seo.meta_title = fiche.get("meta_title") or seo.meta_title
+        seo.meta_description = fiche.get("meta_description") or seo.meta_description
+
+    db.commit()
+    db.refresh(article)
+    return article
+
+
+def validate_for_publication(db: Session, article: Article) -> dict:
+    revision = _latest_revision(db, article.id)
+    fiche = get_latest_artifact(db, article.id, FICHE_ARTIFACT_KEY)
+    report = validation_report(revision.body if revision else "", fiche)
+    if report["passed"]:
+        set_article_status(article, ArticleStatus.READY_TO_PUBLISH)
+        article.updated_at = datetime.now(timezone.utc)
+        _record_workflow_state(db, article, EditorialStatus.VALIDATED, checks=report["checks"])
+        db.commit()
+        db.refresh(article)
+    return report
+
+
+def schedule_for_publication(db: Session, article: Article, scheduled_at: datetime) -> dict:
+    report = validate_for_publication(db, article)
+    if not report["passed"]:
+        return report
+    if scheduled_at.tzinfo is None:
+        scheduled_at = scheduled_at.replace(tzinfo=timezone.utc)
+    set_article_status(article, ArticleStatus.SCHEDULED)
+    article.scheduled_for = scheduled_at.astimezone(timezone.utc)
+    article.updated_at = datetime.now(timezone.utc)
+    _record_workflow_state(
+        db,
+        article,
+        EditorialStatus.SCHEDULED,
+        scheduled_for=article.scheduled_for.isoformat(),
+        checks=report["checks"],
+    )
+    db.commit()
+    db.refresh(article)
+    return {**report, "scheduled_for": article.scheduled_for}
+
+
+def publish_due_article(db: Session, article: Article) -> Article:
+    """Publish a scheduled lab article without invoking scoring_service."""
+    revision = _latest_revision(db, article.id)
+    fiche = get_latest_artifact(db, article.id, FICHE_ARTIFACT_KEY)
+    report = validation_report(revision.body if revision else "", fiche)
+    if not report["passed"]:
+        raise ValueError("Les contrôles techniques ne permettent plus la publication.")
+    if revision is None:
+        raise ValueError("Aucune révision courante à publier.")
+
+    article.published_revision_id = revision.id
+    set_article_status(article, ArticleStatus.PUBLISHED)
+    article.published_at = article.published_at or datetime.now(timezone.utc)
+    article.scheduled_for = None
+    article.updated_at = datetime.now(timezone.utc)
+    _record_workflow_state(db, article, EditorialStatus.PUBLISHED, checks=report["checks"])
+    db.commit()
+    db.refresh(article)
+    return article
+
+
+def is_workflow_managed(db: Session, article_id: str) -> bool:
+    artifact = get_latest_artifact(db, article_id, WORKFLOW_ARTIFACT_KEY)
+    return bool(artifact and artifact.get("managed_by") == "editorial_workflow")

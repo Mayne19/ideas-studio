@@ -20,6 +20,7 @@ def check_scheduled_publications():
     from app.models.content import Article
     from app.models.reference import ArticleStatus
     from app.services.article_lifecycle_service import publish_article
+    from app.services.editorial_workflow_service import is_workflow_managed, publish_due_article
     from app.services.validation_service import PublishBlockedError
 
     db = SessionLocal()
@@ -41,9 +42,12 @@ def check_scheduled_publications():
             ).scalars().all()
             for article in articles:
                 try:
-                    publish_article(db, article)
+                    if is_workflow_managed(db, article.id):
+                        publish_due_article(db, article)
+                    else:
+                        publish_article(db, article)
                     logger.info("Scheduled publication: article %s published", article.id)
-                except PublishBlockedError as e:
+                except (PublishBlockedError, ValueError) as e:
                     # Reste programmé : l'éditeur doit améliorer le score ou
                     # abaisser le minimum (Paramètres → Pipeline). Le contrôle
                     # précède toute écriture : rien à annuler.
