@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any
 
 from experiments.editorial_agent_lab.editorial_agent.models import (
@@ -19,7 +20,9 @@ from experiments.editorial_agent_lab.editorial_agent.angle import propose_angle,
 from experiments.editorial_agent_lab.editorial_agent.fact_ledger import assign_fact_ids, validate_fact_ledger
 from experiments.editorial_agent_lab.editorial_agent.prompting import build_writer_context
 from experiments.editorial_agent_lab.editorial_agent.writer import (
-    SinglePassWriter,
+    MarkdownWriter,
+    StructuredExtractor,
+    StyleReviewer,
     WriterOutputError,
     load_lab_prompt,
 )
@@ -40,6 +43,13 @@ from experiments.editorial_agent_lab.editorial_agent.validators import (
     validate_plan,
 )
 from experiments.editorial_agent_lab.editorial_agent.workflow import EditorialAgent
+from experiments.editorial_agent_lab.editorial_agent.live_runner import (
+    STYLE_REVIEW_INSTRUCTION,
+    _complete_separate,
+    _extract_article_data,
+    _run_markdown_draft,
+    _structure_report,
+)
 
 
 def make_plan() -> ArticlePlan:
@@ -312,15 +322,88 @@ def test_writer_prompt_excludes_commercial_calls_to_action() -> None:
     assert "publicité" in prompt
 
 
-def test_single_pass_writer_calls_model_once_and_validates_json() -> None:
+def test_writer_prompt_is_markdown_only_and_contains_style_rules() -> None:
+    prompt = load_lab_prompt()
+    assert "Retourne uniquement l'article complet en Markdown" in prompt
+    assert "Retourne uniquement cet objet JSON" not in prompt
+    assert "La première phrase de l'introduction ne formule pas la réponse." in prompt
+    assert "Chaque phrase s'appuie sur la précédente et prépare la suivante." in prompt
+    assert STYLE_REVIEW_INSTRUCTION.startswith("Relis cet article uniquement pour la fluidité.")
+
+
+class FakeMarkdownMessages:
+    def __init__(self, text: str):
+        self.text = text
+        self.calls: list[dict[str, Any]] = []
+
+    def create(self, **kwargs: Any) -> Any:
+        self.calls.append(kwargs)
+        return SimpleNamespace(
+            content=[SimpleNamespace(type="text", text=self.text)],
+            stop_reason="end_turn",
+            usage=None,
+        )
+
+
+class FakeMarkdownClient:
+    def __init__(self, text: str):
+        self.messages = FakeMarkdownMessages(text)
+
+
+def test_drafting_stage_returns_markdown_without_parsing_json() -> None:
+    client = FakeMarkdownClient("# Titre\n\nUn premier paragraphe relié au suivant.")
+    markdown, writer = _run_markdown_draft(client, "test-model", "système", "mot-clé")
+    assert markdown.startswith("# Titre")
+    assert writer.messages[0]["role"] == "user"
+    assert client.messages.calls[0]["tools"]
+
+
+def test_extraction_stage_requires_the_structured_fields() -> None:
+    data = _extract_article_data(
+        '{"title":"Titre","meta_title":"Meta","meta_description":"Description",'
+        '"slug":"titre","faq":[],"sources":[],"facts":[],"self_review":{}}'
+    )
+    assert set(data) == {"title", "meta_title", "meta_description", "slug", "faq", "sources", "facts", "self_review"}
+
+
+def test_separate_extraction_call_uses_low_reasoning_and_restores_client_state() -> None:
+    class Client:
+        reasoning_effort = "high"
+
+        def __init__(self):
+            self.calls: list[tuple[str, str, str]] = []
+
+        def complete(self, system: str, user: str, max_tokens: int) -> str:
+            self.calls.append((system, user, self.reasoning_effort))
+            return "{}"
+
+    client = Client()
+    assert _complete_separate(client, "model", "extract", "article", reasoning_effort="low", max_tokens=100) == "{}"
+    assert client.calls == [("extract", "article", "low")]
+    assert client.reasoning_effort == "high"
+
+
+def test_structure_report_ignores_removed_paragraph_controls() -> None:
+    report = _structure_report({
+        "title": "Titre",
+        "content_html": "<p>Introduction.</p><h2>Section</h2><p>Contenu.</p>",
+    })
+    rules = {rule["rule"] for rule in report["rules"]}
+    assert "paragraph_length" not in rules
+    assert "paragraph_variation" not in rules
+    assert "h2_lead_paragraph" in rules
+    assert "intro_length" in rules
+
+
+def test_markdown_writer_calls_model_once_and_returns_markdown() -> None:
     calls: list[tuple[str, str]] = []
 
     def fake_call(system: str, user: str) -> str:
         calls.append((system, user))
-        return make_draft().model_dump_json()
+        return "# Un article\n\nUn contenu Markdown complet."
 
-    writer = SinglePassWriter(fake_call, load_lab_prompt())
-    draft = writer.write(
+    writer = MarkdownWriter(fake_call, load_lab_prompt())
+    markdown = writer.write(
         ArticleRequest(keyword="choisir un outil"),
         SiteContext(site_name="Test", domain="example.com"),
         [],
@@ -334,20 +417,20 @@ def test_single_pass_writer_calls_model_once_and_validates_json() -> None:
         [],
         make_plan(),
     )
-    assert draft.title == "Un article utile"
+    assert markdown.startswith("# Un article")
     assert len(calls) == 1
     assert "summary_callout" in calls[0][1]
 
 
-def test_single_pass_writer_does_not_hide_a_correction_round() -> None:
+def test_markdown_writer_rejects_an_empty_response() -> None:
     calls = 0
 
     def fake_call(system: str, user: str) -> str:
         nonlocal calls
         calls += 1
-        return "ceci n'est pas du JSON"
+        return ""
 
-    writer = SinglePassWriter(fake_call, load_lab_prompt())
+    writer = MarkdownWriter(fake_call, load_lab_prompt())
     try:
         writer.write(
             ArticleRequest(keyword="choisir un outil"),
@@ -366,8 +449,25 @@ def test_single_pass_writer_does_not_hide_a_correction_round() -> None:
     except WriterOutputError:
         pass
     else:
-        raise AssertionError("un JSON invalide doit être bloquant")
+        raise AssertionError("un article Markdown vide doit être bloquant")
     assert calls == 1
+
+
+def test_extractor_and_style_reviewer_are_separate_calls() -> None:
+    calls: list[str] = []
+
+    def fake_call(system: str, user: str) -> str:
+        calls.append(system)
+        if "extraire" in system:
+            return '{"title":"Titre","meta_title":"Meta","meta_description":"Description",' \
+                   '"slug":"titre","faq":[],"sources":[],"facts":[],"self_review":{}}'
+        return "# Titre\n\nTexte relu."
+
+    extracted = StructuredExtractor(fake_call, "Tu es chargé d'extraire les données.").extract("# Titre", "Source")
+    reviewed = StyleReviewer(fake_call, "Tu es relecteur.", "Relis pour la fluidité.").review("# Titre\n\nTexte.")
+    assert extracted["title"] == "Titre"
+    assert reviewed.endswith("Texte relu.")
+    assert len(calls) == 2
 
 
 def test_validation_pipeline_keeps_similarity_as_non_blocking_warning() -> None:

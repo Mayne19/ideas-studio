@@ -66,7 +66,7 @@ def build_writer_context(
             "Le call out En résumé vient entre l'introduction et le premier H2.",
             "La FAQ est définie par le plan et ne répète pas le corps.",
             "Ne lance aucune réécriture automatique pour une alerte de similarité.",
-            "Rends uniquement le JSON demandé, sans article de référence à imiter.",
+            "Rends uniquement l'article complet en Markdown, sans article de référence à imiter.",
         ],
     }
     return json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True)

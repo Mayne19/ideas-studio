@@ -1,4 +1,4 @@
-"""Rédacteur unique en une passe, indépendant du fournisseur de modèle."""
+"""Étapes de rédaction, d'extraction et de relecture du laboratoire."""
 
 from __future__ import annotations
 
@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Protocol
 
 from .models import (
-    ArticleDraft,
     ArticlePlan,
     ArticleRequest,
     CompetitorPage,
@@ -25,7 +24,7 @@ class WriterCall(Protocol):
 
 
 class WriterOutputError(ValueError):
-    """Le modèle n'a pas rendu le contrat JSON attendu."""
+    """Le modèle n'a pas rendu le format attendu par l'étape."""
 
 
 def _extract_json(text: str) -> dict:
@@ -45,8 +44,8 @@ def _extract_json(text: str) -> dict:
 
 
 @dataclass
-class SinglePassWriter:
-    """Un appel au modèle, puis validation du contrat, sans correction cachée."""
+class MarkdownWriter:
+    """Produit uniquement l'article complet en Markdown."""
 
     call: WriterCall
     system_prompt: str
@@ -60,10 +59,49 @@ class SinglePassWriter:
         angle: EditorialAngle,
         facts: list[FactRecord],
         plan: ArticlePlan,
-    ) -> ArticleDraft:
+    ) -> str:
         user_context = build_writer_context(request, site, competitors, reader, angle, facts, plan)
         raw = self.call(self.system_prompt, user_context)
-        return ArticleDraft.model_validate(_extract_json(raw))
+        markdown = (raw or "").strip()
+        if not markdown:
+            raise WriterOutputError("réponse Markdown vide")
+        return markdown
+
+
+@dataclass
+class StructuredExtractor:
+    """Transforme séparément le Markdown et la recherche en données JSON."""
+
+    call: WriterCall
+    system_prompt: str
+
+    def extract(self, article_markdown: str, research: str) -> dict:
+        raw = self.call(
+            self.system_prompt,
+            "Article Markdown :\n\n" + article_markdown + "\n\nRecherche :\n\n" + research,
+        )
+        data = _extract_json(raw)
+        required = ("title", "meta_title", "meta_description", "slug", "faq", "sources", "facts", "self_review")
+        missing = [key for key in required if key not in data]
+        if missing:
+            raise WriterOutputError("clés absentes : " + ", ".join(missing))
+        return data
+
+
+@dataclass
+class StyleReviewer:
+    """Relit séparément le Markdown uniquement pour sa fluidité."""
+
+    call: WriterCall
+    system_prompt: str
+    instruction: str
+
+    def review(self, article_markdown: str) -> str:
+        raw = self.call(self.system_prompt, self.instruction + "\n\nArticle Markdown :\n\n" + article_markdown)
+        reviewed = (raw or "").strip()
+        if not reviewed:
+            raise WriterOutputError("relecture Markdown vide")
+        return reviewed
 
 
 def load_lab_prompt() -> str:

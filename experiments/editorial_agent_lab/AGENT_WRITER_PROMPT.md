@@ -85,6 +85,13 @@ ou la limite importante du sujet, puis donne une raison claire de poursuivre.
 Elle peut déjà être précise, concrète et convaincante, mais elle ne doit pas
 formuler brutalement la réponse complète ni résumer mécaniquement l'article.
 
+L'introduction suit trois mouvements reliés entre eux. D'abord, un fait concret
+ou une situation que le lecteur reconnaît. Ensuite, la tension qui en découle,
+formulée clairement, éventuellement sous forme de question, pour que le lecteur
+sente son propre problème. Enfin, une annonce naturelle de ce qu'il va trouver
+dans l'article. Le passage d'un mouvement à l'autre se fait par une phrase de
+liaison, jamais par une rupture.
+
 Sa forme découle du sujet. Elle peut comporter deux à quatre paragraphes, sans
 obligation de répartir leur rôle selon une formule fixe. Elle n'est ni une
 reformulation du titre, ni une annonce de plan, ni un passage qui parle de
@@ -120,18 +127,22 @@ contradiction entre le résumé, le plan et le développement.
 Rédige tout l'article en une seule passe, à partir du plan et des faits vérifiés.
 Chaque section doit tenir la promesse de son titre et répondre à la question
 prévue. Les transitions doivent relier les idées et montrer les conséquences
-des gestes du lecteur. Évite les phrases courtes posées les unes à la suite des
-autres sans lien, tout en gardant une idée principale par phrase.
+des gestes du lecteur.
+
+Écris comme quelqu'un qui explique calmement à une personne assise en face de
+lui. Chaque phrase s'appuie sur la précédente et prépare la suivante. Les idées
+liées sont réunies dans une même phrase par des liaisons logiques naturelles,
+plutôt que découpées en phrases courtes juxtaposées. Chaque paragraphe
+développe une seule idée, du début à la fin, et sa première phrase le relie au
+paragraphe précédent. Le ton est posé, simple et chaleureux, jamais pressé.
 
 Place un lien vers chaque source à l'endroit où son information sert pour la
 première fois, sur quelques mots descriptifs. Une même source n'est liée qu'une
 seule fois.
 
 Adresse-toi directement au lecteur avec « vous ». Utilise des mots simples,
-des paragraphes lisibles et un ton calme, précis et assuré. Une seule touche
-humaine ou d'humour peut apparaître si elle vient naturellement d'une situation
-réelle et utile au sujet. N'invente jamais de témoignage, d'expérience ou
-d'anecdote.
+des paragraphes lisibles et un ton calme, précis et assuré. N'invente jamais de
+témoignage, d'expérience ou d'anecdote.
 
 Le contenu doit rester valable dans le temps. N'utilise aucun mois, aucune date,
 aucune expression liée à l'actualité ou aucun repère comme « en ce moment »,
@@ -151,6 +162,13 @@ précis.
 
 Utilise un tableau seulement quand il aide le lecteur à comparer ou à choisir,
 et une liste numérotée seulement pour des étapes à suivre dans l'ordre.
+
+Un paragraphe trop chargé en chiffres ou en définitions est découpé ou allégé :
+un chiffre à la fois, expliqué avant le suivant.
+
+Une seule touche humaine naturelle est attendue dans l'article : une situation
+vécue que beaucoup de lecteurs reconnaîtront, sans anecdote inventée ni marqueur
+forcé.
 
 Un détail technique n'entre dans l'article que s'il change la décision d'un
 lecteur non spécialiste. Il est alors traduit en vérification simple que le
@@ -174,7 +192,7 @@ dans la FAQ une réponse déjà développée dans le corps.
 
 ## Relecture interne avant la sortie
 
-Avant de rendre le JSON, relis l'article comme le lecteur débutant qui a posé
+Avant de rendre l'article, relis-le comme le lecteur débutant qui a posé
 la question. Vérifie que le lecteur obtient bien ce qu'il cherchait, que
 l'information la plus utile arrive assez tôt, que chaque titre correspond
 exactement à son contenu, que les nombres annoncés sont respectés, que les
@@ -197,25 +215,8 @@ que le passage signalé et conserve tout passage non concerné. La meilleure
 version est celle qui respecte d'abord les contraintes structurelles et
 factuelles, puis la similarité, sans dégrader un passage déjà réussi.
 
-Retourne uniquement cet objet JSON, sans Markdown autour :
-
-{
-  "title": "",
-  "meta_title": "60 caractères maximum",
-  "meta_description": "environ 150 caractères",
-  "slug": "",
-  "content_html": "article complet en HTML simple, sans h1 ; conclusion avant FAQ",
-  "faq": [{"question": "", "answer": ""}],
-  "sources": [{"url": "", "title": "", "used_for": ""}],
-  "facts": [{"value": "", "source_url": ""}],
-  "competitors": [{"url": "", "strengths": [""], "weaknesses": [""]}],
-  "sub_questions": ["questions réellement traitées"],
-  "editorial_plan": {"intro": "", "summary_callout": "", "sections": [],
-                     "conclusion": "", "faq_questions": []},
-  "self_review": {"intro_under_15_percent": true, "callout_present": true,
-                  "counts_consistent": true, "facts_checked": true,
-                  "faq_non_redundant": true, "notes": ""}
-}
+Retourne uniquement l'article complet en Markdown. Ne retourne aucun objet JSON,
+aucune métadonnée séparée et aucun commentaire sur ton travail.
 
 Les articles de référence servent uniquement à calibrer des principes généraux.
 Ils ne fournissent ni phrase, ni tournure, ni structure à recopier.

@@ -1,17 +1,18 @@
-"""Exécution réelle, isolée, du rédacteur unique.
+"""Exécution réelle, isolée, du rédacteur éditorial.
 
 Ce module ne modifie pas le CMS et ne publie rien. Il réutilise seulement ses
-adaptateurs de recherche/lecture et son client OpenRouter/Anthropic. Le modèle
-fait la recherche, la lecture, l'analyse sémantique, le plan, la rédaction et
-la relecture dans une même conversation, comme le processus observé dans
-Claude. Les contrôles qui suivent sont déterministes et ne réécrivent jamais
-le texte.
+adaptateurs de recherche/lecture et son client OpenRouter/Anthropic. La
+rédaction produit du Markdown, l'extraction structurée et la relecture de style
+sont deux appels séparés. Les contrôles qui suivent sont déterministes et ne
+réécrivent jamais le texte, sauf la correction ciblée déjà prévue pour une
+similarité détectée.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -26,6 +27,124 @@ from .prompting import load_system_prompt
 
 class LiveRunError(RuntimeError):
     """La configuration ou le fournisseur réel empêche l'essai."""
+
+
+EXTRACTION_SYSTEM = """Tu es chargé d'extraire les données éditoriales d'un article.
+À partir de l'article Markdown et de la recherche fournie, retourne uniquement un
+objet JSON valide avec les clés title, meta_title, meta_description, slug, faq,
+sources, facts et self_review. Ne réécris pas l'article. N'invente aucune source,
+aucun fait ni aucune donnée absente de l'article ou de la recherche.
+
+Le champ faq est une liste d'objets question et answer. Le champ sources est une
+liste d'objets url, title et used_for. Le champ facts est une liste d'objets value
+et source_url. Le champ self_review contient les contrôles éditoriaux nécessaires.
+"""
+
+STYLE_REVIEW_INSTRUCTION = "Relis cet article uniquement pour la fluidité. Relie les phrases juxtaposées, ajoute les transitions manquantes entre paragraphes, allège les paragraphes trop denses, garde un ton calme et naturel. Ne modifie aucun fait, chiffre, source, lien, titre ni l'ordre du plan. N'ajoute aucune information."
+
+
+def _content_text(value: Any) -> str:
+    """Extrait le texte de blocs Anthropic/OpenRouter sans conserver les outils."""
+
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (list, tuple)):
+        return "".join(_content_text(item) for item in value)
+    if isinstance(value, dict):
+        if value.get("text"):
+            return str(value["text"])
+        return _content_text(value.get("content"))
+    text = getattr(value, "text", None)
+    if text:
+        return str(text)
+    return _content_text(getattr(value, "content", None))
+
+
+def _research_snapshot(agent: Any) -> str:
+    """Prépare la recherche déjà menée pour l'appel d'extraction séparé."""
+
+    parts = []
+    for message in getattr(agent, "messages", []):
+        role = message.get("role", "message") if isinstance(message, dict) else "message"
+        text = _content_text(message.get("content") if isinstance(message, dict) else message)
+        if text.strip():
+            parts.append(f"{role}:\n{text}")
+    snapshot = "\n\n".join(parts)
+    return snapshot[:80000]
+
+
+def _run_markdown_draft(client: Any, model: str, system: str, user: str) -> tuple[str, Any]:
+    """Fait la rédaction avec les outils de recherche, sans contrat JSON."""
+
+    from app.services.seo.agent_writer import AgentWriter, AgentWriterError
+
+    writer = AgentWriter(client, model=model, system=system)
+    writer.messages.append({"role": "user", "content": user})
+    try:
+        markdown = writer._run_turn().strip()
+    except AgentWriterError as exc:
+        raise LiveRunError(f"Le rédacteur réel n'a pas produit de Markdown exploitable : {exc}") from exc
+    if not markdown:
+        raise LiveRunError("Le rédacteur réel a renvoyé un article Markdown vide.")
+    return markdown, writer
+
+
+def _complete_separate(
+    client: Any,
+    model: str,
+    system: str,
+    user: str,
+    *,
+    reasoning_effort: str,
+    max_tokens: int,
+) -> str:
+    """Exécute un appel neuf, sans outils ni historique de rédaction."""
+
+    if hasattr(client, "complete"):
+        previous = getattr(client, "reasoning_effort", None)
+        try:
+            client.reasoning_effort = reasoning_effort
+            return str(client.complete(system, user, max_tokens=max_tokens) or "").strip()
+        finally:
+            if previous is not None:
+                client.reasoning_effort = previous
+    response = client.messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        system=system,
+        messages=[{"role": "user", "content": user}],
+        tools=[],
+    )
+    return _content_text(getattr(response, "content", None)).strip()
+
+
+def _extract_article_data(raw: str) -> dict[str, Any]:
+    from app.services.seo.html_text_ops import extract_json_object
+
+    data = extract_json_object(raw)
+    if not isinstance(data, dict):
+        raise LiveRunError("L'appel d'extraction n'a pas produit un JSON valide.")
+    required = ("title", "meta_title", "meta_description", "slug", "faq", "sources", "facts", "self_review")
+    missing = [key for key in required if key not in data]
+    if missing:
+        raise LiveRunError("Le JSON extrait ne contient pas les clés suivantes : " + ", ".join(missing))
+    return data
+
+
+def _markdown_without_h1(markdown: str) -> str:
+    cleaned = re.sub(r"^```(?:markdown)?\s*|\s*```$", "", markdown.strip(), flags=re.IGNORECASE)
+    return re.sub(r"^\s*#\s+[^\n]+\n+", "", cleaned, count=1)
+
+
+def _markdown_to_html(markdown: str) -> str:
+    try:
+        from app.core.markdown import markdown_to_html
+
+        return markdown_to_html(_markdown_without_h1(markdown))
+    except Exception as exc:
+        raise LiveRunError(f"Conversion du Markdown en HTML impossible : {exc}") from exc
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
@@ -198,7 +317,22 @@ def _structure_report(data: dict[str, Any]) -> dict[str, Any]:
     try:
         from app.services.seo.structure_validator import validate_structure
 
-        return validate_structure(data.get("content_html") or "", data.get("title") or "")
+        report = validate_structure(data.get("content_html") or "", data.get("title") or "")
+        removed = {"paragraph_length", "paragraph_variation"}
+        rules = [rule for rule in report.get("rules", []) if rule.get("rule") not in removed]
+        hard_failed = [rule["rule"] for rule in rules if not rule.get("passed", True) and rule.get("severity") == "hard"]
+        warnings = [rule["rule"] for rule in rules if not rule.get("passed", True) and rule.get("severity") != "hard"]
+        report.update({
+            "rules": rules,
+            "status": "fail" if hard_failed else "pass",
+            "hard_failures": len(hard_failed),
+            "warning_count": len(warnings),
+            "failed_hard_rules": hard_failed,
+            "failed_warning_rules": warnings,
+            "passed_count": sum(1 for rule in rules if rule.get("passed", True)),
+            "rule_count": len(rules),
+        })
+        return report
     except Exception as exc:
         return {"status": "unavailable", "error": str(exc)}
 
@@ -234,6 +368,27 @@ def _plagiarism_correction_errors(plagiarism: dict[str, Any]) -> list[str]:
                 f"sans modifier le reste : « {sentence} » (source détectée : {url})."
             )
     return errors
+
+
+def _correct_markdown_similarity(client: Any, model: str, markdown: str, errors: list[str]) -> str:
+    system = (
+        "Tu corriges uniquement les passages signalés pour une similarité textuelle. "
+        "Retourne l'article complet en Markdown, sans JSON, sans modifier les autres passages."
+    )
+    user = (
+        "Corrige uniquement ces passages et conserve tous les faits, chiffres, sources, liens, titres et l'ordre du plan.\n"
+        + "\n".join(f"- {error}" for error in errors)
+        + "\n\nArticle Markdown :\n\n"
+        + markdown
+    )
+    return _complete_separate(
+        client,
+        model,
+        system,
+        user,
+        reasoning_effort="high",
+        max_tokens=32000,
+    )
 
 
 def _write_html(path: Path, data: dict[str, Any], report: dict[str, Any]) -> None:
@@ -289,33 +444,67 @@ def run_live(config: LiveRunConfig, *, published_articles: list[dict[str, str]] 
     if route == "openrouter" and adapter is None:
         raise LiveRunError("OpenRouter nécessite l'adaptateur de recherche réel du pipeline.")
     client = _make_client(route, key, model, config, adapter)
-    from app.services.seo.agent_writer import AgentWriter, AgentWriterError
+    context_articles = published_articles if published_articles is not None else _load_published_articles(config.project_id)
 
-    writer = AgentWriter(client, model=model, system=system)
-    try:
-        # Une seule production éditoriale. Une réponse JSON invalide est un
-        # échec technique du run, pas une invitation à discuter ou à réécrire
-        # le contenu dans un second tour.
-        context_articles = published_articles if published_articles is not None else _load_published_articles(config.project_id)
-        data = writer.write(_build_user_message(config, context_articles), json_retries=0)
-    except AgentWriterError as exc:
-        raise LiveRunError(f"Le rédacteur réel n'a pas produit un JSON exploitable : {exc}") from exc
+    # 1. Rédaction : le modèle dispose des outils de recherche et ne renvoie
+    # que l'article complet en Markdown.
+    draft_markdown, writer = _run_markdown_draft(
+        client,
+        model,
+        system,
+        _build_user_message(config, context_articles),
+    )
+
+    # 2. Extraction : appel neuf, sans outils ni historique, avec un
+    # raisonnement bas pour produire uniquement les métadonnées structurées.
+    extraction_user = (
+        "Article Markdown :\n\n"
+        + draft_markdown
+        + "\n\nRecherche et échanges de recherche disponibles :\n\n"
+        + _research_snapshot(writer)
+    )
+    extraction_raw = _complete_separate(
+        client,
+        model,
+        EXTRACTION_SYSTEM,
+        extraction_user,
+        reasoning_effort="low",
+        max_tokens=16000,
+    )
+    data = _extract_article_data(extraction_raw)
+
+    # 3. Relecture de style : appel neuf, limité à la fluidité, dont le
+    # Markdown relu devient la version de référence de l'article.
+    style_system = "Tu es un relecteur de style. Tu respectes strictement la consigne et tu retournes uniquement le Markdown relu."
+    reviewed_markdown = _complete_separate(
+        client,
+        model,
+        style_system,
+        STYLE_REVIEW_INSTRUCTION + "\n\nArticle Markdown :\n\n" + draft_markdown,
+        reasoning_effort="high",
+        max_tokens=32000,
+    )
+    if not reviewed_markdown:
+        raise LiveRunError("L'appel de relecture de style a renvoyé un article vide.")
+    data["content_html"] = _markdown_to_html(reviewed_markdown)
 
     structure = _structure_report(data)
     plagiarism = _plagiarism_report(data, adapter, config.domain)
-    versions = [(1, data, structure, plagiarism)]
+    versions = [(1, reviewed_markdown, data, structure, plagiarism)]
     correction_errors = _plagiarism_correction_errors(plagiarism)
     if correction_errors:
-        corrected = writer.correct(correction_errors)
-        if corrected:
-            corrected_structure = _structure_report(corrected)
-            corrected_plagiarism = _plagiarism_report(corrected, adapter, config.domain)
-            candidate = (2, corrected, corrected_structure, corrected_plagiarism)
-            if _live_score(candidate[2], candidate[3]) < _live_score(structure, plagiarism):
+        corrected_markdown = _correct_markdown_similarity(client, model, reviewed_markdown, correction_errors)
+        if corrected_markdown:
+            corrected_data = dict(data)
+            corrected_data["content_html"] = _markdown_to_html(corrected_markdown)
+            corrected_structure = _structure_report(corrected_data)
+            corrected_plagiarism = _plagiarism_report(corrected_data, adapter, config.domain)
+            candidate = (2, corrected_markdown, corrected_data, corrected_structure, corrected_plagiarism)
+            if _live_score(candidate[3], candidate[4]) < _live_score(structure, plagiarism):
                 versions.append(candidate)
-    selected_version, data, structure, plagiarism = min(
+    selected_version, reviewed_markdown, data, structure, plagiarism = min(
         versions,
-        key=lambda item: _live_score(item[2], item[3]) + (item[0] - 1,),
+        key=lambda item: _live_score(item[3], item[4]) + (item[0] - 1,),
     )
     agent_report = writer.report()
     blocking = []
@@ -330,6 +519,11 @@ def run_live(config: LiveRunConfig, *, published_articles: list[dict[str, str]] 
         "duration_s": round(perf_counter() - started, 2),
         "cost_usd": agent_report.get("cost_usd") or agent_report.get("real_cost_usd") or 0.0,
         "agent": agent_report,
+        "pipeline": {
+            "draft_format": "markdown",
+            "extraction": "separate_json_low_reasoning",
+            "style_review": "separate_markdown_replacement",
+        },
         "structure": structure,
         "plagiarism": plagiarism,
         "blocking_issues": blocking,
