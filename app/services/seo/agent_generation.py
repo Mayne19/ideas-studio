@@ -783,6 +783,23 @@ def _finish_seo(orch, article: Article, draft, category_name: str, best: dict) -
             orch._step(f"EditorialJudge ({judgement['content_score']}/95)")
     except Exception as exc:
         orch._error("EditorialJudge", str(exc))
+    try:
+        # Juge v2 (grille du rédacteur en chef) : affiché par critère dans le
+        # CMS, « non étalonné » tant que l'étalonnage n'est pas validé.
+        from app.services.seo.editorial_judge_v2 import judge_v2
+
+        def judge_v2_call(prompt: str, step: str, temperature: float) -> str:
+            return orch._write_pass(prompt, "quality_gate", article, temperature, step)
+
+        v2 = judge_v2(draft.content, judge_v2_call, title=draft.title, keyword=draft.keyword or "",
+                      facts=[f for f in best.get("facts") or [] if isinstance(f, dict)],
+                      competitors=sorted(competitor_hosts(best)), faq=draft.faq or [], meta_title=draft.meta_title or "",
+                      meta_description=draft.meta_description or "", slug=article.slug or "")
+        orch._save(article.id, "editorial_judgement_v2", v2)
+        if not v2.get("error"):
+            orch._step(f"EditorialJudgeV2 ({v2['total']}/100, {v2['status']})")
+    except Exception as exc:
+        orch._error("EditorialJudgeV2", str(exc))
 
 
 def _fail(orch, article: Article, draft, category_name: str, message: str, writer, run_report: dict) -> Article:
