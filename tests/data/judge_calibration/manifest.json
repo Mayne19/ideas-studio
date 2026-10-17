@@ -1,0 +1,49 @@
+{
+  "articles": [
+    {
+      "name": "questionnaire en ligne",
+      "reference_score": 87,
+      "path": "questionnaire-90.md"
+    },
+    {
+      "name": "basilic",
+      "reference_score": 90,
+      "path": "basilic-90.md"
+    },
+    {
+      "name": "budget 50/30/20",
+      "reference_score": 90,
+      "path": "budget-50-30-20-90.md"
+    },
+    {
+      "name": "tache de gras, essai 1",
+      "reference_score": 80,
+      "article_id": "6b83f483-b4c0-466e-ac0c-483f2cff654b"
+    },
+    {
+      "name": "tache de gras, essai 2",
+      "reference_score": 78,
+      "article_id": "4066a97b-c1fe-44b4-81f5-06f2f9e73fc7"
+    },
+    {
+      "name": "décalage horaire, essai 4",
+      "reference_score": 84,
+      "article_id": "8a794c0c-ba49-4938-8cc6-c6e82f7e029f"
+    },
+    {
+      "name": "décalage horaire, essai 5",
+      "reference_score": 82,
+      "article_id": "d34f45fb-ee51-4adc-998a-50cca66d6ce7"
+    },
+    {
+      "name": "Notion contre Obsidian, ancien système",
+      "reference_score": 62,
+      "article_id": "c2cbe2d5-252c-4a4e-bb1b-91ed47d82db4"
+    },
+    {
+      "name": "reste à vivre, ancien système",
+      "reference_score": 45,
+      "article_id": "e089f2ef-0c91-4a9a-8e18-a87ee6b2be7a"
+    }
+  ]
+}
