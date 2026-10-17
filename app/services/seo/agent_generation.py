@@ -430,6 +430,74 @@ def correction_rounds(writer, check, data: dict, run_report: dict, step=lambda l
     return best, best_errors, plag_report
 
 
+REVIEW_SYSTEM = (
+    "Tu es un relecteur indépendant. Tu ne réécris rien : tu cherches uniquement les contradictions internes "
+    "d'un article.")
+REVIEW_INSTRUCTIONS = """Relis cet article.
+1. Repère chaque règle, seuil ou calcul que l'article pose lui-même (par exemple une formule, un rythme, une heure).
+2. Applique-les à chaque ligne de tableau, à chaque conseil, à la conclusion et à la FAQ.
+3. Compare aussi chaque affirmation chiffrée aux faits cités ci-dessous.
+Signale seulement une vraie contradiction : deux passages qui ne peuvent pas être vrais ensemble, ou un conseil
+qui contredit le calcul de l'article ou un fait cité. Ne signale ni le style, ni une simple reformulation, ni un
+arrondi (« 10 minutes » et « environ dix minutes » ne se contredisent pas).
+
+Réponds uniquement par ce JSON :
+{"contradictions": [{"passage": "texte exact de l'article", "probleme": "ce qui contredit quoi", "correction": "ce qu'il faut écrire"}]}
+Liste vide si l'article est cohérent.
+
+Faits cités :
+{facts}
+
+Article (HTML) :
+{content}"""
+
+
+def consistency_review(complete, candidate: dict) -> list[str]:
+    """Relecture indépendante (conversation neuve, sans outils) : les
+    contradictions trouvées deviennent des fautes dures à corriger."""
+    from app.services.seo.html_text_ops import extract_json_object
+
+    prompt = (REVIEW_INSTRUCTIONS.replace("{facts}", "\n".join(f"- {line}" for line in fact_lines(candidate)) or "- aucun")
+              .replace("{content}", candidate.get("content_html") or ""))
+    data = extract_json_object(complete(REVIEW_SYSTEM, prompt)) or {}
+    errors = []
+    for item in data.get("contradictions") or []:
+        if isinstance(item, dict) and str(item.get("passage") or "").strip():
+            errors.append(f"Contradiction interne : « {str(item['passage']).strip()[:300]} » : "
+                          f"{str(item.get('probleme') or '').strip()[:300]} Correction attendue : "
+                          f"{str(item.get('correction') or '').strip()[:300]}")
+    return errors
+
+
+def review_round(writer, check, complete, best: dict, best_errors: list, plag_report: dict,
+                 run_report: dict) -> tuple[dict, list, dict]:
+    """Relecture de cohérence puis, si elle trouve des contradictions, un tour
+    de correction. Le nouvel article n'est gardé que s'il n'ajoute aucune
+    faute dure ; une erreur (dont l'arrêt dur) garde l'article précédent."""
+    try:
+        review = consistency_review(complete, best)
+    except Exception as exc:
+        run_report["consistency_review"] = {"error": str(exc)[:300]}
+        return best, best_errors, plag_report
+    run_report["consistency_review"] = {"contradictions": review}
+    if not review:
+        return best, best_errors, plag_report
+    try:
+        corrected = writer.correct(best_errors + review)
+    except Exception as exc:
+        run_report["rounds"].append({"round": "relecture", "error": str(exc)[:300]})
+        return best, best_errors, plag_report
+    if corrected is None:
+        run_report["rounds"].append({"round": "relecture", "error": "JSON corrigé inexploitable"})
+        return best, best_errors, plag_report
+    errors, report = check(corrected)
+    run_report["rounds"].append({"round": "relecture", "errors": errors})
+    if len(errors) <= len(best_errors):
+        best, best_errors, plag_report = corrected, errors, report
+        run_report["remaining_errors"] = best_errors
+    return best, best_errors, plag_report
+
+
 def article_keyword(orch) -> str:
     return str((orch.context.get("idea_discovery") or {}).get("main_keyword") or "")
 
@@ -505,12 +573,13 @@ def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, 
     editor_notes = " ".join(x for x in (orch.context.get("expert_notes") or "", orch.context.get("context_hint") or "") if x)
     user_message = build_user_message(keyword=final_keyword, category=category_name, editor_notes=editor_notes or None,
                                       published_articles=published_articles(db, orch.project))
+    agent_settings = orch._agent_settings()
     if provider == "openrouter":
         from app.services.seo.agent_writer_openrouter import OpenRouterAgentClient, page_fetcher, reader_get
-        agent_settings = orch._agent_settings()
         fetch_fn = page_fetcher(orch.page_cache, fallback=reader_get if agent_settings["reader_fallback"] else None)
         client = OpenRouterAgentClient(api_key, model=model, search_fn=orch.serp_adapter.search, fetch_fn=fetch_fn,
-                                       max_searches=6, max_fetches=6, max_cost_usd=agent_settings["max_cost_usd"])
+                                       max_searches=6, max_fetches=6, max_cost_usd=agent_settings["max_cost_usd"],
+                                       reasoning_effort=agent_settings["reasoning_effort"])
     else:
         client = anthropic_client(api_key)
     writer = AgentWriter(client, model=model, system=system)
@@ -538,6 +607,10 @@ def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, 
         return errors + plag_errors, plag_report
 
     best, best_errors, plag_report = correction_rounds(writer, check, data, run_report, orch._step)
+    if agent_settings["consistency_review"] and callable(getattr(client, "complete", None)):
+        orch._step("AgentWriter relecture de cohérence")
+        best, best_errors, plag_report = review_round(writer, check, client.complete, best, best_errors,
+                                                      plag_report, run_report)
 
     content = best.get("content_html") or ""
     if orch._is_french():
