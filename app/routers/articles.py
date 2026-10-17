@@ -230,6 +230,13 @@ def schedule_article_route(
     member = get_member_for_project(db, current_user.id, article.project_id)
     if not member or member.role not in _MANAGE_ROLES:
         raise HTTPException(status_code=403, detail="Insufficient permissions to schedule")
+    from app.services.editorial_workflow_service import is_workflow_managed, schedule_for_publication
+    if is_workflow_managed(db, article.id):
+        report = schedule_for_publication(db, article, data.scheduled_at)
+        if not report["passed"]:
+            reasons = [check["detail"] for check in report["checks"] if not check["passed"]]
+            raise HTTPException(status_code=400, detail=f"Programmation bloquée : {'; '.join(reasons)}")
+        return to_public(db, article)
     return to_public(db, schedule_article_with_validation(db, article, data.scheduled_at))
 
 
