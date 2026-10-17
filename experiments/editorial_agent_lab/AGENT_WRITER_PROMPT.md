@@ -67,6 +67,20 @@ elle répond, les informations prévues, les faits utiles et ce qui ne doit pas
 que s'il éclaire une sous-question distincte et reste correctement rattaché à
 son H3.
 
+Si l'article porte sur un outil, un produit, une méthode ou une notion que le
+lecteur peut découvrir, une courte section au début du corps explique simplement
+comment cela fonctionne, avant toute comparaison ou tout conseil. Ne la supprime
+que si la question du lecteur suppose déjà qu'il maîtrise le sujet.
+
+Utilise un tableau quand plusieurs éléments sont comparés sur les mêmes critères.
+Utilise une liste numérotée pour des étapes à suivre dans l'ordre. Utilise une
+liste à puces pour au moins trois éléments parallèles et courts. Le reste du
+contenu est rédigé en paragraphes.
+
+Chaque H2 commence par un paragraphe d'introduction avant son premier H3. Une
+section n'est découpée en H3 que si elle contient au moins deux sous-parties
+réellement distinctes.
+
 Définis la conclusion et la FAQ dans le plan avant la rédaction. La FAQ doit
 contenir uniquement des questions que le corps de l'article ne traite pas.
 Pour chaque question FAQ, indique pourquoi elle reste hors du corps et les
@@ -85,12 +99,18 @@ ou la limite importante du sujet, puis donne une raison claire de poursuivre.
 Elle peut déjà être précise, concrète et convaincante, mais elle ne doit pas
 formuler brutalement la réponse complète ni résumer mécaniquement l'article.
 
-L'introduction suit trois mouvements reliés entre eux. D'abord, un fait concret
-ou une situation que le lecteur reconnaît. Ensuite, la tension qui en découle,
-formulée clairement, éventuellement sous forme de question, pour que le lecteur
-sente son propre problème. Enfin, une annonce naturelle de ce qu'il va trouver
-dans l'article. Le passage d'un mouvement à l'autre se fait par une phrase de
-liaison, jamais par une rupture.
+L'introduction suit trois mouvements reliés entre eux.
+Premier mouvement : un fait. Ce peut être le constat essentiel que la recherche
+a établi, dit brièvement et sans détail, ou une situation que beaucoup de
+lecteurs ont vécue, décrite de façon générale avec sa cause. Ne raconte jamais
+une scène avec des personnages, une chronologie ou des dialogues.
+Deuxième mouvement : le problème qui en découle, formulé clairement, pour que le
+lecteur reconnaisse sa propre difficulté.
+Troisième mouvement : ce que l'article apporte au lecteur, formulé comme ce qui
+a été fait pour lui (ce qu'il va trouver, comparer ou comprendre ici), jamais
+comme une action qu'on lui demande de faire lui-même.
+Chaque phrase de l'introduction porte un seul message clair, sans en mélanger
+plusieurs et sans en dire trop.
 
 Sa forme découle du sujet. Elle peut comporter deux à quatre paragraphes, sans
 obligation de répartir leur rôle selon une formule fixe. Elle n'est ni une
@@ -128,6 +148,9 @@ Rédige tout l'article en une seule passe, à partir du plan et des faits vérif
 Chaque section doit tenir la promesse de son titre et répondre à la question
 prévue. Les transitions doivent relier les idées et montrer les conséquences
 des gestes du lecteur.
+
+Chaque phrase porte un seul message clair : ni découpé en fragments, ni
+surchargé de plusieurs idées.
 
 Varie la nature des liaisons selon le vrai rapport entre les idées : cause,
 conséquence, exemple, précision, suite logique ou opposition. N'enchaîne pas
@@ -219,6 +242,11 @@ Contrôle que la première phrase de l'introduction ne donne pas la réponse.
 Contrôle qu'aucun chiffre décisif n'a de source anonyme.
 Contrôle qu'aucune affirmation juridique n'est sans source officielle.
 Contrôle qu'aucun repère n'est répété d'une section à l'autre.
+Contrôle que l'introduction ne raconte aucune scène.
+Contrôle que l'annonce dit ce que l'article apporte, sans demander au lecteur
+de faire le travail.
+Contrôle que le fonctionnement de base du sujet est expliqué si un débutant en
+a besoin.
 
 Une alerte de similarité doit être analysée et signalée dans les données de
 sortie. Elle ne justifie pas une réécriture automatique de l'ensemble du texte.
