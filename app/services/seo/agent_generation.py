@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
 import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -196,7 +197,7 @@ def competitor_hosts(candidate: dict) -> set[str]:
 
 _COMMON_TWO_LEVEL_SUFFIXES = {
     "co.uk", "org.uk", "ac.uk", "gov.uk", "com.au", "net.au", "org.au", "co.nz", "co.jp",
-    "co.in", "com.br", "com.cn", "com.mx", "com.sg", "com.tr", "co.za",
+    "co.in", "com.br", "com.cn", "com.mx", "com.sg", "com.tr", "co.za", "gouv.fr", "gc.ca", "qc.ca",
 }
 
 
@@ -211,8 +212,29 @@ def _registered_domain(host: str) -> str:
 
 def _brand_variants(host: str) -> set[str]:
     """« linge-net.com » -> {« linge-net », « linge net », « lingenet »}."""
-    label = host.split(".")[-2] if host.count(".") >= 1 else host
+    label = host.split(".")[0] if host.count(".") >= 1 else host
+    label = _fold_accents(label)
     return {v for v in (label, label.replace("-", " "), label.replace("-", "")) if len(v) >= 4}
+
+
+def _fold_accents(value: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFKD", value) if not unicodedata.combining(c))
+
+
+_COMMON_WORD_BRANDS = {"ideal"}
+
+
+def _mentions_competitor(raw_text: str, name: str) -> bool:
+    """Match brands with accents, while avoiding common-word false positives."""
+    folded = _fold_accents(raw_text)
+    for match in re.finditer(r"(?<![\w-])" + re.escape(name) + r"(?![\w-])", folded, re.IGNORECASE):
+        original = raw_text[match.start():match.end()]
+        if name in _COMMON_WORD_BRANDS and original == original.lower():
+            prefix = folded[max(0, match.start() - 18):match.start()]
+            if not re.search(r"(?:site|magazine|blog)\s+$", prefix, re.IGNORECASE):
+                continue
+        return True
+    return False
 
 
 def competitor_errors(candidate: dict) -> list[str]:
@@ -226,10 +248,11 @@ def competitor_errors(candidate: dict) -> list[str]:
     for url in re.findall(r"""<a\b[^>]*href\s*=\s*["']([^"']+)["']""", content, re.IGNORECASE):
         if _registered_domain(_host(url)) in hosts:
             errors.append(f"Lien vers un concurrent ({_host(url)}) : supprime ce lien, un concurrent n'est jamais une source.")
-    text = html_to_text(content).lower()
+    raw_text = html_to_text(content)
+    text = raw_text.lower()
     for host in hosts:
         for name in _brand_variants(host):
-            if re.search(r"(?<![\w-])" + re.escape(name) + r"(?![\w-])", text):
+            if _mentions_competitor(raw_text, name):
                 errors.append(f"Le texte nomme le concurrent « {name} » : retire toute mention des concurrents.")
                 break
     if re.search(r"\b(sites concurrents|certains sites|conseils (trouvés )?en ligne)\b", text):
@@ -282,10 +305,12 @@ def self_review_errors(candidate: dict) -> list[str]:
         r"pas\s+d['’]une\s+source(?:\s+lue)?|ne\s+vient\s+pas\s+d['’]une\s+source|"
         r"faute\s+de\s+source)", re.IGNORECASE)
     negated = re.compile(
-        r"\b(?:aucun|aucune|rien|jamais)\b.{0,40}"
+        r"\b(?:(?:aucun|aucune|rien|jamais|ni)\b.{0,40}|"
+        r"(?:pas\s+de|n['’]\w*\s+pas|plus\s+de)\b.{0,40})"
         r"(?:connaissances générales|de mémoire|sans\s+(?:source|citation)|"
         r"non\s+sourc(?:é|ée|és|ées)|non\s+vérifi(?:é|ée|és|ées))\b", re.IGNORECASE)
-    for sentence in re.split(r"(?<=[.!?])\s+", notes):
+    for sentence in re.split(r"(?<=[.!?;])\s+|,\s+(?=(?:mais|sauf|cependant|toutefois)\b)", notes,
+                             flags=re.IGNORECASE):
         if suspicious.search(sentence) and not negated.search(sentence):
             return ["L'auto-relecture reconnaît un fait non sourcé : supprime-le ou ajoute une citation exacte."]
     return []
@@ -295,7 +320,13 @@ def prose_count_errors(content: str) -> list[str]:
     """« deux gestes à faire dans l'ordre » suivi d'une liste de trois
     éléments : faute dure."""
     errors = []
+
+    def inside(tag: str, position: int) -> bool:
+        return content.lower().rfind(f"<{tag}", 0, position) > content.lower().rfind(f"</{tag}", 0, position)
+
     for m in _PROSE_COUNT_RE.finditer(content or ""):
+        if inside("blockquote", m.start()) or inside("table", m.start()):
+            continue
         if re.search(r"<h[23]\b[^>]*>[^<]*$", content[:m.start()], re.IGNORECASE):
             continue  # dans un titre : vérifié par announced_count_errors
         after = content[m.end():m.end() + 4000]

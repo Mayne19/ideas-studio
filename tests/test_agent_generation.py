@@ -56,7 +56,11 @@ def test_competitor_and_prose_count_hard_faults():
     assert prose_count_errors("<p>Retenez un seul geste :</p><ol><li>a</li><li>b</li></ol>")
     assert not prose_count_errors("<p>Retenez trois gestes :</p><ol><li>a</li><li>b</li><li>c</li></ol>")
     assert not prose_count_errors("<p>Attendez deux heures avant de recommencer.</p>")
-    assert not prose_count_errors("<blockquote>Les deux gestes sont parfois confondus.</blockquote>")
+    assert not prose_count_errors("<blockquote>Les deux gestes sont parfois confondus.</blockquote>"
+                                  "<ol><li>a</li><li>b</li></ol>")
+    assert not prose_count_errors("<p>La dose est de 2 mg.</p><ol><li>a</li><li>b</li></ol>")
+    assert not prose_count_errors("<table><tr><td>Deux gestes</td></tr></table>"
+                                  "<ol><li>a</li><li>b</li></ol>")
     assert not prose_count_errors("<p>Retenez deux gestes dans cette phrase, sans liste à suivre.</p>")
 
 
@@ -95,6 +99,9 @@ def test_fact_url_matching_decodes_path_and_self_review_handles_negation_and_agr
     assert self_review_errors({"self_review": {"notes": "Deux chiffres non vérifiés."}})
     assert self_review_errors({"self_review": {"notes": "Une mise en garde non sourcée."}})
     assert self_review_errors({"self_review": {"notes": "Les faits viennent de connaissances générales, pas d'une source lue."}})
+    assert self_review_errors({"self_review": {"notes": "Il n'y a pas de fait non vérifié."}}) == []
+    assert self_review_errors({"self_review": {"notes": "Je n'ai rien écrit de mémoire."}}) == []
+    assert self_review_errors({"self_review": {"notes": "Aucun fait non sourcé, mais deux chiffres restent non vérifiés."}})
 
 
 def test_competitor_matching_uses_registered_domain_without_suffix_false_positive():
@@ -109,3 +116,22 @@ def test_competitor_matching_uses_registered_domain_without_suffix_false_positiv
     errors = " | ".join(competitor_errors(candidate))
     assert "Lien vers un concurrent" in errors
     assert "Seulement" not in errors
+
+    clean = {**candidate, "sources": [{"url": "https://notideal.fr/a"}, {"url": "https://one.example/a"},
+                                        {"url": "https://two.example/a"}, {"url": "https://three.example/a"}]}
+    ideal_text = {**clean, "content_html": "<p>Idéal le reconnaît.</p>"}
+    assert any("ideal" in error for error in competitor_errors(ideal_text))
+    assert not any("concurrent" in error.lower() for error in competitor_errors(
+        {**clean, "content_html": "<p>Le moment idéal arrive.</p>"}))
+    assert not any("concurrent" in error.lower() for error in competitor_errors(
+        {**clean, "content_html": "<p>La température idéale convient.</p>"}))
+
+    ariel = {**clean, "competitors": [{"url": "https://ariel.co.uk/a"}],
+             "content_html": "<p>Ariel conseille cette méthode.</p>"}
+    assert any("ariel" in error for error in competitor_errors(ariel))
+
+    public_sources = {**candidate, "competitors": [], "sources": [
+        {"url": "https://sante.gouv.fr/a"}, {"url": "https://service-public.gouv.fr/a"},
+        {"url": "https://one.example/a"},
+    ]}
+    assert not any("Seulement" in error for error in competitor_errors(public_sources))
