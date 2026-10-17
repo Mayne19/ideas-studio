@@ -44,6 +44,10 @@ JUDGE_CRITERIA: dict[str, tuple[int, str]] = {
 }
 CODE_STRUCTURE_POINTS = 5
 CODE_SEO_POINTS = 5
+# Mode strict : un calcul montré ou un exemple annoncé n'est pas un chiffre
+# non sourcé (sinon le tour de correction supprime l'apport d'information).
+STRICT_FACTS_CALCULATION_RULE = ("Un nombre obtenu par un calcul montré dans l'article à partir de faits de la liste, "
+                                 "ou présenté explicitement comme un exemple, n'est pas non sourcé. Ne le signale pas.")
 BLOCKER_TYPES = ("invented_fact", "unsourced_figure", "contradiction", "intent_missed", "missing_component",
                  "off_topic_fact", "meta_commentary", "reader_drop", "unexplained_jargon", "commercial_copy",
                  "heading_mismatch", "obvious_filler", "plagiarism")
@@ -133,7 +137,8 @@ def build_judge_prompt(content: str, *, title: str, keyword: str, brief: dict, f
     if strict_facts:
         parts += ["", "Toute affirmation technique, chimique, de santé, de sécurité ou sur un symbole absente de cette "
                       "liste de faits est non sourcée : pénalise accuracy et sources, et signale-la (unsourced_figure "
-                      "si c'est un chiffre)."]
+                      "si c'est un chiffre).",
+                  STRICT_FACTS_CALCULATION_RULE]
     if competitors:
         parts += ["", "Concurrents (ne doivent jamais être nommés, cités ni liés dans l'article ; une mention est une "
                       "faute grave) : " + ", ".join(competitors)]
