@@ -26,6 +26,9 @@ MAX_TOOL_STEPS = 40
 # Pages lues en entier ou presque (un concurrent de 3 000 mots ≈ 18 000
 # caractères) : moins de pages, mais complètes (consigne du 2026-10-17).
 PAGE_CHARS = 20_000
+# En dessous, l'extraction a probablement raté le corps de la page (bannière,
+# mur de cookies) : on tente le lecteur de secours.
+MIN_PAGE_CHARS = 1_500
 REASONING_EFFORT = "low"
 MAX_COST_USD = 3.0
 
@@ -55,13 +58,18 @@ class OpenRouterAgentClient:
     def __init__(self, api_key: str, *, search_fn: Callable[[str, int], list[dict]],
                  fetch_fn: Callable[[str], str], model: str = OPENROUTER_AGENT_MODEL,
                  max_searches: int = 10, max_fetches: int = 15, post: Callable | None = None,
-                 timeout_seconds: float = 600.0, max_cost_usd: float = MAX_COST_USD):
+                 timeout_seconds: float = 600.0, max_cost_usd: float = MAX_COST_USD,
+                 max_failed_fetches: int = 6):
         self.api_key = api_key
         self.model = model
         self.search_fn = search_fn
         self.fetch_fn = fetch_fn
         self.max_searches = max_searches
         self.max_fetches = max_fetches
+        self.max_failed_fetches = max_failed_fetches
+        self.failed_fetches = 0
+        self.fetch_log: list[dict] = []
+        self.search_log: list[str] = []
         self.timeout_seconds = timeout_seconds
         self._post = post
         self.max_cost_usd = max_cost_usd
@@ -86,18 +94,27 @@ class OpenRouterAgentClient:
             if self.searches >= self.max_searches:
                 return "Limite de recherches atteinte : rédige avec ce que tu as déjà."
             self.searches += 1
+            self.search_log.append(str(args.get("query") or ""))
             results = self.search_fn(str(args.get("query") or ""), 10) or []
             return json.dumps([{"title": r.get("title", ""), "url": r.get("url") or r.get("link", ""),
                                 "snippet": r.get("snippet", "")} for r in results], ensure_ascii=False)
         if name == "web_fetch":
             if self.fetches >= self.max_fetches:
                 return "Limite de pages lues atteinte : rédige avec ce que tu as déjà."
-            self.fetches += 1
+            if self.failed_fetches >= self.max_failed_fetches:
+                return "Limite d'échecs de lecture atteinte : rédige avec ce que tu as déjà."
             url = str(args.get("url") or "")
             text = self.fetch_fn(url) or ""
             if not text.strip():
+                # Une page illisible n'ajoute rien au contexte : elle ne consomme
+                # pas le budget de lectures, mais un plafond d'échecs séparé.
+                self.failed_fetches += 1
+                self.fetch_log.append({"url": url, "chars": 0, "failed": True})
                 return (f"ÉCHEC DE LECTURE : la page {url} est vide, bloquée ou illisible. "
-                        "Choisis une autre page (autre concurrent ou autre source).")
+                        "Cet échec ne compte pas dans ton budget de pages : choisis une autre page "
+                        "(autre concurrent ou autre source).")
+            self.fetches += 1
+            self.fetch_log.append({"url": url, "chars": len(text), "failed": False})
             return text[:PAGE_CHARS]
         return f"Outil inconnu : {name}"
 
@@ -155,8 +172,28 @@ class OpenRouterAgentClient:
         raise RuntimeError("trop d'étapes d'outils sans réponse finale")
 
 
-def page_fetcher(cache=None) -> Callable[[str], str]:
-    """Lecture d'une page avec le cache et l'extracteur du pipeline."""
+READER_URL = "https://r.jina.ai/"
+READER_TIMEOUT_SECONDS = 25.0
+
+
+def reader_get(url: str, timeout: float = READER_TIMEOUT_SECONDS) -> str:
+    """Lecture de secours par un lecteur externe (page rendue puis convertie
+    en texte) : utile pour les sites qui refusent les robots simples. Une
+    page d'erreur (4xx/5xx) est traitée comme un échec."""
+    import httpx
+
+    resp = httpx.get(READER_URL + url, timeout=timeout, headers={"Accept": "text/plain"})
+    if resp.status_code >= 400:
+        return ""
+    text = resp.text
+    if "Warning: Target URL returned error" in text[:1000]:
+        return ""
+    return text.split("Markdown Content:", 1)[-1].strip()
+
+
+def page_fetcher(cache=None, fallback: Callable[[str], str] | None = reader_get) -> Callable[[str], str]:
+    """Lecture d'une page avec le cache et l'extracteur du pipeline, puis le
+    lecteur de secours si la page est vide ou bloquée (robots.txt respecté)."""
     from app.services.seo.adapters.content_extraction_adapter import content_extraction_adapter
     from app.services.seo.page_cache import PageCache
 
@@ -164,8 +201,13 @@ def page_fetcher(cache=None) -> Callable[[str], str]:
 
     def fetch(url: str) -> str:
         html = cache.get_html(url)
-        if not html:
-            return ""
-        extracted = content_extraction_adapter.extract_from_html(html, url) or {}
-        return extracted.get("text") or ""
+        text = ""
+        if html:
+            text = (content_extraction_adapter.extract_from_html(html, url) or {}).get("text") or ""
+        if len(text.strip()) < MIN_PAGE_CHARS and fallback is not None and cache.allowed(url):
+            try:
+                text = fallback(url) or text
+            except Exception as exc:  # réseau, délai : la lecture reste un échec
+                logger.debug("lecteur de secours : échec %s : %s", url, exc)
+        return text
     return fetch
