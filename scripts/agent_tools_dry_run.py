@@ -20,10 +20,10 @@ from urllib.parse import urlsplit
 # publiques, organismes techniques et scientifiques. Indicatif seulement.
 # Comparés au domaine enregistré, comme le validateur (_registered_domain) :
 # www.cdc.gov, wwwnc.cdc.gov et cdc.gov comptent pour un seul domaine.
-ADMISSIBLE_SUFFIXES = (".gouv.fr", ".gov", ".gc.ca", ".europa.eu", ".admin.ch", ".be")
+ADMISSIBLE_SUFFIXES = (".gouv.fr", ".gov", ".gc.ca", ".europa.eu", ".admin.ch", ".belgium.be", ".fgov.be")
 ADMISSIBLE_HOSTS = {"ameli.fr", "anses.fr", "inserm.fr", "has-sante.fr", "santepubliquefrance.fr", "who.int", "nhs.uk",
                     "cnrs.fr", "pasteur.fr", "quechoisir.org", "60millions-mag.com", "test-achats.be",
-                    "ginetex.net", "pubmed.ncbi.nlm.nih.gov", "cochranelibrary.com", "vidal.fr"}
+                    "ginetex.net", "cochranelibrary.com", "vidal.fr"}
 SKIPPED_HOSTS = ("youtube.com", "facebook.com", "instagram.com", "tiktok.com", "reddit.com", "pinterest.")
 
 
@@ -40,7 +40,8 @@ def domain_of(url: str) -> str:
 
 def admissible(url: str) -> bool:
     domain = domain_of(url)
-    return domain in ADMISSIBLE_HOSTS or any(domain.endswith(s) for s in ADMISSIBLE_SUFFIXES)
+    # Un suffixe couvre aussi le domaine lui-même (health.belgium.be donne belgium.be).
+    return domain in ADMISSIBLE_HOSTS or any(domain.endswith(s) or domain == s[1:] for s in ADMISSIBLE_SUFFIXES)
 
 
 def run(project_id: str, keyword: str, queries: list[str], max_urls: int, fallback: bool, per_query: int = 4) -> str:

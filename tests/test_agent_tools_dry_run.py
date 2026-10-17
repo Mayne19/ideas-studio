@@ -24,3 +24,10 @@ def test_registered_domain_matches_the_validator():
     assert dry_run.domain_of("https://presse.inserm.fr/a") == "inserm.fr" and dry_run.admissible("https://presse.inserm.fr/a")
     assert dry_run.domain_of("https://sante.gouv.fr/x") == "sante.gouv.fr" and dry_run.admissible("https://sante.gouv.fr/x")
     assert dry_run.domain_of("https://notcdc.gov.example.com/") == "example.com"
+
+
+def test_belgian_sources_use_precise_suffixes():
+    assert not dry_run.admissible("https://www.exemple-boutique.be/decalage")
+    assert dry_run.admissible("https://www.health.belgium.be/fr/jet-lag")
+    assert dry_run.admissible("https://www.test-achats.be/sante")
+    assert dry_run.admissible("https://pubmed.ncbi.nlm.nih.gov/123/")
