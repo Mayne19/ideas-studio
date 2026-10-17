@@ -1,0 +1,90 @@
+{
+  "meta_title": "Application gratuite pour apprendre une langue : que choisir",
+  "meta_description": "Duolingo, Busuu, Memrise, Anki, HelloTalk : ce que chaque version gratuite permet réellement et comment choisir l'application adaptée à votre objectif.",
+  "slug": "application-gratuite-apprendre-langue",
+  "mot_cle_principal": "application gratuite pour apprendre une langue",
+  "sources": [
+    {
+      "titre": "Duolingo : pourquoi Duolingo est passé à l'énergie",
+      "url": "https://blog.duolingo.com/duolingo-energy/"
+    },
+    {
+      "titre": "Duolingo : lancement de Super Duolingo",
+      "url": "https://blog.duolingo.com/super-duolingo-launch/"
+    },
+    {
+      "titre": "Duolingo : guide de l'onglet d'entraînement",
+      "url": "https://blog.duolingo.com/guide-to-duolingo-practice-hub/"
+    },
+    {
+      "titre": "Busuu : nouvelles fonctionnalités et contenu de cours gratuit",
+      "url": "https://blog.busuu.com/busuu-new-features/"
+    },
+    {
+      "titre": "Busuu : formules Premium",
+      "url": "https://www.busuu.com/en/premium-plans"
+    },
+    {
+      "titre": "Memrise : FAQ",
+      "url": "https://explore.memrise.com/help"
+    },
+    {
+      "titre": "Babbel : tester Babbel gratuitement",
+      "url": "https://www.babbel.com/test-babbel-for-free"
+    },
+    {
+      "titre": "Anki : site officiel",
+      "url": "https://apps.ankiweb.net/"
+    },
+    {
+      "titre": "HelloTalk : site officiel",
+      "url": "https://www.hellotalk.com"
+    },
+    {
+      "titre": "Language Transfer : cours gratuits",
+      "url": "https://www.languagetransfer.org/courses"
+    }
+  ],
+  "images": [
+    {
+      "apres_le_titre": "Duolingo et Busuu pour suivre un cours complet",
+      "montre": "Capture de la version gratuite de Duolingo avec la jauge d'énergie presque vide et les options proposées pour la recharger",
+      "texte_alternatif": "Jauge d'énergie de la version gratuite de Duolingo avec les options pour la recharger"
+    },
+    {
+      "apres_le_titre": "Memrise et Anki pour retenir le vocabulaire",
+      "montre": "Écran de révision Anki avec une fiche retournée et les boutons qui indiquent la difficulté ressentie, ce qui détermine la date de la prochaine révision",
+      "texte_alternatif": "Fiche de vocabulaire en révision dans Anki avec les boutons de difficulté"
+    },
+    {
+      "apres_le_titre": "HelloTalk pour parler avec des natifs",
+      "montre": "Conversation HelloTalk dans laquelle un natif corrige une phrase de l'apprenant grâce à l'outil de correction intégré",
+      "texte_alternatif": "Phrase corrigée par un natif dans une conversation HelloTalk"
+    }
+  ],
+  "liens_internes_places": [],
+  "liens_internes_suggeres": [
+    "Mémoriser le vocabulaire d'une langue avec la répétition espacée",
+    "Trouver un partenaire d'échange linguistique et préparer ses premières conversations",
+    "Apprendre une langue en écoutant des podcasts",
+    "Se préparer à un examen de langue officiel"
+  ],
+  "faq": [
+    {
+      "question": "Faut-il donner sa carte bancaire pour utiliser une version gratuite ?",
+      "reponse": "Non, une adresse e-mail suffit en général. La carte n'est demandée que pour un abonnement ou l'essai d'une formule payante."
+    },
+    {
+      "question": "Existe-t-il des cours gratuits à écouter sans regarder l'écran ?",
+      "reponse": "Oui, Language Transfer propose des cours audio gratuits, sans publicité ni inscription, mais donnés en anglais. Babbel publie aussi des podcasts gratuits."
+    },
+    {
+      "question": "Combien de temps faut-il pratiquer chaque jour ?",
+      "reponse": "Une courte séance quotidienne vaut mieux qu'une longue séance par semaine, car des révisions régulières ancrent mieux les mots en mémoire."
+    },
+    {
+      "question": "Une application gratuite suffit-elle pour préparer un examen de langue ?",
+      "reponse": "Non, pas à elle seule. Complétez-la avec les sujets d'exemple publiés par l'organisme qui fait passer l'examen."
+    }
+  ]
+}
