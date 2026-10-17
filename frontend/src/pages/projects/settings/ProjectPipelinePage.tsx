@@ -74,6 +74,8 @@ export default function ProjectPipelinePage() {
   const [ideasPerRun, setIdeasPerRun] = useState(2)
   const [minPublishScore, setMinPublishScore] = useState(90)
   const [generationMode, setGenerationMode] = useState<'agent' | 'pipeline'>('agent')
+  const [agentMaxCost, setAgentMaxCost] = useState('3')
+  const [agentReaderFallback, setAgentReaderFallback] = useState(true)
 
   useEffect(() => {
     if (!projectId) return
@@ -96,6 +98,8 @@ export default function ProjectPipelinePage() {
         setIdeasPerRun(s.ideas_per_run ?? 2)
         setMinPublishScore(s.min_publish_score ?? 90)
         setGenerationMode(s.generation_mode ?? 'agent')
+        setAgentMaxCost(String(s.agent_max_cost_usd ?? 3))
+        setAgentReaderFallback(s.agent_reader_fallback ?? true)
         setLogs(l)
         setLoadStatus('success')
         setLoadError('')
@@ -132,6 +136,8 @@ export default function ProjectPipelinePage() {
         ideas_per_run: ideasPerRun,
         min_publish_score: minPublishScore,
         generation_mode: generationMode,
+        agent_max_cost_usd: Math.max(0.1, Math.min(20, Number(agentMaxCost) || 3)),
+        agent_reader_fallback: agentReaderFallback,
       })
       setSettings(updated)
       setDirty(false)
@@ -296,6 +302,46 @@ export default function ProjectPipelinePage() {
             L'agent cherche, lit les concurrents et les sources, puis rédige l'article d'un seul tenant. Clé dans Fournisseurs IA (Anthropic), modèle dans Agents (agent_writer).
           </p>
         </div>
+
+        {generationMode === 'agent' && (
+          <div className="flex flex-col gap-4">
+            <div>
+              <label htmlFor="agent-max-cost" className="mb-1.5 block text-[12px] font-medium text-secondary">
+                Arrêt dur du coût par article (agent)
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="agent-max-cost"
+                  type="number"
+                  min={0.1}
+                  max={20}
+                  step={0.1}
+                  value={agentMaxCost}
+                  onChange={(e) => { setAgentMaxCost(e.target.value); setDirty(true) }}
+                  className="h-9 w-24 rounded-[8px] border border-border bg-transparent px-2.5 text-[12px] text-primary"
+                />
+                <span className="text-[12px] text-tertiary">$ (facturation OpenRouter)</span>
+              </div>
+              <p className="mt-1.5 text-[11px] text-tertiary">
+                La rédaction s'arrête dès que le coût cumulé de l'agent dépasse ce montant ; le rapport garde ce qui a été produit.
+              </p>
+            </div>
+            <label className="flex items-start gap-2 text-[12px] text-secondary">
+              <input
+                type="checkbox"
+                checked={agentReaderFallback}
+                onChange={(e) => { setAgentReaderFallback(e.target.checked); setDirty(true) }}
+                className="mt-0.5"
+              />
+              <span>
+                Lecture de secours des pages (r.jina.ai)
+                <span className="mt-0.5 block text-[11px] text-tertiary">
+                  Utilisée seulement si la lecture directe échoue ou rend moins de 1 500 caractères. Service gratuit, limité en débit : le rapport indique chaque refus (429).
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
       </Card>
 
       {/* Planification (visible seulement si activé) */}

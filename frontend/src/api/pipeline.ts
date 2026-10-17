@@ -22,6 +22,9 @@ export type PipelineSettings = {
   min_publish_score: number
   // « agent » : agent rédacteur unique ; « pipeline » : ancienne chaîne.
   generation_mode?: 'agent' | 'pipeline'
+  // Agent rédacteur : arrêt dur du coût d'un article (dollars) et lecture de secours.
+  agent_max_cost_usd?: number
+  agent_reader_fallback?: boolean
   max_parallel_writing_jobs?: number | null
   total_monthly_from_categories: number | null
   categories_frequencies: Array<{
@@ -52,6 +55,8 @@ export type PipelineSettingsUpdate = {
   ideas_per_run?: number
   min_publish_score?: number
   generation_mode?: 'agent' | 'pipeline'
+  agent_max_cost_usd?: number
+  agent_reader_fallback?: boolean
 }
 
 export type PipelineLog = {
