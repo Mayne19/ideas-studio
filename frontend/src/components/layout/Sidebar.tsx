@@ -11,6 +11,7 @@ import {
   Calendar03Icon,
   ChartBarLineIcon,
   DashboardSquare01Icon,
+  BellIcon,
   File01Icon,
   Folder01Icon,
   Image01Icon,
@@ -172,6 +173,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
               <SidebarSection title="Analytics" collapsed={collapsed}>
                 <SidebarLink to={`/projects/${projectId}/analytics`} icon={<HugeIcon icon={ChartBarLineIcon} size={15} />} label="Analytics" collapsed={collapsed} />
                 <SidebarLink to={`/projects/${projectId}/recommendations`} icon={<HugeIcon icon={MagicWand01Icon} size={15} />} label="Optimisations" collapsed={collapsed} />
+                <SidebarLink to={`/projects/${projectId}/notifications`} icon={<HugeIcon icon={BellIcon} size={15} />} label="Notifications" collapsed={collapsed} />
               </SidebarSection>
 
               <SidebarSection title="Projet" collapsed={collapsed}>
