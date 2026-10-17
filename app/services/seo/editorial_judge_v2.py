@@ -29,12 +29,17 @@ MODEL_CRITERIA: dict[str, tuple[int, str]] = {
                              "fait inventé, aucune contradiction, équilibre des sources"),
     "information_gain": (15, "Apport d'information et originalité : au moins deux éléments absents des concurrents "
                              "(outil de décision, calcul vérifié, fait contre-intuitif)"),
-    "readability": (15, "Lisibilité et clarté : phrases reliées, mots simples, termes techniques expliqués, ni "
-                        "phrases hachées, ni personnification, ni excès de modalisateurs"),
+    "readability": (15, "Lisibilité et clarté : phrases reliées, aucune phrase isolée sans lien avec les autres, "
+                        "mots simples, termes techniques expliqués, ni phrases hachées, ni personnification, ni excès "
+                        "de modalisateurs, aucune ouverture interdite (« Voici », « Le principe est simple », "
+                        "« Le piège consiste à », « Imaginez », « Franchement »), aucune phrase qui commente l'article "
+                        "lui-même (« cet article », « les sources consultées », « nous retenons »)"),
     "intent": (10, "Réponse et intention de recherche : réponse dans les 60 premiers mots, besoin réel du lecteur "
                    "couvert"),
-    "introduction": (10, "Introduction : moment du lecteur, problématique liée à l'idée générale, annonce qui "
-                         "promet un gain"),
+    "introduction": (10, "Introduction : l'idée générale part du moment que vit le lecteur et lui donne tout de "
+                         "suite quoi faire (jamais une définition ni une explication technique en première phrase) ; "
+                         "la problématique découle logiquement de cette idée et décrit le doute concret du lecteur ; "
+                         "l'annonce promet un gain précis, pas une liste neutre de sujets"),
     "structure": (10, "Structure et promesses : chaque titre correspond à sa section, nombres annoncés justes, "
                       "aucune répétition, conclusion avant la FAQ"),
     "tone": (5, "Ton et engagement : calme, « vous » qui responsabilise, une scène vécue"),
@@ -127,8 +132,9 @@ def build_prompt(content: str, *, title: str, keyword: str, measured: dict, fact
 
     criteria = "\n".join(f"- {k} (sur {pts}) : {desc}" for k, (pts, desc) in MODEL_CRITERIA.items())
     faq_lines = "\n".join(f"- Q : {f.get('question', '')}\n  R : {f.get('answer', '')}" for f in faq or []) or "- aucune"
-    fact_block = "\n".join(f"- {f}" for f in facts[:40]) or ("- aucune liste fournie : juge les sources d'après les "
-                                                           "liens et attributions présents dans l'article")
+    fact_block = "\n".join(f"- {f}" for f in facts[:40]) or (
+        "- aucune liste fournie : juge les sources d'après les liens et attributions présents dans l'article. "
+        "N'exige aucune citation mot pour mot et ne retire aucun point pour l'absence de liste de faits.")
     return "\n".join([
         "Tu es le rédacteur en chef d'un site éditorial français. Tu notes un article de blog avec une grille stricte, "
         "pour un lecteur débutant qui veut une réponse fiable et agréable à lire. Un article noté 90 est publiable "

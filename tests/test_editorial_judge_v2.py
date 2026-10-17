@@ -64,3 +64,17 @@ def test_prompt_contains_measures_facts_and_competitors():
     prompt = seen[0]
     assert "une heure par jour" in prompt and "lonelyplanet.fr" in prompt and "Q ?" in prompt
     assert "mots par phrase" in prompt and "calcul montré" in prompt
+
+
+def test_without_facts_the_judge_does_not_require_verbatim_quotes():
+    seen = []
+    out = judge_v2("# Basilic\n\nSi votre basilic meurt, arrosez moins. Selon [l'Inrae](https://inrae.fr/x), "
+                   "il aime la chaleur.", lambda p, s, t: seen.append(p) or reply(full_scores()))
+    assert "aucune liste fournie" in seen[0] and "N'exige aucune citation mot pour mot" in seen[0]
+    assert out["measurements"]["quote_faults"] == [] and out["measurements"]["balance_faults"] == []
+
+
+def test_criteria_carry_the_house_writing_rules():
+    intro, readability = MODEL_CRITERIA["introduction"][1], MODEL_CRITERIA["readability"][1]
+    assert "moment que vit le lecteur" in intro and "découle logiquement" in intro and "gain précis" in intro
+    assert "phrase isolée" in readability and "cet article" in readability and "Voici" in readability
