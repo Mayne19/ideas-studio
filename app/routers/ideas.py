@@ -297,31 +297,8 @@ def rerun_writing_route(
     _check_role(db, current_user.id, article.project_id, ("owner", "admin", "editor"))
     if article.status_reason_id not in _RERUN_STATUSES:
         raise HTTPException(status_code=400, detail=f"Cannot rerun from status '{article.status_reason_id}'")
-    try:
-        llm = get_llm_provider()
-        search = get_search_provider(article.project_id)
-        logger.info(
-            "rerun_writing provider=%s model=%s is_mock=%s article=%s",
-            llm.provider_name, llm.model_name, llm.is_mock, article_id,
-        )
-        from app.services.seo.seo_generation_orchestrator import generate_full_article
-        from app.services.agents.agent_router import get_agent_router
-
-        article = generate_full_article(
-            db=db,
-            project_id=article.project_id,
-            llm=llm,
-            search=search,
-            agent_router=get_agent_router(db=db),
-            keyword=primary_keyword(db, article_id),
-            category_id=article.category_id,
-            existing_article_id=article_id,
-        )
-    except (ProviderUnavailableError, GenerationFailedError) as exc:
-        raise _generation_http_error(exc) from exc
-    db.commit()
-    db.refresh(article)
-    return _idea_response(db, article, llm)
+    from app.services.editorial_workflow_service import request_writing
+    return _idea_response(db, request_writing(db, article))
 
 
 @router.post("/projects/{project_id}/launch")
