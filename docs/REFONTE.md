@@ -20,47 +20,64 @@ L'utilisateur ne règle aucun paramètre technique. Tout ce qui peut être déci
 - Personne ne modifie le skill sans validation de Claude (chat) et de Mayne.
 - Après toute modification, on régénère les deux articles de référence (« Comment enlever une tache de gras sur un vêtement » et « Comment contester un forfait post-stationnement ») et on compare. Si la qualité baisse, la modification est annulée.
 
-## Le parcours dans l'application (5 écrans)
+## Le parcours dans l'application (un écran Production)
 
-### 1. Idées
-- Liste des sujets par catégorie, avec leur statut.
-- Ajout manuel d'un sujet, ou génération d'une liste d'idées pour une catégorie.
-- Contrôle automatique de doublon avec les articles existants (cannibalisation), affiché comme simple alerte.
-- Un bouton : « Envoyer en rédaction ».
+La sidebar conserve les espaces principaux : Tableau de bord, Articles avec le
+Kanban, Catégories, Calendrier éditorial, Analytics, Médias, Optimisations,
+Notifications et Production. Les réglages gardent Providers pour les clés API
+et Services externes pour les connexions de recherche et d'images.
 
-### 2. Rédaction
-- File des sujets en cours de rédaction, avec l'état (en attente, en cours, terminé, erreur).
-- Le coût réel de chaque article est affiché, rien d'autre.
-- Aucun réglage : modèle, raisonnement et outils sont fixés dans le code.
+### Production — Idées
 
-### 3. Relecture et validation
-- L'article est affiché mis en forme, comme sur le site, jamais en Markdown brut.
-- Édition directe du texte.
-- À côté de l'article, la fiche lisible :
-  - titre SEO, meta description, slug (modifiables) ;
-  - sources ;
-  - images à ajouter, avec emplacement, texte alternatif et légende ;
-  - intégrations proposées (vidéo, publication) ;
-  - expériences de l'équipe à ajouter ;
-  - informations à mettre à jour plus tard.
-- Trois contrôles techniques affichés en vert ou rouge : encadré « En résumé », aucun tiret cadratin, fiche valide. Le plagiat est une simple alerte.
-- Deux boutons : « Valider » ou « Renvoyer en rédaction » avec un commentaire.
+- Le bouton « Générer les idées du mois » produit le nombre d'idées prévu par
+  les catégories et le pipeline.
+- Les idées sont groupées par catégorie et affichent seulement le titre, le
+  mot-clé et une alerte de cannibalisation éventuelle.
+- Chaque idée peut être acceptée, rejetée et supprimée, ou renommée. Les
+  actions « Tout accepter » et « Accepter la sélection » envoient les sujets
+  acceptés dans la file de rédaction.
 
-### 4. Publication
-- Calendrier des articles validés.
-- La date de publication est fixée automatiquement selon la cadence choisie dans les paramètres. Mayne peut la déplacer.
-- Publication automatique à la date prévue. Aucun article n'est publié sans validation humaine.
+### Production — Rédaction
 
-### 5. Mises à jour
-- Liste générée depuis le champ `a_mettre_a_jour` des fiches : quelle information revérifier, dans quel article, et quand.
-- Un bouton pour renvoyer l'article en rédaction pour mise à jour.
+- Un résumé indique le nombre d'articles rédigés par jour, les jours de
+  rédaction et la date prévisionnelle de fin de file.
+- La file affiche les états « en attente », « en cours », « terminé » et
+  « erreur », avec la date prévue et un bouton « Relancer » pour une erreur.
+- Le coût par article et le total du mois sont affichés de façon discrète.
+  Les agents, fournisseurs, jetons et journaux ne sont pas affichés.
+- La route du rédacteur local ne renvoie aucun sujet lorsque le plafond du jour
+  est atteint ou lorsque le jour courant n'est pas un jour de rédaction.
 
-### Paramètres (une seule page, réduite au minimum)
-- Nom du site, domaine, langue du site (fixée à la création, une langue par site ou département).
-- Catégories.
-- Cadence de publication (articles par semaine).
-- Mode de rédaction : local (abonnement Claude, par défaut) ou API (plus tard).
-- Auteurs : nom, photo, biographie (pour les pages auteur et l'E-E-A-T).
+### Production — Validation
+
+- La liste affiche le titre, la catégorie, le score global sur 100, les trois
+  contrôles techniques, ainsi que les alertes de plagiat et de doublon.
+- Un clic ouvre l'article dans l'éditeur existant et sa fiche dans le panneau
+  latéral : métadonnées SEO, slug, sources, images et légendes, intégrations,
+  expériences à ajouter et informations à mettre à jour.
+- Le bouton « Valider tous les articles au-dessus du seuil » utilise
+  `min_publish_score`, et la validation de la sélection reste disponible.
+  La validation programme automatiquement l'article dans le calendrier selon
+  les dates et heures configurées.
+- Le score repose sur six contrôles déterministes : encadré « En résumé » (15),
+  absence de tiret cadratin (10), fiche valide (15), trois sources liées dont
+  une primaire ou officielle (20), absence d'alerte de plagiat (20) et
+  structure respectée (20). L'encadré, le tiret et la fiche sont bloquants,
+  quel que soit le score.
+- Les sous-scores SEO, GEO, originalité et humanisation ne sont pas affichés.
+
+### Production — Mises à jour
+
+- La liste vient du champ `a_mettre_a_jour` des fiches et affiche l'article,
+  l'information, la source et la date prévue.
+- Un bouton renvoie l'article en rédaction.
+
+### Paramètres du pipeline
+
+- La génération mensuelle des idées et les dates et heures de publication sont
+  conservées.
+- Le pipeline règle le nombre d'articles rédigés par jour, fixé à 2 par défaut,
+  et les jours de rédaction, fixés du lundi au vendredi par défaut.
 
 ## Ce qu'on garde (en le simplifiant si besoin)
 
