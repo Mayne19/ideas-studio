@@ -152,43 +152,8 @@ def start_writing_route(
             status_code=400,
             detail=f"Impossible de lancer la rédaction depuis le statut '{article.status_reason_id}'"
         )
-    try:
-        llm = get_llm_provider()
-        search = get_search_provider(article.project_id)
-    except ProviderUnavailableError as exc:
-        raise _generation_http_error(exc) from exc
-
-    logger.info(
-        "start_writing_orchestrator provider=%s model=%s article=%s",
-        llm.provider_name, llm.model_name, article_id,
-    )
-
-    try:
-        from app.services.seo.seo_generation_orchestrator import generate_full_article
-        from app.services.agents.agent_router import get_agent_router
-
-        project = db.get(Project, article.project_id)
-        profile = project.active_editorial_profile if project else None
-        revision = article.current_revision
-
-        article = generate_full_article(
-            db=db,
-            project_id=article.project_id,
-            llm=llm,
-            search=search,
-            agent_router=get_agent_router(db=db),
-            preferred_title=revision.title if revision else None,
-            keyword=primary_keyword(db, article_id),
-            category_id=article.category_id,
-            audience=profile.audience if profile else None,
-            existing_article_id=article_id,
-        )
-    except (ProviderUnavailableError, GenerationFailedError) as exc:
-        raise _generation_http_error(exc) from exc
-
-    db.commit()
-    db.refresh(article)
-    return _idea_response(db, article, llm)
+    from app.services.editorial_workflow_service import request_writing
+    return _idea_response(db, request_writing(db, article))
 
 
 @router.post("/articles/{article_id}/reject")
