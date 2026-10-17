@@ -39,7 +39,7 @@ def test_only_hard_faults_trigger_corrections():
 
 
 def test_competitor_and_prose_count_hard_faults():
-    from app.services.seo.agent_generation import competitor_errors, prose_count_errors
+    from app.services.seo.agent_generation import competitor_errors, fact_errors, prose_count_errors
 
     candidate = {
         "content_html": ('<p>Idéal le reconnaît, et <a href="https://www.linge-net.com/blog/x">ce guide</a> aussi. '
@@ -50,5 +50,25 @@ def test_competitor_and_prose_count_hard_faults():
     errors = " | ".join(competitor_errors(candidate))
     assert "Lien vers un concurrent" in errors and "linge-net" in errors
     assert "sites concurrents" in errors and "Seulement 1 domaine" in errors
+    assert "concurrent apparaît dans" in errors
     assert prose_count_errors("<p>Retenez deux gestes à faire dans l'ordre :</p><ol><li>a</li><li>b</li><li>c</li></ol>")
+    assert prose_count_errors("<p>Retenez 2 gestes :</p><ol><li>a</li><li>b</li><li>c</li></ol>")
     assert not prose_count_errors("<p>Retenez trois gestes :</p><ol><li>a</li><li>b</li><li>c</li></ol>")
+
+
+def test_facts_require_exact_quote_and_declared_source():
+    from app.services.seo.agent_generation import fact_errors
+
+    valid = {
+        "sources": [{"url": "https://example.com/guide/?utm_source=test"}],
+        "facts": [{"value": "20 minutes", "source_url": "https://example.com/guide/",
+                   "quote": "20 minutes"}],
+    }
+    assert fact_errors(valid) == []
+
+    invalid = {
+        "sources": [{"url": "https://example.com/guide"}],
+        "facts": [{"value": "20 minutes", "source_url": "https://other.example/guide", "quote": ""}],
+    }
+    errors = " | ".join(fact_errors(invalid))
+    assert "citation exacte" in errors and "n'apparaît pas" in errors
