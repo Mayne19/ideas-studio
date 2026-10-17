@@ -15,12 +15,14 @@ import markdown
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
-from app.models.ai import Artifact
+from app.models.ai import Artifact, Pipeline
 from app.models.content import Article, ArticleRevision, ArticleSeo
 from app.models.reference import ArticleStatus, RevisionSource, set_article_status
 from app.core.utils import generate_unique_slug, slugify
 from app.services.article_service import set_primary_keyword
 from app.services.seo.artifacts import get_latest_artifact, save_artifact
+from app.services.editorial_score_service import compute_editorial_score, store_editorial_score
+from app.services.pipeline_service import resolve_min_publish_score
 
 
 WORKFLOW_ARTIFACT_KEY = "editorial_workflow"
@@ -224,11 +226,14 @@ def deposit_markdown(
 
     if fiche is not None:
         save_artifact(db, article.id, FICHE_ARTIFACT_KEY, fiche)
+    score = compute_editorial_score(db, article, fiche, fiche_error)
+    store_editorial_score(db, article, score)
     _record_workflow_state(
         db,
         article,
         EditorialStatus.REVIEW,
         fiche_error=fiche_error,
+        score=score,
         deposited_at=datetime.now(timezone.utc).isoformat(),
     )
 
@@ -248,11 +253,21 @@ def deposit_markdown(
 def validate_for_publication(db: Session, article: Article) -> dict:
     revision = _latest_revision(db, article.id)
     fiche = get_latest_artifact(db, article.id, FICHE_ARTIFACT_KEY)
-    report = validation_report(revision.body if revision else "", fiche)
+    workflow = get_latest_artifact(db, article.id, WORKFLOW_ARTIFACT_KEY) or {}
+    technical = validation_report(revision.body if revision else "", fiche, workflow.get("fiche_error", ""))
+    score = compute_editorial_score(db, article, fiche, workflow.get("fiche_error", ""))
+    store_editorial_score(db, article, score)
+    report = {
+        **technical,
+        "score": score,
+        "global_score": score["global_score"],
+        "min_publish_score": resolve_min_publish_score(db.get(Pipeline, article.project_id)),
+    }
+    report["passed"] = technical["passed"] and score["global_score"] >= report["min_publish_score"]
     if report["passed"]:
         set_article_status(article, ArticleStatus.READY_TO_PUBLISH)
         article.updated_at = datetime.now(timezone.utc)
-        _record_workflow_state(db, article, EditorialStatus.VALIDATED, checks=report["checks"])
+        _record_workflow_state(db, article, EditorialStatus.VALIDATED, checks=report["checks"], score=score)
         db.commit()
         db.refresh(article)
     return report
