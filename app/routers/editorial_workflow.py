@@ -88,11 +88,12 @@ def _article_or_404(db: Session, project_id: str, article_id: str) -> Article:
 def _article_response(db: Session, article: Article) -> WorkflowArticleResponse:
     revision = article.current_revision
     details = workflow_article_details(db, article)
+    current_status = EditorialStatus.ERROR if details.get("error") else workflow_status(article)
     return WorkflowArticleResponse(
         id=article.id,
         title=revision.title if revision else "",
         slug=article.slug,
-        status=workflow_status(article),
+        status=current_status,
         scheduled_for=article.scheduled_for,
         published_at=article.published_at,
         updated_at=article.updated_at,
@@ -161,6 +162,7 @@ def list_writing_queue(
     return (
         _list_articles(db, project_id, EditorialStatus.IDEA)
         + _list_articles(db, project_id, EditorialStatus.WRITING)
+        + _list_articles(db, project_id, EditorialStatus.REVIEW)
         + _list_articles(db, project_id, EditorialStatus.ERROR)
     )
 
