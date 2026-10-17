@@ -26,6 +26,7 @@ from experiments.editorial_agent_lab.editorial_agent.writer import (
 from experiments.editorial_agent_lab.editorial_agent.validation_pipeline import validate_article
 from experiments.editorial_agent_lab.editorial_agent.reporting import build_run_report
 from experiments.editorial_agent_lab.editorial_agent.review import ReviewLedger
+from experiments.editorial_agent_lab.editorial_agent.benchmark import BenchmarkLedger, BenchmarkRun
 from experiments.editorial_agent_lab.editorial_agent.similarity import scan_exact_phrases
 from experiments.editorial_agent_lab.editorial_agent.planning import (
     build_reader_intent,
@@ -446,3 +447,27 @@ def test_review_can_create_a_pending_rule_without_modifying_the_draft() -> None:
     )
     assert rule.status == "pending"
     assert result.draft.content_html == before
+
+
+def test_benchmark_stays_pending_before_the_acceptance_sample() -> None:
+    ledger = BenchmarkLedger()
+    ledger.add(BenchmarkRun(
+        topic="basilic",
+        system="lab",
+        human_score=90,
+        blocking_errors=0,
+        warnings=1,
+        cost_usd=0,
+        duration_s=1,
+    ))
+    decision = ledger.decide()
+    assert decision.status == "PENDING"
+
+
+def test_benchmark_can_return_no_go_for_blocking_errors() -> None:
+    ledger = BenchmarkLedger()
+    for index in range(10):
+        topic = f"topic-{index % 5}"
+        ledger.add(BenchmarkRun(topic, "lab", 90, 1 if index == 0 else 0, 0, 1, 1))
+        ledger.add(BenchmarkRun(topic, "pipeline", 80, 0, 0, 1, 1))
+    assert ledger.decide().status == "NO-GO"

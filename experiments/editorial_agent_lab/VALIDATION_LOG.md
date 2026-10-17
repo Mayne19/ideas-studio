@@ -45,6 +45,8 @@ pas encore une validation de production avec de vraies clés et de vraies pages.
   alertes, le modèle, le coût et les traces de recherche.
 - A16 : une validation humaine ne peut pas approuver un résultat bloqué.
 - A17 : une remarque peut produire une règle `pending` sans modifier le texte.
+- A18 : le harnais de comparaison refuse de conclure avant cinq sujets et dix
+  articles, et renvoie `NO-GO` dès qu'une erreur bloquante reste présente.
 
 ### Preuve exécutée
 

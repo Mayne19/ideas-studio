@@ -21,6 +21,6 @@
     {"id": "A15", "title": "produce report", "status": "validated", "scope": "local_report_contract", "evidence": "editorial_agent/reporting.py"},
     {"id": "A16", "title": "add human review", "status": "validated", "scope": "local_review_contract", "evidence": "editorial_agent/review.py"},
     {"id": "A17", "title": "turn feedback into rules", "status": "validated", "scope": "pending_rule_contract", "evidence": "editorial_agent/review.py"},
-    {"id": "A18", "title": "compare with old system", "status": "planned", "evidence": null}
+    {"id": "A18", "title": "compare with old system", "status": "validated", "scope": "benchmark_harness_only", "evidence": "editorial_agent/benchmark.py"}
   ]
 }

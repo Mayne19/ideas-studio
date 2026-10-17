@@ -47,7 +47,7 @@ preuve locale avant de passer à la suivante.
 | A15 | Produire le rapport | Recherches, pages, coûts, sources, faits, contrôles, alertes et versions | Rapport JSON complet et lisible | `validated` |
 | A16 | Ajouter la validation humaine | Validation, refus, commentaire et décision | Un article bloqué ne peut pas être approuvé | `validated` |
 | A17 | Transformer les remarques en règles | Registre versionné des règles avec origine et test | Une règle est proposée en attente, sans modifier le brouillon | `validated` |
-| A18 | Comparer avec l'ancien système | Cinq sujets puis dix articles comparables | Score, coût, erreurs et temps comparés avant toute intégration | `planned` |
+| A18 | Comparer avec l'ancien système | Cinq sujets puis dix articles comparables | Harnais qui reste `PENDING` jusqu'à l'échantillon réel et produit `GO` ou `NO-GO` | `validated` |
 
 ## Règles de progression
 
