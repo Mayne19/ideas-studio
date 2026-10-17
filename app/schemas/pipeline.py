@@ -34,6 +34,9 @@ class PipelineSettingsUpdate(BaseModel):
     min_publish_score: Optional[int] = Field(default=None, ge=MIN_PUBLISH_SCORE_MIN, le=MIN_PUBLISH_SCORE_MAX)
     # « agent » : agent rédacteur unique ; « pipeline » : ancienne chaîne.
     generation_mode: Optional[Literal["agent", "pipeline"]] = None
+    # Arrêt dur du coût d'un article de l'agent (dollars) et lecture de secours.
+    agent_max_cost_usd: Optional[float] = Field(default=None, gt=0, le=20)
+    agent_reader_fallback: Optional[bool] = None
     max_pending_drafts: Optional[int] = None
     max_parallel_writing_jobs: Optional[int] = None
     paused_until: Optional[datetime] = None
@@ -64,6 +67,8 @@ class PipelineSettingsPublic(BaseModel):
     ideas_per_run: int = DEFAULT_IDEAS_PER_RUN
     min_publish_score: int = DEFAULT_MIN_PUBLISH_SCORE
     generation_mode: str = "agent"
+    agent_max_cost_usd: float = 3.0
+    agent_reader_fallback: bool = True
     max_pending_drafts: Optional[int] = None
     max_parallel_writing_jobs: Optional[int] = None
     paused_until: Optional[datetime] = None
