@@ -37,11 +37,12 @@ def scan_exact_phrases(article: str, sources: dict[str, str], min_words: int = 8
 
 
 def fetch_text(url: str, timeout: float = 15.0) -> str:
-    import httpx
+    """Bibliothèque standard seulement : le laboratoire tourne avec n'importe quel Python."""
+    from urllib.request import Request, urlopen
 
-    resp = httpx.get(url, timeout=timeout, follow_redirects=True,
-                     headers={"User-Agent": "Mozilla/5.0 (Macintosh) AppleWebKit/605.1.15 Safari/605.1.15"})
-    return resp.text if resp.status_code < 400 else ""
+    request = Request(url, headers={"User-Agent": "Mozilla/5.0 (Macintosh) AppleWebKit/605.1.15 Safari/605.1.15"})
+    with urlopen(request, timeout=timeout) as resp:  # noqa: S310 - URL des sources de la fiche
+        return resp.read().decode(resp.headers.get_content_charset() or "utf-8", errors="replace")
 
 
 def plagiarism_alert(article: str, source_urls: list[str], fetch: Callable[[str], str] = fetch_text) -> dict:
