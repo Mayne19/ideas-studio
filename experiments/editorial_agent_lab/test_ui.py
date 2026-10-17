@@ -60,27 +60,8 @@ PAGE = """<!doctype html>
   <p class="lead">Un essai isolé : un mot-clé, une exécution complète, un article et son rapport.</p>
   <section class="panel">
     <form id="run-form">
-      <label>Mot-clé ou sujet
-        <input id="keyword" required placeholder="Ex. comment choisir un casque audio">
-      </label>
-      <div class="grid">
-        <label>Nom du site
-          <input id="site-name" value="Ideas Studio">
-        </label>
-        <label>Domaine
-          <input id="domain" value="example.com">
-        </label>
-      </div>
-      <div class="grid">
-        <label>Catégorie
-          <input id="category" placeholder="Optionnel">
-        </label>
-        <label>Project ID du CMS
-          <input id="project-id" placeholder="Optionnel : charge le contexte existant">
-        </label>
-      </div>
-      <label>Consigne éditoriale complémentaire
-        <textarea id="notes" placeholder="Optionnel"></textarea>
+      <label>Sujet ou mot-clé
+        <input id="keyword" required autofocus placeholder="Ex. comment choisir un casque audio">
       </label>
       <button id="submit" type="submit">Lancer l’essai</button>
     </form>
@@ -133,8 +114,7 @@ form.addEventListener('submit', async (event) => {
   bubble('user', value('keyword'));
   const status = bubble('agent', 'Préparation de l’essai…');
   const response = await fetch('/api/runs', {method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({keyword: value('keyword'), site_name: value('site-name'), domain: value('domain'),
-      category: value('category'), project_id: value('project-id'), editor_notes: value('notes')})});
+    body: JSON.stringify({keyword: value('keyword')})});
   const job = await response.json();
   if (!response.ok) { submit.disabled = false; status.textContent = job.error; return; }
   poll(job.id, status);
