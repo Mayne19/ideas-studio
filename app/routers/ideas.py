@@ -491,6 +491,7 @@ def process_production_queue_route(
     articles = db.execute(select(Article).where(Article.id.in_(ids))).scalars().all() if ids else []
     return {
         "processed": len(articles),
+        "waiting_for_local_writer": outcome.get("pending_local_writer", 0),
         "requeued_stale": outcome["requeued_stale"],
         "articles": [{"id": a.id, "title": a.current_revision.title if a.current_revision else "", "status": a.status_reason_id} for a in articles],
     }
