@@ -113,3 +113,10 @@ def test_fiche_accepts_integrations_and_experience_fields():
     assert "integrations[0].legende doit être str" in fiche_valid(extended | {"integrations": [{"legende": 1}]}, "")["detail"]
     assert "integrations doit être list" in fiche_valid(FICHE | {"integrations": "x"}, "")["detail"]
     assert "experience_a_ajouter doit être list" in fiche_valid(FICHE | {"experience_a_ajouter": {}}, "")["detail"]
+
+
+def test_fiche_accepts_update_tracking_field():
+    extended = FICHE | {"a_mettre_a_jour": [{"information": "Prix", "source": "https://example.com",
+                                               "a_verifier": "chaque année"}]}
+    assert fiche_valid(extended, "")["passed"] and fiche_valid(FICHE, "")["passed"]
+    assert "a_mettre_a_jour doit être list" in fiche_valid(FICHE | {"a_mettre_a_jour": "x"}, "")["detail"]

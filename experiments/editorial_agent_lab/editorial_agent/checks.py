@@ -9,7 +9,9 @@ FICHE_FIELDS: dict[str, type] = {
 }
 # Champs acceptés mais facultatifs (une fiche plus ancienne reste valide) :
 # s'ils sont présents, ce sont des listes.
-OPTIONAL_FICHE_FIELDS: dict[str, type] = {"integrations": list, "experience_a_ajouter": list}
+OPTIONAL_FICHE_FIELDS: dict[str, type] = {
+    "integrations": list, "experience_a_ajouter": list, "a_mettre_a_jour": list,
+}
 
 
 def _caption_problems(fiche: dict) -> list[str]:

@@ -147,6 +147,7 @@ Relis tout l'article comme le lecteur, du titre à la FAQ, puis corrige :
 - chaque titre annonce exactement son contenu ;
 - aucun passage haché, aucune phrase isolée sans lien, aucune répétition d'un repère déjà expliqué ;
 - chaque chiffre décisif est vérifié, sourcé et lié ; aucune source anonyme ; aucune affirmation juridique sans source officielle ;
+- chaque chiffre repris dans l'encadré « En résumé » ou dans la conclusion a été rouvert et revérifié à sa source ; s'il ne peut pas l'être, il est retiré et la phrase reformulée ;
 - aucune mention d'autres articles, comparatifs ou guides ;
 - les nombres annoncés sont respectés ;
 - les outils cités sont liés à leur première mention ;
@@ -157,6 +158,8 @@ Relis tout l'article comme le lecteur, du titre à la FAQ, puis corrige :
 
 Après l'article, ajoute ce bloc, rempli :
 
+Liste dans "a_mettre_a_jour" chaque montant, délai, plafond, loi ou prix qui peut changer, avec sa source et la fréquence de vérification conseillée.
+
 ```json
 {
   "meta_title": "60 caractères au plus, mot-clé principal au début",
@@ -164,6 +167,7 @@ Après l'article, ajoute ce bloc, rempli :
   "slug": "mots-cles-en-minuscules-sans-accents",
   "mot_cle_principal": "",
   "sources": [{"titre": "", "url": ""}],
+  "a_mettre_a_jour": [{"information": "", "source": "", "a_verifier": "chaque année|à chaque changement de loi|autre"}],
   "images": [{"apres_le_titre": "", "montre": "", "texte_alternatif": "", "legende": ""}],
   "integrations": [{"apres_le_titre": "", "type": "youtube|instagram|x|tiktok", "url": "", "pourquoi": "", "legende": ""}],
   "experience_a_ajouter": [{"apres_le_titre": "", "suggestion": ""}],
