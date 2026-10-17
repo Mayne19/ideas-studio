@@ -157,3 +157,35 @@ def test_competitor_matching_uses_registered_domain_without_suffix_false_positiv
         {"url": "https://one.example/a"},
     ]}
     assert not any("Seulement" in error for error in competitor_errors(public_sources))
+
+
+def test_judge_unsourced_figure_becomes_a_hard_fault_with_facts_sent():
+    from types import SimpleNamespace
+
+    from app.services.seo import agent_generation
+
+    seen = {}
+
+    def fake_judge(content, call_fn, **kwargs):
+        seen.update(kwargs)
+        return {"blockers": [
+            {"type": "unsourced_figure", "section": "Mélatonine", "detail": "« les plus de 60 ans » sans citation"},
+            {"type": "heading_mismatch", "section": "Lumière", "detail": "le titre promet le retour"},
+            {"type": "contradiction", "section": "x", "detail": "informatif"}]}
+
+    import app.services.seo.editorial_judge as judge_module
+    original = judge_module.judge_article
+    judge_module.judge_article = fake_judge
+    try:
+        orch = SimpleNamespace(context={}, _write_pass=lambda *a: "")
+        candidate = {"content_html": "<p>x</p>", "title": "T",
+                     "facts": [{"value": "1 h par jour", "quote": "une heure par jour", "source_url": "https://inserm.fr/a"}],
+                     "competitors": [{"url": "https://www.lonelyplanet.fr/x"}]}
+        errors = agent_generation.judge_errors(orch, None, candidate)
+    finally:
+        judge_module.judge_article = original
+    assert len(errors) == 2
+    assert "« les plus de 60 ans » sans citation" in errors[0] and "citation exacte" in errors[0]
+    assert "Titre en désaccord" in errors[1]
+    assert seen["facts"] == ["1 h par jour — « une heure par jour » (source : https://inserm.fr/a)"]
+    assert seen["strict_facts"] is True and seen["competitors"] == ["lonelyplanet.fr"]

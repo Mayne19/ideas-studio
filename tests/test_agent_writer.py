@@ -127,6 +127,7 @@ def test_openrouter_bridge_hard_stop_and_explicit_fetch_error():
             "finish_reason": "tool_calls"}], "usage": {"prompt_tokens": 10, "completion_tokens": 1, "cost": 2.0}}
 
     client = OpenRouterAgentClient("k", search_fn=lambda q, n: [], fetch_fn=lambda url: "", post=post, max_cost_usd=3.0)
+    client.seen_urls.add("x.fr/")
     with pytest.raises(AgentBudgetExceeded):
         AgentWriter(client, model="anthropic/claude-opus-5.5", system="s").write("kw")
     assert "ÉCHEC DE LECTURE" in [m for m in client.transcript if m["role"] == "tool"][0]["content"]
@@ -136,8 +137,10 @@ def test_failed_fetches_do_not_consume_page_budget_and_are_reported():
     from app.services.seo.agent_writer_openrouter import OpenRouterAgentClient
 
     pages = {"https://ok.fr": "Texte lu. " * 200, "https://court.fr": "Trop court"}
-    client = OpenRouterAgentClient("k", search_fn=lambda q, n: [], fetch_fn=lambda url: pages.get(url, ""),
-                                   max_fetches=1, max_failed_fetches=2)
+    urls = ["https://bloque.fr", "https://ok.fr", "https://court.fr", "https://vide2.fr"]
+    client = OpenRouterAgentClient("k", search_fn=lambda q, n: [{"url": u} for u in urls],
+                                   fetch_fn=lambda url: pages.get(url, ""), max_fetches=1, max_failed_fetches=2)
+    client._run_tool("web_search", {"query": "q"})
     assert "ÉCHEC DE LECTURE" in client._run_tool("web_fetch", {"url": "https://bloque.fr"})
     assert client._run_tool("web_fetch", {"url": "https://ok.fr"}).startswith("Texte lu")
     assert client.fetches == 1 and client.failed_fetches == 1
@@ -191,7 +194,9 @@ def test_short_extracted_page_fails_without_using_the_budget():
     from app.services.seo.agent_writer_openrouter import OpenRouterAgentClient
 
     pages = {"https://court.fr": "a" * 300, "https://long.fr": "a" * 2000}
-    client = OpenRouterAgentClient("k", search_fn=lambda q, n: [], fetch_fn=lambda url: pages[url], max_fetches=1)
+    client = OpenRouterAgentClient("k", search_fn=lambda q, n: [{"link": u} for u in pages], fetch_fn=lambda url: pages[url],
+                                   max_fetches=1)
+    client._run_tool("web_search", {"query": "q"})
     assert "ÉCHEC DE LECTURE (300 caractères)" in client._run_tool("web_fetch", {"url": "https://court.fr"})
     assert client.fetches == 0 and client.failed_fetches == 1
     assert client._run_tool("web_fetch", {"url": "https://long.fr"}) == "a" * 2000
@@ -233,3 +238,20 @@ def test_orchestrator_reads_agent_settings_from_pipeline():
     pipe = SimpleNamespace(agent_max_cost_usd=1.70, agent_reader_fallback=False)
     assert read(orch(pipe)) == {"max_cost_usd": 1.7, "reader_fallback": False}
     assert read(orch(None)) == {"max_cost_usd": 3.0, "reader_fallback": True}
+
+
+def test_fetch_refuses_urls_absent_from_search_results():
+    from app.services.seo.agent_writer_openrouter import OpenRouterAgentClient
+
+    fetched = []
+    client = OpenRouterAgentClient(
+        "k", search_fn=lambda q, n: [{"url": "https://www.inserm.fr/dossier/chronobiologie/?utm=1"}],
+        fetch_fn=lambda url: fetched.append(url) or "a" * 2000)
+    client._run_tool("web_search", {"query": "inserm"})
+    assert client._run_tool("web_fetch", {"url": "https://www.cdc.gov/invente.html"}) == (
+        "URL inventée : choisis une URL issue d'une recherche.")
+    assert fetched == [] and client.fetches == 0 and client.failed_fetches == 0
+    assert client.fetch_log[-1]["method"] == "refusée"
+    # Même page, écrite autrement (schéma, www, barre finale) : acceptée.
+    assert client._run_tool("web_fetch", {"url": "http://inserm.fr/dossier/chronobiologie?utm=1"}) == "a" * 2000
+    assert client.fetches == 1
