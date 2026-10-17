@@ -130,3 +130,52 @@ def test_openrouter_bridge_hard_stop_and_explicit_fetch_error():
     with pytest.raises(AgentBudgetExceeded):
         AgentWriter(client, model="anthropic/claude-opus-5.5", system="s").write("kw")
     assert "ÉCHEC DE LECTURE" in [m for m in client.transcript if m["role"] == "tool"][0]["content"]
+
+
+def test_failed_fetches_do_not_consume_page_budget_and_are_reported():
+    from app.services.seo.agent_writer_openrouter import OpenRouterAgentClient
+
+    pages = {"https://ok.fr": "Texte lu"}
+    client = OpenRouterAgentClient("k", search_fn=lambda q, n: [], fetch_fn=lambda url: pages.get(url, ""),
+                                   max_fetches=1, max_failed_fetches=2)
+    assert "ÉCHEC DE LECTURE" in client._run_tool("web_fetch", {"url": "https://bloque.fr"})
+    assert client._run_tool("web_fetch", {"url": "https://ok.fr"}) == "Texte lu"
+    assert client.fetches == 1 and client.failed_fetches == 1
+    assert "Limite de pages lues" in client._run_tool("web_fetch", {"url": "https://ok.fr"})
+    client.fetches = 0
+    client._run_tool("web_fetch", {"url": "https://vide.fr"})
+    assert "Limite d'échecs" in client._run_tool("web_fetch", {"url": "https://vide2.fr"})
+    assert [e["failed"] for e in client.fetch_log] == [True, False, True]
+
+
+def test_report_keeps_raw_text_and_fetch_log_when_json_fails():
+    from app.services.seo.agent_writer_openrouter import OpenRouterAgentClient
+
+    replies = [{"choices": [{"message": {"role": "assistant", "content": '{"sources": []}'}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 5}} for _ in range(2)]
+    client = OpenRouterAgentClient("k", search_fn=lambda q, n: [], fetch_fn=lambda url: "",
+                                   post=lambda payload: replies.pop(0))
+    writer = AgentWriter(client, model="anthropic/claude-opus-5.5", system="s")
+    with pytest.raises(AgentWriterError):
+        writer.write("kw")
+    report = writer.report()
+    assert report["raw_text_head"] == '{"sources": []}' and report["fetch_log"] == [] and report["search_log"] == []
+
+
+def test_page_fetcher_uses_reader_fallback_but_respects_robots():
+    from app.services.seo.agent_writer_openrouter import page_fetcher
+
+    class Cache:
+        def __init__(self, allowed):
+            self._allowed = allowed
+
+        def get_html(self, url):
+            return None
+
+        def allowed(self, url):
+            return self._allowed
+
+    fallback = lambda url: "Texte rendu par le lecteur de secours"
+    assert page_fetcher(Cache(True), fallback=fallback)("https://x.fr").startswith("Texte rendu")
+    assert page_fetcher(Cache(False), fallback=fallback)("https://x.fr") == ""
+    assert page_fetcher(Cache(True), fallback=None)("https://x.fr") == ""
