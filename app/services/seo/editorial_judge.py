@@ -102,7 +102,8 @@ def article_digest(content: str) -> str:
 
 def build_judge_prompt(content: str, *, title: str, keyword: str, brief: dict, facts: list[str],
                        reference_figures: list[str], required_component: str = "",
-                       planned_gain: dict | None = None) -> str:
+                       planned_gain: dict | None = None, competitors: list[str] | None = None,
+                       strict_facts: bool = False) -> str:
     criteria = "\n".join(f"- {key} ({pts} pts) : {desc}" for key, (pts, desc) in JUDGE_CRITERIA.items())
     parts = [
         "Tu es rédacteur en chef d'un média web exigeant (niveau des meilleurs blogs experts français). "
@@ -129,6 +130,13 @@ def build_judge_prompt(content: str, *, title: str, keyword: str, brief: dict, f
                           "élément est présent et juste) : " + ", ".join(planned)]
     if facts:
         parts += ["", "Faits vérifiés disponibles (avec leur source) :", *[f"- {f}" for f in facts[:40]]]
+    if strict_facts:
+        parts += ["", "Toute affirmation technique, chimique, de santé, de sécurité ou sur un symbole absente de cette "
+                      "liste de faits est non sourcée : pénalise accuracy et sources, et signale-la (unsourced_figure "
+                      "si c'est un chiffre)."]
+    if competitors:
+        parts += ["", "Concurrents (ne doivent jamais être nommés, cités ni liés dans l'article ; une mention est une "
+                      "faute grave) : " + ", ".join(competitors)]
     parts += [
         "",
         "Grille (note chaque critère de 0 à son maximum) :",
@@ -233,11 +241,12 @@ def parse_judgement(raw: str, *, structure_report: dict | None = None) -> dict |
 def judge_article(content: str, call_fn: CallFn, *, title: str, keyword: str, brief: dict,
                   facts: list[str], reference_figures: list[str], structure_report: dict | None = None,
                   required_component: str = "", planned_gain: dict | None = None,
+                  competitors: list[str] | None = None, strict_facts: bool = False,
                   fatal_exceptions: tuple[type[BaseException], ...] = ()) -> dict:
     """Jugement complet, ou {"error": ...} si l'appel ou le JSON échoue."""
     prompt = build_judge_prompt(content, title=title, keyword=keyword, brief=brief, facts=facts,
                                 reference_figures=reference_figures, required_component=required_component,
-                                planned_gain=planned_gain)
+                                planned_gain=planned_gain, competitors=competitors, strict_facts=strict_facts)
     try:
         raw = call_fn(prompt, "EditorialJudge", 0.1)
     except fatal_exceptions:
