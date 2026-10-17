@@ -28,8 +28,8 @@ def test_grid_totals_100_and_perfect_article_scores_100():
 
 
 def test_grave_faults_cap_the_score():
-    one = [{"type": "false_fact", "passage": "x", "detail": "y"}]
-    two = one + [{"type": "central_contradiction", "passage": "a", "detail": "b"}]
+    one = [{"type": "false_fact", "passage": "sortez au soleil le matin", "detail": "y"}]
+    two = one + [{"type": "central_contradiction", "passage": "La lumière du matin avance", "detail": "b"}]
     assert apply_caps(97, one)[0] == CAP_ONE_GRAVE == 85
     assert apply_caps(97, two)[0] == CAP_TWO_GRAVE == 75
     assert apply_caps(70, one)[0] == 70
@@ -117,3 +117,12 @@ def test_defects_without_a_real_passage_are_ignored_and_scores_floor_at_zero():
     perfect = judge_v2(ARTICLE, lambda p, s, t: defects_reply({}), title="Décalage horaire")
     assert perfect["raw_total"] == 100 and all(not c.get("defects") for c in perfect["criteria"].values()
                                                if "defects" in c)
+
+
+def test_grave_faults_need_a_real_passage_and_ce_guide_is_not_meta_commentary():
+    invented = [{"type": "false_fact", "passage": "un passage absent de l'article", "detail": "inventé"}]
+    out = judge_v2(ARTICLE, lambda p, s, t: reply(full_scores(), invented), title="Décalage horaire")
+    assert out["grave_faults"] == [] and out["caps"]["cap"] is None and out["total"] == 100
+    measured = judge_v2("<p>Ce guide vous montre quoi faire dès l'arrivée, sans détour.</p>",
+                        lambda p, s, t: defects_reply({}), title="T")["measurements"]
+    assert measured["meta_commentary"] == []

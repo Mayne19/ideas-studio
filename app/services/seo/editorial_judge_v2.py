@@ -53,7 +53,8 @@ CODE_CRITERIA: dict[str, tuple[int, str]] = {
 # critère selon sa gravité ; le code recalcule la note (le modèle ne la donne
 # plus), et la note maximale exige zéro défaut.
 SEVERITY_WEIGHTS = {"majeur": 0.30, "moyen": 0.15, "mineur": 0.05}
-META_COMMENTARY_RE = re.compile(r"\b(cet article|ce guide|les sources consultées|nous retenons)\b", re.IGNORECASE)
+# « ce guide » n'est pas compté : c'est une façon normale de désigner l'article.
+META_COMMENTARY_RE = re.compile(r"\b(cet article|les sources consultées|nous retenons)\b", re.IGNORECASE)
 COMPARISON_RE = re.compile(r"[^.!?\n]*\b(autant que|plus que|moins que)\b[^.!?\n]*[.!?]?", re.IGNORECASE)
 GRAVE_FAULT_TYPES = ("false_fact", "central_contradiction", "competitor_named", "unsourced_health_figure")
 CAP_ONE_GRAVE = 85
@@ -272,6 +273,8 @@ def judge_v2(content: str, call_fn: CallFn, *, title: str = "", keyword: str = "
     grave = [{"type": str(g.get("type")), "passage": str(g.get("passage") or "")[:300],
               "detail": str(g.get("detail") or "")[:300]}
              for g in data.get("grave_faults") or [] if isinstance(g, dict) and g.get("type") in GRAVE_FAULT_TYPES]
+    # Même garde que les défauts : une faute grave sans passage réel est ignorée.
+    grave = [g for g in grave if _passage_in(g["passage"], article_norm)]
     raw_total = round(sum(c["score"] for c in criteria.values()), 1)
     total, caps = apply_caps(raw_total, grave)
     coherence = [{"rule": str(c.get("rule") or "")[:300], "passage": str(c.get("passage") or "")[:300],
