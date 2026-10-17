@@ -202,8 +202,6 @@ class Pipeline(Base):
     ideas_per_week: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=5)
     # Plafond dur d'idées créées par lancement (1-3), voir v3_0006.
     ideas_per_run: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=2, server_default=text("2"))
-    # Score global minimum pour publier (85-100), voir v3_0006.
-    min_publish_score: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=90, server_default=text("90"))
     # « agent » (agent rédacteur unique) ou « pipeline » (ancienne chaîne).
     generation_mode: Mapped[str] = mapped_column(Text, nullable=False, default="agent", server_default="agent")
     # Arrêt dur du coût d'un article de l'agent, en dollars, voir v3_0011.

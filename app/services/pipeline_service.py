@@ -106,14 +106,6 @@ def _clamp_ideas_per_run(value) -> int:
     return max(IDEAS_PER_RUN_MIN, min(IDEAS_PER_RUN_MAX, value))
 
 
-def _clamp_min_publish_score(value) -> int:
-    try:
-        value = int(value)
-    except (TypeError, ValueError):
-        return DEFAULT_MIN_PUBLISH_SCORE
-    return max(MIN_PUBLISH_SCORE_MIN, min(MIN_PUBLISH_SCORE_MAX, value))
-
-
 def resolve_ideas_per_run(db: Session, project_id: str) -> int:
     """Plafond dur d'idées créées par lancement pour ce projet (1-3, défaut
     2), réglable dans Paramètres → Pipeline. Appliqué partout où des idées
@@ -137,8 +129,8 @@ def cap_ideas_count(db: Session, project_id: str, requested: int | None) -> int:
 
 
 def resolve_min_publish_score(pipeline: Pipeline | None) -> int:
-    """Score global minimum de publication (85-100, défaut 90)."""
-    return _clamp_min_publish_score(pipeline.min_publish_score if pipeline else None)
+    """Compatibilité pour les anciens articles : la publication n'est plus scorée."""
+    return DEFAULT_MIN_PUBLISH_SCORE
 
 
 def _category_frequency_summary(db: Session, project_id: str) -> tuple[int, list[dict]]:
@@ -286,7 +278,7 @@ def _model_to_settings(pipe: Pipeline, db: Session | None = None) -> PipelineSet
         category_priorities=schedule.get("category_priorities", {}),
         ideas_per_week=pipe.ideas_per_week,
         ideas_per_run=_clamp_ideas_per_run(pipe.ideas_per_run),
-        min_publish_score=_clamp_min_publish_score(pipe.min_publish_score),
+        min_publish_score=DEFAULT_MIN_PUBLISH_SCORE,
         generation_mode=pipe.generation_mode or "agent",
         agent_max_cost_usd=float(pipe.agent_max_cost_usd) if pipe.agent_max_cost_usd is not None else 3.0,
         max_pending_drafts=pipe.max_pending_drafts,
@@ -357,7 +349,6 @@ _PIPELINE_FIELD_MAP = {
     "articles_per_week": "articles_per_week",
     "ideas_per_week": "ideas_per_week",
     "ideas_per_run": "ideas_per_run",
-    "min_publish_score": "min_publish_score",
     "generation_mode": "generation_mode",
     "agent_max_cost_usd": "agent_max_cost_usd",
     "max_pending_drafts": "max_pending_drafts",
