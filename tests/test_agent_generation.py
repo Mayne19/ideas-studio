@@ -294,12 +294,12 @@ def test_source_balance_flags_a_domain_over_half_of_the_facts():
     assert source_balance_errors(facts(["https://vidal.fr/a"] * 3)) == []
 
 
-def test_a_source_named_more_than_four_times_is_a_hard_fault():
+def test_a_source_named_more_than_five_times_is_a_hard_fault():
     from app.services.seo.agent_generation import source_mention_errors
 
     sources = [{"url": "https://www.vidal.fr/sante/voyage/decalage-horaire.html"}, {"url": "https://www.anses.fr/x"}]
-    five = "".join(f"<p>Vidal conseille le geste {i}.</p>" for i in range(5))
-    four = "".join(f"<p>Selon Vidal, geste {i}.</p>" for i in range(4)) + "<p>L'Anses précise un point.</p>"
-    errors = source_mention_errors({"sources": sources, "content_html": five})
-    assert errors == ["Source nommée 5 fois (vidal.fr) : reformule et regroupe, au plus 4 mentions d'une même source."]
-    assert source_mention_errors({"sources": sources, "content_html": four}) == []
+    six = "".join(f"<p>Vidal conseille le geste {i}.</p>" for i in range(6))
+    five = "".join(f"<p>Selon Vidal, geste {i}.</p>" for i in range(5)) + "<p>L'Anses précise un point.</p>"
+    errors = source_mention_errors({"sources": sources, "content_html": six})
+    assert errors == ["Source nommée 6 fois (vidal.fr) : reformule et regroupe, au plus 5 mentions d'une même source."]
+    assert source_mention_errors({"sources": sources, "content_html": five}) == []
