@@ -130,6 +130,16 @@ def test_competitor_matching_uses_registered_domain_without_suffix_false_positiv
              "content_html": "<p>Ariel conseille cette méthode.</p>"}
     assert any("ariel" in error for error in competitor_errors(ariel))
 
+    elle = {**clean, "competitors": [{"url": "https://elle.fr/a"}]}
+    assert not any("concurrent" in error.lower() for error in competitor_errors(
+        {**elle, "content_html": "<p>Elle se lave à 30 °C.</p>"}))
+    assert not any("concurrent" in error.lower() for error in competitor_errors(
+        {**elle, "content_html": "<p>Il faut qu’elle sèche.</p>"}))
+    assert any("elle" in error for error in competitor_errors(
+        {**elle, "content_html": "<p>Selon Elle, ce produit convient.</p>"}))
+    assert any("elle" in error for error in competitor_errors(
+        {**elle, "content_html": "<p>Le magazine Elle recommande ce produit.</p>"}))
+
     public_sources = {**candidate, "competitors": [], "sources": [
         {"url": "https://sante.gouv.fr/a"}, {"url": "https://service-public.gouv.fr/a"},
         {"url": "https://one.example/a"},

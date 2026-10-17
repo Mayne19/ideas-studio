@@ -14,6 +14,7 @@ import re
 import unicodedata
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
 
@@ -221,7 +222,19 @@ def _fold_accents(value: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFKD", value) if not unicodedata.combining(c))
 
 
-_COMMON_WORD_BRANDS = {"ideal"}
+_COMMON_WORD_BRANDS_PATH = Path(__file__).with_name("data") / "common_word_brands.txt"
+_ATTRIBUTION_VERBS = {"conseille", "recommande", "explique", "indique", "reconnait", "ecrit", "affirme", "precise", "propose"}
+
+
+def _load_common_word_brands() -> set[str]:
+    try:
+        return {_fold_accents(line.strip().lower()) for line in _COMMON_WORD_BRANDS_PATH.read_text(encoding="utf-8").splitlines()
+                if line.strip() and not line.lstrip().startswith("#")}
+    except OSError:  # pragma: no cover - packaging failure fallback
+        return {"ideal"}
+
+
+_COMMON_WORD_BRANDS = _load_common_word_brands()
 
 
 def _mentions_competitor(raw_text: str, name: str) -> bool:
@@ -231,8 +244,16 @@ def _mentions_competitor(raw_text: str, name: str) -> bool:
         original = raw_text[match.start():match.end()]
         if name in _COMMON_WORD_BRANDS and original == original.lower():
             prefix = folded[max(0, match.start() - 18):match.start()]
-            if not re.search(r"(?:site|magazine|blog)\s+$", prefix, re.IGNORECASE):
+            if not re.search(r"(?:site|magazine|blog|selon|d['’]après)\s+$", prefix, re.IGNORECASE):
                 continue
+        elif name in _COMMON_WORD_BRANDS:
+            prefix = folded[:match.start()].rstrip()
+            sentence_start = not prefix or bool(re.search(r"[.!?;]\s*$", prefix))
+            if sentence_start:
+                next_words = _fold_accents(raw_text[match.end():match.end() + 80]).lower()
+                verbs = re.findall(r"[a-zà-ÿ]+", next_words)
+                if not any(word in _ATTRIBUTION_VERBS for word in verbs[:3]):
+                    continue
         return True
     return False
 

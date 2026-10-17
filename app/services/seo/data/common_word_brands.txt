@@ -1,0 +1,11 @@
+# Domains whose registered label is also a common word or first name.
+elle
+ideal
+pratique
+deco
+maison
+femme
+cuisine
+sante
+jardin
+voyage
