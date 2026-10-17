@@ -26,7 +26,7 @@ from app.models.reference import ArticleStatus, RunStatus, WorkflowPhase, set_ar
 if TYPE_CHECKING:  # pragma: no cover
     from app.services.seo.seo_generation_orchestrator import SEOGenerationOrchestrator
 
-MAX_FAQ, MIN_FAQ = 6, 3
+MAX_FAQ, MIN_FAQ = 5, 3
 logger = logging.getLogger(__name__)
 
 
