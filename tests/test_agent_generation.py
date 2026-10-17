@@ -36,3 +36,19 @@ def test_only_hard_faults_trigger_corrections():
     assert "liste numérotée" in render and "en-tête" in render and "longueurs différentes" in render
     assert announced_count_errors("<p>i</p><h2>Les trois erreurs à éviter</h2><ol><li>a</li><li>b</li></ol>")
     assert not announced_count_errors("<p>i</p><h2>Les trois erreurs à éviter</h2><ol><li>a</li><li>b</li><li>c</li></ol>")
+
+
+def test_competitor_and_prose_count_hard_faults():
+    from app.services.seo.agent_generation import competitor_errors, prose_count_errors
+
+    candidate = {
+        "content_html": ('<p>Idéal le reconnaît, et <a href="https://www.linge-net.com/blog/x">ce guide</a> aussi. '
+                         "Les sites concurrents se trompent.</p>"),
+        "competitors": [{"url": "https://www.ideal.fr/a"}, {"url": "https://www.linge-net.com/blog/x"}],
+        "sources": [{"url": "https://www.60millions-mag.com/a"}, {"url": "https://www.ideal.fr/a"}],
+    }
+    errors = " | ".join(competitor_errors(candidate))
+    assert "Lien vers un concurrent" in errors and "linge-net" in errors
+    assert "sites concurrents" in errors and "Seulement 1 domaine" in errors
+    assert prose_count_errors("<p>Retenez deux gestes à faire dans l'ordre :</p><ol><li>a</li><li>b</li><li>c</li></ol>")
+    assert not prose_count_errors("<p>Retenez trois gestes :</p><ol><li>a</li><li>b</li><li>c</li></ol>")
