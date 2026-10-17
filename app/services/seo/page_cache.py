@@ -26,8 +26,10 @@ MAX_HTML_BYTES = 3_000_000
 
 _HEADERS = {
     "User-Agent": (
+        # Navigateur courant : certains sites publics refusent les agents
+        # marqués ; robots.txt reste vérifié sous le nom ROBOTS_USER_AGENT.
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 IdeasStudio"
+        "(KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
     ),
     "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -75,6 +77,8 @@ class PageCache:
         self.hit_count = 0
         self.blocked_by_robots: list[str] = []
         self.failures: list[str] = []
+        # Statut HTTP de la dernière lecture de chaque URL (None si réseau).
+        self.status: dict[str, int | None] = {}
 
     @staticmethod
     def _key(url: str) -> str:
@@ -120,8 +124,10 @@ class PageCache:
             self.fetch_count += 1
             try:
                 html = self._fetcher(key, self.timeout)
+                self.status[key] = 200
             except Exception as exc:
                 logger.debug("page_cache: échec %s : %s", key, exc)
+                self.status[key] = getattr(getattr(exc, "response", None), "status_code", None)
                 html = None
             if html is None:
                 self.failures.append(key)
