@@ -350,25 +350,8 @@ def launch_project_route(
             raise _generation_http_error(exc) from exc
         if article:
             if body.mode == "full_article":
-                try:
-                    from app.services.seo.seo_generation_orchestrator import generate_full_article
-                    from app.services.agents.agent_router import get_agent_router
-                    article = generate_full_article(
-                        db=db,
-                        project_id=project_id,
-                        llm=llm,
-                        search=search,
-                        agent_router=get_agent_router(db=db),
-                        keyword=body.keyword,
-                        audience=body.audience,
-                        angle=body.angle,
-                        search_intent=body.search_intent,
-                        include_faq=body.include_faq,
-                        include_callouts=body.include_callouts,
-                        existing_article_id=article.id,
-                    )
-                except (ProviderUnavailableError, GenerationFailedError) as exc:
-                    raise _generation_http_error(exc) from exc
+                from app.services.editorial_workflow_service import request_writing
+                request_writing(db, article, commit=False)
             generated.append(article.id)
 
     if not body.dry_run:
