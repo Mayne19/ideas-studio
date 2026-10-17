@@ -41,6 +41,10 @@ pas encore une validation de production avec de vraies clés et de vraies pages.
   recherche, analyse concurrentielle, intention lecteur, faits, angle, plan,
   rédaction, puis validations. Le test utilise uniquement des fournisseurs
   fictifs et ne touche pas au CMS.
+- A15 : le rapport contient le plan, l'angle, le brouillon, les contrôles, les
+  alertes, le modèle, le coût et les traces de recherche.
+- A16 : une validation humaine ne peut pas approuver un résultat bloqué.
+- A17 : une remarque peut produire une règle `pending` sans modifier le texte.
 
 ### Preuve exécutée
 

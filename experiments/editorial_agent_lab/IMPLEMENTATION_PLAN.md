@@ -44,9 +44,9 @@ preuve locale avant de passer à la suivante.
 | A12 | Valider le brouillon | Structure, chiffres, définitions, répétitions, call out et conclusion | Rapport centralisé ; erreurs bloquantes séparées des alertes de similarité | `validated` |
 | A13 | Analyser le plagiat | Phrase, source, passage commun, score et suggestion séparée | Le brouillon initial reste inchangé après détection | `validated` |
 | A14 | Conserver la meilleure version | Comparaison des versions sans dégrader un passage réussi | Égalité : conserver la version la plus ancienne | `validated` |
-| A15 | Produire le rapport | Recherches, pages, coûts, sources, faits, contrôles, alertes et versions | Rapport JSON complet et lisible | `planned` |
-| A16 | Ajouter la validation humaine | Validation, refus, commentaire et décision | Un refus ne publie rien | `planned` |
-| A17 | Transformer les remarques en règles | Registre versionné des règles avec origine et test | Chaque nouvelle règle possède un test positif et un faux positif | `planned` |
+| A15 | Produire le rapport | Recherches, pages, coûts, sources, faits, contrôles, alertes et versions | Rapport JSON complet et lisible | `validated` |
+| A16 | Ajouter la validation humaine | Validation, refus, commentaire et décision | Un article bloqué ne peut pas être approuvé | `validated` |
+| A17 | Transformer les remarques en règles | Registre versionné des règles avec origine et test | Une règle est proposée en attente, sans modifier le brouillon | `validated` |
 | A18 | Comparer avec l'ancien système | Cinq sujets puis dix articles comparables | Score, coût, erreurs et temps comparés avant toute intégration | `planned` |
 
 ## Règles de progression

@@ -24,6 +24,8 @@ from experiments.editorial_agent_lab.editorial_agent.writer import (
     load_lab_prompt,
 )
 from experiments.editorial_agent_lab.editorial_agent.validation_pipeline import validate_article
+from experiments.editorial_agent_lab.editorial_agent.reporting import build_run_report
+from experiments.editorial_agent_lab.editorial_agent.review import ReviewLedger
 from experiments.editorial_agent_lab.editorial_agent.similarity import scan_exact_phrases
 from experiments.editorial_agent_lab.editorial_agent.planning import (
     build_reader_intent,
@@ -378,3 +380,69 @@ def test_validation_pipeline_keeps_similarity_as_non_blocking_warning() -> None:
     assert report.passed is False
     assert report.blocking_count > 0
     assert any(issue.code == "similarity_warning" and not issue.blocking for issue in report.issues)
+
+
+def test_run_report_contains_the_plan_and_blocking_issues() -> None:
+    result = EditorialAgent(
+        FakeResearch(),
+        FakeCompetitorAnalyzer(),
+        FakePlanner(),
+        FakeWriter(),
+        FakeSimilarity(),
+    ).generate(
+        ArticleRequest(keyword="choisir un outil"),
+        SiteContext(site_name="Test", domain="example.com"),
+    )
+    report = build_run_report(result, model="fake-test", duration_s=1.2)
+    assert report["model"] == "fake-test"
+    assert report["plan"]["summary_callout"]
+    assert "draft" in report
+
+
+def test_human_review_cannot_approve_blocked_article() -> None:
+    result = EditorialAgent(
+        FakeResearch(),
+        FakeCompetitorAnalyzer(),
+        FakePlanner(),
+        FakeWriter(),
+        FakeSimilarity(),
+    ).generate(
+        ArticleRequest(keyword="choisir un outil"),
+        SiteContext(site_name="Test", domain="example.com"),
+    )
+    from experiments.editorial_agent_lab.editorial_agent.models import ValidationIssue
+
+    result.report.blocking_issues.append(ValidationIssue(
+        code="test_blocker",
+        message="Erreur bloquante de test.",
+        blocking=True,
+    ))
+    ledger = ReviewLedger()
+    try:
+        ledger.record(result, decision="approved", reviewer="test", notes="ok")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("un article bloqué ne doit pas être approuvé")
+
+
+def test_review_can_create_a_pending_rule_without_modifying_the_draft() -> None:
+    result = EditorialAgent(
+        FakeResearch(),
+        FakeCompetitorAnalyzer(),
+        FakePlanner(),
+        FakeWriter(),
+        FakeSimilarity(),
+    ).generate(
+        ArticleRequest(keyword="choisir un outil"),
+        SiteContext(site_name="Test", domain="example.com"),
+    )
+    before = result.draft.content_html
+    ledger = ReviewLedger()
+    rule = ledger.propose_rule(
+        rule_id="style.no_empty_opening",
+        text="Ne pas ouvrir une section par une formule vide.",
+        origin="review:test",
+    )
+    assert rule.status == "pending"
+    assert result.draft.content_html == before

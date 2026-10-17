@@ -18,9 +18,9 @@
     {"id": "A12", "title": "validate draft", "status": "validated", "scope": "deterministic_validation", "evidence": "editorial_agent/validation_pipeline.py"},
     {"id": "A13", "title": "analyse plagiarism", "status": "validated", "evidence": "editorial_agent/similarity.py"},
     {"id": "A14", "title": "keep best version", "status": "validated", "evidence": "editorial_agent/validators.py"},
-    {"id": "A15", "title": "produce report", "status": "planned", "evidence": null},
-    {"id": "A16", "title": "add human review", "status": "planned", "evidence": null},
-    {"id": "A17", "title": "turn feedback into rules", "status": "planned", "evidence": null},
+    {"id": "A15", "title": "produce report", "status": "validated", "scope": "local_report_contract", "evidence": "editorial_agent/reporting.py"},
+    {"id": "A16", "title": "add human review", "status": "validated", "scope": "local_review_contract", "evidence": "editorial_agent/review.py"},
+    {"id": "A17", "title": "turn feedback into rules", "status": "validated", "scope": "pending_rule_contract", "evidence": "editorial_agent/review.py"},
     {"id": "A18", "title": "compare with old system", "status": "planned", "evidence": null}
   ]
 }
