@@ -38,11 +38,36 @@ def test_grave_faults_cap_the_score():
     assert out["total"] == 75 and out["raw_total"] == 100 and len(out["grave_faults"]) == 2
 
 
-def test_scores_are_clamped_and_bad_json_is_an_error():
-    scores = full_scores() | {"accuracy_sources": 40, "faq": -3}
-    out = judge_v2(ARTICLE, lambda p, s, t: reply(scores))
-    assert out["criteria"]["accuracy_sources"]["score"] == 20 and out["criteria"]["faq"]["score"] == 0
+def defects_reply(defects, coherence=()):
+    return json.dumps({"coherence": list(coherence), "grave_faults": [], "summary": "ok",
+                       "criteria": {k: {"defects": defects.get(k, []), "evidence": "preuve"} for k in MODEL_CRITERIA}})
+
+
+def test_scores_are_deduced_from_defects_and_bad_json_is_an_error():
+    major = {"severity": "majeur", "passage": "sortez au soleil le matin", "detail": "y"}
+    out = judge_v2(ARTICLE, lambda p, s, t: defects_reply({
+        "accuracy_sources": [major, {"severity": "mineur", "passage": "La lumière du matin avance", "detail": "b"}],
+        "faq": [major] * 10, "tone": [{"severity": "inconnu", "passage": "", "detail": ""}]},
+        coherence=[{"rule": "1 h par jour", "passage": "chaque matinée", "detail": "faux vers l'ouest"}]),
+        title="Décalage horaire")
+    assert out["criteria"]["accuracy_sources"]["score"] == 13.0   # 20 - 6 - 1
+    assert out["criteria"]["faq"]["score"] == 0.0 and out["criteria"]["tone"]["score"] == 5.0
+    assert out["coherence"][0]["passage"] == "chaque matinée"
     assert "error" in judge_v2(ARTICLE, lambda p, s, t: "pas de json")
+
+
+def test_code_defects_lower_readability_and_accuracy():
+    from app.services.seo.editorial_judge_v2 import code_defects
+
+    measured = {"quote_faults": ["Citations absentes : « une phrase inventée de cinq mots » | « autre citation là »"],
+                "balance_faults": ["Le domaine vidal.fr porte 10 faits sur 17"], "mention_faults": ["Source nommée 12 fois"],
+                "meta_commentary": ["cet article"], "choppy_runs": 1}
+    defects = code_defects(measured)
+    assert [d["severity"] for d in defects["accuracy_sources"]] == ["mineur", "mineur", "moyen"]
+    assert [d["severity"] for d in defects["readability"]] == ["moyen", "moyen", "mineur"]
+    out = judge_v2("<p>Dans cet article, nous retenons une règle simple pour le lecteur.</p>",
+                   lambda p, s, t: defects_reply({}), title="T")
+    assert out["measurements"]["meta_commentary"] and out["criteria"]["readability"]["score"] == 12.8
 
 
 def test_code_measures_form_choppy_sentences_and_markdown():
@@ -78,3 +103,17 @@ def test_criteria_carry_the_house_writing_rules():
     intro, readability = MODEL_CRITERIA["introduction"][1], MODEL_CRITERIA["readability"][1]
     assert "moment que vit le lecteur" in intro and "découle logiquement" in intro and "gain précis" in intro
     assert "phrase isolée" in readability and "cet article" in readability and "Voici" in readability
+
+
+def test_defects_without_a_real_passage_are_ignored_and_scores_floor_at_zero():
+    invented = {"severity": "majeur", "passage": "une phrase qui n'existe nulle part", "detail": "inventé"}
+    real = {"severity": "majeur", "passage": "Votre horloge interne se recale", "detail": "réel"}
+    empty = {"severity": "majeur", "passage": "", "detail": "sans passage"}
+    out = judge_v2(ARTICLE, lambda p, s, t: defects_reply({"intent": [invented, empty], "faq": [real] * 9,
+                                                           "structure": [real]}), title="Décalage horaire")
+    assert out["criteria"]["intent"]["score"] == 10 and out["criteria"]["intent"]["defects"] == []
+    assert out["criteria"]["faq"]["score"] == 0.0
+    assert out["criteria"]["structure"]["score"] == 7.0
+    perfect = judge_v2(ARTICLE, lambda p, s, t: defects_reply({}), title="Décalage horaire")
+    assert perfect["raw_total"] == 100 and all(not c.get("defects") for c in perfect["criteria"].values()
+                                               if "defects" in c)
