@@ -9,6 +9,7 @@ from .models import (
     ArticlePlan,
     ArticleRequest,
     CompetitorPage,
+    EditorialAngle,
     FactRecord,
     ReaderIntent,
     SiteContext,
@@ -23,6 +24,10 @@ class ResearchProvider(Protocol):
     def find_facts(self, keyword: str, reader: ReaderIntent) -> list[FactRecord]: ...
 
 
+class CompetitorAnalyzer(Protocol):
+    def analyze(self, competitors: list[CompetitorPage]) -> list[CompetitorPage]: ...
+
+
 class EditorialPlanner(Protocol):
     def build_plan(
         self,
@@ -30,6 +35,7 @@ class EditorialPlanner(Protocol):
         context: SiteContext,
         competitors: list[CompetitorPage],
         reader: ReaderIntent,
+        angle: EditorialAngle,
         facts: list[FactRecord],
     ) -> ArticlePlan: ...
 
@@ -41,6 +47,7 @@ class ArticleWriter(Protocol):
         context: SiteContext,
         competitors: list[CompetitorPage],
         reader: ReaderIntent,
+        angle: EditorialAngle,
         facts: list[FactRecord],
         plan: ArticlePlan,
     ) -> ArticleDraft: ...

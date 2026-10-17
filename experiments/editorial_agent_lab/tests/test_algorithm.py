@@ -123,21 +123,30 @@ class FakeResearch:
 
     def find_facts(self, keyword: str, reader: Any) -> list[FactRecord]:
         return [FactRecord(
-            value="3",
-            definition="Nombre de concurrents lus.",
-            source_url="https://example.com/fact",
+            value=str(index),
+            definition="Un fait vérifié.",
+            quote=f"Le fait vérifié vaut {index}.",
+            source_url=f"https://official-{index}.example/fact",
             source_kind="official",
             verified=True,
-        )]
+        ) for index in range(1, 4)]
 
 
 class FakePlanner:
-    def build_plan(self, request: Any, context: Any, competitors: Any, reader: Any, facts: Any) -> ArticlePlan:
+    def build_plan(self, request: Any, context: Any, competitors: Any, reader: Any, angle: Any, facts: Any) -> ArticlePlan:
         return make_plan()
 
 
+class FakeCompetitorAnalyzer:
+    def analyze(self, competitors: list[Any]) -> list[Any]:
+        return [competitor.model_copy(update={
+            "strengths": ["Une force"],
+            "weaknesses": ["Une faiblesse"],
+        }) for competitor in competitors]
+
+
 class FakeWriter:
-    def write(self, request: Any, context: Any, competitors: Any, reader: Any, facts: Any, plan: Any) -> ArticleDraft:
+    def write(self, request: Any, context: Any, competitors: Any, reader: Any, angle: Any, facts: Any, plan: Any) -> ArticleDraft:
         return make_draft()
 
 
@@ -147,7 +156,7 @@ class FakeSimilarity:
 
 
 def test_workflow_runs_without_a_paid_model_call() -> None:
-    agent = EditorialAgent(FakeResearch(), FakePlanner(), FakeWriter(), FakeSimilarity())
+    agent = EditorialAgent(FakeResearch(), FakeCompetitorAnalyzer(), FakePlanner(), FakeWriter(), FakeSimilarity())
     result = agent.generate(
         ArticleRequest(keyword="choisir un outil"),
         SiteContext(site_name="Test", domain="example.com"),

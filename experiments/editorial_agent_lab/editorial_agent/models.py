@@ -178,6 +178,7 @@ class GenerationReport(BaseModel):
 class GenerationResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    angle: EditorialAngle | None = None
     plan: ArticlePlan
     draft: ArticleDraft
     report: GenerationReport

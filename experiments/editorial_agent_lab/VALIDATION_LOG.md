@@ -37,6 +37,10 @@ pas encore une validation de production avec de vraies clés et de vraies pages.
 - A12 : le validateur central regroupe les contrôles du dossier, du plan, des
   faits et du brouillon. Une similarité est une alerte non bloquante ; elle ne
   déclenche aucune réécriture.
+- Le workflow de laboratoire appelle désormais les étapes dans l'ordre :
+  recherche, analyse concurrentielle, intention lecteur, faits, angle, plan,
+  rédaction, puis validations. Le test utilise uniquement des fournisseurs
+  fictifs et ne touche pas au CMS.
 
 ### Preuve exécutée
 
