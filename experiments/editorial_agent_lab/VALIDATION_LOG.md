@@ -43,10 +43,11 @@ pas encore une validation de production avec de vraies clés et de vraies pages.
   fictifs et ne touche pas au CMS.
 - A15 : le rapport contient le plan, l'angle, le brouillon, les contrôles, les
   alertes, le modèle, le coût et les traces de recherche.
-- A16 : une validation humaine ne peut pas approuver un résultat bloqué.
-- A17 : une remarque peut produire une règle `pending` sans modifier le texte.
-- A18 : le harnais de comparaison refuse de conclure avant cinq sujets et dix
-  articles, et renvoie `NO-GO` dès qu'une erreur bloquante reste présente.
+- A16/A17 : ces décisions éditoriales sont maintenant explicitement hors du
+  run automatique. Le modèle ne reçoit aucune demande de validation et aucune
+  boucle de conversation ne reprend l'article après sa production.
+- A18 : le harnais de comparaison est prêt, mais attend encore cinq sujets et
+  dix articles réels avant de conclure.
 
 ### Preuve exécutée
 
@@ -66,6 +67,6 @@ tout appel réseau : aucune clé Anthropic/OpenRouter n'est accessible dans le
 runtime du terminal, et aucun credential CMS ne peut être résolu sans la
 configuration de l'application. Aucun crédit n'a donc été consommé.
 
-La validation humaine et la transformation des remarques en règles sont des
-étapes postérieures au laboratoire. Elles ne sont plus comptées comme des
-étapes de l'algorithme.
+Le jugement de l'éditeur et la transformation de ses remarques en règles sont
+des opérations postérieures au laboratoire. Elles ne sont pas exécutées par
+l'algorithme et ne déclenchent aucune reprise automatique.

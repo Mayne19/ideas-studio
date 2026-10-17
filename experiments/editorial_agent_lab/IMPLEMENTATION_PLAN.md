@@ -9,6 +9,10 @@ preuve locale avant de passer à la suivante.
 - `validated` : construit et vérifié par un test local.
 - `planned` : spécifié, mais pas encore construit.
 - `blocked` : impossible à valider sans une dépendance ou une décision externe.
+- `ready_for_live_run` : construit, mais l'essai réel n'a pas encore été exécuté.
+- `out_of_algorithm` : volontairement hors du traitement automatique.
+- `post_run_only` : intervient seulement après le résultat, sans boucle avec le modèle.
+- `pending_real_sample` : harnais prêt, échantillon réel encore absent.
 
 ## Ce qui existe déjà et sera réutilisé
 
@@ -31,29 +35,30 @@ preuve locale avant de passer à la suivante.
 |---|---|---|---|---|
 | A0 | Isoler le laboratoire | Package indépendant, aucun import du pipeline dans le cœur | Compilation + tests faux fournisseurs | `validated` |
 | A1 | Définir les contrats | Modèles pour contexte, lecteur, concurrents, faits, plan, FAQ, brouillon et rapport | Pydantic refuse les champs inattendus | `validated` |
-| A2 | Brancher la vraie recherche | Adaptateur vers `SerpAdapter` avec limite, déduplication et exclusion du domaine propre | Contrat faux SERP validé ; configuration réseau réelle encore séparée | `validated` |
-| A3 | Brancher la vraie lecture | Adaptateur vers `PageCache` et extraction de contenu | Contrat de lecture et gestion d'échec validés ; factory CMS bloquée par l'environnement incomplet | `validated` |
-| A4 | Construire le dossier concurrentiel | Forces, faiblesses, oublis et contradictions par page | Port d'analyse obligatoire dans le workflow ; analyse sémantique réelle encore à brancher | `validated` |
-| A5 | Comprendre le lecteur | Question réelle, niveau, piège et gain concret | Construction déterministe minimale validée ; analyse sémantique du modèle encore à brancher | `validated` |
+| A2 | Brancher la vraie recherche | Adaptateur vers `SerpAdapter` avec limite, déduplication et exclusion du domaine propre | Lanceur réel prêt ; exécution réseau encore bloquée par les credentials absentes du runtime | `ready_for_live_run` |
+| A3 | Brancher la vraie lecture | Adaptateur vers `PageCache` et extraction de contenu | Lanceur réel prêt ; exécution réseau encore bloquée par les credentials absentes du runtime | `ready_for_live_run` |
+| A4 | Construire le dossier concurrentiel | Forces, faiblesses, oublis et contradictions par page | Prompt réel et sortie JSON préparés ; essai modèle encore nécessaire | `ready_for_live_run` |
+| A5 | Comprendre le lecteur | Question réelle, niveau, piège et gain concret | Prompt réel préparé ; essai modèle encore nécessaire | `ready_for_live_run` |
 | A6 | Construire le registre des faits | Faits, définitions, unités, sources, citations et statut | Citation absente, source non lue, fait non vérifié et concurrent utilisé comme source détectés | `validated` |
 | A7 | Diversifier les sources | Au moins trois domaines admissibles, hors concurrents | Test de source dominante et test de sources suffisantes | `validated` |
-| A8 | Choisir l'angle | Angle original fondé sur le lecteur et les lacunes | Angle incomplet ou non traçable bloqué ; proposition minimale testée | `validated` |
-| A9 | Construire le plan complet | Introduction, call out, H2, H3, conclusion et FAQ | Contrats de sections et FAQ validés ; planification par le modèle encore à brancher | `validated` |
+| A8 | Choisir l'angle | Angle original fondé sur le lecteur et les lacunes | Prompt réel préparé ; essai modèle encore nécessaire | `ready_for_live_run` |
+| A9 | Construire le plan complet | Introduction, call out, H2, H3, conclusion et FAQ | Prompt réel préparé ; essai modèle encore nécessaire | `ready_for_live_run` |
 | A10 | Vérifier les zones de répétition | Matrice article/FAQ et matrice section/fait | Recouvrement FAQ/corps et recouvrement de faits détectés | `validated` |
-| A11 | Brancher le rédacteur unique | Un appel de rédaction avec recherche, faits et plan complets | Workflow relié au port d'angle et au faux modèle ; un seul appel JSON | `validated` |
+| A11 | Brancher le rédacteur unique | Une seule production de contenu avec recherche, faits et plan complets | Client réel relié ; JSON invalide bloquant, sans tour de correction éditoriale | `ready_for_live_run` |
 | A12 | Valider le brouillon | Structure, chiffres, définitions, répétitions, call out et conclusion | Rapport centralisé ; erreurs bloquantes séparées des alertes de similarité | `validated` |
 | A13 | Analyser le plagiat | Phrase, source, passage commun, score et suggestion séparée | Le brouillon initial reste inchangé après détection | `validated` |
 | A14 | Conserver la meilleure version | Comparaison des versions sans dégrader un passage réussi | Égalité : conserver la version la plus ancienne | `validated` |
-| A15 | Produire le rapport | Recherches, pages, coûts, sources, faits, contrôles, alertes et versions | Rapport JSON complet et lisible | `validated` |
-| A16 | Ajouter la validation humaine | Validation, refus, commentaire et décision | Un article bloqué ne peut pas être approuvé | `validated` |
-| A17 | Transformer les remarques en règles | Registre versionné des règles avec origine et test | Une règle est proposée en attente, sans modifier le brouillon | `validated` |
-| A18 | Comparer avec l'ancien système | Cinq sujets puis dix articles comparables | Harnais qui reste `PENDING` jusqu'à l'échantillon réel et produit `GO` ou `NO-GO` | `validated` |
+| A15 | Produire le rapport | Recherches, pages, coûts, sources, faits, contrôles, alertes et version produite | Rapport JSON et rendu HTML prêts ; essai réel encore nécessaire | `ready_for_live_run` |
+| A16 | Validation de l'éditeur | L'éditeur lit le résultat après l'exécution | Ne fait jamais partie de l'algorithme et ne déclenche aucune conversation automatique | `out_of_algorithm` |
+| A17 | Transformer les remarques en règles | Évolution future du prompt par décision éditoriale | Opération manuelle ultérieure, sans modifier l'article en cours | `post_run_only` |
+| A18 | Comparer avec l'ancien système | Cinq sujets puis dix articles comparables | Harnais prêt, échantillon réel encore absent | `pending_real_sample` |
 
 ## Règles de progression
 
-1. Une étape `planned` ne doit pas être présentée comme terminée.
+1. Une étape `planned` ou `ready_for_live_run` ne doit pas être présentée comme validée en production.
 2. Une étape ne passe à `validated` qu'avec une preuve locale enregistrée.
 3. Les appels payants restent interdits pendant les tests unitaires.
 4. Aucun résultat de laboratoire ne modifie un article existant.
 5. Aucune correction stylistique automatique ne remplace une version réussie.
-6. L'intégration dans Ideas Studio ne sera envisagée qu'après l'étape A18.
+6. L'éditeur ne dialogue pas avec l'algorithme pendant un run ; il juge le résultat après coup.
+7. L'intégration dans Ideas Studio ne sera envisagée qu'après l'étape A18.

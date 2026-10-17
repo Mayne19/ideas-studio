@@ -17,9 +17,10 @@ uniquement le noyau de la nouvelle méthode :
 
 Le cœur de l'algorithme reste testable avec des faux fournisseurs. Le mode réel
 réutilise toutefois les adaptateurs de recherche et de lecture existants, puis
-le client Anthropic/OpenRouter déjà présent dans Ideas Studio. Il fait un seul
-essai complet dans une conversation modèle : recherche, lecture, analyse
-sémantique, plan, rédaction et relecture. Rien n'est publié dans le CMS.
+le client Anthropic/OpenRouter déjà présent dans Ideas Studio. Il fait une seule
+production éditoriale : recherche, lecture, analyse sémantique, plan, rédaction
+et relecture interne du modèle. Il ne demande jamais à l'éditeur de répondre,
+ne lance pas de conversation de correction et ne publie rien dans le CMS.
 
 Le plan de construction et les preuves sont dans
 [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) et
@@ -46,7 +47,7 @@ Le résultat est écrit dans `run/article.html` et le rapport complet dans
 `run/report.json`. La clé est résolue depuis le runtime existant ou depuis les
 variables d'environnement, sans jamais être copiée dans le laboratoire.
 
-L'analyse sémantique réelle est faite par le modèle dans sa conversation : il
+L'analyse sémantique réelle est faite par le modèle dans son exécution contrôlée : il
 compare les concurrents, repère leurs lacunes et contradictions, formule la
 question réelle du lecteur, choisit l'angle, organise le plan et relie les
 faits aux sources. Le code ne prétend pas remplacer ce jugement par un score

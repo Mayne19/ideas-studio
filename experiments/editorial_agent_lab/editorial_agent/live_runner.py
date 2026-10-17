@@ -219,7 +219,10 @@ def run_live(config: LiveRunConfig, *, published_articles: list[dict[str, str]] 
 
     writer = AgentWriter(client, model=model, system=system)
     try:
-        data = writer.write(_build_user_message(config, published_articles))
+        # Une seule production éditoriale. Une réponse JSON invalide est un
+        # échec technique du run, pas une invitation à discuter ou à réécrire
+        # le contenu dans un second tour.
+        data = writer.write(_build_user_message(config, published_articles), json_retries=0)
     except AgentWriterError as exc:
         raise LiveRunError(f"Le rédacteur réel n'a pas produit un JSON exploitable : {exc}") from exc
 
@@ -232,7 +235,6 @@ def run_live(config: LiveRunConfig, *, published_articles: list[dict[str, str]] 
             blocking.append({"code": rule.get("rule", "structure"), "message": rule.get("label", "Règle non respectée")})
     report = {
         "algorithm": "editorial-agent-lab/live-claude-style",
-        "human_review": "outside_algorithm",
         "keyword": config.keyword,
         "model": model,
         "route": route,
