@@ -18,10 +18,11 @@ LAB_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = LAB_ROOT / "outputs"
 
 
-def generate(subject: str, *, site_articles: list[dict] | None = None, output_root: Path = OUTPUT_ROOT,
-             writer: Callable[[str], dict] = run_writer, fetch: Callable[[str], str] = fetch_text) -> dict:
+def generate(subject: str, *, site_articles: list[dict] | None = None, request: dict | None = None,
+             output_root: Path = OUTPUT_ROOT, writer: Callable[[str], dict] = run_writer,
+             fetch: Callable[[str], str] = fetch_text) -> dict:
     started = datetime.now(timezone.utc)
-    prompt = build_prompt(subject, site_articles)
+    prompt = build_prompt(subject, site_articles, request)
     result = writer(prompt)
     article, fiche, fiche_error = split_output(result["text"])
     slug = article_slug(subject, fiche)
@@ -42,6 +43,7 @@ def generate(subject: str, *, site_articles: list[dict] | None = None, output_ro
                    "turns": result.get("turns"), "web_search_requests": result.get("web_search_requests"),
                    "model_usage": result.get("model_usage")},
         "blocking_checks": checks,
+        "fiche_error": fiche_error,
         "passed": all(c["passed"] for c in checks),
         "plagiarism": plagiarism_alert(article, sources, fetch),
         "output": {"article_md": str(out_dir / "article.md"), "raw_output_md": str(out_dir / "raw_output.md"),
