@@ -1,14 +1,12 @@
-"""Étalonne judge_v2 sur un manifeste de 9 articles notés par Claude.
-
-Le manifeste contient des entrées {name, reference_score, article_id} (articles DB)
-ou {name, reference_score, path} (fichiers locaux). Un call_fn explicite est requis :
-ce script ne choisit ni ne déclenche seul de fournisseur de modèle.
+"""Calibrate judge_v2 against Claude's nine reference scores.
 
 Usage:
   DATABASE_URL=… python scripts/judge_calibration.py \
-    --manifest tests/data/judge_calibration/manifest.json \
-    --judge app.services.seo.editorial_judge:judge_v2 \
-    --call-fn mon_module:call_fn
+    --call-fn your_module:call_fn
+
+The call_fn must have the signature call_fn(prompt, step, temperature). Each
+calibration article invokes the supplied judge once. No model provider is
+selected implicitly.
 """
 from __future__ import annotations
 
@@ -19,203 +17,207 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Any, Callable
+from urllib.parse import urlparse
 
+MANIFEST_DEFAULT = Path("tests/data/judge_calibration/manifest.json")
+AGENT_ARTICLE_IDS = {
+    "6b83f483-b4c0-466e-ac0c-483f2cff654b",
+    "4066a97b-c1fe-44b4-81f5-06f2f9e73fc7",
+    "8a794c0c-ba49-4938-8cc6-c6e82f7e029f",
+    "d34f45fb-ee51-4adc-998a-50cca66d6ce7",
+}
 EXPECTED_COUNT = 9
 
 
-def _load_callable(spec: str) -> Callable:
+def load_callable(spec: str):
     module_name, sep, attr = spec.partition(":")
     if not sep or not module_name or not attr:
-        raise ValueError(f"Callable attendu sous la forme module:fonction, reçu {spec!r}")
-    value = getattr(importlib.import_module(module_name), attr)
-    if not callable(value):
-        raise TypeError(f"{spec} n'est pas appelable")
+        raise ValueError("Utilise le format module:fonction.")
+    fn = getattr(importlib.import_module(module_name), attr)
+    if not callable(fn):
+        raise TypeError(f"{spec} n'est pas appelable.")
+    return fn
+
+
+def _as_json(value, default):
+    if value is None:
+        return default
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return default
     return value
 
 
-def _md_to_html(text: str) -> str:
-    """Convertit les éléments Markdown des trois exemples en HTML simple."""
-    out: list[str] = []
-    paragraph: list[str] = []
-    in_list: str | None = None
-
-    def flush_paragraph() -> None:
-        if paragraph:
-            out.append("<p>" + " ".join(paragraph) + "</p>")
-            paragraph.clear()
-
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            flush_paragraph()
-            if in_list:
-                out.append(f"</{in_list}>")
-                in_list = None
-            continue
-        heading = re.match(r"^(#{1,6})\s+(.+)$", stripped)
-        if heading:
-            flush_paragraph()
-            if in_list:
-                out.append(f"</{in_list}>")
-                in_list = None
-            level = min(len(heading.group(1)), 3)
-            out.append(f"<h{level}>{heading.group(2)}</h{level}>")
-            continue
-        item = re.match(r"^([-*]|\d+\.)\s+(.+)$", stripped)
-        if item:
-            flush_paragraph()
-            kind = "ol" if item.group(1)[0].isdigit() else "ul"
-            if in_list != kind:
-                if in_list:
-                    out.append(f"</{in_list}>")
-                out.append(f"<{kind}>")
-                in_list = kind
-            out.append(f"<li>{item.group(2)}</li>")
-            continue
-        if stripped.startswith("|"):
-            flush_paragraph()
-            if re.fullmatch(r"[| :\-]+", stripped):
-                continue
-            cells = [cell.strip() for cell in stripped.strip("|").split("|")]
-            out.append("<p>" + " | ".join(cells) + "</p>")
-            continue
-        paragraph.append(stripped)
-    flush_paragraph()
-    if in_list:
-        out.append(f"</{in_list}>")
-    return "\n".join(out)
+def _faq_from_markdown(content: str) -> tuple[str, list[dict]]:
+    lines = content.splitlines()
+    start = next((i for i, line in enumerate(lines)
+                  if re.match(r"^##\s+.*(?:FAQ|questions fréquentes)", line, re.I)), None)
+    if start is None:
+        return content, []
+    body = "\n".join(lines[:start]).rstrip()
+    faq_lines = lines[start + 1:]
+    entries: list[dict] = []
+    question = None
+    answer: list[str] = []
+    for line in faq_lines:
+        match = re.match(r"^#{3,}\s+(.+)$", line.strip())
+        if match:
+            if question:
+                entries.append({"question": question, "answer": "\n".join(answer).strip()})
+            question, answer = match.group(1).strip(), []
+        elif question:
+            answer.append(line)
+    if question:
+        entries.append({"question": question, "answer": "\n".join(answer).strip()})
+    return body, entries
 
 
-def _fetch_db_article(cur: Any, article_id: str) -> dict:
+def _domain(url: str) -> str:
+    host = urlparse(url if "://" in url else "https://" + url).hostname or ""
+    return host.lower().removeprefix("www.")
+
+
+def _fetch_db_article(cur, item: dict) -> dict:
+    article_id = item["article_id"]
     cur.execute(
-        "select r.title, r.body from content.article_revisions r "
-        "where r.article_id=%s order by r.revision_no desc limit 1",
+        "select r.title, r.body, r.faq from content.articles a "
+        "join content.article_revisions r on r.id = a.current_revision_id "
+        "where a.id = %s",
         (article_id,),
     )
     row = cur.fetchone()
     if not row:
-        raise ValueError(f"Article introuvable en base : {article_id}")
-    title, content = row
+        raise ValueError(f"Article introuvable : {article_id}")
+    title, content, faq = row
+    faq = _as_json(faq, [])
+    if not isinstance(faq, list):
+        faq = []
+    facts, competitors, keyword = [], [], ""
+    if article_id in AGENT_ARTICLE_IDS:
+        cur.execute(
+            "select payload from ai.artifacts where article_id = %s "
+            "and agent_key = 'agent_writer_output' order by created_at desc limit 1",
+            (article_id,),
+        )
+        result = cur.fetchone()
+        output = _as_json(result[0] if result else None, {})
+        facts = output.get("facts") or []
+        competitors = sorted({
+            domain for c in output.get("competitors") or []
+            if isinstance(c, dict)
+            for domain in [_domain(c.get("url", ""))] if domain
+        })
     cur.execute(
-        "select table_schema, table_name from information_schema.tables "
-        "where table_name like '%artifact%' order by table_schema, table_name limit 1"
-    )
-    table = cur.fetchone()
-    if not table:
-        raise ValueError("Table d'artefacts introuvable")
-    from psycopg2 import sql
-
-    table_ref = sql.SQL(".").join(map(sql.Identifier, table))
-    cur.execute(
-        sql.SQL("select payload from {} where article_id=%s and agent_key=%s "
-                "order by created_at desc limit 1").format(table_ref),
-        (article_id, "agent_writer_output"),
+        "select payload from ai.artifacts where article_id = %s "
+        "and agent_key = 'idea_discovery' order by created_at desc limit 1",
+        (article_id,),
     )
     result = cur.fetchone()
-    output = (result[0] if result else {}) or {}
-    facts = [
-        f"{f.get('value', '')} — {f.get('quote', '')} — {f.get('source_url', '')}"
-        for f in output.get("facts", []) if isinstance(f, dict)
-    ]
-    competitors = [
-        c.get("url", "") if isinstance(c, dict) else str(c)
-        for c in output.get("competitors", [])
-    ]
-    return {"title": title or article_id, "content": content or "", "facts": facts,
-            "competitors": competitors, "keyword": ""}
+    idea = _as_json(result[0] if result else None, {})
+    keyword = idea.get("main_keyword", "")
+    return {"title": title or item["name"], "content": content or "",
+            "facts": facts, "competitors": competitors, "faq": faq, "keyword": keyword}
 
 
-def _load_items(manifest_path: Path) -> tuple[list[dict], Any]:
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    items = manifest.get("articles") if isinstance(manifest, dict) else None
-    if not isinstance(items, list) or len(items) != EXPECTED_COUNT:
-        raise ValueError(f"Le manifeste doit contenir exactement {EXPECTED_COUNT} articles.")
-    for i, item in enumerate(items, 1):
-        if not isinstance(item, dict) or not item.get("name") or "reference_score" not in item:
-            raise ValueError(f"Entrée {i}: name et reference_score sont requis.")
-        if ("article_id" in item) == ("path" in item):
-            raise ValueError(f"Entrée {i}: indique exactement un article_id ou un path.")
-        item["reference_score"] = float(item["reference_score"])
-    return items, manifest
+def load_article(item: dict, manifest_dir: Path, cur) -> dict:
+    if "article_id" in item:
+        article = _fetch_db_article(cur, item)
+    else:
+        path = (manifest_dir / item["path"]).resolve()
+        content = path.read_text(encoding="utf-8")
+        content, faq = _faq_from_markdown(content)
+        article = {"title": item.get("title", item["name"]), "content": content,
+                   "facts": item.get("facts", []), "competitors": item.get("competitors", []),
+                   "faq": faq, "keyword": item.get("keyword", "")}
+    article["facts"] = _as_json(article.get("facts"), [])
+    article["competitors"] = article.get("competitors") or []
+    article["faq"] = _as_json(article.get("faq"), [])
+    return article
+
+
+def pairwise_ranking_identical(rows: list[dict]) -> bool:
+    """Exact ordering check that preserves reference ties."""
+    for i, left in enumerate(rows):
+        for right in rows[i + 1:]:
+            reference_delta = left["reference_score"] - right["reference_score"]
+            judge_delta = left["judge_score"] - right["judge_score"]
+            if (reference_delta > 0) != (judge_delta > 0):
+                return False
+            if (reference_delta < 0) != (judge_delta < 0):
+                return False
+            if (reference_delta == 0) != (judge_delta == 0):
+                return False
+    return True
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--manifest", type=Path, default=Path("tests/data/judge_calibration/manifest.json"))
-    parser.add_argument("--judge", required=True, help="module:judge_v2")
-    parser.add_argument("--call-fn", required=True, help="module:fonction de rappel du juge")
+    parser.add_argument("--manifest", type=Path, default=MANIFEST_DEFAULT)
+    parser.add_argument("--judge", default="app.services.seo.editorial_judge:judge_v2")
+    parser.add_argument("--call-fn", required=True, help="module:fonction(prompt, step, temperature)")
     parser.add_argument("--mean-limit", type=float, default=3)
     parser.add_argument("--max-limit", type=float, default=6)
     parser.add_argument("--json-out", type=Path)
     args = parser.parse_args()
 
-    items, _ = _load_items(args.manifest)
-    judge_v2 = _load_callable(args.judge)
-    call_fn = _load_callable(args.call_fn)
-    conn = None
-    cursor = None
-    if any("article_id" in item for item in items):
-        try:
-            import psycopg2
-        except ImportError as exc:
-            raise RuntimeError("psycopg2 est requis pour les articles de la base.") from exc
-        conn = psycopg2.connect(os.environ["DATABASE_URL"])
-        cursor = conn.cursor()
+    manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
+    items = manifest.get("articles", [])
+    if len(items) != EXPECTED_COUNT:
+        raise ValueError(f"Le manifeste doit contenir exactement {EXPECTED_COUNT} articles.")
+    judge_v2 = load_callable(args.judge)
+    call_fn = load_callable(args.call_fn)
 
+    import psycopg2
+    conn = psycopg2.connect(os.environ["DATABASE_URL"])
     rows = []
     try:
+        cur = conn.cursor()
         for item in items:
-            if "path" in item:
-                path = (args.manifest.parent / item["path"]).resolve()
-                raw = path.read_text(encoding="utf-8")
-                article = {"title": item.get("title", item["name"]),
-                           "content": _md_to_html(raw) if path.suffix.lower() == ".md" else raw,
-                           "facts": item.get("facts", []), "competitors": item.get("competitors", []),
-                           "keyword": item.get("keyword", "")}
-            else:
-                article = _fetch_db_article(cursor, str(item["article_id"]))
-                article.update({k: item[k] for k in ("facts", "competitors", "keyword", "title")
-                                if k in item})
+            article = load_article(item, args.manifest.parent, cur)
             result = judge_v2(
-                article["content"], article.get("facts", []), article.get("competitors", []), call_fn
+                article["content"], call_fn, title=article["title"],
+                keyword=article["keyword"], facts=article["facts"],
+                competitors=article["competitors"], faq=article["faq"],
             )
-            if not isinstance(result, dict) or "total" not in result:
-                raise ValueError(f"{item['name']}: judge_v2 doit rendre un objet avec total.")
+            if not isinstance(result, dict) or result.get("total") is None:
+                raise ValueError(f"{item['name']}: judge_v2 n'a pas renvoyé total.")
+            reference = float(item["reference_score"])
+            score = float(result["total"])
             rows.append({
-                "name": item["name"],
-                "reference": item["reference_score"],
-                "total": float(result["total"]),
-                "error": abs(float(result["total"]) - float(item["reference_score"])),
-                "criteria": result.get("criteria", {}),
-                "caps": result.get("caps", []),
+                "name": item["name"], "reference_score": reference,
+                "judge_score": score, "absolute_error": abs(score - reference),
+                "criteria": result.get("criteria", {}), "caps": result.get("caps", []),
+                "grave_faults": result.get("grave_faults", []),
+                "measurements": result.get("measurements", {}),
+                "status": result.get("status"),
             })
     finally:
-        if conn:
-            conn.close()
+        conn.close()
 
-    mean_error = sum(r["error"] for r in rows) / len(rows)
-    max_error = max(r["error"] for r in rows)
-    ref_rank = [r["name"] for r in sorted(rows, key=lambda r: (-r["reference"], r["name"]))]
-    judge_rank = [r["name"] for r in sorted(rows, key=lambda r: (-r["total"], r["name"]))]
-    rank_positions = {name: i for i, name in enumerate(ref_rank)}
-    inversions = sum(
-        rank_positions[judge_rank[i]] > rank_positions[judge_rank[j]]
-        for i in range(len(judge_rank)) for j in range(i + 1, len(judge_rank))
-    )
-    pair_count = len(rows) * (len(rows) - 1) // 2
-    passed = mean_error <= args.mean_limit and max_error <= args.max_limit
+    mean_error = sum(r["absolute_error"] for r in rows) / len(rows)
+    max_error = max(r["absolute_error"] for r in rows)
+    ranked = sorted(rows, key=lambda r: (-r["reference_score"], r["name"]))
+    ranking_identical = pairwise_ranking_identical(rows)
+    calibrated = (mean_error <= args.mean_limit and max_error <= args.max_limit and ranking_identical)
     report = {
-        "count": len(rows), "mean_absolute_error": round(mean_error, 3),
-        "max_absolute_error": round(max_error, 3), "mean_limit": args.mean_limit,
-        "max_limit": args.max_limit, "ranking_reference": ref_rank,
-        "ranking_judge": judge_rank, "ranking_inversions": inversions,
-        "ranking_pairs": pair_count, "passed": passed, "articles": rows,
+        "articles": ranked,
+        "overall": {
+            "count": len(rows), "mean_absolute_error": round(mean_error, 3),
+            "max_absolute_error": round(max_error, 3),
+            "mean_limit": args.mean_limit, "max_limit": args.max_limit,
+            "ranking_reference": [r["name"] for r in sorted(rows, key=lambda r: (-r["reference_score"], r["name"]))],
+            "ranking_judge": [r["name"] for r in sorted(rows, key=lambda r: (-r["judge_score"], r["name"]))],
+            "ranking_identical": ranking_identical,
+            "verdict": "étalonné" if calibrated else "non étalonné",
+        },
     }
-    print(json.dumps(report, ensure_ascii=False, indent=2))
+    output = json.dumps(report, ensure_ascii=False, indent=2)
+    print(output)
     if args.json_out:
-        args.json_out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return 0 if passed else 1
+        args.json_out.write_text(output + "\n", encoding="utf-8")
+    return 0 if calibrated else 1
 
 
 if __name__ == "__main__":
