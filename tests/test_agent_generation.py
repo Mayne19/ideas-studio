@@ -303,3 +303,33 @@ def test_a_source_named_more_than_five_times_is_a_hard_fault():
     errors = source_mention_errors({"sources": sources, "content_html": six})
     assert errors == ["Source nommée 6 fois (vidal.fr) : reformule et regroupe, au plus 5 mentions d'une même source."]
     assert source_mention_errors({"sources": sources, "content_html": five}) == []
+
+def _judge_errors_for_blockers(monkeypatch, blockers):
+    from types import SimpleNamespace
+
+    from app.services.seo import agent_generation
+    import app.services.seo.editorial_judge as judge_module
+
+    monkeypatch.setattr(judge_module, "judge_article", lambda *args, **kwargs: {"blockers": blockers})
+    orch = SimpleNamespace(context={}, _write_pass=lambda *args: "")
+    candidate = {"title": "Article", "content_html": "<p>Une réponse concise.</p>"}
+    return agent_generation.judge_errors(orch, None, candidate)
+
+
+def test_judge_invented_fact_becomes_a_hard_fault(monkeypatch):
+    errors = _judge_errors_for_blockers(monkeypatch, [{
+        "type": "invented_fact", "section": "Conseils",
+        "detail": "La source citée ne contient pas cette recommandation",
+    }])
+
+    assert len(errors) == 1
+    assert "Fait ou source inventé" in errors[0]
+    assert "citation exacte" in errors[0]
+
+
+def test_judge_reader_drop_does_not_become_a_hard_fault(monkeypatch):
+    errors = _judge_errors_for_blockers(monkeypatch, [{
+        "type": "reader_drop", "section": "Introduction", "detail": "Phrase trop longue",
+    }])
+
+    assert errors == []

@@ -486,6 +486,9 @@ def judge_errors(orch, article, candidate: dict) -> list[str]:
         elif b.get("type") == "unsourced_figure":
             errors.append(f"Chiffre ou affirmation sans citation dans « facts » (section {b.get('section', '')}) : "
                           f"{b.get('detail', '')}. Ajoute le fait avec sa citation exacte, ou retire-le.")
+        elif b.get("type") == "invented_fact":
+            errors.append(f"Fait ou source inventé dans « {b.get('section', '')} » : "
+                          f"{b.get('detail', '')}. Supprime-le ou ajoute le fait avec sa citation exacte.")
     return errors
 
 
