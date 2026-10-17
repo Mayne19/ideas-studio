@@ -27,8 +27,10 @@ MAX_TOOL_STEPS = 40
 # caractères) : moins de pages, mais complètes (consigne du 2026-10-17).
 PAGE_CHARS = 20_000
 # En dessous, l'extraction a probablement raté le corps de la page (bannière,
-# mur de cookies) : on tente le lecteur de secours.
+# mur de cookies) : on tente le lecteur de secours, puis la lecture compte
+# comme un échec (consigne du rédacteur en chef, 2026-10-17).
 MIN_PAGE_CHARS = 1_500
+AGENT_FETCH_TIMEOUT_SECONDS = 15.0
 REASONING_EFFORT = "low"
 MAX_COST_USD = 3.0
 
@@ -105,16 +107,17 @@ class OpenRouterAgentClient:
                 return "Limite d'échecs de lecture atteinte : rédige avec ce que tu as déjà."
             url = str(args.get("url") or "")
             text = self.fetch_fn(url) or ""
-            if not text.strip():
-                # Une page illisible n'ajoute rien au contexte : elle ne consomme
-                # pas le budget de lectures, mais un plafond d'échecs séparé.
+            chars = len(text.strip())
+            entry = {"url": url, "chars": chars} | dict(getattr(self.fetch_fn, "last", None) or {})
+            if chars < MIN_PAGE_CHARS:
+                # Une page illisible ou presque vide n'apporte rien : elle ne
+                # consomme pas le budget de lectures, mais un plafond d'échecs.
                 self.failed_fetches += 1
-                self.fetch_log.append({"url": url, "chars": 0, "failed": True})
-                return (f"ÉCHEC DE LECTURE : la page {url} est vide, bloquée ou illisible. "
-                        "Cet échec ne compte pas dans ton budget de pages : choisis une autre page "
-                        "(autre concurrent ou autre source).")
+                self.fetch_log.append(entry | {"failed": True})
+                return (f"ÉCHEC DE LECTURE ({chars} caractères) : la page {url} ne compte pas, "
+                        "choisis une autre source.")
             self.fetches += 1
-            self.fetch_log.append({"url": url, "chars": len(text), "failed": False})
+            self.fetch_log.append(entry | {"failed": False})
             return text[:PAGE_CHARS]
         return f"Outil inconnu : {name}"
 
@@ -176,38 +179,51 @@ READER_URL = "https://r.jina.ai/"
 READER_TIMEOUT_SECONDS = 25.0
 
 
-def reader_get(url: str, timeout: float = READER_TIMEOUT_SECONDS) -> str:
+def reader_get(url: str, timeout: float = READER_TIMEOUT_SECONDS) -> tuple[str, int | None]:
     """Lecture de secours par un lecteur externe (page rendue puis convertie
-    en texte) : utile pour les sites qui refusent les robots simples. Une
-    page d'erreur (4xx/5xx) est traitée comme un échec."""
+    en texte) : utile pour les sites qui refusent les robots simples. Rend
+    (texte, statut) ; une page d'erreur (4xx/5xx) donne un texte vide."""
     import httpx
 
     resp = httpx.get(READER_URL + url, timeout=timeout, headers={"Accept": "text/plain"})
     if resp.status_code >= 400:
-        return ""
+        return "", resp.status_code
     text = resp.text
     if "Warning: Target URL returned error" in text[:1000]:
-        return ""
-    return text.split("Markdown Content:", 1)[-1].strip()
+        return "", 404
+    return text.split("Markdown Content:", 1)[-1].strip(), resp.status_code
 
 
-def page_fetcher(cache=None, fallback: Callable[[str], str] | None = reader_get) -> Callable[[str], str]:
+def page_fetcher(cache=None, fallback: Callable[[str], tuple[str, int | None]] | None = reader_get
+                 ) -> Callable[[str], str]:
     """Lecture d'une page avec le cache et l'extracteur du pipeline, puis le
-    lecteur de secours si la page est vide ou bloquée (robots.txt respecté)."""
+    lecteur de secours si le texte extrait est trop court (robots.txt
+    respecté). `fetch.last` décrit la dernière lecture pour le rapport."""
     from app.services.seo.adapters.content_extraction_adapter import content_extraction_adapter
     from app.services.seo.page_cache import PageCache
 
     cache = cache or PageCache()
+    cache.timeout = max(cache.timeout, AGENT_FETCH_TIMEOUT_SECONDS)
 
     def fetch(url: str) -> str:
         html = cache.get_html(url)
         text = ""
         if html:
             text = (content_extraction_adapter.extract_from_html(html, url) or {}).get("text") or ""
+        status = getattr(cache, "status", {}).get(cache._key(url)) if hasattr(cache, "_key") else None
+        fetch.last = {"method": "directe", "status": status, "html_chars": len(html or ""),
+                      "text_chars": len(text.strip())}
         if len(text.strip()) < MIN_PAGE_CHARS and fallback is not None and cache.allowed(url):
             try:
-                text = fallback(url) or text
+                rescued, rescue_status = fallback(url)
             except Exception as exc:  # réseau, délai : la lecture reste un échec
                 logger.debug("lecteur de secours : échec %s : %s", url, exc)
+                rescued, rescue_status = "", None
+            fetch.last |= {"method": "secours", "status": rescue_status, "text_chars": len(rescued.strip())}
+            if rescue_status == 429:
+                fetch.last["note"] = "limite de débit du lecteur de secours atteinte"
+            if len(rescued.strip()) > len(text.strip()):
+                text = rescued
         return text
+    fetch.last = {}
     return fetch
