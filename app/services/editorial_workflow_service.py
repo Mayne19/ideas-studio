@@ -182,12 +182,13 @@ def _record_workflow_state(db: Session, article: Article, status: EditorialStatu
     )
 
 
-def request_writing(db: Session, article: Article) -> Article:
+def request_writing(db: Session, article: Article, *, commit: bool = True) -> Article:
     set_article_status(article, ArticleStatus.WRITING_REQUESTED)
     article.updated_at = datetime.now(timezone.utc)
     _record_workflow_state(db, article, EditorialStatus.WRITING)
-    db.commit()
-    db.refresh(article)
+    if commit:
+        db.commit()
+        db.refresh(article)
     return article
 
 
