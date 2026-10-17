@@ -182,7 +182,9 @@ def _url_key(url: str) -> str:
         query = urlencode(sorted((key, value) for key, value in parse_qsl(parsed.query)
                                  if not key.lower().startswith(("utm_", "fbclid", "gclid"))))
         path = parsed.path.rstrip("/") or "/"
-        return urlunsplit((parsed.scheme.lower(), netloc, path, query, ""))
+        # Le schéma n'identifie pas la ressource éditoriale : http et https
+        # doivent correspondre, comme www et la barre finale.
+        return urlunsplit(("", netloc, path, query, ""))
     except (ValueError, UnicodeError):
         return ""
 
@@ -251,6 +253,15 @@ def fact_errors(candidate: dict) -> list[str]:
         if not source_url or source_url not in sources:
             errors.append("La source du fait #{} n'apparaît pas dans « sources ».".format(index))
     return errors
+
+
+def self_review_errors(candidate: dict) -> list[str]:
+    """L'agent ne peut pas justifier un fait par sa mémoire."""
+    notes = str((candidate.get("self_review") or {}).get("notes") or "")
+    if re.search(r"\b(connaissances générales|de mémoire|sans (?:source|citation)|non sourcé|non vérifié)\b",
+                 notes, re.IGNORECASE):
+        return ["L'auto-relecture reconnaît un fait non sourcé : supprime-le ou ajoute une citation exacte."]
+    return []
 
 
 def prose_count_errors(content: str) -> list[str]:
@@ -389,6 +400,7 @@ def generate_with_agent(orch: "SEOGenerationOrchestrator", *, final_title: str, 
         errors += assembly_errors(candidate) + link_errors(content) + html_render_errors(content)
         errors += announced_count_errors(content) + prose_count_errors(content) + competitor_errors(candidate)
         errors += fact_errors(candidate)
+        errors += self_review_errors(candidate)
         errors += heading_mismatch_errors(orch, article, candidate)
         plag_errors, plag_report = plagiarism_errors(orch, content)
         plag_report["consistency_info"] = consistency_errors(content, orch._polish_call_fn(article))

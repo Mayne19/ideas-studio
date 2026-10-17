@@ -57,14 +57,16 @@ def test_competitor_and_prose_count_hard_faults():
 
 
 def test_facts_require_exact_quote_and_declared_source():
-    from app.services.seo.agent_generation import fact_errors
+    from app.services.seo.agent_generation import fact_errors, self_review_errors
 
     valid = {
         "sources": [{"url": "https://example.com/guide/?utm_source=test"}],
-        "facts": [{"value": "20 minutes", "source_url": "https://example.com/guide/",
+        "facts": [{"value": "20 minutes", "source_url": "http://www.example.com/guide/#section",
                    "quote": "20 minutes"}],
+        "self_review": {"notes": "Chaque fait est relié à sa source."},
     }
     assert fact_errors(valid) == []
+    assert self_review_errors(valid) == []
 
     invalid = {
         "sources": [{"url": "https://example.com/guide"}],
@@ -72,3 +74,4 @@ def test_facts_require_exact_quote_and_declared_source():
     }
     errors = " | ".join(fact_errors(invalid))
     assert "citation exacte" in errors and "n'apparaît pas" in errors
+    assert self_review_errors({"self_review": {"notes": "Ce point vient de connaissances générales."}})
