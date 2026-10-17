@@ -18,6 +18,10 @@ uniquement le noyau de la nouvelle méthode :
 Le modèle, la recherche web, le CMS et la base de données sont des ports.
 Le cœur de l'algorithme ne dépend d'aucun fournisseur.
 
+Le plan de construction et les preuves sont dans
+[`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) et
+[`VALIDATION_LOG.md`](VALIDATION_LOG.md).
+
 ## Exécution des tests
 
 Depuis la racine du dépôt :

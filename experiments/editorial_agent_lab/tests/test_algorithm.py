@@ -11,6 +11,9 @@ from experiments.editorial_agent_lab.editorial_agent.models import (
     SectionPlan,
     SiteContext,
 )
+from experiments.editorial_agent_lab.editorial_agent.existing_pipeline_adapter import (
+    ExistingPipelineWebAdapter,
+)
 from experiments.editorial_agent_lab.editorial_agent.similarity import scan_exact_phrases
 from experiments.editorial_agent_lab.editorial_agent.validators import (
     choose_best_version,
@@ -135,3 +138,34 @@ def test_workflow_runs_without_a_paid_model_call() -> None:
     )
     assert result.report.blocking_issues == []
     assert result.plan.faq[0].question == "Que faire dans un cas particulier ?"
+
+
+def test_existing_pipeline_adapter_filters_own_domain_and_duplicates() -> None:
+    calls: list[tuple[str, int]] = []
+
+    def search(query: str, limit: int) -> list[dict[str, str]]:
+        calls.append((query, limit))
+        return [
+            {"url": "https://www.example.com/existing"},
+            {"url": "https://competitor.fr/guide"},
+            {"url": "https://competitor.fr/guide#section"},
+            {"link": "https://second.fr/article"},
+            {"url": "not-a-url"},
+        ]
+
+    adapter = ExistingPipelineWebAdapter(search_fn=search, fetch_fn=lambda url: "page")
+    assert adapter.search_competitors("mot clé", "https://example.com", limit=3) == [
+        "https://competitor.fr/guide",
+        "https://second.fr/article",
+    ]
+    assert calls == [("mot clé", 10)]
+
+
+def test_existing_pipeline_adapter_reports_empty_reads() -> None:
+    adapter = ExistingPipelineWebAdapter(
+        search_fn=lambda query, limit: [],
+        fetch_fn=lambda url: "",
+    )
+    assert adapter.fetch_page("https://example.com/page") == ""
+    assert adapter.stats()["pages_read"] == 0
+    assert adapter.stats()["fetch_errors"]
