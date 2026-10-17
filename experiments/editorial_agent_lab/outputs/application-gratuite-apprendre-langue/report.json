@@ -1,0 +1,81 @@
+{
+  "subject": "Quelle application gratuite choisir pour apprendre une langue",
+  "started_at": "2026-10-17T15:47:50.733726+00:00",
+  "writer": {
+    "agent": "claude code, skill redaction-article",
+    "cost_usd": 1.3332576,
+    "tokens": {
+      "input": 32,
+      "output": 21051,
+      "cache_creation": 48867,
+      "cache_read": 876943
+    },
+    "duration_s": 265.2,
+    "turns": 38,
+    "web_search_requests": 0,
+    "model_usage": {
+      "claude-opus-5-5": {
+        "inputTokens": 32,
+        "outputTokens": 21051,
+        "cacheReadInputTokens": 876943,
+        "cacheCreationInputTokens": 48867,
+        "webSearchRequests": 0,
+        "costUSD": 0.9874726,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 9315,
+        "canonicalModel": "claude-opus-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      },
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 203030,
+        "outputTokens": 8551,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 10,
+        "costUSD": 0.34578499999999995,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    }
+  },
+  "blocking_checks": [
+    {
+      "name": "encadré « En résumé »",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "aucun tiret cadratin",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "fiche json valide",
+      "passed": true,
+      "detail": ""
+    }
+  ],
+  "passed": true,
+  "plagiarism": {
+    "name": "plagiat (alerte)",
+    "blocking": false,
+    "findings": [],
+    "unreadable_sources": []
+  },
+  "output": {
+    "article_md": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/outputs/application-gratuite-apprendre-langue/article.md",
+    "fiche_json": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/outputs/application-gratuite-apprendre-langue/fiche.json",
+    "report_json": "/Users/mayne/Perso/Projects/ideas-studio/experiments/editorial_agent_lab/outputs/application-gratuite-apprendre-langue/report.json"
+  },
+  "postprocess": {
+    "function": "writer.strip_preamble",
+    "reason": "correctif du découpage après l'essai",
+    "removed_before_title": "I have what I need. Here is the article:"
+  }
+}
