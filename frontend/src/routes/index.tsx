@@ -30,7 +30,6 @@ const ArchivesPage = lazy(() => import('@/pages/projects/articles/ArchivesPage')
 const PipelinePage = lazy(() => import('@/pages/projects/pipeline/PipelinePage'))
 const AnalyticsPage = lazy(() => import('@/pages/projects/analytics/AnalyticsPage'))
 const RecommendationsPage = lazy(() => import('@/pages/projects/recommendations/RecommendationsPage'))
-const GeneratePage = lazy(() => import('@/pages/projects/generate/GeneratePage'))
 const CalendarPage = lazy(() => import('@/pages/projects/calendar/CalendarPage'))
 
 const NotificationsPage = lazy(() => import('@/pages/projects/notifications/NotificationsPage'))
@@ -39,7 +38,6 @@ const ProjectProvidersPage = lazy(() => import('@/pages/projects/settings/Projec
 const ProjectExternalServicesPage = lazy(() => import('@/pages/projects/settings/ProjectExternalServicesPage'))
 const ProjectCalloutsPage = lazy(() => import('@/pages/projects/settings/ProjectCalloutsPage'))
 const ProjectPipelinePage = lazy(() => import('@/pages/projects/settings/ProjectPipelinePage'))
-const ProjectAgentsPage = lazy(() => import('@/pages/projects/settings/ProjectAgentsPage'))
 const MediaPage = lazy(() => import('@/pages/projects/media/MediaPage'))
 const AccountPage = lazy(() => import('@/pages/account/AccountPage'))
 const DocumentationPage = lazy(() => import('@/pages/DocumentationPage'))
@@ -249,22 +247,6 @@ export const router = createBrowserRouter([
               </Suspense>
             ),
           },
-          {
-            path: 'agents',
-            element: (
-              <Suspense fallback={<LoadingState />}>
-                <ProjectAgentsPage />
-              </Suspense>
-            ),
-          },
-          {
-            path: 'ia',
-            element: (
-              <Suspense fallback={<LoadingState />}>
-                <GeneratePage />
-              </Suspense>
-            ),
-          },
         ],
       },
       /* Convenience alias for integration */
@@ -335,14 +317,6 @@ export const router = createBrowserRouter([
       {
         path: 'projects/:projectId/optimizations',
         element: <OptimizationsRedirect />,
-      },
-      {
-        path: 'projects/:projectId/generate',
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <GeneratePage />
-          </Suspense>
-        ),
       },
       {
         path: 'projects/:projectId/calendar',

@@ -6,9 +6,7 @@ export type SettingsSectionKey =
   | 'callouts'
   | 'providers'
   | 'external-services'
-  | 'agents'
   | 'pipeline'
-  | 'ia'
 
 export type SettingsSection = {
   key: SettingsSectionKey
@@ -19,7 +17,7 @@ export type SettingsSection = {
   adminOnly?: boolean
 }
 
-const ADMIN_ONLY_KEYS: SettingsSectionKey[] = ['providers', 'external-services', 'agents', 'pipeline', 'ia']
+const ADMIN_ONLY_KEYS: SettingsSectionKey[] = ['providers', 'external-services', 'pipeline']
 
 export function getSettingsSections(
   projectId: string | undefined,
@@ -36,9 +34,7 @@ export function getSettingsSections(
     { key: 'callouts', label: 'Callouts', description: 'Templates éditoriaux', path: `${projectBase}/callouts` },
     { key: 'providers', label: 'Providers', description: 'Services IA connectés', path: `${projectBase}/providers`, adminOnly: true },
     { key: 'external-services', label: 'Services externes', description: 'Recherche web et images', path: `${projectBase}/external-services`, adminOnly: true },
-    { key: 'agents', label: 'Agents', description: 'Routage des agents IA', path: `${projectBase}/agents`, adminOnly: true },
     { key: 'pipeline', label: 'Pipeline', description: 'Fréquences, planning et automatisations', path: `${projectBase}/pipeline`, adminOnly: true },
-    { key: 'ia', label: 'IA & Workflows', description: 'Providers, agents, pipeline IA', path: `${projectBase}/ia`, adminOnly: true },
   ]
 
   if (!showAdminOnly) {
