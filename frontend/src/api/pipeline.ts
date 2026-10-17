@@ -24,10 +24,6 @@ export type PipelineSettings = {
   generation_mode?: 'agent' | 'pipeline'
   // Agent rédacteur : arrêt dur du coût d'un article (dollars) et lecture de secours.
   agent_max_cost_usd?: number
-  agent_reader_fallback?: boolean
-  // Effort de raisonnement du modèle et relecture de cohérence indépendante.
-  agent_reasoning_effort?: 'low' | 'medium' | 'high'
-  agent_consistency_review?: boolean
   max_parallel_writing_jobs?: number | null
   total_monthly_from_categories: number | null
   categories_frequencies: Array<{
@@ -59,9 +55,6 @@ export type PipelineSettingsUpdate = {
   min_publish_score?: number
   generation_mode?: 'agent' | 'pipeline'
   agent_max_cost_usd?: number
-  agent_reader_fallback?: boolean
-  agent_reasoning_effort?: 'low' | 'medium' | 'high'
-  agent_consistency_review?: boolean
 }
 
 export type PipelineLog = {
