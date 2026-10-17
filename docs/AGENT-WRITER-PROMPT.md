@@ -80,9 +80,8 @@ Avant de rendre l'article, relis-le comme un lecteur débutant et corrige tout c
 - Aucune phrase compliquée, inversée ou inutilement longue.
 - Aucune transition-annonce, aucun mot interdit.
 - La FAQ ne répète rien de l'article.
-- Même si certaines lectures ont échoué ou s'il manque des sources admissibles, rends toujours le JSON complet. N'écris que les faits accompagnés d'une citation exacte et d'une source déclarée, puis signale clairement le manque dans `self_review.notes`.
 
-SORTIE : uniquement ce JSON.
+SORTIE : uniquement ce JSON. Même si certaines lectures ont échoué ou s'il manque des sources admissibles, rends toujours le JSON complet. N'écris que les faits accompagnés d'une citation exacte et d'une source déclarée. Si moins de trois domaines admissibles ont été lus, signale le manque dans `self_review.notes` uniquement sous la forme : « Domaines admissibles lus : N sur 3 requis. ».
 {
   "title": "",
   "meta_title": "60 caractères maximum",

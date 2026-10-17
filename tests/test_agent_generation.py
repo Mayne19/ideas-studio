@@ -107,6 +107,7 @@ def test_fact_url_matching_decodes_path_and_self_review_handles_negation_and_agr
     assert self_review_errors({"self_review": {"notes": "Il n'y a pas de fait non vérifié."}}) == []
     assert self_review_errors({"self_review": {"notes": "Je n'ai rien écrit de mémoire."}}) == []
     assert self_review_errors({"self_review": {"notes": "Aucun fait non sourcé, mais deux chiffres restent non vérifiés."}})
+    assert self_review_errors({"self_review": {"notes": "Domaines admissibles lus : 2 sur 3 requis."}}) == []
 
 
 def test_competitor_matching_uses_registered_domain_without_suffix_false_positive():
