@@ -103,9 +103,13 @@ def test_generate_writes_article_fiche_and_report(tmp_path):
 
 
 def test_fiche_accepts_integrations_and_experience_fields():
-    extended = FICHE | {"integrations": [{"apres_le_titre": "Choisir", "type": "youtube", "url": "https://youtu.be/x",
-                                          "pourquoi": "démonstration"}],
+    extended = FICHE | {"images": [{"apres_le_titre": "Choisir", "montre": "Deux outils côte à côte",
+                                     "texte_alternatif": "Deux outils comparés", "legende": "Une comparaison utile"}],
+                        "integrations": [{"apres_le_titre": "Choisir", "type": "youtube", "url": "https://youtu.be/x",
+                                          "pourquoi": "démonstration", "legende": "La démonstration en une ligne"}],
                         "experience_a_ajouter": [{"apres_le_titre": "Choisir", "suggestion": "photo d'un essai"}]}
     assert fiche_valid(extended, "")["passed"] and fiche_valid(FICHE, "")["passed"]
+    assert "images[0].legende doit être str" in fiche_valid(extended | {"images": [{"legende": 1}]}, "")["detail"]
+    assert "integrations[0].legende doit être str" in fiche_valid(extended | {"integrations": [{"legende": 1}]}, "")["detail"]
     assert "integrations doit être list" in fiche_valid(FICHE | {"integrations": "x"}, "")["detail"]
     assert "experience_a_ajouter doit être list" in fiche_valid(FICHE | {"experience_a_ajouter": {}}, "")["detail"]
